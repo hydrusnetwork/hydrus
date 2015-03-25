@@ -5,6 +5,8 @@ import HydrusFileHandling
 import os
 import dircache
 import itertools
+import ClientData
+import ClientConstants
 
 def GetAllFileHashes():
     
@@ -126,20 +128,20 @@ class LocationsManager( object ):
     def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
     
     def GetCurrent( self ): return self._current
-    def GetCurrentRemote( self ): return self._current - set( ( HC.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetCurrentRemote( self ): return self._current - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
     
     def GetDeleted( self ): return self._deleted
-    def GetDeletedRemote( self ): return self._deleted - set( ( HC.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetDeletedRemote( self ): return self._deleted - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
     
     def GetPending( self ): return self._pending
-    def GetPendingRemote( self ): return self._pending - set( ( HC.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetPendingRemote( self ): return self._pending - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
     
     def GetPetitioned( self ): return self._petitioned
-    def GetPetitionedRemote( self ): return self._petitioned - set( ( HC.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetPetitionedRemote( self ): return self._petitioned - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
     
-    def HasDownloading( self ): return HC.LOCAL_FILE_SERVICE_KEY in self._pending
+    def HasDownloading( self ): return ClientConstants.LOCAL_FILE_SERVICE_KEY in self._pending
     
-    def HasLocal( self ): return HC.LOCAL_FILE_SERVICE_KEY in self._current
+    def HasLocal( self ): return ClientConstants.LOCAL_FILE_SERVICE_KEY in self._current
     
     def ProcessContentUpdate( self, service_key, content_update ):
         

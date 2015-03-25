@@ -1,5 +1,9 @@
-import httplib
 import HydrusConstants as HC
+import HydrusData
+import HydrusGlobals
+
+import httplib
+import HydrusPubSub
 import HydrusServer
 import HydrusSessions
 import HydrusThreading
@@ -62,7 +66,7 @@ class Controller( wx.App ):
                         connection.connect()
                         connection.close()
                         
-                        raise Exception( 'Something was already bound to port ' + HC.u( port ) )
+                        raise Exception( 'Something was already bound to port ' + HydrusData.ToString( port ) )
                         
                     except:
                         
@@ -84,7 +88,7 @@ class Controller( wx.App ):
                             
                         except:
                             
-                            raise Exception( 'Tried to bind port ' + HC.u( port ) + ' but it failed.' )
+                            raise Exception( 'Tried to bind port ' + HydrusData.ToString( port ) + ' but it failed.' )
                             
                         
                     
@@ -110,7 +114,7 @@ class Controller( wx.App ):
     
     def EventExit( self, event ): wx.CallAfter( self._tbicon.Destroy )
     
-    def EventPubSub( self, event ): HC.pubsub.WXProcessQueueItem()
+    def EventPubSub( self, event ): HydrusGlobals.pubsub.WXProcessQueueItem()
     
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
@@ -118,11 +122,9 @@ class Controller( wx.App ):
     
     def OnInit( self ):
         
-        HC.app = self
-        
         try:
             
-            self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
+            self.Bind( HydrusPubSub.EVT_PUBSUB, self.EventPubSub )
             
             self._db = ServerDB.DB()
             
@@ -135,7 +137,7 @@ class Controller( wx.App ):
             self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
             self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
             
-            HC.pubsub.sub( self, 'ActionService', 'action_service' )
+            HydrusGlobals.pubsub.sub( self, 'ActionService', 'action_service' )
             
             self._services = {}
             
@@ -159,7 +161,7 @@ class Controller( wx.App ):
                 connection.connect()
                 connection.close()
                 
-                message = 'Something was already bound to port ' + HC.u( port )
+                message = 'Something was already bound to port ' + HydrusData.ToString( port )
                 
                 wx.MessageBox( message )
                 

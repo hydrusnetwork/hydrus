@@ -16,6 +16,8 @@ import traceback
 import yaml
 import wx
 import zlib
+import HydrusData
+import HydrusGlobals
 
 class Conversation( object ):
     
@@ -28,12 +30,12 @@ class Conversation( object ):
         self._drafts = drafts
         self._search_context = search_context
         
-        HC.pubsub.sub( self, 'DeleteDraft', 'delete_draft_data' )
-        HC.pubsub.sub( self, 'DeleteMessage', 'delete_message' )
-        HC.pubsub.sub( self, 'DraftSaved', 'draft_saved' )
-        HC.pubsub.sub( self, 'ArchiveConversation', 'archive_conversation_data' )
-        HC.pubsub.sub( self, 'InboxConversation', 'inbox_conversation_data' )
-        HC.pubsub.sub( self, 'UpdateMessageStatuses', 'message_statuses_data' )
+        HydrusGlobals.pubsub.sub( self, 'DeleteDraft', 'delete_draft_data' )
+        HydrusGlobals.pubsub.sub( self, 'DeleteMessage', 'delete_message' )
+        HydrusGlobals.pubsub.sub( self, 'DraftSaved', 'draft_saved' )
+        HydrusGlobals.pubsub.sub( self, 'ArchiveConversation', 'archive_conversation_data' )
+        HydrusGlobals.pubsub.sub( self, 'InboxConversation', 'inbox_conversation_data' )
+        HydrusGlobals.pubsub.sub( self, 'UpdateMessageStatuses', 'message_statuses_data' )
         
     
     def AddDraft( self, draft ): self._drafts.append( draft )
@@ -56,8 +58,8 @@ class Conversation( object ):
         
         if len( self._messages ) + len( self._drafts ) == 0:
             
-            HC.pubsub.pub( 'delete_conversation_data', self._conversation_key )
-            HC.pubsub.pub( 'delete_conversation_gui', self._conversation_key )
+            HydrusGlobals.pubsub.pub( 'delete_conversation_data', self._conversation_key )
+            HydrusGlobals.pubsub.pub( 'delete_conversation_gui', self._conversation_key )
             
         
     
@@ -80,8 +82,8 @@ class Conversation( object ):
         
         if len( self._messages ) + len( self._drafts ) == 0:
             
-            HC.pubsub.pub( 'delete_conversation_data', self._conversation_key )
-            HC.pubsub.pub( 'delete_conversation_gui', self._conversation_key )
+            HydrusGlobals.pubsub.pub( 'delete_conversation_data', self._conversation_key )
+            HydrusGlobals.pubsub.pub( 'delete_conversation_gui', self._conversation_key )
             
         
     
@@ -183,13 +185,13 @@ class Conversation( object ):
             
         
     
-class Contact( HC.HydrusYAMLBase ):
+class Contact( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Contact'
     
     def __init__( self, public_key, name, host, port ):
         
-        HC.HydrusYAMLBase.__init__( self )
+        HydrusData.HydrusYAMLBase.__init__( self )
         
         self._public_key = public_key
         self._name = name
@@ -316,7 +318,9 @@ class Message( object ):
     
 class MessageSearchContext( object ):
     
-    def __init__( self, identity, raw_predicates = [] ):
+    def __init__( self, identity, raw_predicates = None ):
+        
+        if raw_predicates is None: raw_predicates = []
         
         self._identity = identity
         
@@ -452,7 +456,7 @@ class MessageSystemPredicates( object ):
                         days = int( days )
                         
                     
-                    timestamp = HC.GetNow() - ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 86400 )
+                    timestamp = HydrusData.GetNow() - ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 86400 )
                     
                     # this is backwards because we are talking about age, not timestamp
                     

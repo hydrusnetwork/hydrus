@@ -20,6 +20,8 @@ import wx.lib.scrolledpanel
 import yaml
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
+import HydrusData
+import HydrusGlobals
 
 class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
@@ -59,12 +61,12 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         self.RefreshAcceleratorTable()
         
-        HC.pubsub.sub( self, 'SetConversations', 'set_conversations' )
-        HC.pubsub.sub( self, 'ArchiveConversation', 'archive_conversation_gui' )
-        HC.pubsub.sub( self, 'InboxConversation', 'inbox_conversation_gui' )
-        HC.pubsub.sub( self, 'DeleteConversation', 'delete_conversation_gui' )
-        HC.pubsub.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
-        HC.pubsub.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
+        HydrusGlobals.pubsub.sub( self, 'SetConversations', 'set_conversations' )
+        HydrusGlobals.pubsub.sub( self, 'ArchiveConversation', 'archive_conversation_gui' )
+        HydrusGlobals.pubsub.sub( self, 'InboxConversation', 'inbox_conversation_gui' )
+        HydrusGlobals.pubsub.sub( self, 'DeleteConversation', 'delete_conversation_gui' )
+        HydrusGlobals.pubsub.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
         
     
     def RefreshAcceleratorTable( self ):
@@ -96,7 +98,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
     def _GetPrettyStatus( self ):
         
         if len( self._conversations ) == 1: return '1 conversation'
-        else: return HC.u( len( self._conversations ) ) + ' conversations'
+        else: return HydrusData.ToString( len( self._conversations ) ) + ' conversations'
         
     
     def _SetConversations( self, conversations ):
@@ -125,11 +127,11 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
                 
             else:
                 
-                created_string = HC.ConvertTimestampToHumanPrettyTime( created )
-                updated_string = HC.ConvertTimestampToHumanPrettyTime( updated )
+                created_string = HydrusData.ConvertTimestampToHumanPrettyTime( created )
+                updated_string = HydrusData.ConvertTimestampToHumanPrettyTime( updated )
                 
             
-            self.Append( ( '', subject, name_from, ', '.join( [ contact.GetName() for contact in participants if contact.GetName() != name_from ] ), HC.u( message_count ), HC.u( unread_count ), created_string, updated_string ) )
+            self.Append( ( '', subject, name_from, ', '.join( [ contact.GetName() for contact in participants if contact.GetName() != name_from ] ), HydrusData.ToString( message_count ), HydrusData.ToString( unread_count ), created_string, updated_string ) )
             
             data_index = i
             
@@ -145,8 +147,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
             i += 1
             
         
-        HC.pubsub.pub( 'conversation_focus', self._page_key, None )
-        HC.pubsub.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+        HydrusGlobals.pubsub.pub( 'conversation_focus', self._page_key, None )
+        HydrusGlobals.pubsub.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
         
     
     def _UpdateConversationItem( self, conversation_key ):
@@ -168,8 +170,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
             if inbox: self.SetItemImage( selection, 1 )
             else: self.SetItemImage( selection, 0 )
             
-            self.SetStringItem( selection, 4, HC.u( message_count ) )
-            self.SetStringItem( selection, 5, HC.u( unread_count ) )
+            self.SetStringItem( selection, 4, HydrusData.ToString( message_count ) )
+            self.SetStringItem( selection, 5, HydrusData.ToString( unread_count ) )
             
             if created is None:
                 
@@ -178,9 +180,9 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
                 
             else:
                 
-                created_string = HC.ConvertTimestampToHumanPrettyTime( created )
+                created_string = HydrusData.ConvertTimestampToHumanPrettyTime( created )
                 
-                updated_string = HC.ConvertTimestampToHumanPrettyTime( updated )
+                updated_string = HydrusData.ConvertTimestampToHumanPrettyTime( updated )
                 
             
             self.SetStringItem( selection, 6, created_string )
@@ -220,25 +222,25 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
             
             identity_contact_key = self._identity.GetContactKey()
             
-            if command == 'archive': HC.app.Write( 'archive_conversation', conversation_key )
-            elif command == 'inbox': HC.app.Write( 'inbox_conversation', conversation_key )
+            if command == 'archive': wx.GetApp().Write( 'archive_conversation', conversation_key )
+            elif command == 'inbox': wx.GetApp().Write( 'inbox_conversation', conversation_key )
             elif command == 'read':
                 
                 message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'sent' ) )
                 
-                for message_key in message_keys: HC.app.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'read' ) ] )
+                for message_key in message_keys: wx.GetApp().Write( 'message_statuses', message_key, [ ( identity_contact_key, 'read' ) ] )
                 
             elif command == 'unread':
                 
                 message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'read' ) )
                 
-                for message_key in message_keys: HC.app.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'sent' ) ] )
+                for message_key in message_keys: wx.GetApp().Write( 'message_statuses', message_key, [ ( identity_contact_key, 'sent' ) ] )
                 
             elif command == 'delete':
                 
                 with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete this conversation?' ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_conversation', conversation_key )
+                    if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_conversation', conversation_key )
                     
                 
             else: event.Skip()
@@ -249,8 +251,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         selection = self.GetFirstSelected()
         
-        if selection == wx.NOT_FOUND: HC.pubsub.pub( 'conversation_focus', self._page_key, None )
-        else: HC.pubsub.pub( 'conversation_focus', self._page_key, self._data_indices_to_conversations[ self.GetItemData( selection ) ] )
+        if selection == wx.NOT_FOUND: HydrusGlobals.pubsub.pub( 'conversation_focus', self._page_key, None )
+        else: HydrusGlobals.pubsub.pub( 'conversation_focus', self._page_key, self._data_indices_to_conversations[ self.GetItemData( selection ) ] )
         
     
     def EventShowMenu( self, event ):
@@ -335,8 +337,8 @@ class ConversationPanel( wx.Panel ):
         
         self.SetSizer( self._vbox )
         
-        HC.pubsub.sub( self, 'DeleteDraft', 'delete_draft_gui' )
-        HC.pubsub.sub( self, 'NewMessage', 'new_message' )
+        HydrusGlobals.pubsub.sub( self, 'DeleteDraft', 'delete_draft_gui' )
+        HydrusGlobals.pubsub.sub( self, 'NewMessage', 'new_message' )
         
     
     def _DrawConversation( self ):
@@ -469,7 +471,9 @@ class ConversationPanel( wx.Panel ):
     
 class ConversationSplitter( wx.SplitterWindow ):
     
-    def __init__( self, parent, page_key, identity, conversations = [] ):
+    def __init__( self, parent, page_key, identity, conversations = None ):
+        
+        if conversations is None: conversations = []
         
         wx.SplitterWindow.__init__( self, parent )
         
@@ -486,7 +490,7 @@ class ConversationSplitter( wx.SplitterWindow ):
         wx.CallAfter( self.SplitHorizontally, self._conversations_panel, self._conversation_panel, 180 )
         wx.CallAfter( self._conversation_panel.Refresh )
         
-        HC.pubsub.sub( self, 'SetConversationFocus', 'conversation_focus' )
+        HydrusGlobals.pubsub.sub( self, 'SetConversationFocus', 'conversation_focus' )
         
     
     def _InitConversationsPanel( self ): self._conversations_panel = ConversationsListCtrl( self, self._page_key, self._identity, self._conversations )
@@ -608,7 +612,7 @@ class DestinationPanel( wx.Panel ):
                 elif command == 'read': status = 'read'
                 elif command == 'unread': status = 'sent'
                 
-                my_message_depot = HC.app.GetManager( 'services' ).GetService( self._identity.GetServiceKey() )
+                my_message_depot = wx.GetApp().GetManager( 'services' ).GetService( self._identity.GetServiceKey() )
                 
                 connection = my_message_depot.GetConnection()
                 
@@ -627,7 +631,7 @@ class DestinationPanel( wx.Panel ):
                 
                 connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = status_updates )
                 
-                HC.app.Write( 'message_statuses', self._message_key, [ ( self._contact_key, status ) ] )
+                wx.GetApp().Write( 'message_statuses', self._message_key, [ ( self._contact_key, status ) ] )
                 
             else: event.Skip()
             
@@ -705,7 +709,7 @@ class DestinationsPanel( wx.Panel ):
         
         self.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
+        HydrusGlobals.pubsub.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
         
     
     def UpdateMessageStatuses( self, message_key, updates ):
@@ -1144,8 +1148,8 @@ class DraftPanel( wx.Panel ):
         
         self.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'AddContact', 'add_contact' )
-        HC.pubsub.sub( self, 'DraftSaved', 'draft_saved' )
+        HydrusGlobals.pubsub.sub( self, 'AddContact', 'add_contact' )
+        HydrusGlobals.pubsub.sub( self, 'DraftSaved', 'draft_saved' )
         
         if not self._draft_message.IsReply(): wx.CallAfter( self._new_recipient.SetFocus )
         
@@ -1220,19 +1224,19 @@ class DraftPanel( wx.Panel ):
         if event is not None: event.Skip()
         
     
-    def EventDeleteDraft( self, event ): HC.app.Write( 'delete_draft', self._draft_key )
+    def EventDeleteDraft( self, event ): wx.GetApp().Write( 'delete_draft', self._draft_key )
     
     def EventSend( self, event ):
         
         draft_message = self._GetDraftMessage()
         
-        transport_messages = HC.app.Read( 'transport_messages_from_draft', draft_message )
+        transport_messages = wx.GetApp().Read( 'transport_messages_from_draft', draft_message )
         
         if self._contact_from.GetName() != 'Anonymous':
             
             try:
                 
-                my_message_depot = HC.app.GetManager( 'services' ).GetService( self._contact_from.GetServiceKey() )
+                my_message_depot = wx.GetApp().GetManager( 'services' ).GetService( self._contact_from.GetServiceKey() )
                 
                 connection = my_message_depot.GetConnection()
                 
@@ -1265,24 +1269,24 @@ class DraftPanel( wx.Panel ):
                 
             except:
                 
-                HC.ShowText( 'The hydrus client could not connect to your message depot, so the message could not be sent!' )
+                HydrusData.ShowText( 'The hydrus client could not connect to your message depot, so the message could not be sent!' )
                 
                 return
                 
             
         
-        for transport_message in transport_messages: HC.app.Write( 'message', transport_message, forced_status = 'pending' )
+        for transport_message in transport_messages: wx.GetApp().Write( 'message', transport_message, forced_status = 'pending' )
         
         draft_key = draft_message.GetDraftKey()
         
-        HC.app.Write( 'delete_draft', draft_key )
+        wx.GetApp().Write( 'delete_draft', draft_key )
         
     
     def EventSaveDraft( self, event ):
         
         draft_message = self._GetDraftMessage()
         
-        HC.app.Write( 'draft_message', draft_message )
+        wx.GetApp().Write( 'draft_message', draft_message )
         
     
     def EventRemove( self, event ):
@@ -1347,7 +1351,7 @@ class MessagePanel( wx.Panel ):
         else: name = self._message.GetContactFrom().GetName()
         
         #vbox.AddF( wx.StaticText( self, label = name + ', ' + HC.ConvertTimestampToPrettyAgo( self._message.GetTimestamp() ) ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( ClientGUICommon.AnimatedStaticTextTimestamp( self, name + ', ', HC.ConvertTimestampToPrettyAgo, self._message.GetTimestamp(), '' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.AnimatedStaticTextTimestamp( self, name + ', ', HydrusData.ConvertTimestampToPrettyAgo, self._message.GetTimestamp(), '' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         body = self._message.GetBody()
         

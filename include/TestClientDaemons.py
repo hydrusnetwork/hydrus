@@ -3,13 +3,18 @@ import collections
 import HydrusConstants as HC
 import os
 import TestConstants
+import tempfile
 import unittest
+import HydrusData
+import ClientConstants
+import HydrusGlobals
+import wx
 
 class TestDaemons( unittest.TestCase ):
     
     def test_import_folders_daemon( self ):
         
-        test_dir = HC.TEMP_DIR + os.path.sep + 'test'
+        test_dir = tempfile.mkdtemp()
         
         if not os.path.exists( test_dir ): os.mkdir( test_dir )
         
@@ -29,12 +34,12 @@ class TestDaemons( unittest.TestCase ):
         details[ 'cached_imported_paths' ] = { test_dir + os.path.sep + '2' }
         details[ 'failed_imported_paths' ] = { test_dir + os.path.sep + '5' }
         details[ 'local_tag' ] = 'local tag'
-        details[ 'last_checked' ] = HC.GetNow() - 1500
+        details[ 'last_checked' ] = HydrusData.GetNow() - 1500
         details[ 'check_period' ] = 1000
         
         old_details = dict( details )
         
-        HC.app.SetRead( 'import_folders', { path : details } )
+        wx.GetApp().SetRead( 'import_folders', { path : details } )
         
         ClientDaemons.DAEMONCheckImportFolders()
         
@@ -42,11 +47,11 @@ class TestDaemons( unittest.TestCase ):
         #(('C:\\code\\Hydrus\\temp\\e0dbdcb1a13c0565ffb73f2f497528adbe1703ca1dfc69680202487187b9fcfa',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
         #(('C:\\code\\Hydrus\\temp\\182c4eecf2a5b4dfc8b74813bcff5d967ed53d92a982d8ae18520e1504fa5902',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
         
-        import_file = HC.app.GetWrite( 'import_file' )
+        import_file = wx.GetApp().GetWrite( 'import_file' )
         
         self.assertEqual( len( import_file ), 3 )
         
-        expected_tag_part = { 'service_keys_to_tags' : { HC.LOCAL_TAG_SERVICE_KEY : set( [ 'local tag' ] ) } }
+        expected_tag_part = { 'service_keys_to_tags' : { ClientConstants.LOCAL_TAG_SERVICE_KEY : set( [ 'local tag' ] ) } }
         
         ( one, two, three ) = import_file
         
@@ -64,7 +69,7 @@ class TestDaemons( unittest.TestCase ):
         
         # I need to expand tests here with the new file system
         
-        [ ( ( updated_path, updated_details ), kwargs ) ] = HC.app.GetWrite( 'import_folder' )
+        [ ( ( updated_path, updated_details ), kwargs ) ] = wx.GetApp().GetWrite( 'import_folder' )
         
         self.assertEqual( path, updated_path )
         
@@ -85,12 +90,12 @@ class TestDaemons( unittest.TestCase ):
         details[ 'cached_imported_paths' ] = set()
         details[ 'failed_imported_paths' ] = { test_dir + os.path.sep + '5' }
         details[ 'local_tag' ] = 'local tag'
-        details[ 'last_checked' ] = HC.GetNow() - 1500
+        details[ 'last_checked' ] = HydrusData.GetNow() - 1500
         details[ 'check_period' ] = 1000
         
         old_details = dict( details )
         
-        HC.app.SetRead( 'import_folders', { path : details } )
+        wx.GetApp().SetRead( 'import_folders', { path : details } )
         
         ClientDaemons.DAEMONCheckImportFolders()
         
@@ -102,9 +107,9 @@ class TestDaemons( unittest.TestCase ):
         #(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
         #(('blarg',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
         
-        import_file = HC.app.GetWrite( 'import_file' )
+        import_file = wx.GetApp().GetWrite( 'import_file' )
         
-        [ ( ( updated_path, updated_details ), kwargs ) ] = HC.app.GetWrite( 'import_folder' )
+        [ ( ( updated_path, updated_details ), kwargs ) ] = wx.GetApp().GetWrite( 'import_folder' )
         
         self.assertEqual( path, updated_path )
         

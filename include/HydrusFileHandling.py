@@ -1,4 +1,5 @@
 #import cv2
+import gc
 import hashlib
 import hsaudiotag
 import hsaudiotag.auto
@@ -13,16 +14,61 @@ import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusVideoHandling
 import os
-import threading
-import time
+import tempfile
 import traceback
-import wx
 import cStringIO
+import subprocess
+import HydrusData
+import wx
 
 # Mime
 
-#magic_mime = magic.Magic( HC.STATIC_DIR + os.path.sep + 'magic.mime', HC.STATIC_DIR + os.path.sep + 'magic.mime.cache' )
+header_and_mime = [
+    ( 0, '\xff\xd8', HC.IMAGE_JPEG ),
+    ( 0, 'GIF87a', HC.IMAGE_GIF ),
+    ( 0, 'GIF89a', HC.IMAGE_GIF ),
+    ( 0, '\x89PNG', HC.IMAGE_PNG ),
+    ( 0, 'BM', HC.IMAGE_BMP ),
+    ( 0, 'CWS', HC.APPLICATION_FLASH ),
+    ( 0, 'FWS', HC.APPLICATION_FLASH ),
+    ( 0, 'FLV', HC.VIDEO_FLV ),
+    ( 0, '%PDF', HC.APPLICATION_PDF ),
+    ( 0, 'PK\x03\x04', HC.APPLICATION_ZIP ),
+    ( 0, 'hydrus encrypted zip', HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
+    ( 4, 'ftypmp4', HC.VIDEO_MP4 ),
+    ( 0, 'fLaC', HC.AUDIO_FLAC ),
+    ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
+    ]
 
+def ConvertAbsPathToPortablePath( abs_path ):
+    
+    if abs_path == '': return None
+    
+    try: return os.path.relpath( abs_path, HC.BASE_DIR )
+    except: return abs_path
+
+def CleanUpTempPath( os_file_handle, temp_path ):
+    
+    def clean():
+        
+        os.close( os_file_handle )
+        
+        try: os.remove( temp_path )
+        except OSError:
+            
+            gc.collect()
+            
+            try: os.remove( temp_path )
+            except OSError: print( 'The client could not delete the temporary file ' + temp_path )
+            
+        
+    
+    wx.CallAfter( clean )
+    
+def CopyFileLikeToFileLike( f_source, f_dest ):
+    
+    for block in HydrusData.ReadFileLikeAsBlocks( f_source, 65536 ): f_dest.write( block )
+    
 def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     mime = GetMime( path )
@@ -84,6 +130,28 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     return thumbnail
     
+def GetExtraHashesFromPath( path ):
+    
+    h_md5 = hashlib.md5()
+    h_sha1 = hashlib.sha1()
+    h_sha512 = hashlib.sha512()
+    
+    with open( path, 'rb' ) as f:
+        
+        for block in HydrusData.ReadFileLikeAsBlocks( f, 65536 ):
+            
+            h_md5.update( block )
+            h_sha1.update( block )
+            h_sha512.update( block )
+            
+        
+    
+    md5 = h_md5.digest()
+    sha1 = h_sha1.digest()
+    sha512 = h_sha512.digest()
+    
+    return ( md5, sha1, sha512 )
+    
 def GetFileInfo( path ):
     
     info = os.lstat( path )
@@ -133,50 +201,11 @@ def GetHashFromPath( path ):
     
     with open( path, 'rb' ) as f:
         
-        for block in HC.ReadFileLikeAsBlocks( f, 65536 ): h.update( block )
+        for block in HydrusData.ReadFileLikeAsBlocks( f, 65536 ): h.update( block )
         
     
     return h.digest()
     
-def GetExtraHashesFromPath( path ):
-    
-    h_md5 = hashlib.md5()
-    h_sha1 = hashlib.sha1()
-    h_sha512 = hashlib.sha512()
-    
-    with open( path, 'rb' ) as f:
-        
-        for block in HC.ReadFileLikeAsBlocks( f, 65536 ):
-            
-            h_md5.update( block )
-            h_sha1.update( block )
-            h_sha512.update( block )
-            
-        
-    
-    md5 = h_md5.digest()
-    sha1 = h_sha1.digest()
-    sha512 = h_sha512.digest()
-    
-    return ( md5, sha1, sha512 )
-    
-header_and_mime = [
-    ( 0, '\xff\xd8', HC.IMAGE_JPEG ),
-    ( 0, 'GIF87a', HC.IMAGE_GIF ),
-    ( 0, 'GIF89a', HC.IMAGE_GIF ),
-    ( 0, '\x89PNG', HC.IMAGE_PNG ),
-    ( 0, 'BM', HC.IMAGE_BMP ),
-    ( 0, 'CWS', HC.APPLICATION_FLASH ),
-    ( 0, 'FWS', HC.APPLICATION_FLASH ),
-    ( 0, 'FLV', HC.VIDEO_FLV ),
-    ( 0, '%PDF', HC.APPLICATION_PDF ),
-    ( 0, 'PK\x03\x04', HC.APPLICATION_ZIP ),
-    ( 0, 'hydrus encrypted zip', HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
-    ( 4, 'ftypmp4', HC.VIDEO_MP4 ),
-    ( 0, 'fLaC', HC.AUDIO_FLAC ),
-    ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
-    ]
-
 def GetMime( path ):
     
     with open( path, 'rb' ) as f:
@@ -225,4 +254,30 @@ def GetMime( path ):
         
     
     return HC.APPLICATION_UNKNOWN
+    
+def GetTempFile(): return tempfile.TemporaryFile()
+def GetTempFileQuick(): return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
+def GetTempPath(): return tempfile.mkstemp( prefix = 'hydrus' )
+
+def IsImage( mime ): return mime in ( HC.IMAGE_JPEG, HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_BMP )
+
+def LaunchDirectory( path ):
+    
+    if HC.PLATFORM_WINDOWS: launch_phrase = 'explorer '
+    elif HC.PLATFORM_OSX: launch_phrase = 'open '
+    elif HC.PLATFORM_LINUX: launch_phrase = 'xdg-open '
+    
+    subprocess.Popen( launch_phrase + '"' + path + '"', shell = True )
+    
+def LaunchFile( path ):
+    
+    # Don't even think about omitting the double quotes on start
+    
+    if HC.PLATFORM_WINDOWS: launch_phrase = 'start "" '
+    elif HC.PLATFORM_OSX: launch_phrase = 'open '
+    elif HC.PLATFORM_LINUX: launch_phrase = 'xdg-open '
+    
+    subprocess.Popen( launch_phrase + '"' + path + '"', shell = True )
+    
+        
     

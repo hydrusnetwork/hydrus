@@ -1,6 +1,6 @@
 import HydrusConstants as HC
 import HydrusAudioHandling
-import HydrusDownloading
+import ClientDownloading
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
@@ -25,6 +25,9 @@ import urllib
 import urlparse
 import wx
 import wx.lib.scrolledpanel
+import HydrusData
+import ClientSearch
+import HydrusGlobals
 
 CAPTCHA_FETCH_EVENT_TYPE = wx.NewEventType()
 CAPTCHA_FETCH_EVENT = wx.PyEventBinder( CAPTCHA_FETCH_EVENT_TYPE )
@@ -150,7 +153,7 @@ class CaptchaControl( wx.Panel ):
             self._refresh_button.SetLabel( 'get new captcha' )
             self._refresh_button.Enable()
             
-            self._captcha_time_left.SetLabel( HC.ConvertTimestampToPrettyExpires( self._captcha_runs_out ) )
+            self._captcha_time_left.SetLabel( HydrusData.ConvertTimestampToPrettyExpires( self._captcha_runs_out ) )
             
         
         del dc
@@ -208,7 +211,7 @@ class CaptchaControl( wx.Panel ):
     
     def EnableWithValues( self, challenge, bitmap, captcha_runs_out, entry, ready ):
         
-        if HC.GetNow() > captcha_runs_out: self.Enable()
+        if HydrusData.GetNow() > captcha_runs_out: self.Enable()
         else:
             
             self._captcha_challenge = challenge
@@ -233,21 +236,28 @@ class CaptchaControl( wx.Panel ):
     
     def EventRefreshCaptcha( self, event ):
         
-        javascript_string = HC.http.Request( HC.GET, 'http://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
+        javascript_string = HydrusGlobals.http.Request( HC.GET, 'http://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
         
         ( trash, rest ) = javascript_string.split( 'challenge : \'', 1 )
         
         ( self._captcha_challenge, trash ) = rest.split( '\'', 1 )
         
-        jpeg = HC.http.Request( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
+        jpeg = HydrusGlobals.http.Request( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
         
-        temp_path = HC.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        with open( temp_path, 'wb' ) as f: f.write( jpeg )
+        try:
+            
+            with open( temp_path, 'wb' ) as f: f.write( jpeg )
+            
+            self._bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
-        self._bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
-        
-        self._captcha_runs_out = HC.GetNow() + 5 * 60 - 15
+        self._captcha_runs_out = HydrusData.GetNow() + 5 * 60 - 15
         
         self._DrawMain()
         self._DrawEntry( '' )
@@ -261,7 +271,7 @@ class CaptchaControl( wx.Panel ):
     
     def TIMEREvent( self, event ):
         
-        if HC.GetNow() > self._captcha_runs_out: self.Enable()
+        if HydrusData.GetNow() > self._captcha_runs_out: self.Enable()
         else: self._DrawMain()
         
     
@@ -331,7 +341,7 @@ class Comment( wx.Panel ):
     
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_key = HC.LOCAL_FILE_SERVICE_KEY, starting_from_session = False ):
+    def __init__( self, parent, page, page_key, file_service_key = CC.LOCAL_FILE_SERVICE_KEY, starting_from_session = False ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
@@ -343,14 +353,14 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self._page = page
         self._page_key = page_key
         self._file_service_key = file_service_key
-        self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
+        self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
         self._starting_from_session = starting_from_session
         
         self._paused = False
         
-        HC.pubsub.sub( self, 'SetSearchFocus', 'set_search_focus' )
-        HC.pubsub.sub( self, 'Pause', 'pause' )
-        HC.pubsub.sub( self, 'Resume', 'resume' )
+        HydrusGlobals.pubsub.sub( self, 'SetSearchFocus', 'set_search_focus' )
+        HydrusGlobals.pubsub.sub( self, 'Pause', 'pause' )
+        HydrusGlobals.pubsub.sub( self, 'Resume', 'resume' )
         
     
     def _MakeCollect( self, sizer ):
@@ -400,9 +410,9 @@ class ManagementPanelDumper( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
-        ( self._4chan_token, pin, timeout ) = HC.app.Read( '4chan_pass' )
+        ( self._4chan_token, pin, timeout ) = wx.GetApp().Read( '4chan_pass' )
         
-        self._have_4chan_pass = timeout > HC.GetNow()
+        self._have_4chan_pass = timeout > HydrusData.GetNow()
         
         self._imageboard = imageboard
         
@@ -540,8 +550,8 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'FocusChanged', 'focus_changed' )
-        HC.pubsub.sub( self, 'SortedMediaPulse', 'sorted_media_pulse' )
+        HydrusGlobals.pubsub.sub( self, 'FocusChanged', 'focus_changed' )
+        HydrusGlobals.pubsub.sub( self, 'SortedMediaPulse', 'sorted_media_pulse' )
         
         self._sorted_media_hashes = [ media_result.GetHash() for media_result in media_results ]
         
@@ -579,13 +589,13 @@ class ManagementPanelDumper( ManagementPanel ):
         
         try:
             
-            response = HC.http.Request( HC.POST, self._post_url, request_headers = headers, body = body )
+            response = HydrusGlobals.http.Request( HC.POST, self._post_url, request_headers = headers, body = body )
             
-            ( status, phrase ) = HydrusDownloading.Parse4chanPostScreen( response )
+            ( status, phrase ) = ClientDownloading.Parse4chanPostScreen( response )
             
         except Exception as e:
             
-            ( status, phrase ) = ( 'big error', HC.u( e ) )
+            ( status, phrase ) = ( 'big error', HydrusData.ToString( e ) )
             
         
         wx.CallAfter( self.CALLBACKDoneDump, hash, post_field_info, status, phrase )
@@ -620,11 +630,11 @@ class ManagementPanelDumper( ManagementPanel ):
             
             total_size = sum( [ m.GetSize() for m in self._hashes_to_media.values() ] )
             
-            initial = 'Hydrus Network Client is starting a dump of ' + HC.u( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) + ':' + os.linesep * 2
+            initial = 'Hydrus Network Client is starting a dump of ' + HydrusData.ToString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) + ':' + os.linesep * 2
             
         else: initial = ''
         
-        initial += HC.u( index + 1 ) + '/' + HC.u( num_files )
+        initial += HydrusData.ToString( index + 1 ) + '/' + HydrusData.ToString( num_files )
         
         advanced_tag_options = self._advanced_tag_options.GetInfo()
         
@@ -632,7 +642,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             tags_manager = media.GetTagsManager()
             
-            try: service = HC.app.GetManager( 'services' ).GetService( service_key )
+            try: service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
             except HydrusExceptions.NotFoundException: continue
             
             service_key = service.GetServiceKey()
@@ -677,7 +687,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             index = self._sorted_media_hashes.index( self._current_hash )
             
-            self._post_info.SetLabel( HC.u( index + 1 ) + '/' + HC.u( num_files ) + ': ' + dump_status_string )
+            self._post_info.SetLabel( HydrusData.ToString( index + 1 ) + '/' + HydrusData.ToString( num_files ) + ': ' + dump_status_string )
             
             for ( name, field_type, value ) in post_field_info:
                 
@@ -766,9 +776,9 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_DUMPED_OK
             dump_status_string = 'dumped ok'
             
-            if hash == self._current_hash: HC.pubsub.pub( 'set_focus', self._page_key, None )
+            if hash == self._current_hash: HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, None )
             
-            self._next_dump_time = HC.GetNow() + self._flood_time
+            self._next_dump_time = HydrusData.GetNow() + self._flood_time
             
             self._num_dumped += 1
             
@@ -781,7 +791,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_RECOVERABLE_ERROR
             dump_status_string = 'captcha was incorrect'
             
-            self._next_dump_time = HC.GetNow() + 10
+            self._next_dump_time = HydrusData.GetNow() + 10
             
             new_post_field_info = []
             
@@ -807,14 +817,14 @@ class ManagementPanelDumper( ManagementPanel ):
             
             self._progress_info.SetLabel( 'Flood limit hit, retrying.' )
             
-            self._next_dump_time = HC.GetNow() + self._flood_time
+            self._next_dump_time = HydrusData.GetNow() + self._flood_time
             
         elif status == 'big error':
             
             dump_status_enum = CC.DUMPER_UNRECOVERABLE_ERROR
             dump_status_string = ''
             
-            HC.ShowText( phrase )
+            HydrusData.ShowText( phrase )
             
             self._progress_info.SetLabel( 'error: ' + phrase )
             
@@ -838,20 +848,20 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_UNRECOVERABLE_ERROR
             dump_status_string = phrase
             
-            if hash == self._current_hash: HC.pubsub.pub( 'set_focus', self._page_key, None )
+            if hash == self._current_hash: HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, None )
             
-            self._next_dump_time = HC.GetNow() + self._flood_time
+            self._next_dump_time = HydrusData.GetNow() + self._flood_time
             
             self._next_dump_index += 1
             
         
         self._hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, post_field_info )
         
-        HC.pubsub.pub( 'file_dumped', self._page_key, hash, dump_status_enum )
+        HydrusGlobals.pubsub.pub( 'file_dumped', self._page_key, hash, dump_status_enum )
         
         if self._next_dump_index == len( self._sorted_media_hashes ):
             
-            self._progress_info.SetLabel( 'done - ' + HC.u( self._num_dumped ) + ' dumped' )
+            self._progress_info.SetLabel( 'done - ' + HydrusData.ToString( self._num_dumped ) + ' dumped' )
             
             self._start_button.Disable()
             
@@ -920,7 +930,7 @@ class ManagementPanelDumper( ManagementPanel ):
             self._dumping = True
             self._start_button.SetLabel( 'pause' )
             
-            if self._next_dump_time == 0: self._next_dump_time = HC.GetNow() + 5
+            if self._next_dump_time == 0: self._next_dump_time = HydrusData.GetNow() + 5
             
             # disable thread fields here
             
@@ -1000,7 +1010,7 @@ class ManagementPanelDumper( ManagementPanel ):
                 
                 media_to_select = self._hashes_to_media[ hash_to_select ]
                 
-                HC.pubsub.pub( 'set_focus', self._page_key, media_to_select )
+                HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, media_to_select )
                 
             
         
@@ -1024,7 +1034,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if self._dumping:
             
-            time_left = self._next_dump_time - HC.GetNow()
+            time_left = self._next_dump_time - HydrusData.GetNow()
             
             if time_left < 1:
                 
@@ -1052,7 +1062,7 @@ class ManagementPanelDumper( ManagementPanel ):
                                 
                                 ( challenge, bitmap, captcha_runs_out, entry, ready ) = value
                                 
-                                if HC.GetNow() > captcha_runs_out or not ready:
+                                if HydrusData.GetNow() > captcha_runs_out or not ready:
                                     
                                     wait = True
                                     
@@ -1119,17 +1129,17 @@ class ManagementPanelDumper( ManagementPanel ):
                     
                 except Exception as e:
                     
-                    ( status, phrase ) = ( 'big error', HC.u( e ) )
+                    ( status, phrase ) = ( 'big error', HydrusData.ToString( e ) )
                     
                     wx.CallAfter( self.CALLBACKDoneDump, hash, post_field_info, status, phrase )
                     
                 
-            else: self._progress_info.SetLabel( 'dumping next file in ' + HC.u( time_left ) + ' seconds' )
+            else: self._progress_info.SetLabel( 'dumping next file in ' + HydrusData.ToString( time_left ) + ' seconds' )
             
         else:
             
             if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
-            else: self._progress_info.SetLabel( 'paused after ' + HC.u( self._num_dumped ) + ' files dumped' )
+            else: self._progress_info.SetLabel( 'paused after ' + HydrusData.ToString( self._num_dumped ) + ' files dumped' )
             
         
     
@@ -1223,10 +1233,10 @@ class ManagementPanelImport( ManagementPanel ):
         num_deleted = import_controller_job_key.GetVariable( 'num_deleted' )
         num_redundant = import_controller_job_key.GetVariable( 'num_redundant' )
         
-        if num_successful > 0: status_strings.append( HC.u( num_successful ) + ' successful' )
-        if num_failed > 0: status_strings.append( HC.u( num_failed ) + ' failed' )
-        if num_deleted > 0: status_strings.append( HC.u( num_deleted ) + ' already deleted' )
-        if num_redundant > 0: status_strings.append( HC.u( num_redundant ) + ' already in db' )
+        if num_successful > 0: status_strings.append( HydrusData.ToString( num_successful ) + ' successful' )
+        if num_failed > 0: status_strings.append( HydrusData.ToString( num_failed ) + ' failed' )
+        if num_deleted > 0: status_strings.append( HydrusData.ToString( num_deleted ) + ' already deleted' )
+        if num_redundant > 0: status_strings.append( HydrusData.ToString( num_redundant ) + ' already in db' )
         
         overall_info = ', '.join( status_strings )
         
@@ -1829,9 +1839,9 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 
                 import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
                 
-                import_queue_builder_job_key.SetVariable( 'status', HC.u( e ) )
+                import_queue_builder_job_key.SetVariable( 'status', HydrusData.ToString( e ) )
                 
-                HC.ShowException( e )
+                HydrusData.ShowException( e )
                 
                 return
                 
@@ -1893,7 +1903,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_key, starting_from_session = starting_from_session )
         
-        self._service = HC.app.GetManager( 'services' ).GetService( self._petition_service_key )
+        self._service = wx.GetApp().GetManager( 'services' ).GetService( self._petition_service_key )
         self._can_ban = self._service.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS )
         
         self._num_petitions = None
@@ -1960,7 +1970,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         wx.CallAfter( self.EventRefreshNumPetitions, None )
         
-        HC.pubsub.sub( self, 'RefreshQuery', 'refresh_query' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshQuery', 'refresh_query' )
         
     
     def _DrawCurrentPetition( self ):
@@ -1983,7 +1993,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._can_ban: self._modify_petitioner.Enable()
             
-            with wx.BusyCursor(): media_results = HC.app.Read( 'media_results', self._file_service_key, self._current_petition.GetHashes() )
+            with wx.BusyCursor(): media_results = wx.GetApp().Read( 'media_results', self._file_service_key, self._current_petition.GetHashes() )
             
             panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_key, media_results )
             
@@ -1992,12 +2002,12 @@ class ManagementPanelPetitions( ManagementPanel ):
             panel.Sort( self._page_key, self._sort_by.GetChoice() )
             
         
-        HC.pubsub.pub( 'swap_media_panel', self._page_key, panel )
+        HydrusGlobals.pubsub.pub( 'swap_media_panel', self._page_key, panel )
         
     
     def _DrawNumPetitions( self ):
         
-        self._num_petitions_text.SetLabel( HC.ConvertIntToPrettyString( self._num_petitions ) + ' petitions' )
+        self._num_petitions_text.SetLabel( HydrusData.ConvertIntToPrettyString( self._num_petitions ) + ' petitions' )
         
         if self._num_petitions > 0: self._get_petition.Enable()
         else: self._get_petition.Disable()
@@ -2009,7 +2019,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._service.Request( HC.POST, 'update', { 'update' : update } )
         
-        HC.app.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+        wx.GetApp().Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
         
         self._current_petition = None
         
@@ -2072,7 +2082,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         except Exception as e:
             
-            self._num_petitions_text.SetLabel( HC.u( e ) )
+            self._num_petitions_text.SetLabel( HydrusData.ToString( e ) )
             
         
     
@@ -2083,11 +2093,13 @@ class ManagementPanelPetitions( ManagementPanel ):
     
 class ManagementPanelQuery( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_key, show_search = True, initial_predicates = [], starting_from_session = False ):
+    def __init__( self, parent, page, page_key, file_service_key, show_search = True, initial_predicates = None, starting_from_session = False ):
+        
+        if initial_predicates is None: initial_predicates = []
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_key, starting_from_session = starting_from_session )
         
-        self._query_key = HC.JobKey( cancellable = True )
+        self._query_key = HydrusData.JobKey( cancellable = True )
         self._synchronised = True
         self._include_current_tags = True
         self._include_pending_tags = True
@@ -2100,7 +2112,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._current_predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._search_panel, self._page_key, initial_predicates )
             
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_key, HC.COMBINED_TAG_SERVICE_KEY, self._page.GetMedia )
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_key, CC.COMBINED_TAG_SERVICE_KEY, self._page.GetMedia )
             
             self._search_panel.AddF( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._search_panel.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2119,23 +2131,23 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if len( initial_predicates ) > 0 and not starting_from_session: wx.CallAfter( self._DoQuery )
         
-        HC.pubsub.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
-        HC.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
-        HC.pubsub.sub( self, 'ChangeFileRepositoryPubsub', 'change_file_repository' )
-        HC.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
-        HC.pubsub.sub( self, 'IncludeCurrent', 'notify_include_current' )
-        HC.pubsub.sub( self, 'IncludePending', 'notify_include_pending' )
-        HC.pubsub.sub( self, 'SearchImmediately', 'notify_search_immediately' )
-        HC.pubsub.sub( self, 'ShowQuery', 'file_query_done' )
-        HC.pubsub.sub( self, 'RefreshQuery', 'refresh_query' )
-        HC.pubsub.sub( self, 'RemovePredicate', 'remove_predicate' )
+        HydrusGlobals.pubsub.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
+        HydrusGlobals.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
+        HydrusGlobals.pubsub.sub( self, 'ChangeFileRepositoryPubsub', 'change_file_repository' )
+        HydrusGlobals.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
+        HydrusGlobals.pubsub.sub( self, 'IncludeCurrent', 'notify_include_current' )
+        HydrusGlobals.pubsub.sub( self, 'IncludePending', 'notify_include_pending' )
+        HydrusGlobals.pubsub.sub( self, 'SearchImmediately', 'notify_search_immediately' )
+        HydrusGlobals.pubsub.sub( self, 'ShowQuery', 'file_query_done' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshQuery', 'refresh_query' )
+        HydrusGlobals.pubsub.sub( self, 'RemovePredicate', 'remove_predicate' )
         
     
     def _DoQuery( self ):
         
         self._query_key.Cancel()
         
-        self._query_key = HC.JobKey()
+        self._query_key = HydrusData.JobKey()
         
         if self._show_search and self._synchronised:
             
@@ -2150,13 +2162,13 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     search_context = ClientData.FileSearchContext( self._file_service_key, self._tag_service_key, include_current, include_pending, current_predicates )
                     
-                    HC.app.StartFileQuery( self._query_key, search_context )
+                    wx.GetApp().StartFileQuery( self._query_key, search_context )
                     
                     panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, self._file_service_key )
                     
                 else: panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, self._file_service_key )
                 
-                HC.pubsub.pub( 'swap_media_panel', self._page_key, panel )
+                HydrusGlobals.pubsub.pub( 'swap_media_panel', self._page_key, panel )
                 
             except: wx.MessageBox( traceback.format_exc() )
             
@@ -2164,7 +2176,7 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def AddMediaResultsFromQuery( self, query_key, media_results ):
         
-        if query_key == self._query_key: HC.pubsub.pub( 'add_media_results', self._page_key, media_results, append = False )
+        if query_key == self._query_key: HydrusGlobals.pubsub.pub( 'add_media_results', self._page_key, media_results, append = False )
         
     
     def AddPredicate( self, page_key, predicate ): 
@@ -2187,7 +2199,7 @@ class ManagementPanelQuery( ManagementPanel ):
                             else: return
                             
                         
-                    elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_UNTAGGED: predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 0 ) ) )
+                    elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_UNTAGGED: predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 0 ) ) )
                     
                 
                 if self._current_predicates_box.HasPredicate( predicate ): self._current_predicates_box.RemovePredicate( predicate )
@@ -2284,7 +2296,7 @@ class ManagementPanelQuery( ManagementPanel ):
         if page_key == self._page_key:
             
             try: self._searchbox.SetFocus() # there's a chance this doesn't exist!
-            except: HC.pubsub.pub( 'set_media_focus' )
+            except: HydrusGlobals.pubsub.pub( 'set_media_focus' )
             
         
     
@@ -2302,7 +2314,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 panel.Sort( self._page_key, self._sort_by.GetChoice() )
                 
-                HC.pubsub.pub( 'swap_media_panel', self._page_key, panel )
+                HydrusGlobals.pubsub.pub( 'swap_media_panel', self._page_key, panel )
                 
             
         except: wx.MessageBox( traceback.format_exc() )
@@ -2320,7 +2332,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         self._identity = identity
         self._starting_from_session = starting_from_session
         
-        self._query_key = HC.JobKey( cancellable = True )
+        self._query_key = HydrusData.JobKey( cancellable = True )
         
         # sort out push-refresh later
         #self._refresh_inbox = wx.Button( self, label = 'refresh inbox' )
@@ -2356,11 +2368,11 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         
         self.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
-        HC.pubsub.sub( self, 'SearchImmediately', 'notify_search_immediately' )
-        HC.pubsub.sub( self, 'ShowQuery', 'message_query_done' )
-        HC.pubsub.sub( self, 'RefreshQuery', 'refresh_query' )
-        HC.pubsub.sub( self, 'RemovePredicate', 'remove_predicate' )
+        HydrusGlobals.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
+        HydrusGlobals.pubsub.sub( self, 'SearchImmediately', 'notify_search_immediately' )
+        HydrusGlobals.pubsub.sub( self, 'ShowQuery', 'message_query_done' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshQuery', 'refresh_query' )
+        HydrusGlobals.pubsub.sub( self, 'RemovePredicate', 'remove_predicate' )
         
         wx.CallAfter( self._DoQuery )
         
@@ -2373,17 +2385,17 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                HC.pubsub.pub( 'set_conversations', self._page_key, [] )
+                HydrusGlobals.pubsub.pub( 'set_conversations', self._page_key, [] )
                 
                 self._query_key.Cancel()
                 
-                self._query_key = HC.JobKey( cancellable = True )
+                self._query_key = HydrusData.JobKey( cancellable = True )
                 
                 if len( current_predicates ) > 0:
                     
                     search_context = ClientConstantsMessages.MessageSearchContext( self._identity, current_predicates )
                     
-                    HC.app.Read( 'do_message_query', self._query_key, search_context )
+                    wx.GetApp().Read( 'do_message_query', self._query_key, search_context )
                     
                 
             except: wx.MessageBox( traceback.format_exc() )
@@ -2431,7 +2443,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
             
         
     
-    def EventCompose( self, event ): HC.pubsub.pub( 'new_compose_frame', self._identity )
+    def EventCompose( self, event ): HydrusGlobals.pubsub.pub( 'new_compose_frame', self._identity )
     
     def EventRefreshInbox( self, event ):
         
@@ -2472,7 +2484,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         
         try:
             
-            if query_key == self._query_key: HC.pubsub.pub( 'set_conversations', self._page_key, conversations )
+            if query_key == self._query_key: HydrusGlobals.pubsub.pub( 'set_conversations', self._page_key, conversations )
             
         except: wx.MessageBox( traceback.format_exc() )
         

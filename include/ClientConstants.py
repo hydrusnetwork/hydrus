@@ -209,5 +209,16 @@ class GlobalBMPs( object ):
         GlobalBMPs.dump_ok = wx.Image( HC.STATIC_DIR + os.path.sep + 'dump_ok.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
         GlobalBMPs.dump_recoverable = wx.Image( HC.STATIC_DIR + os.path.sep + 'dump_recoverable.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
         GlobalBMPs.dump_fail = wx.Image( HC.STATIC_DIR + os.path.sep + 'dump_fail.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
+
+LOCAL_TAG_SERVICE_KEY = 'local tags'
+
+LOCAL_FILE_SERVICE_KEY = 'local files'
+
+LOCAL_BOORU_SERVICE_KEY = 'local booru'
+
+COMBINED_FILE_SERVICE_KEY = 'all known files'
+
+COMBINED_TAG_SERVICE_KEY = 'all known tags'
+
         
     

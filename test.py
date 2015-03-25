@@ -5,6 +5,7 @@ except: pass
 
 from include import HydrusConstants as HC
 from include import ClientConstants as CC
+from include import HydrusGlobals
 from include import ClientDefaults
 from include import HydrusNetworking
 from include import HydrusSessions
@@ -32,6 +33,7 @@ import wx
 from twisted.internet import reactor
 from include import ClientCaches
 from include import ClientData
+from include import HydrusData
 
 only_run = None
 
@@ -39,13 +41,9 @@ class App( wx.App ):
     
     def OnInit( self ):
         
-        HC.app = self
-        
-        HC.http = HydrusNetworking.HTTPConnectionManager()
-        
         def show_text( text ): pass
         
-        HC.ShowText = show_text
+        HydrusData.ShowText = show_text
         
         self._reads = {}
         
@@ -56,9 +54,9 @@ class App( wx.App ):
         self._reads[ 'options' ] = ClientDefaults.GetClientDefaultOptions()
         
         services = []
-        services.append( ClientData.Service( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, HC.LOCAL_BOORU_SERVICE_KEY, { 'max_monthly_data' : None, 'used_monthly_data' : 0 } ) )
-        services.append( ClientData.Service( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, HC.LOCAL_FILE_SERVICE_KEY, {} ) )
-        services.append( ClientData.Service( HC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, HC.LOCAL_TAG_SERVICE_KEY, {} ) )
+        services.append( ClientData.Service( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, CC.LOCAL_BOORU_SERVICE_KEY, { 'max_monthly_data' : None, 'used_monthly_data' : 0 } ) )
+        services.append( ClientData.Service( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, CC.LOCAL_FILE_SERVICE_KEY, {} ) )
+        services.append( ClientData.Service( CC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, CC.LOCAL_TAG_SERVICE_KEY, {} ) )
         self._reads[ 'services' ] = services
         
         self._reads[ 'sessions' ] = []
@@ -67,7 +65,7 @@ class App( wx.App ):
         self._reads[ 'web_sessions' ] = {}
         
         HC.options = ClientDefaults.GetClientDefaultOptions()
-        HC.pubsub = TestConstants.FakePubSub()
+        HydrusGlobals.pubsub = TestConstants.FakePubSub()
         
         self._writes = collections.defaultdict( list )
         
@@ -168,13 +166,13 @@ if __name__ == '__main__':
         
     else: only_run = None
     
-    old_pubsub = HC.pubsub
+    old_pubsub = HydrusGlobals.pubsub
     
     app = App()
     
-    HC.shutdown = True
+    HydrusGlobals.shutdown = True
     
-    HC.pubsub.WXpubimmediate( 'shutdown' )
+    HydrusGlobals.pubsub.WXpubimmediate( 'shutdown' )
     
     old_pubsub.WXpubimmediate( 'shutdown' )
     

@@ -12,6 +12,7 @@ import traceback
 import wx
 import yaml
 import zlib
+import HydrusGlobals
 
 def AESKeyToText( aes_key, iv ): return ( aes_key + iv ).encode( 'hex' )
 
@@ -248,7 +249,7 @@ class HydrusOTRAccount( potr.context.Account ):
     
     def saveTrusts( self ):
         
-        HC.app.Write( 'otr_trusts', self.name, self.trusts )
+        wx.GetApp().Write( 'otr_trusts', self.name, self.trusts )
         
     
     # I need an accounts manager so there is only ever one copy of an account

@@ -23,6 +23,8 @@ import yaml
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.protocols import amp
+import HydrusData
+import HydrusGlobals
 
 class HydrusAMPCommand( amp.Command ):
     errors = {}
@@ -82,7 +84,7 @@ class MessagingClientProtocol( HydrusAMP ):
         
         def do_it( gumpf ):
             
-            HC.pubsub.pub( 'im_message_received', identifier_from, name_from, identifier_to, name_to, message )
+            HydrusGlobals.pubsub.pub( 'im_message_received', identifier_from, name_from, identifier_to, name_to, message )
             
             return {}
             
@@ -123,7 +125,7 @@ class MessagingServiceProtocol( HydrusAMP ):
             if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
             else: message = 'This server is out of date; please ask its admin to update to the latest release.'
             
-            message = 'Network version mismatch! This server\'s network version is ' + HC.u( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HC.u( network_version ) + '! ' + message
+            message = 'Network version mismatch! This server\'s network version is ' + HydrusData.ToString( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HydrusData.ToString( network_version ) + '! ' + message
             
             raise HydrusExceptions.NetworkVersionException( message )
             
@@ -135,7 +137,7 @@ class MessagingServiceProtocol( HydrusAMP ):
             
             self._check_network_version( network_version )
             
-            session_manager = HC.app.GetManager( 'messaging_sessions' )
+            session_manager = wx.GetApp().GetManager( 'messaging_sessions' )
             
             ( identifier, name ) = session_manager.GetIdentityAndName( self.factory.service_key, session_key )
             
@@ -219,7 +221,7 @@ class MessagingServiceProtocol( HydrusAMP ):
         
         def do_it( gumpf ):
             
-            session_manager = HC.app.GetManager( 'messaging_sessions' )
+            session_manager = wx.GetApp().GetManager( 'messaging_sessions' )
             
             d = deferToThread( session_manager.AddSession, self.factory.service_key, access_key, name )
             

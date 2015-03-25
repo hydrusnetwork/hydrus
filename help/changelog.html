@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 151</h3></li>
+				<ul>
+					<li>added a possible solution to the manage tags dialog next/previous buttons crash</li>
+					<li>completely overhauled temporary file management throughout client and server</li>
+					<li>removed old temp folder</li>
+					<li>copy files to clipboard will now copy the database's exact file paths (rather than copying to a temp folder beforehand), making it a lot quicker</li>
+					<li>the import folders daemon will no longer attempt to import (and hence spam errors about) zero-length files</li>
+					<li>added one-time tag archive sync button to the 'perform a service-wide operation' dialog in review services. this lets you add or delete the archive's tags by namespace</li>
+					<li>revised the tag archive sync code a little so it syncs to non-local files as well, if the hashes can be lined up</li>
+					<li>added hash cross-referencing to archive sync code before maina processing step, often saving a huge amount of time</li>
+					<li>fixed a parsing error with advanced content updates at the gui-end</li>
+					<li>added GetName and IterateHashes to hydrus tag archives</li>
+					<li>added default 'similar to' max hamming distance to file system predicate defaults in client options</li>
+					<li>fixed up the default text display of the file service system predicate</li>
+					<li>added some text to the sort/collect options panel to better explain what the big listbox is for</li>
+					<li>fixed a popup numerical typo when uploading files to a repository</li>
+					<li>fixed an utterly bizarre bug caused by the import files dialog that was screwing up subsequent dialogs' layout and size, apparently by wx voodoo</li>
+					<li>refactored all the functions and classes of hydrusconstants to better locations</li>
+					<li>misc other refactorisation</li>
+					<li>misc cleaning</li>
+					<li>renamed hydrusdownloading to clientdownloading</li>
+					<li>changed all default { } and [ ] parameters to None. I don't think it mattered, but just in case for the future</li>
+					<li>moved some ugly global variable stuff to better places, hoping to do more in future</li>
+					<li>cleaned up many unused imports</li>
+				</ul>
 				<li><h3>version 150</h3></li>
 				<ul>
 					<li>added an 'idle' updating processing mode that churns through tags four times faster but makes gui laggy. it will kick in whenever you haven't done anything in thirty minutes</li>

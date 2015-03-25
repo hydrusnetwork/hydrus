@@ -12,10 +12,14 @@ import shutil
 import sqlite3
 import stat
 import TestConstants
+import tempfile
 import time
 import threading
 import unittest
 import yaml
+import HydrusData
+import ClientSearch
+import HydrusNetworking
 
 class TestClientDB( unittest.TestCase ):
     
@@ -39,12 +43,11 @@ class TestClientDB( unittest.TestCase ):
         self._old_client_files_dir = HC.CLIENT_FILES_DIR
         self._old_client_thumbnails_dir = HC.CLIENT_THUMBNAILS_DIR
         
-        HC.DB_DIR = HC.TEMP_DIR + os.path.sep + os.urandom( 32 ).encode( 'hex' )
+        HC.DB_DIR = tempfile.mkdtemp()
         
         HC.CLIENT_FILES_DIR = HC.DB_DIR + os.path.sep + 'client_files'
         HC.CLIENT_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'client_thumbnails'
         
-        if not os.path.exists( HC.TEMP_DIR ): os.mkdir( HC.TEMP_DIR )
         if not os.path.exists( HC.DB_DIR ): os.mkdir( HC.DB_DIR )
         
         self._db = ClientDB.DB()
@@ -82,7 +85,7 @@ class TestClientDB( unittest.TestCase ):
         
         token = 'token'
         pin = 'pin'
-        timeout = HC.GetNow() + 100000
+        timeout = HydrusData.GetNow() + 100000
         
         self._write( '4chan_pass', ( token, pin, timeout ) )
         
@@ -117,11 +120,11 @@ class TestClientDB( unittest.TestCase ):
         
         content_updates = []
 
-        content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ) )
-        content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
-        content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ) )
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ HC.LOCAL_TAG_SERVICE_KEY ] = content_updates
+        service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = content_updates
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -131,8 +134,8 @@ class TestClientDB( unittest.TestCase ):
         
         preds = set()
         
-        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
-        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
+        preds.add( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
+        preds.add( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
         
         for p in result: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
         
@@ -144,8 +147,8 @@ class TestClientDB( unittest.TestCase ):
         
         preds = set()
         
-        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
-        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
+        preds.add( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
+        preds.add( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
         
         for p in result: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
         
@@ -161,7 +164,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'autocomplete_predicates', half_complete_tag = 'series:c' )
         
-        pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } )
+        pred = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } )
         
         ( read_pred, ) = result
         
@@ -173,7 +176,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'autocomplete_predicates', tag = 'car' )
         
-        pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } )
+        pred = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } )
         
         ( read_pred, ) = result
         
@@ -246,7 +249,7 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_content_updates = {}
         
-        service_keys_to_content_updates[ HC.LOCAL_FILE_SERVICE_KEY ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, ( hash, ) ), )
+        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, ( hash, ) ), )
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -262,7 +265,7 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_content_updates = {}
         
-        service_keys_to_content_updates[ HC.LOCAL_FILE_SERVICE_KEY ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, ( hash, ) ), )
+        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, ( hash, ) ), )
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -304,9 +307,9 @@ class TestClientDB( unittest.TestCase ):
             
             for ( inclusive, namespace, result ) in tests:
                 
-                predicates = [ HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive ) ]
+                predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive ) ]
                 
-                search_context = ClientData.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -318,9 +321,9 @@ class TestClientDB( unittest.TestCase ):
             
             for ( predicate_type, info, result ) in tests:
                 
-                predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( predicate_type, info ) ) ]
+                predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( predicate_type, info ) ) ]
                 
-                search_context = ClientData.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -332,9 +335,9 @@ class TestClientDB( unittest.TestCase ):
             
             for ( inclusive, tag, result ) in tests:
                 
-                predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive ) ]
+                predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive ) ]
                 
-                search_context = ClientData.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -390,10 +393,10 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None, 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.CURRENT, HC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, HC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, HC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.PENDING, HC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
         
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HASH, hash, 1 ) )
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HASH, ( '0123456789abcdef' * 4 ).decode( 'hex' ), 0 ) )
@@ -445,19 +448,19 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ), 1 ) )
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( ( '0123456789abcdef' * 4 ).decode( 'hex' ), 5 ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 0, HC.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5270, HC.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5271, HC.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 5270, HC.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 0, HC.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 5270, HC.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 0, HC.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5270, HC.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5269, HC.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HC.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HC.ConvertUnitToInteger( 'KB' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HC.ConvertUnitToInteger( 'MB' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HC.ConvertUnitToInteger( 'GB' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 0, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 0, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 5270, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 0, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInteger( 'KB' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInteger( 'MB' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInteger( 'GB' ) ), 1 ) )
         
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '<', 201 ), 1 ) )
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '<', 200 ), 0 ) )
@@ -481,8 +484,8 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_content_updates = {}
         
-        service_keys_to_content_updates[ HC.LOCAL_FILE_SERVICE_KEY ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ), )
-        service_keys_to_content_updates[ HC.LOCAL_TAG_SERVICE_KEY ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
+        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ), )
+        service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -530,10 +533,10 @@ class TestClientDB( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
-        content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ HC.LOCAL_TAG_SERVICE_KEY ] = content_updates
+        service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = content_updates
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -559,9 +562,9 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
         
-        service_keys_to_content_updates = { HC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -594,14 +597,14 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'file_system_predicates', HC.LOCAL_FILE_SERVICE_KEY )
+        result = self._read( 'file_system_predicates', CC.LOCAL_FILE_SERVICE_KEY )
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : 1 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : 1 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : 0 } ) )
-        predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : 1 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : 1 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : 0 } ) )
+        predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
         
         self.assertEqual( result, predicates )
         
@@ -612,9 +615,9 @@ class TestClientDB( unittest.TestCase ):
         
         info = []
         
-        info.append( ( 'blank', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [], 'initial_media_results' : [], 'initial_predicates' : [] } ) )
-        info.append( ( 'system', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 8 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.SYSTEM_PREDICATE_ARCHIVE ] } ) )
-        info.append( ( 'tags', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 4 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] } ) )
+        info.append( ( 'blank', 'class_text', ( CC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [], 'initial_media_results' : [], 'initial_predicates' : [] } ) )
+        info.append( ( 'system', 'class_text', ( CC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 8 ) ], 'initial_media_results' : [], 'initial_predicates' : [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] } ) )
+        info.append( ( 'tags', 'class_text', ( CC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 4 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] } ) )
         
         self._write( 'gui_session', 'normal', info )
         
@@ -658,7 +661,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = written_media_result.ToTuple()
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self.assertEqual( mr_hash, hash )
         self.assertEqual( mr_inbox, True )
@@ -769,9 +772,9 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
         
-        service_keys_to_content_updates = { HC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -804,11 +807,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( media_result, ) = self._read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+        ( media_result, ) = self._read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
         
         ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self.assertEqual( mr_hash, hash )
         self.assertEqual( mr_inbox, True )
@@ -823,11 +826,11 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_num_frames, None )
         self.assertEqual( mr_num_words, None )
         
-        ( media_result, ) = self._read( 'media_results_from_ids', HC.LOCAL_FILE_SERVICE_KEY, ( 1, ) )
+        ( media_result, ) = self._read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, ( 1, ) )
         
         ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self.assertEqual( mr_hash, hash )
         self.assertEqual( mr_inbox, True )
@@ -849,7 +852,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'tag_censorship', HC.LOCAL_TAG_SERVICE_KEY )
+        result = self._read( 'tag_censorship', CC.LOCAL_TAG_SERVICE_KEY )
         
         self.assertEqual( result, ( True, [] ) )
         
@@ -857,8 +860,8 @@ class TestClientDB( unittest.TestCase ):
         
         info = []
         
-        info.append( ( HC.LOCAL_TAG_SERVICE_KEY, False, [ ':', 'series:' ] ) )
-        info.append( ( HC.LOCAL_FILE_SERVICE_KEY, True, [ ':' ] ) ) # bit dodgy, but whatever!
+        info.append( ( CC.LOCAL_TAG_SERVICE_KEY, False, [ ':', 'series:' ] ) )
+        info.append( ( CC.LOCAL_FILE_SERVICE_KEY, True, [ ':' ] ) ) # bit dodgy, but whatever!
         
         self._write( 'tag_censorship', info )
         
@@ -868,14 +871,14 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertItemsEqual( result, info )
         
-        result = self._read( 'tag_censorship', HC.LOCAL_TAG_SERVICE_KEY )
+        result = self._read( 'tag_censorship', CC.LOCAL_TAG_SERVICE_KEY )
         
         self.assertEqual( result, ( False, [ ':', 'series:' ] ) )
         
     
     def test_news( self ):
         
-        result = self._read( 'news', HC.LOCAL_TAG_SERVICE_KEY )
+        result = self._read( 'news', CC.LOCAL_TAG_SERVICE_KEY )
         
         self.assertEqual( result, [] )
         
@@ -883,18 +886,18 @@ class TestClientDB( unittest.TestCase ):
         
         news = []
         
-        news.append( ( 'hello', HC.GetNow() - 30000 ) )
-        news.append( ( 'hello again', HC.GetNow() - 20000 ) )
+        news.append( ( 'hello', HydrusData.GetNow() - 30000 ) )
+        news.append( ( 'hello again', HydrusData.GetNow() - 20000 ) )
         
         service_updates = dict()
         
-        service_updates[ HC.LOCAL_TAG_SERVICE_KEY ] = [ HC.ServiceUpdate( HC.SERVICE_UPDATE_NEWS, news ) ]
+        service_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_NEWS, news ) ]
         
         self._write( 'service_updates', service_updates )
         
         #
         
-        result = self._read( 'news', HC.LOCAL_TAG_SERVICE_KEY )
+        result = self._read( 'news', CC.LOCAL_TAG_SERVICE_KEY )
         
         self.assertItemsEqual( result, news )
         
@@ -958,11 +961,11 @@ class TestClientDB( unittest.TestCase ):
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertItemsEqual( { HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
+        self.assertItemsEqual( { CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
         
         #
         
-        result = self._read( 'service_info', HC.LOCAL_FILE_SERVICE_KEY )
+        result = self._read( 'service_info', CC.LOCAL_FILE_SERVICE_KEY )
         
         self.assertEqual( type( result ), dict )
         
@@ -1030,10 +1033,10 @@ class TestClientDB( unittest.TestCase ):
         
         edit_log = []
         
-        edit_log.append( HC.EditLogActionAdd( new_tag_repo ) )
-        edit_log.append( HC.EditLogActionAdd( other_new_tag_repo ) )
-        edit_log.append( HC.EditLogActionAdd( new_local_like ) )
-        edit_log.append( HC.EditLogActionAdd( new_local_numerical ) )
+        edit_log.append( HydrusData.EditLogActionAdd( new_tag_repo ) )
+        edit_log.append( HydrusData.EditLogActionAdd( other_new_tag_repo ) )
+        edit_log.append( HydrusData.EditLogActionAdd( new_local_like ) )
+        edit_log.append( HydrusData.EditLogActionAdd( new_local_numerical ) )
         
         self._write( 'update_services', edit_log )
         
@@ -1057,8 +1060,8 @@ class TestClientDB( unittest.TestCase ):
         
         edit_log = []
         
-        edit_log.append( HC.EditLogActionDelete( new_local_like[0] ) )
-        edit_log.append( HC.EditLogActionEdit( other_new_tag_repo_updated[0], other_new_tag_repo_updated ) )
+        edit_log.append( HydrusData.EditLogActionDelete( new_local_like[0] ) )
+        edit_log.append( HydrusData.EditLogActionEdit( other_new_tag_repo_updated[0], other_new_tag_repo_updated ) )
         
         self._write( 'update_services', edit_log )
         
@@ -1070,7 +1073,7 @@ class TestClientDB( unittest.TestCase ):
         
         edit_log = []
         
-        edit_log.append( HC.EditLogActionDelete( other_new_tag_repo_updated[0] ) )
+        edit_log.append( HydrusData.EditLogActionDelete( other_new_tag_repo_updated[0] ) )
         
         self._write( 'update_services', edit_log )
         
@@ -1085,7 +1088,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, [] )
         
-        session = ( HC.LOCAL_FILE_SERVICE_KEY, os.urandom( 32 ), HC.GetNow() + 100000 )
+        session = ( CC.LOCAL_FILE_SERVICE_KEY, os.urandom( 32 ), HydrusData.GetNow() + 100000 )
         
         self._write( 'hydrus_session', *session )
         
@@ -1099,7 +1102,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, [] )
         
-        session = ( 'website name', [ 'cookie 1', 'cookie 2' ], HC.GetNow() + 100000 )
+        session = ( 'website name', [ 'cookie 1', 'cookie 2' ], HydrusData.GetNow() + 100000 )
         
         self._write( 'web_session', *session )
         
@@ -1133,12 +1136,11 @@ class TestServerDB( unittest.TestCase ):
         self._old_server_files_dir = HC.SERVER_FILES_DIR
         self._old_server_thumbnails_dir = HC.SERVER_THUMBNAILS_DIR
         
-        HC.DB_DIR = HC.TEMP_DIR + os.path.sep + os.urandom( 32 ).encode( 'hex' )
+        HC.DB_DIR = tempfile.mkdtemp()
         
         HC.SERVER_FILES_DIR = HC.DB_DIR + os.path.sep + 'server_files'
         HC.SERVER_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'server_thumbnails'
         
-        if not os.path.exists( HC.TEMP_DIR ): os.mkdir( HC.TEMP_DIR )
         if not os.path.exists( HC.DB_DIR ): os.mkdir( HC.DB_DIR )
         
         self._db = ServerDB.DB()
@@ -1181,7 +1183,7 @@ class TestServerDB( unittest.TestCase ):
         
         #
         
-        user_at = HC.AccountType( 'user', [ HC.GET_DATA, HC.POST_DATA ], ( 50000, 500 ) )
+        user_at = HydrusData.AccountType( 'user', [ HC.GET_DATA, HC.POST_DATA ], ( 50000, 500 ) )
         
         edit_log = [ ( HC.ADD, user_at ) ]
         
@@ -1201,7 +1203,7 @@ class TestServerDB( unittest.TestCase ):
         
         #
         
-        user_at_diff = HC.AccountType( 'user different', [ HC.GET_DATA ], ( 40000, None ) )
+        user_at_diff = HydrusData.AccountType( 'user different', [ HC.GET_DATA ], ( 40000, None ) )
         
         edit_log = [ ( HC.EDIT, ( 'user', user_at_diff ) ) ]
         

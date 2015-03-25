@@ -14,6 +14,10 @@ import wx.combo
 import wx.richtext
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
+import HydrusTags
+import HydrusData
+import ClientSearch
+import HydrusGlobals
 
 TEXT_CUTOFF = 1024
 
@@ -40,7 +44,7 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
         self._timestamp = timestamp
         self._suffix = suffix
         
-        self._last_tick = HC.GetNow()
+        self._last_tick = HydrusData.GetNow()
         
         wx.StaticText.__init__( self, parent, label = self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
         
@@ -54,7 +58,7 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
         
         update = False
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         difference = abs( now - self._timestamp )
         
@@ -233,7 +237,7 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventCloseDropdown( self, event ):
         
-        HC.app.GetGUI().EventExit( event )
+        wx.GetApp().GetGUI().EventExit( event )
         
     
     def EventKeyDown( self, event ):
@@ -372,7 +376,7 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
         self._dropdown_window.SetSizer( vbox )
         
     
-    def _BroadcastChoice( self, predicate ): HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+    def _BroadcastChoice( self, predicate ): HydrusGlobals.pubsub.pub( 'add_predicate', self._page_key, predicate )
     
     def _InitDropDownList( self ): return ListBoxMessagesActiveOnly( self._dropdown_window, self.BroadcastChoice )
     
@@ -383,7 +387,7 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
         if entry.startswith( '-' ): search_term = entry[1:]
         else: search_term = entry
         
-        if search_term == '': matches = HC.app.Read( 'message_system_predicates', self._identity )
+        if search_term == '': matches = wx.GetApp().Read( 'message_system_predicates', self._identity )
         else: matches = [ ( entry, None ) ]
         
         return matches
@@ -414,8 +418,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._file_service_key = file_service_key
         self._tag_service_key = tag_service_key
         
-        file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
-        tag_service = HC.app.GetManager( 'services' ).GetService( self._tag_service_key )
+        file_service = wx.GetApp().GetManager( 'services' ).GetService( self._file_service_key )
+        tag_service = wx.GetApp().GetManager( 'services' ).GetService( self._tag_service_key )
         
         self._file_repo_button = wx.Button( self._dropdown_window, label = file_service.GetName() )
         self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
@@ -432,7 +436,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
 
         self._file_service_key = file_service_key
         
-        file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
+        file_service = wx.GetApp().GetManager( 'services' ).GetService( self._file_service_key )
         
         name = file_service.GetName()
         
@@ -443,7 +447,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
 
         self._tag_service_key = tag_service_key
         
-        tag_service = tag_service = HC.app.GetManager( 'services' ).GetService( self._tag_service_key )
+        tag_service = tag_service = wx.GetApp().GetManager( 'services' ).GetService( self._tag_service_key )
         
         name = tag_service.GetName()
         
@@ -467,11 +471,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventFileButton( self, event ):
         
-        services_manager = HC.app.GetManager( 'services' )
+        services_manager = wx.GetApp().GetManager( 'services' )
         
         services = []
-        services.append( services_manager.GetService( HC.COMBINED_FILE_SERVICE_KEY ) )
-        services.append( services_manager.GetService( HC.LOCAL_FILE_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.LOCAL_FILE_SERVICE_KEY ) )
         services.extend( services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) )
         
         menu = wx.Menu()
@@ -509,11 +513,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventTagButton( self, event ):
         
-        services_manager = HC.app.GetManager( 'services' )
+        services_manager = wx.GetApp().GetManager( 'services' )
         
         services = []
-        services.append( services_manager.GetService( HC.COMBINED_TAG_SERVICE_KEY ) )
-        services.append( services_manager.GetService( HC.LOCAL_TAG_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.COMBINED_TAG_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.LOCAL_TAG_SERVICE_KEY ) )
         services.extend( services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         
         menu = wx.Menu()
@@ -564,26 +568,26 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._dropdown_window.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'SetSynchronisedWait', 'synchronised_wait_switch' )
+        HydrusGlobals.pubsub.sub( self, 'SetSynchronisedWait', 'synchronised_wait_switch' )
         
-        HC.pubsub.sub( self, 'IncludeCurrent', 'notify_include_current' )
-        HC.pubsub.sub( self, 'IncludePending', 'notify_include_pending' )
+        HydrusGlobals.pubsub.sub( self, 'IncludeCurrent', 'notify_include_current' )
+        HydrusGlobals.pubsub.sub( self, 'IncludePending', 'notify_include_pending' )
         
     
-    def _BroadcastChoice( self, predicate ): HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+    def _BroadcastChoice( self, predicate ): HydrusGlobals.pubsub.pub( 'add_predicate', self._page_key, predicate )
     
     def _ChangeFileRepository( self, file_service_key ):
         
         AutoCompleteDropdownTags._ChangeFileRepository( self, file_service_key )
         
-        HC.pubsub.pub( 'change_file_repository', self._page_key, self._file_service_key )
+        HydrusGlobals.pubsub.pub( 'change_file_repository', self._page_key, self._file_service_key )
         
     
     def _ChangeTagRepository( self, tag_service_key ):
         
         AutoCompleteDropdownTags._ChangeTagRepository( self, tag_service_key )
         
-        HC.pubsub.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
+        HydrusGlobals.pubsub.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
         
     
     def _GenerateMatches( self ):
@@ -605,17 +609,17 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             search_text = raw_entry
             
         
-        search_text = HC.CleanTag( search_text )
+        search_text = HydrusTags.CleanTag( search_text )
         
         if search_text == '':
             
             self._cache_text = ''
             self._current_namespace = ''
             
-            if self._file_service_key == HC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service_key
+            if self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service_key
             else: search_service_key = self._file_service_key
             
-            matches = HC.app.Read( 'file_system_predicates', search_service_key )
+            matches = wx.GetApp().Read( 'file_system_predicates', search_service_key )
             
         else:
             
@@ -666,7 +670,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if len( search_text ) < num_autocomplete_chars:
                         
-                        predicates = HC.app.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
+                        predicates = wx.GetApp().Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                         
                     else:
                         
@@ -674,7 +678,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cache_text = search_text
                             
-                            self._cached_results = HC.app.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
+                            self._cached_results = wx.GetApp().Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                             
                         
                         predicates = self._cached_results
@@ -699,8 +703,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
                     pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
                     
-                    current_tags_flat = [ tag for tag in current_tags_flat_iterable if HC.SearchEntryMatchesTag( search_text, tag ) ]
-                    pending_tags_flat = [ tag for tag in pending_tags_flat_iterable if HC.SearchEntryMatchesTag( search_text, tag ) ]
+                    current_tags_flat = [ tag for tag in current_tags_flat_iterable if ClientSearch.SearchEntryMatchesTag( search_text, tag ) ]
+                    pending_tags_flat = [ tag for tag in pending_tags_flat_iterable if ClientSearch.SearchEntryMatchesTag( search_text, tag ) ]
                     
                     current_tags_to_count = collections.Counter( current_tags_flat )
                     pending_tags_to_count = collections.Counter( pending_tags_flat )
@@ -710,18 +714,18 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
                     if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
                     
-                    predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
+                    predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
                     
                 
-                predicates = ClientData.SortPredicates( predicates, collapse_siblings = True )
+                predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = True )
                 
-                matches = ClientData.FilterPredicates( search_text, predicates )
+                matches = ClientSearch.FilterPredicates( search_text, predicates )
                 
             
-            if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
-            if '*' in search_text: matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+            if self._current_namespace != '': matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
+            if '*' in search_text: matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
             
-            entry_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
+            entry_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
             
             try:
                 
@@ -771,7 +775,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._chosen_tag_callable = chosen_tag_callable
         
-        if HC.options[ 'show_all_tags_in_autocomplete' ]: file_service_key = HC.COMBINED_FILE_SERVICE_KEY
+        if HC.options[ 'show_all_tags_in_autocomplete' ]: file_service_key = CC.COMBINED_FILE_SERVICE_KEY
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
         
@@ -795,13 +799,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             tag = predicate.GetValue()
             
-            tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
+            tag_censorship_manager = wx.GetApp().GetManager( 'tag_censorship' )
             
             result = tag_censorship_manager.FilterTags( self._tag_service_key, ( tag, ) )
             
             if len( result ) > 0:
                 
-                tag_parents_manager = HC.app.GetManager( 'tag_parents' )
+                tag_parents_manager = wx.GetApp().GetManager( 'tag_parents' )
                 
                 parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
                 
@@ -818,7 +822,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         raw_entry = self._text_ctrl.GetValue()
         
-        search_text = HC.CleanTag( raw_entry )
+        search_text = HydrusTags.CleanTag( raw_entry )
         
         if search_text == '':
             
@@ -848,7 +852,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if len( search_text ) < num_autocomplete_chars:
                 
-                predicates = HC.app.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
+                predicates = wx.GetApp().Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
                 
             else:
                 
@@ -856,15 +860,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._cache_text = half_complete_tag
                     
-                    self._cached_results = HC.app.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, add_namespaceless = False )
+                    self._cached_results = wx.GetApp().Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, add_namespaceless = False )
                     
                 
                 predicates = self._cached_results
                 
             
-            predicates = ClientData.SortPredicates( predicates, collapse_siblings = False )
+            predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = False )
             
-            matches = ClientData.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = True )
+            matches = ClientSearch.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = True )
             
             # do the 'put whatever they typed in at the top, whether it has count or not'
             # now with sibling support!
@@ -873,13 +877,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             top_predicates = []
             
-            top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, search_text ) )
+            top_predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text ) )
             
-            siblings_manager = HC.app.GetManager( 'tag_siblings' )
+            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
             
             sibling = siblings_manager.GetSibling( search_text )
             
-            if sibling is not None: top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, sibling ) )
+            if sibling is not None: top_predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, sibling ) )
             
             for predicate in top_predicates:
                 
@@ -908,11 +912,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         tag = predicate.GetValue()
                         
-                        parents_manager = HC.app.GetManager( 'tag_parents' )
+                        parents_manager = wx.GetApp().GetManager( 'tag_parents' )
                         
                         raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
                         
-                        parents = [ HC.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
+                        parents = [ HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
                         
                     
                 
@@ -1002,7 +1006,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         collect_types = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in collect_types ] )
         collect_types.sort()
         
-        ratings_services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for ratings_service in ratings_services: collect_types.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey() ) ) )
         
@@ -1034,7 +1038,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
             self._collect_by = None
             
         
-        HC.pubsub.pub( 'collect_media', self._page_key, self._collect_by )
+        HydrusGlobals.pubsub.pub( 'collect_media', self._page_key, self._collect_by )
         
     
     class _Popup( wx.combo.ComboPopup ):
@@ -1139,7 +1143,7 @@ class ChoiceSort( BetterChoice ):
         
         sort_choices = CC.SORT_CHOICES + sort_by
         
-        ratings_services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for ratings_service in ratings_services:
             
@@ -1172,7 +1176,7 @@ class ChoiceSort( BetterChoice ):
         
         self.Bind( wx.EVT_CHOICE, self.EventChoice )
         
-        HC.pubsub.sub( self, 'ACollectHappened', 'collect_media' )
+        HydrusGlobals.pubsub.sub( self, 'ACollectHappened', 'collect_media' )
         
     
     def _BroadcastSort( self ):
@@ -1183,7 +1187,7 @@ class ChoiceSort( BetterChoice ):
             
             sort_by = self.GetClientData( selection )
             
-            HC.pubsub.pub( 'sort_media', self._page_key, sort_by )
+            HydrusGlobals.pubsub.pub( 'sort_media', self._page_key, sort_by )
             
         
     
@@ -1226,7 +1230,7 @@ class ExportPatternButton( wx.Button ):
         if id == self.ID_TAG: phrase = '(...)'
         else: event.Skip()
         
-        if phrase is not None: HC.pubsub.pub( 'clipboard', 'text', phrase )
+        if phrase is not None: HydrusGlobals.pubsub.pub( 'clipboard', 'text', phrase )
         
     
     def EventButton( self, event ):
@@ -2005,7 +2009,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                HC.pubsub.pub( 'clipboard', 'text', term )
+                HydrusGlobals.pubsub.pub( 'clipboard', 'text', term )
                 
             elif command == 'copy_sub_term':
                 
@@ -2013,7 +2017,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 sub_term = term.split( ':', 1 )[1]
                 
-                HC.pubsub.pub( 'clipboard', 'text', sub_term )
+                HydrusGlobals.pubsub.pub( 'clipboard', 'text', sub_term )
                 
             else:
                 
@@ -2175,7 +2179,7 @@ class ListBoxMessagesActiveOnly( ListBoxMessages ):
             for ( term, count ) in matches:
                 
                 if count is None: term_string = term
-                else: term_string = term + ' (' + HC.ConvertIntToPrettyString( count ) + ')'
+                else: term_string = term + ' (' + HydrusData.ConvertIntToPrettyString( count ) + ')'
                 
                 self._ordered_strings.append( term_string )
                 self._strings_to_terms[ term_string ] = term
@@ -2189,7 +2193,9 @@ class ListBoxMessagesActiveOnly( ListBoxMessages ):
     
 class ListBoxMessagesPredicates( ListBoxMessages ):
     
-    def __init__( self, parent, page_key, initial_predicates = [] ):
+    def __init__( self, parent, page_key, initial_predicates = None ):
+        
+        if initial_predicates is None: initial_predicates = []
         
         ListBoxMessages.__init__( self, parent )
         
@@ -2207,7 +2213,7 @@ class ListBoxMessagesPredicates( ListBoxMessages ):
             
         
     
-    def _Activate( self, s, term ): HC.pubsub.pub( 'remove_predicate', self._page_key, term )
+    def _Activate( self, s, term ): HydrusGlobals.pubsub.pub( 'remove_predicate', self._page_key, term )
     
     def ActivatePredicate( self, term ):
         
@@ -2301,32 +2307,32 @@ class ListBoxTags( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HC.Predicate: s = term.GetUnicode()
+                if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
-                HC.pubsub.pub( 'clipboard', 'text', s )
+                HydrusGlobals.pubsub.pub( 'clipboard', 'text', s )
                 
             elif command == 'copy_sub_term':
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HC.Predicate: s = term.GetUnicode()
+                if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
                 sub_s = s.split( ':', 1 )[1]
                 
-                HC.pubsub.pub( 'clipboard', 'text', sub_s )
+                HydrusGlobals.pubsub.pub( 'clipboard', 'text', sub_s )
                 
-            elif command == 'copy_all_tags': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
-            elif command == 'copy_all_tags_with_counts': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
+            elif command == 'copy_all_tags': HydrusGlobals.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
+            elif command == 'copy_all_tags_with_counts': HydrusGlobals.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
             elif command == 'new_search_page_with_term':
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HC.Predicate: predicate = term
-                else: predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, term )
+                if type( term ) == HydrusData.Predicate: predicate = term
+                else: predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, term )
                 
-                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ predicate ] )
+                HydrusGlobals.pubsub.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ predicate ] )
                 
             elif command in ( 'parent', 'sibling' ):
                 
@@ -2366,7 +2372,7 @@ class ListBoxTags( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HC.Predicate: s = term.GetUnicode()
+                if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
                 menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_search_page_with_term' ), 'open a new search page for "' + s + '"' )
@@ -2381,7 +2387,7 @@ class ListBoxTags( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HC.Predicate: s = term.GetUnicode()
+                if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
                 menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + s + '"' )
@@ -2656,7 +2662,7 @@ class ListBoxTagsStrings( ListBoxTags ):
         
         self._strings_to_terms = {}
         
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
         
         for tag in self._tags:
             
@@ -2690,7 +2696,9 @@ class ListBoxTagsStrings( ListBoxTags ):
             
         
     
-    def AddTag( self, tag, parents = [] ):
+    def AddTag( self, tag, parents = None ):
+        
+        if parents is None: parents = []
         
         if tag in self._tags: self._tags.discard( tag )
         else:
@@ -2729,7 +2737,9 @@ class ListBoxTagsPredicates( ListBoxTags ):
     
     has_counts = False
     
-    def __init__( self, parent, page_key, initial_predicates = [] ):
+    def __init__( self, parent, page_key, initial_predicates = None ):
+        
+        if initial_predicates is None: initial_predicates = []
         
         ListBoxTags.__init__( self, parent, min_height = 100 )
         
@@ -2749,7 +2759,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
         
     
-    def _Activate( self, s, term ): HC.pubsub.pub( 'remove_predicate', self._page_key, term )
+    def _Activate( self, s, term ): HydrusGlobals.pubsub.pub( 'remove_predicate', self._page_key, term )
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
@@ -2762,14 +2772,14 @@ class ListBoxTagsPredicates( ListBoxTags ):
         
         predicate_string = predicate.GetUnicode()
         
-        inbox_predicate = HC.SYSTEM_PREDICATE_INBOX
-        archive_predicate = HC.SYSTEM_PREDICATE_ARCHIVE
+        inbox_predicate = ClientSearch.SYSTEM_PREDICATE_INBOX
+        archive_predicate = ClientSearch.SYSTEM_PREDICATE_ARCHIVE
         
         if predicate == inbox_predicate and self.HasPredicate( archive_predicate ): self.RemovePredicate( archive_predicate )
         elif predicate == archive_predicate and self.HasPredicate( inbox_predicate ): self.RemovePredicate( inbox_predicate )
         
-        local_predicate = HC.SYSTEM_PREDICATE_LOCAL
-        not_local_predicate = HC.SYSTEM_PREDICATE_NOT_LOCAL
+        local_predicate = ClientSearch.SYSTEM_PREDICATE_LOCAL
+        not_local_predicate = ClientSearch.SYSTEM_PREDICATE_NOT_LOCAL
         
         if predicate == local_predicate and self.HasPredicate( not_local_predicate ): self.RemovePredicate( not_local_predicate )
         elif predicate == not_local_predicate and self.HasPredicate( local_predicate ): self.RemovePredicate( local_predicate )
@@ -2814,7 +2824,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         self._last_media = set()
         
-        self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
+        self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
         
         self._collapse_siblings = collapse_siblings
         
@@ -2837,7 +2847,7 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def _RecalcStrings( self ):
         
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
         
         all_tags = set()
         
@@ -2853,10 +2863,10 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             tag_string = tag
             
-            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
-            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
-            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
-            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HC.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
+            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HydrusData.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
+            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HydrusData.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
+            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HydrusData.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HydrusData.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
             
             if not self._collapse_siblings:
                 
@@ -2910,7 +2920,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         if self._collapse_siblings:
             
-            siblings_manager = HC.app.GetManager( 'tag_siblings' )
+            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
             
             current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
             deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
@@ -2955,7 +2965,7 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             if self._collapse_siblings:
                 
-                siblings_manager = HC.app.GetManager( 'tag_siblings' )
+                siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
                 
                 current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
                 deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
@@ -3007,15 +3017,15 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         
         self._page_key = page_key
         
-        HC.pubsub.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
-        HC.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
+        HydrusGlobals.pubsub.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
+        HydrusGlobals.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
         
     
     def _Activate( self, s, term ):
         
-        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, term )
+        predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, term )
         
-        HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        HydrusGlobals.pubsub.pub( 'add_predicate', self._page_key, predicate )
         
     
     def ChangeTagRepositoryPubsub( self, page_key, service_key ):
@@ -3179,7 +3189,7 @@ class OnOffButton( wx.Button ):
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         
-        HC.pubsub.sub( self, 'HitButton', 'hit_on_off_button' )
+        HydrusGlobals.pubsub.sub( self, 'HitButton', 'hit_on_off_button' )
         
     
     def EventButton( self, event ):
@@ -3192,7 +3202,7 @@ class OnOffButton( wx.Button ):
             
             self.SetForegroundColour( ( 128, 0, 0 ) )
             
-            HC.pubsub.pub( self._topic, self._page_key, False )
+            HydrusGlobals.pubsub.pub( self._topic, self._page_key, False )
             
         else:
             
@@ -3202,7 +3212,7 @@ class OnOffButton( wx.Button ):
             
             self.SetForegroundColour( ( 0, 128, 0 ) )
             
-            HC.pubsub.pub( self._topic, self._page_key, True )
+            HydrusGlobals.pubsub.pub( self._topic, self._page_key, True )
             
         
     
@@ -3246,7 +3256,7 @@ class PopupDismissAll( PopupWindow ):
     
     def EventButton( self, event ): self.GetParent().DismissAll()
     
-    def SetNumMessages( self, num_messages_pending ): self._text.SetLabel( HC.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
+    def SetNumMessages( self, num_messages_pending ): self._text.SetLabel( HydrusData.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
     
 class PopupMessage( PopupWindow ):
     
@@ -3376,7 +3386,7 @@ class PopupMessage( PopupWindow ):
         self._cancel_button.Disable()
         
     
-    def EventCopyTBButton( self, event ): HC.pubsub.pub( 'clipboard', 'text', HC.ConvertJobKeyToString( self._job_key ) )
+    def EventCopyTBButton( self, event ): HydrusGlobals.pubsub.pub( 'clipboard', 'text', self._job_key.ToString() )
     
     def EventPauseButton( self, event ):
         
@@ -3434,9 +3444,9 @@ class PopupMessage( PopupWindow ):
         
         hashes = self._job_key.GetVariable( 'popup_message_files' )
         
-        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
+        media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
         
-        HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+        HydrusGlobals.pubsub.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
         
     
     def EventShowTBButton( self, event ):
@@ -3486,7 +3496,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_message_text_1' )
             
-            if self._text_1.GetLabel() != text: self._text_1.SetLabel( self._ProcessText( HC.u( text ) ) )
+            if self._text_1.GetLabel() != text: self._text_1.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
             self._text_1.Show()
             
@@ -3511,7 +3521,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_message_text_2' )
             
-            if self._text_2.GetLabel() != text: self._text_2.SetLabel( self._ProcessText( HC.u( text ) ) )
+            if self._text_2.GetLabel() != text: self._text_2.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
             self._text_2.Show()
             
@@ -3536,7 +3546,7 @@ class PopupMessage( PopupWindow ):
             
             hashes = self._job_key.GetVariable( 'popup_message_files' )
             
-            text = 'show ' + HC.ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            text = 'show ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
             
             if self._show_files_button.GetLabel() != text: self._show_files_button.SetLabel( text )
             
@@ -3551,7 +3561,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_message_traceback' )
             
-            if self._tb_text.GetLabel() != text: self._tb_text.SetLabel( self._ProcessText( HC.u( text ) ) )
+            if self._tb_text.GetLabel() != text: self._tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
             self._show_tb_button.Show()
             
@@ -3565,7 +3575,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_message_caller_traceback' )
             
-            if self._caller_tb_text.GetLabel() != text: self._caller_tb_text.SetLabel( self._ProcessText( HC.u( text ) ) )
+            if self._caller_tb_text.GetLabel() != text: self._caller_tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
             self._show_caller_tb_button.Show()
             
@@ -3579,7 +3589,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_message_db_traceback' )
             
-            if self._db_tb_text.GetLabel() != text: self._db_tb_text.SetLabel( self._ProcessText( HC.u( text ) ) )
+            if self._db_tb_text.GetLabel() != text: self._db_tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
             self._show_db_tb_button.Show()
             
@@ -3625,14 +3635,14 @@ class PopupMessageManager( wx.Frame ):
         
         self._SizeAndPositionAndShow()
         
-        HC.pubsub.sub( self, 'AddMessage', 'message' )
+        HydrusGlobals.pubsub.sub( self, 'AddMessage', 'message' )
         
         self._old_excepthook = sys.excepthook
-        self._old_show_exception = HC.ShowException
+        self._old_show_exception = HydrusData.ShowException
         
         sys.excepthook = ClientData.CatchExceptionClient
-        HC.ShowException = ClientData.ShowExceptionClient
-        HC.ShowText = ClientData.ShowTextClient
+        HydrusData.ShowException = ClientData.ShowExceptionClient
+        HydrusData.ShowText = ClientData.ShowTextClient
         
         self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_POPUP )
         
@@ -3671,7 +3681,7 @@ class PopupMessageManager( wx.Frame ):
     
     def _PrintMessage( self, job_key ):
         
-        text = HC.ConvertJobKeyToString( job_key )
+        text = job_key.ToString()
         
         try: print( text )
         except: print( repr( text ) )
@@ -3738,7 +3748,7 @@ class PopupMessageManager( wx.Frame ):
         
         sys.excepthook = self._old_excepthook
         
-        HC.ShowException = self._old_show_exception
+        HydrusData.ShowException = self._old_show_exception
         
     
     def Dismiss( self, window ):
@@ -3779,7 +3789,7 @@ class PopupMessageManager( wx.Frame ):
     
     def TIMEREvent( self, event ):
         
-        if HC.shutdown:
+        if HydrusGlobals.shutdown:
             
             self.Destroy()
             
@@ -3921,7 +3931,7 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_FILENAME: phrase = r'(?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)'
         else: event.Skip()
         
-        if phrase is not None: HC.pubsub.pub( 'clipboard', 'text', phrase )
+        if phrase is not None: HydrusGlobals.pubsub.pub( 'clipboard', 'text', phrase )
         
     
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
@@ -4108,7 +4118,7 @@ class Shortcut( wx.TextCtrl ):
             elif event.CmdDown(): modifier = wx.ACCEL_CTRL
             elif event.ShiftDown(): modifier = wx.ACCEL_SHIFT
             
-            ( self._modifier, self._key ) = HC.GetShortcutFromEvent( event )
+            ( self._modifier, self._key ) = ClientData.GetShortcutFromEvent( event )
             
             self._SetShortcutString()
         
@@ -4247,7 +4257,7 @@ class ShowKeys( Frame ):
         elif key_type == 'access': title = 'Access Keys'
         
         # give it no parent, so this doesn't close when the dialog is closed!
-        Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( title ) )
+        Frame.__init__( self, None, title = wx.GetApp().PrepStringForDisplay( title ) )
         
         self._key_type = key_type
         self._keys = keys

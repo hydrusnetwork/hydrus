@@ -6,6 +6,9 @@ import HydrusNetworking
 import os
 import TestConstants
 import unittest
+import HydrusData
+import HydrusGlobals
+import wx
 
 class TestFunctions( unittest.TestCase ):
     
@@ -74,7 +77,7 @@ class TestManagers( unittest.TestCase ):
         services.append( repo )
         services.append( other )
         
-        HC.app.SetRead( 'services', services )
+        wx.GetApp().SetRead( 'services', services )
         
         services_manager = ClientData.ServicesManager()
         
@@ -100,7 +103,7 @@ class TestManagers( unittest.TestCase ):
         
         services.append( repo )
         
-        HC.app.SetRead( 'services', services )
+        wx.GetApp().SetRead( 'services', services )
         
         services_manager.RefreshServices()
         
@@ -113,12 +116,12 @@ class TestManagers( unittest.TestCase ):
         hash_2 = os.urandom( 32 )
         hash_3 = os.urandom( 32 )
         
-        command_1 = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
-        command_2 = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }
-        command_3 = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) ] }
+        command_1 = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
+        command_2 = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }
+        command_3 = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) ] }
         
-        command_1_inverted = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
-        command_2_inverted = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
+        command_1_inverted = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
+        command_2_inverted = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
         
         undo_manager = ClientData.UndoManager()
         
@@ -136,21 +139,21 @@ class TestManagers( unittest.TestCase ):
         
         self.assertEqual( ( u'undo local files->archive 1 files', u'redo local files->inbox 1 files' ), undo_manager.GetUndoRedoStrings() )
         
-        self.assertEqual( HC.app.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        self.assertEqual( wx.GetApp().GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
         
         undo_manager.Redo()
         
-        self.assertEqual( HC.app.GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
+        self.assertEqual( wx.GetApp().GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
         
         self.assertEqual( ( u'undo local files->inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
         
         undo_manager.Undo()
         
-        self.assertEqual( HC.app.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        self.assertEqual( wx.GetApp().GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
         
         undo_manager.Undo()
         
-        self.assertEqual( HC.app.GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
+        self.assertEqual( wx.GetApp().GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
         
         self.assertEqual( ( None, u'redo local files->archive 1 files' ), undo_manager.GetUndoRedoStrings() )
         

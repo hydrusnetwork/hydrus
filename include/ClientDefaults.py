@@ -43,6 +43,7 @@ def GetClientDefaultOptions():
     system_predicates[ 'size' ] = ( 0, 200, 1 )
     system_predicates[ 'width' ] = ( 1, 1920 )
     system_predicates[ 'num_words' ] = ( 0, 30000 )
+    system_predicates[ 'hamming_distance' ] = 5
     
     options[ 'file_system_predicates' ] = system_predicates
     
@@ -139,7 +140,7 @@ def GetClientDefaultOptions():
     
     options[ 'confirm_client_exit' ] = False
     
-    options[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_KEY
+    options[ 'default_tag_repository' ] = CC.LOCAL_TAG_SERVICE_KEY
     options[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
     
     options[ 'pause_export_folders_sync' ] = False

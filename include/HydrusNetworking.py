@@ -9,6 +9,10 @@ import time
 import urllib
 import urlparse
 import yaml
+import wx
+import HydrusData
+import itertools
+import HydrusGlobals
 
 def AddHydrusCredentialsToHeaders( credentials, request_headers ):
     
@@ -22,7 +26,7 @@ def AddHydrusCredentialsToHeaders( credentials, request_headers ):
     
 def AddHydrusSessionKeyToHeaders( service_key, request_headers ):
     
-    session_manager = HC.app.GetManager( 'hydrus_sessions' )
+    session_manager = wx.GetApp().GetManager( 'hydrus_sessions' )
     
     session_key = session_manager.GetSessionKey( service_key )
     
@@ -38,7 +42,7 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
     
     if 'server' not in response_headers or service_string not in response_headers[ 'server' ]:
         
-        HC.app.Write( 'service_updates', { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] })
+        wx.GetApp().Write( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HydrusData.GetUnknownAccount() ) ] })
         
         raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
         
@@ -54,7 +58,7 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
         if network_version > HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
         else: message = 'The server is out of date; please ask its admin to update to the latest release.'
         
-        raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + HC.u( network_version ) + ', whereas your client\'s is ' + HC.u( HC.NETWORK_VERSION ) + '! ' + message )
+        raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + HydrusData.ToString( network_version ) + ', whereas your client\'s is ' + HydrusData.ToString( HC.NETWORK_VERSION ) + '! ' + message )
         
     
 def ConvertHydrusGETArgsToQuery( request_args ):
@@ -83,24 +87,53 @@ def ConvertHydrusGETArgsToQuery( request_args ):
         request_args[ 'title' ] = request_args[ 'title' ].encode( 'hex' )
         
     
-    query = '&'.join( [ key + '=' + HC.u( value ) for ( key, value ) in request_args.items() ] )
+    query = '&'.join( [ key + '=' + HydrusData.ToString( value ) for ( key, value ) in request_args.items() ] )
     
     return query
     
 def DoHydrusBandwidth( service_key, method, command, size ):
     
-    try: service = HC.app.GetManager( 'services' ).GetService( service_key )
+    try: service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
     except: return
     
     service_type = service.GetServiceType()
     
-    if ( service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HC.pubsub.pub( 'service_updates_delayed', { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, size ) ] } )
+    if ( service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HydrusGlobals.pubsub.pub( 'service_updates_delayed', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, size ) ] } )
+    
+def GenerateDumpMultipartFormDataCTAndBody( fields ):
+    
+    m = multipart.Multipart()
+    
+    for ( name, field_type, value ) in fields:
+        
+        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ): m.field( name, HydrusData.ToBytes( value ) )
+        elif field_type == CC.FIELD_CHECKBOX:
+            
+            if value:
+                
+                # spoiler/on -> name : spoiler, value : on
+                # we don't say true/false for checkboxes
+                
+                ( name, value ) = name.split( '/', 1 )
+                
+                m.field( name, value )
+                
+            
+        elif field_type == CC.FIELD_FILE:
+            
+            ( hash, mime, file ) = value
+            
+            m.file( name, hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ], file, { 'Content-Type' : HC.mime_string_lookup[ mime ] } )
+            
+        
+    
+    return m.get()
     
 def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
     m = multipart.Multipart()
     
-    for ( name, value ) in fields.items(): m.field( name, HC.b( value ) )
+    for ( name, value ) in fields.items(): m.field( name, HydrusData.ToBytes( value ) )
     
     return m.get()
     
@@ -144,7 +177,9 @@ class HTTPConnectionManager( object ):
         threading.Thread( target = self.DAEMONMaintainConnections, name = 'Maintain Connections' ).start()
         
     
-    def _DoRequest( self, method, location, path, query, request_headers, body, follow_redirects = True, report_hooks = [], response_to_path = False, num_redirects_permitted = 4, long_timeout = False ):
+    def _DoRequest( self, method, location, path, query, request_headers, body, follow_redirects = True, report_hooks = None, temp_path = None, num_redirects_permitted = 4, long_timeout = False ):
+        
+        if report_hooks is None: report_hooks = []
         
         connection = self._GetConnection( location, long_timeout )
         
@@ -155,7 +190,7 @@ class HTTPConnectionManager( object ):
             
             with connection.lock:
                 
-                ( parsed_response, redirect_info, size_of_response, response_headers, cookies ) = connection.Request( method, path_and_query, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path )
+                ( parsed_response, redirect_info, size_of_response, response_headers, cookies ) = connection.Request( method, path_and_query, request_headers, body, report_hooks = report_hooks, temp_path = temp_path )
                 
             
             if redirect_info is None or not follow_redirects: return ( parsed_response, size_of_response, response_headers, cookies )
@@ -169,7 +204,7 @@ class HTTPConnectionManager( object ):
                 
                 if new_location is None: new_location = location
                 
-                return self._DoRequest( new_method, new_location, new_path, new_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, response_to_path = response_to_path, num_redirects_permitted = num_redirects_permitted - 1, long_timeout = long_timeout )
+                return self._DoRequest( new_method, new_location, new_path, new_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path, num_redirects_permitted = num_redirects_permitted - 1, long_timeout = long_timeout )
                 
             
         except:
@@ -199,13 +234,15 @@ class HTTPConnectionManager( object ):
             
         
     
-    def Request( self, method, url, request_headers = {}, body = '', return_everything = False, return_cookies = False, report_hooks = [], response_to_path = False, long_timeout = False ):
+    def Request( self, method, url, request_headers = None, body = '', return_everything = False, return_cookies = False, report_hooks = None, temp_path = None, long_timeout = False ):
+        
+        if request_headers is None: request_headers = {}
         
         ( location, path, query ) = ParseURL( url )
         
         follow_redirects = not return_cookies
         
-        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( method, location, path, query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, response_to_path = response_to_path, long_timeout = long_timeout )
+        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( method, location, path, query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path, long_timeout = long_timeout )
         
         if return_everything: return ( response, size_of_response, response_headers, cookies )
         elif return_cookies: return ( response, cookies )
@@ -214,13 +251,15 @@ class HTTPConnectionManager( object ):
     
     def DAEMONMaintainConnections( self ):
         
+        time.sleep( 1 )
+        
         while True:
             
-            if HC.shutdown: break
+            if HydrusGlobals.shutdown: break
             
             last_checked = 0
             
-            if HC.GetNow() - last_checked > 30:
+            if HydrusData.GetNow() - last_checked > 30:
                 
                 with self._lock:
                     
@@ -237,7 +276,7 @@ class HTTPConnectionManager( object ):
                         
                     
                 
-                last_checked = HC.GetNow()
+                last_checked = HydrusData.GetNow()
                 
             
             time.sleep( 1 )
@@ -257,7 +296,7 @@ class HTTPConnection( object ):
         
         self.lock = threading.Lock()
         
-        self._last_request_time = HC.GetNow()
+        self._last_request_time = HydrusData.GetNow()
         
         self._RefreshConnection()
         
@@ -297,9 +336,9 @@ class HTTPConnection( object ):
         
         data = ''
         
-        for block in HC.ReadFileLikeAsBlocks( response, self.read_block_size ):
+        for block in HydrusData.ReadFileLikeAsBlocks( response, self.read_block_size ):
             
-            if HC.shutdown: raise Exception( 'Application is shutting down!' )
+            if HydrusGlobals.shutdown: raise Exception( 'Application is shutting down!' )
             
             data += block
             
@@ -338,7 +377,7 @@ class HTTPConnection( object ):
                 try: parsed_response = yaml.safe_load( data )
                 except Exception as e:
                     
-                    raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HC.u( e ) )
+                    raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HydrusData.ToString( e ) )
                     
                 
             elif content_type == 'text/html':
@@ -358,24 +397,22 @@ class HTTPConnection( object ):
         elif self._scheme == 'https': self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout )
         
         try: self._connection.connect()
-        except: raise Exception( 'Could not connect to ' + HC.u( self._host ) + '!' )
+        except: raise Exception( 'Could not connect to ' + HydrusData.ToString( self._host ) + '!' )
         
     
-    def _WriteResponseToPath( self, response, report_hooks ):
+    def _WriteResponseToPath( self, response, temp_path, report_hooks ):
         
         content_length = response.getheader( 'Content-Length' )
         
         if content_length is not None: content_length = int( content_length )
         
-        temp_path = HC.GetTempPath()
-        
         size_of_response = 0
         
         with open( temp_path, 'wb' ) as f:
             
-            for block in HC.ReadFileLikeAsBlocks( response, self.read_block_size ):
+            for block in HydrusData.ReadFileLikeAsBlocks( response, self.read_block_size ):
                 
-                if HC.shutdown: raise Exception( 'Application is shutting down!' )
+                if HydrusGlobals.shutdown: raise Exception( 'Application is shutting down!' )
                 
                 size_of_response += len( block )
                 
@@ -393,22 +430,24 @@ class HTTPConnection( object ):
                 
             
         
-        return ( temp_path, size_of_response )
+        return size_of_response
         
     
     def IsStale( self ):
         
-        time_since_last_request = HC.GetNow() - self._last_request_time
+        time_since_last_request = HydrusData.GetNow() - self._last_request_time
         
         return time_since_last_request > self._timeout
         
     
-    def Request( self, method, path_and_query, request_headers, body, report_hooks = [], response_to_path = False ):
+    def Request( self, method, path_and_query, request_headers, body, report_hooks = None, temp_path = None ):
+        
+        if report_hooks is None: report_hooks = []
         
         if method == HC.GET: method_string = 'GET'
         elif method == HC.POST: method_string = 'POST'
         
-        if 'User-Agent' not in request_headers: request_headers[ 'User-Agent' ] = 'hydrus/' + HC.u( HC.NETWORK_VERSION )
+        if 'User-Agent' not in request_headers: request_headers[ 'User-Agent' ] = 'hydrus/' + HydrusData.ToString( HC.NETWORK_VERSION )
         
         # it is important to only send str, not unicode, to httplib
         # it uses += to extend the message body, which propagates the unicode (and thus fails) when
@@ -436,11 +475,11 @@ class HTTPConnection( object ):
             response = self._connection.getresponse()
             
         
-        if response.status == 200 and response_to_path:
+        if response.status == 200 and temp_path is not None:
             
-            ( temp_path, size_of_response ) = self._WriteResponseToPath( response, report_hooks )
+            size_of_response = self._WriteResponseToPath( response, temp_path, report_hooks )
             
-            parsed_response = temp_path
+            parsed_response = 'response written to temporary file'
             
         else:
             
@@ -451,14 +490,14 @@ class HTTPConnection( object ):
         
         cookies = self._ParseCookies( response.getheader( 'set-cookie' ) )
         
-        self._last_request_time = HC.GetNow()
+        self._last_request_time = HydrusData.GetNow()
         
         if response.status == 200: return ( parsed_response, None, size_of_response, response_headers, cookies )
         elif response.status in ( 301, 302, 303, 307 ):
             
             location = response.getheader( 'Location' )
             
-            if location is None: raise Exception( parsed_response )
+            if location is None: raise Exception( 'Received an invalid redirection response.' )
             else:
                 
                 url = location
@@ -507,36 +546,7 @@ class HTTPConnection( object ):
             elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
             elif response.status in ( 500, 501, 502, 503 ): raise Exception( parsed_response )
             else: raise Exception( parsed_response )
-
-def GenerateDumpMultipartFormDataCTAndBody( fields ):
-    
-    m = multipart.Multipart()
-    
-    for ( name, field_type, value ) in fields:
-        
-        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ): m.field( name, HC.b( value ) )
-        elif field_type == CC.FIELD_CHECKBOX:
-            
-            if value: 
-                
-                # spoiler/on -> name : spoiler, value : on
-                # we don't say true/false for checkboxes
-                
-                ( name, value ) = name.split( '/', 1 )
-                
-                m.field( name, value )
-                
-            
-        elif field_type == CC.FIELD_FILE:
-            
-            ( hash, mime, file ) = value
-            
-            m.file( name, hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ], file, { 'Content-Type' : HC.mime_string_lookup[ mime ] } )
             
         
     
-    return m.get()
-    
-            
-        
     

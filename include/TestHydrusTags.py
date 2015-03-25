@@ -4,6 +4,12 @@ import HydrusTags
 import os
 import TestConstants
 import unittest
+import HydrusData
+import ClientData
+import ClientConstants
+import ClientSearch
+import HydrusGlobals
+import wx
 
 class TestMergeTagsManagers( unittest.TestCase ):
     
@@ -15,7 +21,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         #
         
-        service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
         service_keys_to_statuses_to_tags[ first ][ HC.CURRENT ] = { 'current_1', 'series:blame!' }
         
@@ -33,7 +39,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         #
         
-        service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
         service_keys_to_statuses_to_tags[ first ][ HC.CURRENT ] = { 'current_2', 'series:blame!', 'chapter:1' }
         service_keys_to_statuses_to_tags[ first ][ HC.DELETED ] = { 'deleted_2' }
@@ -49,7 +55,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         #
         
-        service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
         service_keys_to_statuses_to_tags[ second ][ HC.CURRENT ] = { 'page:4', 'page:5' }
         service_keys_to_statuses_to_tags[ second ][ HC.PENDING ] = { 'title:double page spread' }
@@ -82,7 +88,7 @@ class TestTagsManager( unittest.TestCase ):
         self._second_key = os.urandom( 32 )
         self._third_key = os.urandom( 32 )
         
-        service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
         service_keys_to_statuses_to_tags[ self._first_key ][ HC.CURRENT ] = { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' }
         service_keys_to_statuses_to_tags[ self._first_key ][ HC.DELETED ] = { 'deleted' }
@@ -107,7 +113,7 @@ class TestTagsManager( unittest.TestCase ):
         self._content_update_service_key = os.urandom( 32 )
         self._reset_service_key = os.urandom( 32 )
         
-        other_service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        other_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
         other_service_keys_to_statuses_to_tags[ self._pending_service_key ][ HC.PENDING ] = { 'pending' }
         other_service_keys_to_statuses_to_tags[ self._pending_service_key ][ HC.PETITIONED ] = { 'petitioned' }
@@ -186,10 +192,10 @@ class TestTagsManager( unittest.TestCase ):
         self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = False, include_pending_tags = True ), 0 )
         self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = True ), 1 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), 10 )
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), 11 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), 10 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), 11 )
         
     
     def test_get_pending( self ):
@@ -248,7 +254,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'hello', hashes ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'hello', hashes ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -262,35 +268,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'hello', hashes ) )
-        
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
-        
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
-        
-        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertIn( 'hello', self._other_tags_manager.GetPending() )
-        
-        #
-        
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PENDING, ( 'hello', hashes ) )
-        
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
-        
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
-        
-        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
-        
-        #
-        
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'hello', hashes ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'hello', hashes ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -304,7 +282,35 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'hello', hashes ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PENDING, ( 'hello', hashes ) )
+        
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
+        
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        
+        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        
+        #
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'hello', hashes ) )
+        
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
+        
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        
+        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
+        self.assertIn( 'hello', self._other_tags_manager.GetPending() )
+        
+        #
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'hello', hashes ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -318,7 +324,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'hello', hashes, 'reason' ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'hello', hashes, 'reason' ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -332,7 +338,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, ( 'hello', hashes ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, ( 'hello', hashes ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -346,7 +352,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'hello', hashes, 'reason' ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'hello', hashes, 'reason' ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -360,7 +366,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'hello', hashes ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'hello', hashes ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -392,145 +398,145 @@ class TestTagObjects( unittest.TestCase ):
     
     def test_predicates( self ):
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag' )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag' )
         
         self.assertEqual( p.GetUnicode(), u'tag' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
         
         self.assertEqual( p.GetUnicode( with_count = False ), u'tag' )
         self.assertEqual( p.GetUnicode( with_count = True ), u'tag (1) (+2)' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False )
         
         self.assertEqual( p.GetUnicode(), u'-tag' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False, counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False, counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
         
         self.assertEqual( p.GetUnicode( with_count = False ), u'-tag' )
         self.assertEqual( p.GetUnicode( with_count = True ), u'-tag (1) (+2)' )
         
         #
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '<', 1, 2, 3, 4 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '<', 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age < 1y2m3d4h' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( u'\u2248', 1, 2, 3, 4 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( u'\u2248', 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age ' + u'\u2248' + ' 1y2m3d4h' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '>', 1, 2, 3, 4 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '>', 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age > 1y2m3d4h' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : 1000 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : 1000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:archive (1,000)' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '<', 1000 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '<', 1000 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:duration < 1,000' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : 2000 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : 2000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:everything (2,000)' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, HC.LOCAL_FILE_SERVICE_KEY ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, ClientConstants.LOCAL_FILE_SERVICE_KEY ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:is currently in local files' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, HC.LOCAL_FILE_SERVICE_KEY ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, ClientConstants.LOCAL_FILE_SERVICE_KEY ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:is not pending to local files' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_HASH, 'abcd'.decode( 'hex' ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_HASH, 'abcd'.decode( 'hex' ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:hash is abcd' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '<', 2000 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '<', 2000 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:height < 2,000' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : 1000 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : 1000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:inbox (1,000)' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LIMIT, 2000 ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LIMIT, 2000 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:limit is 2,000' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), counts = { HC.CURRENT : 100 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), counts = { HC.CURRENT : 100 } )
         
         self.assertEqual( p.GetUnicode(), u'system:local (100)' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.IMAGES ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.IMAGES ) )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is image' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.VIDEO_WEBM ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.VIDEO_WEBM ) )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is video/webm' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), counts = { HC.CURRENT : 100 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), counts = { HC.CURRENT : 100 } )
         
         self.assertEqual( p.GetUnicode(), u'system:not local (100)' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 2 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 2 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:number of tags < 2' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '<', 5000 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '<', 5000 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:number of words < 5,000' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATING, ( HC.LOCAL_FILE_SERVICE_KEY, '>', 0.2 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATING, ( ClientConstants.LOCAL_FILE_SERVICE_KEY, '>', 0.2 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:rating for local files > 0.2' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( '=', 16, 9 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( '=', 16, 9 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:ratio = 16:9' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( 'abcd'.decode( 'hex' ), 5 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( 'abcd'.decode( 'hex' ), 5 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:similar to abcd using max hamming of 5' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5, 1048576 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5, 1048576 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:size > 5MB' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.IMAGES ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.IMAGES ) )
         
         self.assertEqual( p.GetUnicode(), u'system:untagged' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '=', 1920 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '=', 1920 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:width = 1,920' )
         
         #
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
         
         self.assertEqual( p.GetUnicode(), u'series:*' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series', inclusive = False )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series', inclusive = False )
         
         self.assertEqual( p.GetUnicode(), u'-series' )
         
         #
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
         
         self.assertEqual( p.GetUnicode(), u'a*i:o*' )
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', inclusive = False )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', inclusive = False )
         
         self.assertEqual( p.GetUnicode(), u'-a*i:o*' )
         
         #
         
-        p = HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
         
         self.assertEqual( p.GetUnicode(), u'    series:game of thrones' )
         
@@ -544,30 +550,30 @@ class TestTagParents( unittest.TestCase ):
         self._second_key = os.urandom( 32 )
         self._third_key = os.urandom( 32 )
         
-        first_dict = HC.default_dict_set()
+        first_dict = HydrusData.default_dict_set()
         
         first_dict[ HC.CURRENT ] = { ( 'current_a', 'current_b' ), ( 'child', 'mother' ), ( 'child', 'father' ), ( 'sister', 'mother' ), ( 'sister', 'father' ), ( 'brother', 'mother' ), ( 'brother', 'father' ), ( 'mother', 'grandmother' ), ( 'mother', 'grandfather' ), ( 'aunt', 'grandmother' ), ( 'aunt', 'grandfather' ), ( 'cousin', 'aunt' ), ( 'cousin', 'uncle' ), ( 'closed_loop', 'closed_loop' ), ( 'loop_a', 'loop_b' ), ( 'loop_b', 'loop_c' ) }
         first_dict[ HC.DELETED ] = { ( 'deleted_a', 'deleted_b' ) }
         
-        second_dict = HC.default_dict_set()
+        second_dict = HydrusData.default_dict_set()
         
         second_dict[ HC.CURRENT ] = { ( 'loop_c', 'loop_a' ) }
         second_dict[ HC.DELETED ] = { ( 'current_a', 'current_b' ) }
         second_dict[ HC.PENDING ] = { ( 'pending_a', 'pending_b' ) }
         second_dict[ HC.PETITIONED ] = { ( 'petitioned_a', 'petitioned_b' ) }
         
-        third_dict = HC.default_dict_set()
+        third_dict = HydrusData.default_dict_set()
         
         third_dict[ HC.CURRENT ] = { ( 'petitioned_a', 'petitioned_b' ) }
         third_dict[ HC.DELETED ] = { ( 'pending_a', 'pending_b' ) }
         
-        tag_parents = collections.defaultdict( HC.default_dict_set )
+        tag_parents = collections.defaultdict( HydrusData.default_dict_set )
         
         tag_parents[ self._first_key ] = first_dict
         tag_parents[ self._second_key ] = second_dict
         tag_parents[ self._third_key ] = third_dict
         
-        HC.app.SetRead( 'tag_parents', tag_parents )
+        wx.GetApp().SetRead( 'tag_parents', tag_parents )
         
         self._tag_parents_manager = HydrusTags.TagParentsManager()
         
@@ -576,108 +582,108 @@ class TestTagParents( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'grandmother', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'grandfather', counts = { HC.CURRENT : 15 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'not_exist', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'grandmother', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'grandfather', counts = { HC.CURRENT : 15 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'not_exist', counts = { HC.CURRENT : 20 } ) )
         
-        self.assertEqual( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
-        
-        predicates = []
-        
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
-        
-        results = []
-        
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
-        
-        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
+        self.assertEqual( self._tag_parents_manager.ExpandPredicates( ClientConstants.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
         
         results = []
         
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'aunt' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'uncle' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
-        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
+        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( ClientConstants.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
+        
+        predicates = []
+        
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
+        
+        results = []
+        
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'aunt' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'uncle' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        
+        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( ClientConstants.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
     
     def test_expand_tags( self ):
         
         tags = { 'grandmother', 'grandfather' }
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, tags ), tags )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, tags ), tags )
         
         tags = { 'child', 'cousin' }
         
         results = { 'child', 'mother', 'father', 'grandmother', 'grandfather', 'cousin', 'aunt', 'uncle', 'grandmother', 'grandfather' }
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, tags ), results )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, tags ), results )
         
     
     def test_grandparents( self ):
         
-        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'child' ) ), { 'mother', 'father', 'grandmother', 'grandfather' } )
-        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'mother' ) ), { 'grandmother', 'grandfather' } )
-        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'grandmother' ) ), set() )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'child' ) ), { 'mother', 'father', 'grandmother', 'grandfather' } )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'mother' ) ), { 'grandmother', 'grandfather' } )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'grandmother' ) ), set() )
         
     
     def test_current_overwrite( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'current_a' ), [ 'current_b' ] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'current_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'current_a' ), [ 'current_b' ] )
+        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'current_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'current_a' ] ), { 'current_a', 'current_b' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'current_b' ] ), { 'current_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'current_a' ] ), { 'current_a', 'current_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'current_b' ] ), { 'current_b' } )
         
     
     def test_deleted( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'deleted_a' ), [] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'deleted_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'deleted_a' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'deleted_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'deleted_a' ] ), { 'deleted_a' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'deleted_b' ] ), { 'deleted_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'deleted_a' ] ), { 'deleted_a' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'deleted_b' ] ), { 'deleted_b' } )
         
     
     def test_no_loop( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'closed_loop' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'closed_loop' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'closed_loop' ] ), { 'closed_loop' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'closed_loop' ] ), { 'closed_loop' } )
         
     
     def test_not_exist( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'not_exist' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'not_exist' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'not_exist' ] ), { 'not_exist' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'not_exist' ] ), { 'not_exist' } )
         
     
     def test_pending_overwrite( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'pending_a' ), [ 'pending_b' ] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'pending_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'pending_a' ), [ 'pending_b' ] )
+        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'pending_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'pending_a' ] ), { 'pending_a', 'pending_b' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'pending_b' ] ), { 'pending_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'pending_a' ] ), { 'pending_a', 'pending_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'pending_b' ] ), { 'pending_b' } )
         
     
 class TestTagSiblings( unittest.TestCase ):
@@ -689,21 +695,21 @@ class TestTagSiblings( unittest.TestCase ):
         self._second_key = os.urandom( 32 )
         self._third_key = os.urandom( 32 )
         
-        tag_siblings = collections.defaultdict( HC.default_dict_set )
+        tag_siblings = collections.defaultdict( HydrusData.default_dict_set )
         
-        first_dict = HC.default_dict_set()
+        first_dict = HydrusData.default_dict_set()
         
         first_dict[ HC.CURRENT ] = { ( 'ishygddt', 'i sure hope you guys don\'t do that' ), ( 'character:rei ayanami', 'character:ayanami rei' ), ( 'tree_1', 'tree_3' ), ( 'tree_2', 'tree_3' ), ( 'tree_3', 'tree_5' ), ( 'tree_4', 'tree_5' ), ( 'tree_5', 'tree_6' ), ( 'current_a', 'current_b' ), ( 'chain_a', 'chain_b' ), ( 'chain_b', 'chain_c' ), ( 'closed_loop', 'closed_loop' ), ( 'loop_a', 'loop_b' ), ( 'loop_b', 'loop_c' ) }
         first_dict[ HC.DELETED ] = { ( 'deleted_a', 'deleted_b' ) }
         
-        second_dict = HC.default_dict_set()
+        second_dict = HydrusData.default_dict_set()
         
         second_dict[ HC.CURRENT ] = { ( 'loop_c', 'loop_a' ) }
         second_dict[ HC.DELETED ] = { ( 'current_a', 'current_b' ) }
         second_dict[ HC.PENDING ] = { ( 'pending_a', 'pending_b' ) }
         second_dict[ HC.PETITIONED ] = { ( 'petitioned_a', 'petitioned_b' ) }
         
-        third_dict = HC.default_dict_set()
+        third_dict = HydrusData.default_dict_set()
         
         third_dict[ HC.CURRENT ] = { ( 'petitioned_a', 'petitioned_b' ) }
         third_dict[ HC.DELETED ] = { ( 'pending_a', 'pending_b' ) }
@@ -712,7 +718,7 @@ class TestTagSiblings( unittest.TestCase ):
         tag_siblings[ self._second_key ] = second_dict
         tag_siblings[ self._third_key ] = third_dict
         
-        HC.app.SetRead( 'tag_siblings', tag_siblings )
+        wx.GetApp().SetRead( 'tag_siblings', tag_siblings )
         
         self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
         
@@ -737,19 +743,19 @@ class TestTagSiblings( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
         
-        results = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 35 } ) ]
+        results = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 35 } ) ]
         
         self.assertEqual( self._tag_siblings_manager.CollapsePredicates( predicates ), results )
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
         
         ( result, ) = self._tag_siblings_manager.CollapsePredicates( predicates )
         

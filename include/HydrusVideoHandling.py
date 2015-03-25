@@ -1,5 +1,4 @@
 #import numpy.core.multiarray # important this comes before cv!
-import ClientConstants as CC
 import ClientFiles
 import cv2
 from flvlib import tags as flv_tags
@@ -16,6 +15,7 @@ import traceback
 import threading
 import time
 from wx import wx
+import HydrusData
 
 if HC.PLATFORM_LINUX: FFMPEG_PATH = '"' + HC.BIN_DIR + os.path.sep + 'ffmpeg"'
 elif HC.PLATFORM_OSX: FFMPEG_PATH = '"' + HC.BIN_DIR + os.path.sep + 'ffmpeg"'
@@ -378,7 +378,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
                     try: numpy_image = self._renderer.read_frame()
                     except Exception as e:
                         
-                        HC.ShowException( e )
+                        HydrusData.ShowException( e )
                         
                         break
                         
@@ -663,7 +663,7 @@ class GIFRenderer( object ):
                 
                 self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
                 
-                raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + HC.u( self._next_render_index - 1 ) + '.' )
+                raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + HydrusData.ToString( self._next_render_index - 1 ) + '.' )
                 
             
         else:

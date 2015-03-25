@@ -8,6 +8,8 @@ import threading
 import time
 import traceback
 import wx
+import HydrusData
+import HydrusGlobals
 
 class DAEMON( threading.Thread ):
     
@@ -19,7 +21,7 @@ class DAEMON( threading.Thread ):
         
         self._event = threading.Event()
         
-        HC.pubsub.sub( self, 'shutdown', 'shutdown' )
+        HydrusGlobals.pubsub.sub( self, 'shutdown', 'shutdown' )
         
     
     def shutdown( self ): self._event.set()
@@ -35,7 +37,7 @@ class DAEMONQueue( DAEMON ):
         self._queue_topic = queue_topic
         self._period = period
         
-        HC.pubsub.sub( self, 'put', queue_topic )
+        HydrusGlobals.pubsub.sub( self, 'put', queue_topic )
         
         self.start()
         
@@ -50,16 +52,16 @@ class DAEMONQueue( DAEMON ):
             
             while self._queue.empty():
                 
-                if HC.shutdown: return
+                if HydrusGlobals.shutdown: return
                 
                 self._event.wait( self._period )
                 
                 self._event.clear()
                 
             
-            while HC.app.JustWokeFromSleep():
+            while wx.GetApp().JustWokeFromSleep():
                 
-                if HC.shutdown: return
+                if HydrusGlobals.shutdown: return
                 
                 time.sleep( 10 )
                 
@@ -74,14 +76,16 @@ class DAEMONQueue( DAEMON ):
                 
             except Exception as e:
                 
-                HC.ShowException( e )
+                HydrusData.ShowException( e )
                 
             
         
     
 class DAEMONWorker( DAEMON ):
     
-    def __init__( self, name, callable, topics = [], period = 1200, init_wait = 3, pre_callable_wait = 3 ):
+    def __init__( self, name, callable, topics = None, period = 1200, init_wait = 3, pre_callable_wait = 3 ):
+        
+        if topics is None: topics = []
         
         DAEMON.__init__( self, name )
         
@@ -91,7 +95,7 @@ class DAEMONWorker( DAEMON ):
         self._init_wait = init_wait
         self._pre_callable_wait = pre_callable_wait
         
-        for topic in topics: HC.pubsub.sub( self, 'set', topic )
+        for topic in topics: HydrusGlobals.pubsub.sub( self, 'set', topic )
         
         self.start()
         
@@ -102,13 +106,13 @@ class DAEMONWorker( DAEMON ):
         
         while True:
             
-            if HC.shutdown: return
+            if HydrusGlobals.shutdown: return
             
             time.sleep( self._pre_callable_wait )
             
-            while HC.app.JustWokeFromSleep():
+            while wx.GetApp().JustWokeFromSleep():
                 
-                if HC.shutdown: return
+                if HydrusGlobals.shutdown: return
                 
                 time.sleep( 10 )
                 
@@ -116,12 +120,12 @@ class DAEMONWorker( DAEMON ):
             try: self._callable()
             except Exception as e:
                 
-                HC.ShowText( 'Daemon ' + self._name + ' encountered an exception:' )
+                HydrusData.ShowText( 'Daemon ' + self._name + ' encountered an exception:' )
                 
-                HC.ShowException( e )
+                HydrusData.ShowException( e )
                 
             
-            if HC.shutdown: return
+            if HydrusGlobals.shutdown: return
             
             self._event.wait( self._period )
             
@@ -155,7 +159,7 @@ class DAEMONCallToThread( DAEMON ):
             
             while self._queue.empty():
                 
-                if HC.shutdown: return
+                if HydrusGlobals.shutdown: return
                 
                 self._event.wait( 1200 )
                 
@@ -172,7 +176,7 @@ class DAEMONCallToThread( DAEMON ):
                 
             except Exception as e:
                 
-                HC.ShowException( e )
+                HydrusData.ShowException( e )
                 
             
             time.sleep( 0.00001 )
@@ -206,7 +210,7 @@ def CallBlockingToWx( callable, *args, **kwargs ):
         finally: job_key.Finish()
         
     
-    job_key = HC.JobKey()
+    job_key = HydrusData.JobKey()
     
     job_key.Begin()
     
@@ -214,7 +218,7 @@ def CallBlockingToWx( callable, *args, **kwargs ):
     
     while not job_key.IsDone():
         
-        if HC.shutdown: return
+        if HydrusGlobals.shutdown: return
         
         time.sleep( 0.05 )
         

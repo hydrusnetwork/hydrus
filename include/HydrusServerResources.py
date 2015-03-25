@@ -28,13 +28,16 @@ from twisted.web.server import Request, Site, NOT_DONE_YET
 from twisted.web.resource import Resource
 from twisted.web.static import File as FileResource, NoRangeStaticProducer
 from twisted.python import log
+import HydrusData
+import HydrusNetworking
+import HydrusGlobals
 
 CLIENT_ROOT_MESSAGE = '''<html>
     <head>
         <title>hydrus client</title>
     </head>
     <body>
-        <p>This hydrus client uses software version ''' + HC.u( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HC.u( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus client uses software version ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HydrusData.ToString( HC.NETWORK_VERSION ) + '''.</p>
         <p>It only serves requests from 127.0.0.1.</p>
     </body>
 </html>'''
@@ -44,7 +47,7 @@ ROOT_MESSAGE_BEGIN = '''<html>
         <title>hydrus service</title>
     </head>
     <body>
-        <p>This hydrus service uses software version ''' + HC.u( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HC.u( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus service uses software version ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HydrusData.ToString( HC.NETWORK_VERSION ) + '''.</p>
         <p>'''
 
 ROOT_MESSAGE_END = '''</p>
@@ -71,7 +74,7 @@ def ParseFileArguments( path ):
         
     except Exception as e:
         
-        raise HydrusExceptions.ForbiddenException( HC.u( e ) )
+        raise HydrusExceptions.ForbiddenException( HydrusData.ToString( e ) )
         
     
     args = {}
@@ -118,7 +121,7 @@ class HydrusResourceWelcome( Resource ):
         
         Resource.__init__( self )
         
-        if service_key == HC.LOCAL_FILE_SERVICE_KEY: body = CLIENT_ROOT_MESSAGE
+        if service_key == CC.LOCAL_FILE_SERVICE_KEY: body = CLIENT_ROOT_MESSAGE
         else: body = ROOT_MESSAGE_BEGIN + message + ROOT_MESSAGE_END
         
         self._body = body.encode( 'utf-8' )
@@ -177,11 +180,11 @@ class HydrusResourceCommand( Resource ):
                 
             
         
-        if 'subject_account_key' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( account_key = hydrus_args[ 'subject_account_key' ] )
+        if 'subject_account_key' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( account_key = hydrus_args[ 'subject_account_key' ] )
         elif 'subject_hash' in hydrus_args:
             
-            if 'subject_tag' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( tag = hydrus_args[ 'subject_tag' ], hash = hydrus_args[ 'subject_hash' ] )
-            else: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( hash = hydrus_args[ 'subject_hash' ] )
+            if 'subject_tag' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( tag = hydrus_args[ 'subject_tag' ], hash = hydrus_args[ 'subject_hash' ] )
+            else: hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( hash = hydrus_args[ 'subject_hash' ] )
             
         
         request.hydrus_args = hydrus_args
@@ -212,11 +215,14 @@ class HydrusResourceCommand( Resource ):
             
         else:
             
-            temp_path = HC.GetTempPath()
+            
+            ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+            
+            request.temp_file_info = ( os_file_handle, temp_path )
             
             with open( temp_path, 'wb' ) as f:
                 
-                for block in HC.ReadFileLikeAsBlocks( request.content, 65536 ): 
+                for block in HydrusData.ReadFileLikeAsBlocks( request.content, 65536 ): 
                     
                     f.write( block )
                     
@@ -233,6 +239,8 @@ class HydrusResourceCommand( Resource ):
         
     
     def _callbackRenderResponseContext( self, request ):
+        
+        self._CleanUpTempFile( request )
         
         response_context = request.hydrus_response_context
         
@@ -378,7 +386,7 @@ class HydrusResourceCommand( Resource ):
                             if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
                             else: message = 'This server is out of date; please ask its admin to update to the latest release.'
                             
-                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + HC.u( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HC.u( network_version ) + '! ' + message )
+                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + HydrusData.ToString( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HydrusData.ToString( network_version ) + '! ' + message )
                             
                         
                     
@@ -387,6 +395,8 @@ class HydrusResourceCommand( Resource ):
         
     
     def _errbackHandleEmergencyError( self, failure, request ):
+        
+        self._CleanUpTempFile( request )
         
         print( failure.getTraceback() )
         
@@ -398,6 +408,8 @@ class HydrusResourceCommand( Resource ):
         
     
     def _errbackHandleProcessingError( self, failure, request ):
+        
+        self._CleanUpTempFile( request )
         
         do_yaml = True
         
@@ -411,25 +423,25 @@ class HydrusResourceCommand( Resource ):
         if do_yaml:
             
             default_mime = HC.APPLICATION_YAML
-            default_encoding = lambda x: yaml.safe_dump( HC.u( x ) )
+            default_encoding = lambda x: yaml.safe_dump( HydrusData.ToString( x ) )
             
         else:
             
             default_mime = HC.TEXT_HTML
-            default_encoding = lambda x: HC.u( x )
+            default_encoding = lambda x: HydrusData.ToString( x )
             
         
-        if failure.type == KeyError: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
-        elif failure.type == HydrusExceptions.PermissionException: response_context = HC.ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.ForbiddenException: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.NotFoundException: response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.NetworkVersionException: response_context = HC.ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.SessionException: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
+        if failure.type == KeyError: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
+        elif failure.type == HydrusExceptions.PermissionException: response_context = ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.ForbiddenException: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.NotFoundException: response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.NetworkVersionException: response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.SessionException: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
         else:
             
             print( failure.getTraceback() )
             
-            response_context = HC.ResponseContext( 500, mime = default_mime, body = default_encoding( 'The repository encountered an error it could not handle! Here is a dump of what happened, which will also be written to your client.log file. If it persists, please forward it to hydrus.admin@gmail.com:' + os.linesep * 2 + failure.getTraceback() ) )
+            response_context = ResponseContext( 500, mime = default_mime, body = default_encoding( 'The repository encountered an error it could not handle! Here is a dump of what happened, which will also be written to your client.log file. If it persists, please forward it to hydrus.admin@gmail.com:' + os.linesep * 2 + failure.getTraceback() ) )
             
         
         request.hydrus_response_context = response_context
@@ -456,6 +468,16 @@ class HydrusResourceCommand( Resource ):
     def _threadDoGETJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
     
     def _threadDoPOSTJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
+    
+    def _CleanUpTempFile( self, request ):
+        
+        if hasattr( request, 'temp_file_info' ):
+            
+            ( os_file_handle, temp_path ) = request.temp_file_info
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
     
     def render_GET( self, request ):
         
@@ -509,11 +531,11 @@ class HydrusResourceCommandAccessKey( HydrusResourceCommand ):
         
         registration_key = self._parseAccessKey( request )
         
-        access_key = HC.app.Read( 'access_key', registration_key )
+        access_key = wx.GetApp().Read( 'access_key', registration_key )
         
         body = yaml.safe_dump( { 'access_key' : access_key } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -524,11 +546,11 @@ class HydrusResourceCommandAccessKeyVerification( HydrusResourceCommand ):
         
         access_key = self._parseAccessKey( request )
         
-        verified = HC.app.Read( 'verify_access_key', self._service_key, access_key )
+        verified = wx.GetApp().Read( 'verify_access_key', self._service_key, access_key )
         
         body = yaml.safe_dump( { 'verified' : verified } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -547,7 +569,7 @@ class HydrusResourceCommandBooru( HydrusResourceCommand ):
             
             num_bytes = request.hydrus_request_data_usage
             
-            HC.pubsub.pub( 'service_updates_delayed', { HC.LOCAL_BOORU_SERVICE_KEY : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, num_bytes ) ] } )
+            HydrusGlobals.pubsub.pub( 'service_updates_delayed', { CC.LOCAL_BOORU_SERVICE_KEY : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, num_bytes ) ] } )
             
         
     
@@ -571,7 +593,7 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
         
         share_key = request.hydrus_args[ 'share_key' ]
         
-        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
         
         local_booru_manager.CheckShareAuthorised( share_key )
         
@@ -602,7 +624,7 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
     <body>'''
         
         body += '''
-        <div class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpires( timeout ) + '''.</div>'''
+        <div class="timeout">This share ''' + HydrusData.ConvertTimestampToPrettyExpires( timeout ) + '''.</div>'''
         
         if name != '': body += '''
         <h3>''' + name + '''</h3>'''
@@ -641,7 +663,7 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
     </body>
 </html>'''
         
-        response_context = HC.ResponseContext( 200, mime = HC.TEXT_HTML, body = body )
+        response_context = ResponseContext( 200, mime = HC.TEXT_HTML, body = body )
         
         return response_context
         
@@ -655,13 +677,13 @@ class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
         path = ClientFiles.GetFilePath( hash )
         
-        response_context = HC.ResponseContext( 200, path = path )
+        response_context = ResponseContext( 200, path = path )
         
         return response_context
         
@@ -675,7 +697,7 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
@@ -699,7 +721,7 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
     <body>'''
         
         body += '''
-        <div class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpires( timeout ) + '''.</div>'''
+        <div class="timeout">This share ''' + HydrusData.ConvertTimestampToPrettyExpires( timeout ) + '''.</div>'''
         
         if name != '': body += '''
         <h3>''' + name + '''</h3>'''
@@ -752,7 +774,7 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
     </body>
 </html>'''
         
-        response_context = HC.ResponseContext( 200, mime = HC.TEXT_HTML, body = body )
+        response_context = ResponseContext( 200, mime = HC.TEXT_HTML, body = body )
         
         return response_context
         
@@ -766,7 +788,7 @@ class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
@@ -781,7 +803,7 @@ class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
         elif mime == HC.APPLICATION_PDF: path = HC.STATIC_DIR + os.path.sep + 'pdf_resized.png'
         else: path = HC.STATIC_DIR + os.path.sep + 'hydrus_resized.png'
         
-        response_context = HC.ResponseContext( 200, path = path )
+        response_context = ResponseContext( 200, path = path )
         
         return response_context
         
@@ -790,11 +812,11 @@ class HydrusResourceCommandInit( HydrusResourceCommand ):
     
     def _threadDoGETJob( self, request ):
         
-        access_key = HC.app.Read( 'init' )
+        access_key = wx.GetApp().Read( 'init' )
         
         body = yaml.safe_dump( { 'access_key' : access_key } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -807,7 +829,7 @@ class HydrusResourceCommandLocalFile( HydrusResourceCommand ):
         
         path = ClientFiles.GetFilePath( hash )
         
-        response_context = HC.ResponseContext( 200, path = path )
+        response_context = ResponseContext( 200, path = path )
         
         return response_context
         
@@ -820,7 +842,7 @@ class HydrusResourceCommandLocalThumbnail( HydrusResourceCommand ):
         
         path = ClientFiles.GetThumbnailPath( hash )
         
-        response_context = HC.ResponseContext( 200, path = path )
+        response_context = ResponseContext( 200, path = path )
         
         return response_context
         
@@ -831,17 +853,17 @@ class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
         
         access_key = self._parseAccessKey( request )
         
-        session_manager = HC.app.GetManager( 'restricted_services_sessions' )
+        session_manager = wx.GetApp().GetManager( 'restricted_services_sessions' )
         
         ( session_key, expires ) = session_manager.AddSession( self._service_key, access_key )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         max_age = now - expires
         
         cookies = [ ( 'session_key', session_key.encode( 'hex' ), { 'max_age' : max_age, 'path' : '/' } ) ]
         
-        response_context = HC.ResponseContext( 200, cookies = cookies )
+        response_context = ResponseContext( 200, cookies = cookies )
         
         return response_context
         
@@ -897,7 +919,7 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
             
         except: raise Exception( 'Problem parsing cookies!' )
         
-        session_manager = HC.app.GetManager( 'restricted_services_sessions' )
+        session_manager = wx.GetApp().GetManager( 'restricted_services_sessions' )
         
         account = session_manager.GetAccount( self._service_key, session_key )
         
@@ -921,7 +943,7 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
                 
                 account.RequestMade( num_bytes )
                 
-                HC.pubsub.pub( 'request_made', ( account.GetAccountKey(), num_bytes ) )
+                HydrusGlobals.pubsub.pub( 'request_made', ( account.GetAccountKey(), num_bytes ) )
                 
             
         
@@ -937,7 +959,7 @@ class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
         
         body = yaml.safe_dump( { 'account' : account } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -952,17 +974,17 @@ class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
         
         subject_identifiers = request.hydrus_args[ 'subject_identifiers' ]
         
-        subject_account_keys = { HC.app.Read( 'account_key_from_identifier', self._service_key, subject_identifier ) for subject_identifier in subject_identifiers }
+        subject_account_keys = { wx.GetApp().Read( 'account_key_from_identifier', self._service_key, subject_identifier ) for subject_identifier in subject_identifiers }
         
         kwargs = request.hydrus_args # for things like expires, title, and so on
         
-        HC.app.Write( 'account', self._service_key, admin_account_key, action, subject_account_keys, kwargs )
+        wx.GetApp().Write( 'account', self._service_key, admin_account_key, action, subject_account_keys, kwargs )
         
-        session_manager = HC.app.GetManager( 'restricted_services_sessions' )
+        session_manager = wx.GetApp().GetManager( 'restricted_services_sessions' )
         
         session_manager.RefreshAccounts( self._service_key, subject_account_keys )
         
-        response_context = HC.ResponseContext( 200 )
+        response_context = ResponseContext( 200 )
         
         return response_context
         
@@ -975,13 +997,13 @@ class HydrusResourceCommandRestrictedAccountInfo( HydrusResourceCommandRestricte
         
         subject_identifier = request.hydrus_args[ 'subject_identifier' ]
         
-        subject_account_key = HC.app.Read( 'account_key_from_identifier', self._service_key, subject_identifier )
+        subject_account_key = wx.GetApp().Read( 'account_key_from_identifier', self._service_key, subject_identifier )
         
-        account_info = HC.app.Read( 'account_info', self._service_key, subject_account_key )
+        account_info = wx.GetApp().Read( 'account_info', self._service_key, subject_account_key )
         
         body = yaml.safe_dump( { 'account_info' : account_info } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -993,11 +1015,11 @@ class HydrusResourceCommandRestrictedAccountTypes( HydrusResourceCommandRestrict
     
     def _threadDoGETJob( self, request ):
         
-        account_types = HC.app.Read( 'account_types', self._service_key )
+        account_types = wx.GetApp().Read( 'account_types', self._service_key )
         
         body = yaml.safe_dump( { 'account_types' : account_types } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -1006,9 +1028,9 @@ class HydrusResourceCommandRestrictedAccountTypes( HydrusResourceCommandRestrict
         
         edit_log = request.hydrus_args[ 'edit_log' ]
         
-        HC.app.Write( 'account_types', self._service_key, edit_log )
+        wx.GetApp().Write( 'account_types', self._service_key, edit_log )
         
-        response_context = HC.ResponseContext( 200 )
+        response_context = ResponseContext( 200 )
         
         return response_context
         
@@ -1021,9 +1043,9 @@ class HydrusResourceCommandRestrictedBackup( HydrusResourceCommandRestricted ):
         
         #threading.Thread( target = HC.app.Write, args = ( 'backup', ), name = 'Backup Thread' ).start()
         
-        HC.app.Write( 'backup' )
+        wx.GetApp().Write( 'backup' )
         
-        response_context = HC.ResponseContext( 200 )
+        response_context = ResponseContext( 200 )
         
         return response_context
         
@@ -1036,11 +1058,11 @@ class HydrusResourceCommandRestrictedIP( HydrusResourceCommandRestricted ):
         
         hash = request.hydrus_args[ 'hash' ]
         
-        ( ip, timestamp ) = HC.app.Read( 'ip', self._service_key, hash )
+        ( ip, timestamp ) = wx.GetApp().Read( 'ip', self._service_key, hash )
         
         body = yaml.safe_dump( { 'ip' : ip, 'timestamp' : timestamp } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -1053,9 +1075,9 @@ class HydrusResourceCommandRestrictedNews( HydrusResourceCommandRestricted ):
         
         news = request.hydrus_args[ 'news' ]
         
-        HC.app.Write( 'news', self._service_key, news )
+        wx.GetApp().Write( 'news', self._service_key, news )
         
-        response_context = HC.ResponseContext( 200 )
+        response_context = ResponseContext( 200 )
         
         return response_context
         
@@ -1066,11 +1088,11 @@ class HydrusResourceCommandRestrictedNumPetitions( HydrusResourceCommandRestrict
     
     def _threadDoGETJob( self, request ):
         
-        num_petitions = HC.app.Read( 'num_petitions', self._service_key )
+        num_petitions = wx.GetApp().Read( 'num_petitions', self._service_key )
         
         body = yaml.safe_dump( { 'num_petitions' : num_petitions } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -1081,11 +1103,11 @@ class HydrusResourceCommandRestrictedPetition( HydrusResourceCommandRestricted )
     
     def _threadDoGETJob( self, request ):
         
-        petition = HC.app.Read( 'petition', self._service_key )
+        petition = wx.GetApp().Read( 'petition', self._service_key )
         
         body = yaml.safe_dump( { 'petition' : petition } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -1102,11 +1124,11 @@ class HydrusResourceCommandRestrictedRegistrationKeys( HydrusResourceCommandRest
         if 'lifetime' in request.hydrus_args: lifetime = request.hydrus_args[ 'lifetime' ]
         else: lifetime = None
         
-        registration_keys = HC.app.Read( 'registration_keys', self._service_key, num, title, lifetime )
+        registration_keys = wx.GetApp().Read( 'registration_keys', self._service_key, num, title, lifetime )
         
         body = yaml.safe_dump( { 'registration_keys' : registration_keys } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -1126,7 +1148,7 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
         
         path = ServerFiles.GetPath( 'file', hash )
         
-        response_context = HC.ResponseContext( 200, path = path )
+        response_context = ResponseContext( 200, path = path )
         
         return response_context
         
@@ -1141,9 +1163,9 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
         
         file_dict[ 'ip' ] = request.getClientIP()
         
-        HC.app.Write( 'file', self._service_key, account_key, file_dict )
+        wx.GetApp().Write( 'file', self._service_key, account_key, file_dict )
         
-        response_context = HC.ResponseContext( 200 )
+        response_context = ResponseContext( 200 )
         
         return response_context
         
@@ -1161,7 +1183,7 @@ class HydrusResourceCommandRestrictedRepositoryThumbnail( HydrusResourceCommandR
         
         path = ServerFiles.GetPath( 'thumbnail', hash )
         
-        response_context = HC.ResponseContext( 200, path = path )
+        response_context = ResponseContext( 200, path = path )
         
         return response_context
         
@@ -1179,11 +1201,11 @@ class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted )
         
         edit_log = request.hydrus_args[ 'edit_log' ]
         
-        service_keys_to_access_keys = HC.app.Write( 'services', account_key, edit_log )
+        service_keys_to_access_keys = wx.GetApp().Write( 'services', account_key, edit_log )
         
         body = yaml.safe_dump( { 'service_keys_to_access_keys' : service_keys_to_access_keys } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -1195,11 +1217,11 @@ class HydrusResourceCommandRestrictedServicesInfo( HydrusResourceCommandRestrict
     
     def _threadDoGETJob( self, request ):
         
-        services_info = HC.app.Read( 'services_info' )
+        services_info = wx.GetApp().Read( 'services_info' )
         
         body = yaml.safe_dump( { 'services_info' : services_info } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -1210,11 +1232,11 @@ class HydrusResourceCommandRestrictedStats( HydrusResourceCommandRestricted ):
     
     def _threadDoGETJob( self, request ):
         
-        stats = HC.app.Read( 'stats', self._service_key )
+        stats = wx.GetApp().Read( 'stats', self._service_key )
         
         body = yaml.safe_dump( { 'stats' : stats } )
         
-        response_context = HC.ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, body = body )
         
         return response_context
         
@@ -1232,7 +1254,7 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         
         path = ServerFiles.GetUpdatePath( self._service_key, begin )
         
-        response_context = HC.ResponseContext( 200, path = path, is_yaml = True )
+        response_context = ResponseContext( 200, path = path, is_yaml = True )
         
         return response_context
         
@@ -1245,10 +1267,41 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         
         update = request.hydrus_args[ 'update' ]
         
-        HC.app.Write( 'update', self._service_key, account_key, update )
+        wx.GetApp().Write( 'update', self._service_key, account_key, update )
         
-        response_context = HC.ResponseContext( 200 )
+        response_context = ResponseContext( 200 )
         
         return response_context
+
+class ResponseContext( object ):
+    
+    def __init__( self, status_code, mime = HC.APPLICATION_YAML, body = None, path = None, is_yaml = False, cookies = None ):
+        
+        if cookies is None: cookies = []
+        
+        self._status_code = status_code
+        self._mime = mime
+        self._body = body
+        self._path = path
+        self._is_yaml = is_yaml
+        self._cookies = cookies
+        
+    
+    def GetCookies( self ): return self._cookies
+    
+    def GetLength( self ): return len( self._body )
+    
+    def GetMimeBody( self ): return ( self._mime, self._body )
+    
+    def GetPath( self ): return self._path
+    
+    def GetStatusCode( self ): return self._status_code
+    
+    def HasBody( self ): return self._body is not None
+    
+    def HasPath( self ): return self._path is not None
+    
+    def IsYAML( self ): return self._is_yaml
+    
         
     

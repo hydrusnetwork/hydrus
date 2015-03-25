@@ -1,11 +1,12 @@
 import ClientData
 import random
+import HydrusData
 
 class VPTreeNode( object ):
     
     def __init__( self, phashes ):
         
-        ghd = ClientData.GetHammingDistance
+        ghd = HydrusData.GetHammingDistance
         
         if len( phashes ) == 1:
             
@@ -70,7 +71,7 @@ class VPTreeNode( object ):
     
     def GetMatches( self, phash, max_hamming ):
         
-        hamming_distance_to_me = ClientData.GetHammingDistance( self._phash, phash )
+        hamming_distance_to_me = HydrusData.GetHammingDistance( self._phash, phash )
         
         matches = []
         

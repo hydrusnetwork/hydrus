@@ -1,6 +1,6 @@
 import Crypto.PublicKey.RSA
 import HydrusConstants as HC
-import HydrusDownloading
+import ClientDownloading
 import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
@@ -31,6 +31,9 @@ import urllib
 import wx
 import yaml
 import zipfile
+import HydrusData
+import ClientSearch
+import HydrusGlobals
 
 # Option Enums
 
@@ -48,7 +51,7 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
     
     if service_keys is None:
         
-        services = HC.app.GetManager( 'services' ).GetServices( service_types )
+        services = wx.GetApp().GetManager( 'services' ).GetServices( service_types )
         
         if permission is not None: services = [ service for service in services if service.GetInfo( 'account' ).HasPermission( permission ) ]
         
@@ -66,11 +69,11 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
         
     else:
         
-        services = { HC.app.GetManager( 'services' ).GetService( service_key ) for service_key in service_keys }
+        services = { wx.GetApp().GetManager( 'services' ).GetService( service_key ) for service_key in service_keys }
         
         names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in services }
         
-        with DialogSelectFromListOfStrings( HC.app.GetGUI(), 'select service', names_to_service_keys.keys() ) as dlg:
+        with DialogSelectFromListOfStrings( wx.GetApp().GetGUI(), 'select service', names_to_service_keys.keys() ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK: return names_to_service_keys[ dlg.GetString() ]
             else: return None
@@ -104,7 +107,7 @@ class Dialog( wx.Dialog ):
         
         if position == 'center': wx.CallAfter( self.Center )
         
-        HC.app.ResetIdleTimer()
+        wx.GetApp().ResetIdleTimer()
         
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
@@ -143,8 +146,11 @@ class DialogAdvancedContentUpdate( Dialog ):
             self._go = wx.Button( self._internal_actions, label = 'Go!' )
             self._go.Bind( wx.EVT_BUTTON, self.EventGo )
             
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._internal_actions, self.SetSomeTag, HC.COMBINED_FILE_SERVICE_KEY, self._service_key )
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._internal_actions, self.SetSomeTag, CC.COMBINED_FILE_SERVICE_KEY, self._service_key )
             self._specific_tag = wx.StaticText( self._internal_actions, label = '', size = ( 100, -1 ) )
+            
+            self._import_from_hta = wx.Button( self._internal_actions, label = 'one-time mass import or delete using a hydrus tag archive' )
+            self._import_from_hta.Bind( wx.EVT_BUTTON, self.EventImportFromHTA )
             
             #
             
@@ -161,7 +167,7 @@ class DialogAdvancedContentUpdate( Dialog ):
         def PopulateControls():
             
             self._action_dropdown.Append( 'copy', self.COPY )
-            if self._service_key == HC.LOCAL_TAG_SERVICE_KEY:
+            if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
                 
                 self._action_dropdown.Append( 'delete', self.DELETE )
                 self._action_dropdown.Append( 'clear deleted record', self.DELETE_DELETED )
@@ -179,7 +185,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             #
             
-            services = [ service for service in HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
+            services = [ service for service in wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
             
             for service in services:
                 
@@ -207,6 +213,12 @@ class DialogAdvancedContentUpdate( Dialog ):
             hbox.AddF( wx.StaticText( self._internal_actions, label = 'set specific tag or namespace: ' ), CC.FLAGS_MIXED )
             hbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
             hbox.AddF( self._specific_tag, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
             
             self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -296,7 +308,7 @@ class DialogAdvancedContentUpdate( Dialog ):
                         
                     
                 
-                HC.app.Write( 'export_mappings', path, self._service_key, hash_type, self._hashes )
+                wx.GetApp().Write( 'export_mappings', path, self._service_key, hash_type, self._hashes )
                 
             
         
@@ -329,23 +341,121 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         if action == self.COPY:
             
-            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
             
         elif action == self.DELETE:
             
-            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', ( tag, self._hashes ) ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', ( tag, self._hashes ) ) )
             
         elif action == self.DELETE_DELETED:
             
-            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
             
         
         service_keys_to_content_updates = { self._service_key : [ content_update ] }
         
-        HC.app.Write( 'content_updates', service_keys_to_content_updates )
+        wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
         
     
-    def SetSomeTag( self, tag, parents = [] ):
+    def EventImportFromHTA( self, event ):
+        
+        text = 'Select the Hydrus Tag Archive\'s location.'
+        
+        with wx.FileDialog( self, message = text, style = wx.FD_OPEN ) as dlg_file:
+            
+            if dlg_file.ShowModal() == wx.ID_OK:
+                
+                path = dlg_file.GetPath()
+                
+                hta = HydrusTagArchive.HydrusTagArchive( path )
+                
+                potential_namespaces = hta.GetNamespaces()
+                
+                hta.GetHashType() # this tests if the hta can produce a hashtype
+                
+                del hta
+                
+                service = wx.GetApp().GetManager( 'services' ).GetService( self._service_key )
+                
+                service_type = service.GetServiceType()
+                
+                can_delete = True
+                
+                if service_type == HC.TAG_REPOSITORY:
+                    
+                    account = service.GetInfo( 'account' )
+                    
+                    if not account.HasPermission( HC.RESOLVE_PETITIONS ): can_delete = False
+                    
+                
+                if can_delete:
+                    
+                    text = 'Would you like to add or delete the archive\'s tags?'
+                    
+                    with DialogYesNo( self, text, title = 'Add or delete?', yes_label = 'add', no_label = 'delete' ) as dlg_add:
+                        
+                        result = dlg_add.ShowModal()
+                        
+                        if result == wx.ID_YES: adding = True
+                        elif result == wx.ID_NO: adding = False
+                        else: return
+                        
+                    
+                else:
+                    
+                    text = 'You cannot quickly delete tags from this service, so I will assume you want to add tags.'
+                    
+                    wx.MessageBox( text )
+                    
+                    adding = True
+                    
+                
+                text = 'Choose which namespaces to '
+                
+                if adding: text += 'add.'
+                else: text += 'delete.'
+                
+                with DialogCheckFromListOfStrings( self, text, HydrusData.ConvertUglyNamespacesToPrettyStrings( potential_namespaces ) ) as dlg_namespaces:
+                    
+                    if dlg_namespaces.ShowModal() == wx.ID_OK:
+                        
+                        namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg_namespaces.GetChecked() )
+                        
+                        text = 'Are you absolutely sure you want to '
+                        
+                        if adding: text += 'add'
+                        else: text += 'delete'
+                        
+                        text += ' the namespaces:'
+                        text += os.linesep * 2
+                        text += os.linesep.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) )
+                        text += os.linesep * 2
+                        
+                        if adding: text += 'To '
+                        else: text += 'From '
+                        
+                        text += service.GetName() + ' ?'
+                        
+                        with DialogYesNo( self, text ) as dlg_final:
+                            
+                            if dlg_final.ShowModal() == wx.ID_YES:
+                                
+                                content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'hta', ( path, adding, namespaces ) ) )
+                                
+                                service_keys_to_content_updates = { self._service_key : [ content_update ] }
+                                
+                                wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
+                                
+                            
+                        
+                    
+                
+            
+        
+    
+    def SetSomeTag( self, tag, parents = None ):
+        
+        if parents is None: parents = []
         
         self._tag = tag
         
@@ -512,7 +622,7 @@ class DialogFinishFiltering( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            label = keep + ' ' + HC.ConvertIntToPrettyString( num_kept ) + ' and ' + delete + ' ' + HC.ConvertIntToPrettyString( num_deleted ) + ' files?'
+            label = keep + ' ' + HydrusData.ConvertIntToPrettyString( num_kept ) + ' and ' + delete + ' ' + HydrusData.ConvertIntToPrettyString( num_deleted ) + ' files?'
             
             vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -568,8 +678,8 @@ class DialogFinishRatingFiltering( Dialog ):
             
             info_strings = []
             
-            if num_certain_ratings > 0: info_strings.append( HC.ConvertIntToPrettyString( num_certain_ratings ) + ' ratings' )
-            if num_uncertain_ratings > 0: info_strings.append( HC.ConvertIntToPrettyString( num_uncertain_ratings ) + ' uncertain changes' )
+            if num_certain_ratings > 0: info_strings.append( HydrusData.ConvertIntToPrettyString( num_certain_ratings ) + ' ratings' )
+            if num_uncertain_ratings > 0: info_strings.append( HydrusData.ConvertIntToPrettyString( num_uncertain_ratings ) + ' uncertain changes' )
             
             label = 'Apply ' + ' and '.join( info_strings ) + '?'
             
@@ -677,7 +787,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
             self._num.SetValue( 1 )
             
-            service = HC.app.GetManager( 'services' ).GetService( service_key )
+            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
             
             response = service.Request( HC.GET, 'account_types' )
             
@@ -739,7 +849,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         lifetime = self._lifetime.GetClientData( self._lifetime.GetSelection() )
         
-        service = HC.app.GetManager( 'services' ).GetService( self._service_key )
+        service = wx.GetApp().GetManager( 'services' ).GetService( self._service_key )
         
         try:
             
@@ -773,7 +883,7 @@ class DialogInputAdvancedTagOptions( Dialog ):
                 
                 ( booru_id, booru_name ) = name
                 
-                booru = HC.app.Read( 'remote_booru', booru_name )
+                booru = wx.GetApp().Read( 'remote_booru', booru_name )
                 
                 namespaces = booru.GetNamespaces()
                 
@@ -886,7 +996,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._tag_service_keys = wx.Choice( self._tag_panel )
             self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, HC.LOCAL_FILE_SERVICE_KEY, HC.COMBINED_TAG_SERVICE_KEY )
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
             
             self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
             self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
@@ -915,7 +1025,7 @@ class DialogInputCustomFilterAction( Dialog ):
             self._ok_ratings_numerical.Bind( wx.EVT_BUTTON, self.EventOKRatingsNumerical )
             self._ok_ratings_numerical.SetForegroundColour( ( 0, 128, 0 ) )
             
-            services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
             for service in services:
                 
@@ -936,7 +1046,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
             else:
                 
-                self._service = HC.app.GetManager( 'services' ).GetService( service_key )
+                self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 service_name = self._service.GetName()
                 service_type = self._service.GetServiceType()
@@ -1071,7 +1181,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_key = self._ratings_like_service_keys.GetClientData( selection )
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 self._current_ratings_like_service = service
                 
@@ -1095,7 +1205,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_key = self._ratings_numerical_service_keys.GetClientData( selection )
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 self._current_ratings_numerical_service = service
                 
@@ -1162,7 +1272,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
             else:
                 
-                self._pretty_action = HC.u( self._ratings_numerical_slider.GetValue() )
+                self._pretty_action = HydrusData.ToString( self._ratings_numerical_slider.GetValue() )
                 
                 ( lower, upper ) = self._current_ratings_numerical_service.GetLowerUpper()
                 
@@ -1202,15 +1312,20 @@ class DialogInputCustomFilterAction( Dialog ):
         ( modifier, key ) = self._shortcut.GetValue()
         
         if self._service_key is None: pretty_service_key = ''
-        else: pretty_service_key = HC.app.GetManager( 'services' ).GetService( self._service_key ).GetName()
+        else: pretty_service_key = wx.GetApp().GetManager( 'services' ).GetService( self._service_key ).GetName()
         
         # ignore this pretty_action
-        ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, self._action )
+        ( pretty_modifier, pretty_key, pretty_action ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key, self._action )
         
         return ( ( pretty_modifier, pretty_key, pretty_service_key, self._pretty_action ), ( modifier, key, self._service_key, self._action ) )
         
     
-    def SetTag( self, tag, parents = [] ): self._tag_value.SetValue( tag )
+    def SetTag( self, tag, parents = None ):
+        
+        if parents is None: parents = []
+        
+        self._tag_value.SetValue( tag )
+        
     
 class DialogInputFileSystemPredicate( Dialog ):
     
@@ -1359,7 +1474,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign.SetSelection( 0 )
                 self._current_pending.SetSelection( 0 )
                 
-                services = HC.app.GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+                services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
                 
                 for service in services: self._file_service_key.Append( service.GetName(), service.GetServiceKey() )
                 self._file_service_key.SetSelection( 0 )
@@ -1712,8 +1827,8 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             def PopulateControls():
                 
-                self._local_numericals = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
-                self._local_likes = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+                self._local_numericals = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+                self._local_likes = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
                 
                 for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service.GetServiceKey() )
                 
@@ -1956,7 +2071,9 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._hash.SetValue( 'enter hash' )
                 
-                self._max_hamming.SetValue( 5 )
+                hamming_distance = system_predicates[ 'hamming_distance' ]
+                
+                self._max_hamming.SetValue( hamming_distance )
                 
             
             def ArrangeControls():
@@ -2102,7 +2219,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                     
                 else:
                     
-                    service = HC.app.GetManager( 'services' ).GetService( service_key )
+                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                     
                     ( lower, upper ) = service.GetLowerUpper()
                     
@@ -2115,7 +2232,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
             
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATIO: info = ( self._sign.GetStringSelection(), self._width.GetValue(), self._height.GetValue() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIZE: info = ( self._sign.GetStringSelection(), self._size.GetValue(), HC.ConvertUnitToInteger( self._unit.GetStringSelection() ) )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIZE: info = ( self._sign.GetStringSelection(), self._size.GetValue(), HydrusData.ConvertUnitToInteger( self._unit.GetStringSelection() ) )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: info = ( self._sign.GetStringSelection(), self._width.GetValue() )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
             
@@ -2130,7 +2247,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: info = ( self._sign.GetClientData( self._sign.GetSelection() ), self._current_pending.GetClientData( self._current_pending.GetSelection() ), self._file_service_key.GetClientData( self._file_service_key.GetSelection() ) )
         
-        self._predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self._type, info ) )
+        self._predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self._type, info ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -2212,7 +2329,7 @@ class DialogInputLocalBooruShare( Dialog ):
                 
             else:
                 
-                time_left = max( 0, timeout - HC.GetNow() )
+                time_left = max( 0, timeout - HydrusData.GetNow() )
                 
                 if time_left < 60 * 60 * 12: time_value = 60
                 elif time_left < 60 * 60 * 24 * 7: time_value = 60 * 60 
@@ -2252,7 +2369,7 @@ class DialogInputLocalBooruShare( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            intro = 'Sharing ' + HC.ConvertIntToPrettyString( len( self._hashes ) ) + ' files.'
+            intro = 'Sharing ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files.'
             intro += os.linesep + 'Title and text are optional.'
             
             if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
@@ -2285,7 +2402,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyExternalShareURL( self, event ):
         
-        self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         info = self._service.GetInfo()
         
@@ -2297,12 +2414,12 @@ class DialogInputLocalBooruShare( Dialog ):
         
         url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
-        HC.pubsub.pub( 'clipboard', 'text', url )
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', url )
         
     
     def EventCopyInternalShareURL( self, event ):
         
-        self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         info = self._service.GetInfo()
         
@@ -2312,7 +2429,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
-        HC.pubsub.pub( 'clipboard', 'text', url )
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', url )
         
     
     def GetInfo( self ):
@@ -2323,20 +2440,20 @@ class DialogInputLocalBooruShare( Dialog ):
         
         timeout = self._timeout_number.GetValue()
         
-        if timeout is not None: timeout = timeout * self._timeout_multiplier.GetChoice() + HC.GetNow()
+        if timeout is not None: timeout = timeout * self._timeout_multiplier.GetChoice() + HydrusData.GetNow()
         
         return ( self._share_key, name, text, timeout, self._hashes )
         
     
 class DialogInputLocalFiles( Dialog ):
     
-    def __init__( self, parent, paths = [] ):
+    def __init__( self, parent, paths = None ):
+        
+        if paths is None: paths = []
         
         def InitialiseControls():
             
             self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
-            
-            self._gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
             self._gauge = ClientGUICommon.Gauge( self )
             
@@ -2344,9 +2461,11 @@ class DialogInputLocalFiles( Dialog ):
             
             self._gauge_pause = wx.Button( self, label = 'pause' )
             self._gauge_pause.Bind( wx.EVT_BUTTON, self.EventGaugePause )
+            self._gauge_pause.Disable()
             
             self._gauge_cancel = wx.Button( self, label = 'cancel' )
             self._gauge_cancel.Bind( wx.EVT_BUTTON, self.EventGaugeCancel )
+            self._gauge_cancel.Disable()
             
             self._add_files_button = wx.Button( self, label = 'Add Files' )
             self._add_files_button.Bind( wx.EVT_BUTTON, self.EventAddPaths )
@@ -2381,16 +2500,15 @@ class DialogInputLocalFiles( Dialog ):
         
         def ArrangeControls():
             
-            self._gauge_sizer.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._gauge_sizer.AddF( self._gauge_text, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._gauge_sizer.AddF( self._gauge_pause, CC.FLAGS_MIXED )
-            self._gauge_sizer.AddF( self._gauge_cancel, CC.FLAGS_MIXED )
+            gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
-            self._gauge_sizer.ShowItems( False )
+            gauge_sizer.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gauge_sizer.AddF( self._gauge_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gauge_sizer.AddF( self._gauge_pause, CC.FLAGS_MIXED )
+            gauge_sizer.AddF( self._gauge_cancel, CC.FLAGS_MIXED )
             
             file_buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            file_buttons.AddF( self._gauge_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS.ReserveSpaceEvenIfHidden() )
             file_buttons.AddF( self._add_files_button, CC.FLAGS_MIXED )
             file_buttons.AddF( self._add_folder_button, CC.FLAGS_MIXED )
             file_buttons.AddF( self._remove_files_button, CC.FLAGS_MIXED )
@@ -2404,6 +2522,7 @@ class DialogInputLocalFiles( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( file_buttons, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._delete_after_success, CC.FLAGS_LONE_BUTTON )
@@ -2435,7 +2554,7 @@ class DialogInputLocalFiles( Dialog ):
         
         self._current_paths = set()
         
-        self._job_key = HC.JobKey()
+        self._job_key = HydrusData.JobKey()
         
         if len( paths ) > 0: self._AddPathsToList( paths )
         
@@ -2457,6 +2576,9 @@ class DialogInputLocalFiles( Dialog ):
             
             if len( self._processing_queue ) == 0:
                 
+                self._gauge_pause.Disable()
+                self._gauge_cancel.Disable()
+                
                 self._add_button.Enable()
                 self._tag_button.Enable()
                 
@@ -2466,7 +2588,7 @@ class DialogInputLocalFiles( Dialog ):
                 
                 self._currently_parsing = True
                 
-                self._job_key = HC.JobKey()
+                self._job_key = HydrusData.JobKey()
                 
                 HydrusThreading.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
                 
@@ -2474,9 +2596,6 @@ class DialogInputLocalFiles( Dialog ):
                 
                 self._gauge_pause.Enable()
                 self._gauge_cancel.Enable()
-                
-                self._gauge_sizer.ShowItems( True )
-                self._gauge_sizer.Layout()
                 
                 self._add_button.Disable()
                 self._tag_button.Disable()
@@ -2488,7 +2607,7 @@ class DialogInputLocalFiles( Dialog ):
     
     def AddParsedPath( self, path_type, mime, size, path_info ):
         
-        pretty_size = HC.ConvertIntToBytes( size )
+        pretty_size = HydrusData.ConvertIntToBytes( size )
         
         if path_type == 'path': pretty_path = path_info
         elif path_type == 'zip':
@@ -2507,8 +2626,6 @@ class DialogInputLocalFiles( Dialog ):
         
     
     def DoneParsing( self ):
-        
-        self._gauge_sizer.ShowItems( False )
         
         self._currently_parsing = False
         
@@ -2593,7 +2710,7 @@ class DialogInputLocalFiles( Dialog ):
             
             delete_after_success = self._delete_after_success.GetValue()
             
-            HC.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, delete_after_success = delete_after_success )
+            HydrusGlobals.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, delete_after_success = delete_after_success )
             
             self.EndModal( wx.ID_OK )
             
@@ -2634,7 +2751,7 @@ class DialogInputLocalFiles( Dialog ):
                         
                         paths_to_tags = dlg.GetInfo()
                         
-                        HC.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+                        HydrusGlobals.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
                         
                         self.EndModal( wx.ID_OK )
                         
@@ -2679,7 +2796,7 @@ class DialogInputLocalFiles( Dialog ):
             
             if i % 500 == 0: gc.collect()
             
-            wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
+            wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Done ' + HydrusData.ToString( i ) + '/' + HydrusData.ToString( num_file_paths ) )
             
             job_key.WaitOnPause()
             
@@ -2693,7 +2810,7 @@ class DialogInputLocalFiles( Dialog ):
                 
                 num_odd_files += 1
                 
-                HC.ShowException( HydrusExceptions.SizeException( path + ' could not be imported because it is empty!' ) )
+                HydrusData.ShowException( HydrusExceptions.SizeException( path + ' could not be imported because it is empty!' ) )
                 
                 continue
                 
@@ -2728,16 +2845,16 @@ class DialogInputLocalFiles( Dialog ):
                                 ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
                                 
                             
-                        except: HC.ShowText( 'Tried to read a key, but did not understand it.' )
+                        except: HydrusData.ShowText( 'Tried to read a key, but did not understand it.' )
                         
                     
-                    job_key = HC.JobKey()
+                    job_key = HydrusData.JobKey()
                     
                     def WXTHREADGetAESKey( key ):
                         
                         while key is None:
                             
-                            with DialogTextEntry( HC.app.GetTopWindow(), 'Please enter the key for ' + path + '.' ) as dlg:
+                            with DialogTextEntry( wx.GetApp().GetTopWindow(), 'Please enter the key for ' + path + '.' ) as dlg:
                                 
                                 result = dlg.ShowModal()
                                 
@@ -2795,13 +2912,19 @@ class DialogInputLocalFiles( Dialog ):
                                 # the file pointer returned by open doesn't support seek, lol!
                                 # so, might as well open the whole damn file
                                 
-                                zip_temp_path = HC.GetTempPath()
                                 
-                                with open( zip_temp_path, 'wb' ) as f: f.write( z.read( name ) )
+                                ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
                                 
-                                name_mime = HydrusFileHandling.GetMime( zip_temp_path )
-                                
-                                os.remove( zip_temp_path )
+                                try:
+                                    
+                                    with open( temp_path, 'wb' ) as f: f.write( z.read( name ) )
+                                    
+                                    name_mime = HydrusFileHandling.GetMime( temp_path )
+                                    
+                                finally:
+                                    
+                                    HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+                                    
                                 
                                 if name_mime in HC.ALLOWED_MIMES:
                                     
@@ -2821,7 +2944,7 @@ class DialogInputLocalFiles( Dialog ):
                         
                         num_odd_files += 1
                         
-                        HC.ShowException( e )
+                        HydrusData.ShowException( e )
                         
                         continue
                         
@@ -2833,7 +2956,7 @@ class DialogInputLocalFiles( Dialog ):
                 
                 e = HydrusExceptions.MimeException( path + ' could not be imported because its mime is not supported.' )
                 
-                HC.ShowException( e )
+                HydrusData.ShowException( e )
                 
                 continue
                 
@@ -2842,14 +2965,14 @@ class DialogInputLocalFiles( Dialog ):
         if num_good_files > 0:
             
             if num_good_files == 1: message = '1 file was parsed successfully'
-            else: message = HC.u( num_good_files ) + ' files were parsed successfully'
+            else: message = HydrusData.ToString( num_good_files ) + ' files were parsed successfully'
             
-            if num_odd_files > 0: message += ', but ' + HC.u( num_odd_files ) + ' failed.'
+            if num_odd_files > 0: message += ', but ' + HydrusData.ToString( num_odd_files ) + ' failed.'
             else: message += '.'
             
         else:
             
-            message = HC.u( num_odd_files ) + ' files could not be parsed.'
+            message = HydrusData.ToString( num_odd_files ) + ' files could not be parsed.'
             
         
         wx.CallAfter( self.SetGaugeInfo, num_file_paths, num_file_paths, message )
@@ -2921,7 +3044,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = HC.app.Read( 'contact_names' )
+                contact_names = wx.GetApp().Read( 'contact_names' )
                 
                 self._contact = wx.Choice( self, choices=contact_names )
                 
@@ -2963,7 +3086,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = HC.app.Read( 'contact_names' )
+                contact_names = wx.GetApp().Read( 'contact_names' )
                 
                 self._contact = wx.Choice( self, choices = contact_names )
                 
@@ -3005,7 +3128,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = [ name for name in HC.app.Read( 'contact_names' ) if name != 'Anonymous' ]
+                contact_names = [ name for name in wx.GetApp().Read( 'contact_names' ) if name != 'Anonymous' ]
                 
                 self._contact = wx.Choice( self, choices = contact_names )
                 
@@ -3105,11 +3228,11 @@ class DialogInputMessageSystemPredicate( Dialog ):
     
     def GetString( self ):
         
-        if self._type == 'system:age': return 'system:age' + self._sign.GetStringSelection() + HC.u( self._years.GetValue() ) + 'y' + HC.u( self._months.GetValue() ) + 'm' + HC.u( self._days.GetValue() ) + 'd'
+        if self._type == 'system:age': return 'system:age' + self._sign.GetStringSelection() + HydrusData.ToString( self._years.GetValue() ) + 'y' + HydrusData.ToString( self._months.GetValue() ) + 'm' + HydrusData.ToString( self._days.GetValue() ) + 'd'
         elif self._type == 'system:started_by': return 'system:started_by=' + self._contact.GetStringSelection()
         elif self._type == 'system:from': return 'system:from=' + self._contact.GetStringSelection()
         elif self._type == 'system:to': return 'system:to=' + self._contact.GetStringSelection()
-        elif self._type == 'system:numattachments': return 'system:numattachments' + self._sign.GetStringSelection() + HC.u( self._num_attachments.GetValue() )
+        elif self._type == 'system:numattachments': return 'system:numattachments' + self._sign.GetStringSelection() + HydrusData.ToString( self._num_attachments.GetValue() )
         
     
 class DialogInputNamespaceRegex( Dialog ):
@@ -3324,7 +3447,7 @@ class DialogInputNewAccountType( Dialog ):
         
         max_num_requests = self._max_num_requests.GetValue()
         
-        return HC.AccountType( title, permissions, ( max_num_bytes, max_num_requests ) )
+        return HydrusData.AccountType( title, permissions, ( max_num_bytes, max_num_requests ) )
         
     
 class DialogInputNewFormField( Dialog ):
@@ -3639,9 +3762,9 @@ class DialogModifyAccounts( Dialog ):
                 
                 response = self._service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_identifier } )
                 
-                subject_string = HC.u( response[ 'account_info' ] )
+                subject_string = HydrusData.ToString( response[ 'account_info' ] )
                 
-            else: subject_string = 'modifying ' + HC.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
+            else: subject_string = 'modifying ' + HydrusData.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
             
             self._subject_text.SetLabel( subject_string )
             
@@ -3722,7 +3845,7 @@ class DialogModifyAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'modify account' )
         
-        self._service = HC.app.GetManager( 'services' ).GetService( service_key )
+        self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         self._subject_identifiers = list( subject_identifiers )
         
         InitialiseControls()
@@ -3751,7 +3874,7 @@ class DialogModifyAccounts( Dialog ):
             
             account_info = response[ 'account_info' ]
             
-            self._subject_text.SetLabel( HC.u( account_info ) )
+            self._subject_text.SetLabel( HydrusData.ToString( account_info ) )
             
         
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
@@ -3773,7 +3896,7 @@ class DialogModifyAccounts( Dialog ):
         
         expires = self._set_expires.GetClientData( self._set_expires.GetSelection() )
         
-        if expires is not None: expires += HC.GetNow()
+        if expires is not None: expires += HydrusData.GetNow()
         
         self._DoModification( HC.SET_EXPIRES, expires = expires )
         
@@ -3807,7 +3930,7 @@ class DialogNews( Dialog ):
     
         def PopulateControls():
             
-            self._newslist = HC.app.Read( 'news', service_key )
+            self._newslist = wx.GetApp().Read( 'news', service_key )
             
             self._current_news_position = len( self._newslist )
             
@@ -3862,9 +3985,9 @@ class DialogNews( Dialog ):
             
             ( news, timestamp ) = self._newslist[ self._current_news_position - 1 ]
             
-            self._news.SetValue( time.ctime( timestamp ) + ' (' + HC.ConvertTimestampToPrettyAgo( timestamp ) + '):' + os.linesep * 2 + news )
+            self._news.SetValue( time.ctime( timestamp ) + ' (' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + '):' + os.linesep * 2 + news )
             
-            self._news_position.SetValue( HC.ConvertIntToPrettyString( self._current_news_position ) + ' / ' + HC.ConvertIntToPrettyString( len( self._newslist ) ) )
+            self._news_position.SetValue( HydrusData.ConvertIntToPrettyString( self._current_news_position ) + ' / ' + HydrusData.ConvertIntToPrettyString( len( self._newslist ) ) )
             
         
     
@@ -3938,7 +4061,7 @@ class DialogPageChooser( Dialog ):
         
         ArrangeControls()
         
-        self._services = HC.app.GetManager( 'services' ).GetServices()
+        self._services = wx.GetApp().GetManager( 'services' ).GetServices()
         
         self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
         
@@ -3987,7 +4110,7 @@ class DialogPageChooser( Dialog ):
         if entry_type == 'menu': button.SetLabel( obj )
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
-            name = HC.app.GetManager( 'services' ).GetService( obj ).GetName()
+            name = wx.GetApp().GetManager( 'services' ).GetService( obj ).GetName()
             
             button.SetLabel( name )
             
@@ -4019,14 +4142,14 @@ class DialogPageChooser( Dialog ):
             
             file_repos = [ ( 'page_query', service_key ) for service_key in [ service.GetServiceKey() for service in self._services if service.GetServiceType() == HC.FILE_REPOSITORY ] ]
             
-            entries = [ ( 'page_query', HC.LOCAL_FILE_SERVICE_KEY ) ] + file_repos
+            entries = [ ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ) ] + file_repos
             
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery':
             
             entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', None ) ), ( 'page_import_gallery', ( 'deviant art', 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', None ) ) ]
             
-            ( id, password ) = HC.app.Read( 'pixiv_account' )
+            ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
             
             if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
             
@@ -4074,7 +4197,7 @@ class DialogPageChooser( Dialog ):
             if entry_type == 'menu': self._InitButtons( obj )
             else:
                 
-                if entry_type == 'page_query': HC.pubsub.pub( 'new_page_query', obj )
+                if entry_type == 'page_query': HydrusGlobals.pubsub.pub( 'new_page_query', obj )
                 elif entry_type == 'page_import_booru':
                     
                     with DialogSelectBooru( self ) as dlg:
@@ -4083,7 +4206,7 @@ class DialogPageChooser( Dialog ):
                             
                             booru = dlg.GetBooru()
                             
-                            HC.pubsub.pub( 'new_page_import_gallery', 'booru', booru )
+                            HydrusGlobals.pubsub.pub( 'new_page_import_gallery', 'booru', booru )
                             
                         
                     
@@ -4091,11 +4214,11 @@ class DialogPageChooser( Dialog ):
                     
                     ( gallery_name, gallery_type ) = obj
                     
-                    HC.pubsub.pub( 'new_page_import_gallery', gallery_name, gallery_type )
+                    HydrusGlobals.pubsub.pub( 'new_page_import_gallery', gallery_name, gallery_type )
                     
-                elif entry_type == 'page_import_thread_watcher': HC.pubsub.pub( 'new_page_import_thread_watcher' )
-                elif entry_type == 'page_import_url': HC.pubsub.pub( 'new_page_import_url' )
-                elif entry_type == 'page_petitions': HC.pubsub.pub( 'new_page_petitions', obj )
+                elif entry_type == 'page_import_thread_watcher': HydrusGlobals.pubsub.pub( 'new_page_import_thread_watcher' )
+                elif entry_type == 'page_import_url': HydrusGlobals.pubsub.pub( 'new_page_import_url' )
+                elif entry_type == 'page_petitions': HydrusGlobals.pubsub.pub( 'new_page_petitions', obj )
                 
                 self.EndModal( wx.ID_OK )
                 
@@ -4147,7 +4270,7 @@ class DialogPathsToTags( Dialog ):
         
         def PopulateControls():
             
-            services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -4165,15 +4288,15 @@ class DialogPathsToTags( Dialog ):
                     
                 
             
-            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_KEY, paths )
+            page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, paths )
             
-            name = HC.LOCAL_TAG_SERVICE_KEY
+            name = CC.LOCAL_TAG_SERVICE_KEY
             
             self._tag_repositories.AddPage( page, name )
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            default_tag_repository = HC.app.GetManager( 'services' ).GetService( default_tag_repository_key )
+            default_tag_repository = wx.GetApp().GetManager( 'services' ).GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
@@ -4328,7 +4451,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagRemoved )
                 
-                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, HC.LOCAL_FILE_SERVICE_KEY, service_key )
+                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, CC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
                 #
                 
@@ -4338,7 +4461,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagRemoved )
                 
-                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, HC.LOCAL_FILE_SERVICE_KEY, service_key )
+                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, CC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
             
             def PopulateControls():
@@ -4350,7 +4473,7 @@ class DialogPathsToTags( Dialog ):
                     
                     processed_num = num_base + num * num_step
                     
-                    pretty_num = HC.ConvertIntToPrettyString( processed_num )
+                    pretty_num = HydrusData.ConvertIntToPrettyString( processed_num )
                     
                     tags = self._GetTags( num, path )
                     
@@ -4472,10 +4595,10 @@ class DialogPathsToTags( Dialog ):
             
             if num_namespace != '':
                 
-                tags.append( num_namespace + ':' + HC.u( num ) )
+                tags.append( num_namespace + ':' + HydrusData.ToString( num ) )
                 
             
-            tags = HC.CleanTags( tags )
+            tags = HydrusTags.CleanTags( tags )
             
             tags = list( tags )
             
@@ -4494,7 +4617,7 @@ class DialogPathsToTags( Dialog ):
                 
                 if tags != old_tags:
                     
-                    pretty_num = HC.ConvertIntToPrettyString( processed_num )
+                    pretty_num = HydrusData.ConvertIntToPrettyString( processed_num )
                     
                     tags_string = ', '.join( tags )
                     
@@ -4503,7 +4626,9 @@ class DialogPathsToTags( Dialog ):
                 
             
         
-        def AddTag( self, tag, parents = [] ):
+        def AddTag( self, tag, parents = None ):
+            
+            if parents is None: parents = []
             
             if tag is not None:
                 
@@ -4513,7 +4638,9 @@ class DialogPathsToTags( Dialog ):
                 
             
         
-        def AddTagSingle( self, tag, parents = [] ):
+        def AddTagSingle( self, tag, parents = None ):
+            
+            if parents is None: parents = []
             
             if tag is not None:
                 
@@ -4632,7 +4759,7 @@ class DialogPathsToTags( Dialog ):
                 
                 processed_num = num_base + original_num * num_step
                 
-                pretty_num = HC.ConvertIntToPrettyString( processed_num )
+                pretty_num = HydrusData.ConvertIntToPrettyString( processed_num )
                 
                 tags_string = ', '.join( tags )
                 
@@ -4813,7 +4940,7 @@ class DialogSelectBooru( Dialog ):
     
         def PopulateControls():
             
-            boorus = HC.app.Read( 'remote_boorus' )
+            boorus = wx.GetApp().Read( 'remote_boorus' )
             
             for ( name, booru ) in boorus.items(): self._boorus.Append( name, booru )
             
@@ -4869,7 +4996,7 @@ class DialogSelectImageboard( Dialog ):
         
         def PopulateControls():
             
-            all_imageboards = HC.app.Read( 'imageboards' )
+            all_imageboards = wx.GetApp().Read( 'imageboards' )
             
             root_item = self._tree.AddRoot( 'all sites' )
             
@@ -4927,7 +5054,9 @@ class DialogSelectImageboard( Dialog ):
     
 class DialogCheckFromListOfStrings( Dialog ):
     
-    def __init__( self, parent, title, list_of_strings, checked_strings = [] ):
+    def __init__( self, parent, title, list_of_strings, checked_strings = None ):
+        
+        if checked_strings is None: checked_strings = []
         
         def InitialiseControls():
             
@@ -5121,11 +5250,11 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 url_string = title + ' ' + resolution + ' ' + extension
                 
-                job_key = HC.JobKey( pausable = True, cancellable = True )
+                job_key = HydrusData.JobKey( pausable = True, cancellable = True )
                 
-                HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, job_key, url, url_string )
+                HydrusThreading.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
                 
-                HC.pubsub.pub( 'message', job_key )
+                HydrusGlobals.pubsub.pub( 'message', job_key )
                 
             
         
@@ -5179,7 +5308,7 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             self._favourites.Append( 'default', default_actions )
             
-            favourites = HC.app.Read( 'favourite_custom_filter_actions' )
+            favourites = wx.GetApp().Read( 'favourite_custom_filter_actions' )
             
             self._initial_favourite_names = favourites.keys()
             
@@ -5353,9 +5482,9 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         deletees = set( self._initial_favourite_names ) - set( favourites.keys() )
         
-        for deletee in deletees: HC.app.Write( 'delete_favourite_custom_filter_actions', deletee )
+        for deletee in deletees: wx.GetApp().Write( 'delete_favourite_custom_filter_actions', deletee )
         
-        for ( name, actions ) in favourites.items(): HC.app.Write( 'favourite_custom_filter_actions', name, actions )
+        for ( name, actions ) in favourites.items(): wx.GetApp().Write( 'favourite_custom_filter_actions', name, actions )
         
         self.EndModal( wx.ID_OK )
         
@@ -5389,7 +5518,7 @@ class DialogSetupCustomFilterActions( Dialog ):
                 
                 if name == '': return
                 
-                while name in existing_names: name += HC.u( random.randint( 0, 9 ) )
+                while name in existing_names: name += HydrusData.ToString( random.randint( 0, 9 ) )
                 
                 actions = self._actions.GetClientData()
                 
@@ -5425,14 +5554,14 @@ class DialogSetupCustomFilterActions( Dialog ):
                 
                 for ( modifier, key, service_key, action ) in actions:
                     
-                    ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, action )
+                    ( pretty_modifier, pretty_key, pretty_action ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key, action )
                     
                     if service_key is None: pretty_service_key = ''
                     else:
                         
-                        if type( service_key ) == HC.ClientServiceIdentifier: service_key = service_key.GetServiceKey()
+                        if type( service_key ) == ClientData.ClientServiceIdentifier: service_key = service_key.GetServiceKey()
                         
-                        service = HC.app.GetManager( 'services' ).GetService( service_key )
+                        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                         
                         pretty_service_key = service.GetName()
                         
@@ -5516,7 +5645,7 @@ class DialogSetupExport( Dialog ):
                 
                 mime = media.GetMime()
                 
-                pretty_tuple = ( HC.u( i + 1 ), HC.mime_string_lookup[ mime ], '' )
+                pretty_tuple = ( HydrusData.ToString( i + 1 ), HC.mime_string_lookup[ mime ], '' )
                 data_tuple = ( ( i, media ), mime, '' )
                 
                 self._paths.Append( pretty_tuple, data_tuple )
@@ -5524,7 +5653,7 @@ class DialogSetupExport( Dialog ):
             
             if HC.options[ 'export_path' ] is not None:
                 
-                abs_path = HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
+                abs_path = HydrusData.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
                 
                 if abs_path is not None: self._directory_picker.SetPath( abs_path )
                 
@@ -5629,9 +5758,9 @@ class DialogSetupExport( Dialog ):
                 
                 i = 1
                 
-                while self._GetPath( media, terms + [ ( 'string', HC.u( i ) ) ] ) in all_paths: i += 1
+                while self._GetPath( media, terms + [ ( 'string', HydrusData.ToString( i ) ) ] ) in all_paths: i += 1
                 
-                path = self._GetPath( media, terms + [ ( 'string', HC.u( i ) ) ] )
+                path = self._GetPath( media, terms + [ ( 'string', HydrusData.ToString( i ) ) ] )
                 
             
             all_paths.add( path )
@@ -5640,7 +5769,7 @@ class DialogSetupExport( Dialog ):
                 
                 mime = media.GetMime()
                 
-                self._paths.UpdateRow( index, ( HC.u( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
+                self._paths.UpdateRow( index, ( HydrusData.ToString( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
                 
             
         
@@ -5678,7 +5807,7 @@ class DialogSetupExport( Dialog ):
                         
                     except:
                         
-                        wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HC.u( ordering_index + 1 ) + '.' + os.linesep * 2 + traceback.format_exc() )
+                        wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HydrusData.ToString( ordering_index + 1 ) + '.' + os.linesep * 2 + traceback.format_exc() )
                         
                         break
                         
@@ -5703,7 +5832,7 @@ class DialogSetupExport( Dialog ):
                     
                 except:
                     
-                    wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HC.u( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
+                    wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HydrusData.ToString( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
                     
                     break
                     
@@ -5733,7 +5862,7 @@ class DialogSetupExport( Dialog ):
             
             try:
                 
-                HC.LaunchDirectory( directory )
+                HydrusFileHandling.LaunchDirectory( directory )
                 
             except: wx.MessageBox( 'Could not open that location!' )
         

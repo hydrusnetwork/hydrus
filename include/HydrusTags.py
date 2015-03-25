@@ -1,3 +1,4 @@
+import ClientData
 import collections
 import HydrusConstants as HC
 import itertools
@@ -6,6 +7,12 @@ import threading
 import time
 import traceback
 import wx
+import HydrusData
+import HydrusExceptions
+import re
+import ClientSearch
+import ClientConstants
+import HydrusGlobals
 
 # important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
@@ -25,7 +32,7 @@ def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_pare
             
         
     
-    service_keys_to_children_to_parents = collections.defaultdict( HC.default_dict_list )
+    service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
     
     for ( service_key, simple_children_to_parents ) in service_keys_to_simple_children_to_parents.items():
         
@@ -38,7 +45,7 @@ def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_pare
     
 def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
     
-    service_keys_to_simple_children_to_parents = collections.defaultdict( HC.default_dict_set )
+    service_keys_to_simple_children_to_parents = collections.defaultdict( HydrusData.default_dict_set )
     
     for ( service_key, pairs ) in service_keys_to_pairs_flat.items():
         
@@ -49,7 +56,7 @@ def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
     
 def BuildSimpleChildrenToParents( pairs ):
     
-    simple_children_to_parents = HC.default_dict_set()
+    simple_children_to_parents = HydrusData.default_dict_set()
     
     for ( child, parent ) in pairs:
         
@@ -246,11 +253,11 @@ def MergeTagsManagers( tags_managers ):
     flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
     
     # service_key : [ statuses_to_tags ]
-    s_k_s_t_t_dict = HC.BuildKeyToListDict( flattened_s_k_s_t_t )
+    s_k_s_t_t_dict = HydrusData.BuildKeyToListDict( flattened_s_k_s_t_t )
     
     # now let's merge so we have service_key : statuses_to_tags
     
-    merged_service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+    merged_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
     
     for ( service_key, several_statuses_to_tags ) in s_k_s_t_t_dict.items():
         
@@ -260,7 +267,7 @@ def MergeTagsManagers( tags_managers ):
         # [( status, tags )]
         flattened_s_t_t = itertools.chain.from_iterable( s_t_t_tupled )
         
-        statuses_to_tags = HC.default_dict_set()
+        statuses_to_tags = HydrusData.default_dict_set()
         
         for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
         
@@ -281,7 +288,7 @@ class TagsManagerSimple( object ):
     
     def __init__( self, service_keys_to_statuses_to_tags ):
         
-        tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
+        tag_censorship_manager = wx.GetApp().GetManager( 'tag_censorship' )
         
         service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
         
@@ -294,12 +301,12 @@ class TagsManagerSimple( object ):
         
         if self._combined_namespaces_cache is None:
     
-            combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
+            combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ]
             
             combined_current = combined_statuses_to_tags[ HC.CURRENT ]
             combined_pending = combined_statuses_to_tags[ HC.PENDING ]
             
-            self._combined_namespaces_cache = HC.BuildKeyToSetDict( tag.split( ':', 1 ) for tag in combined_current.union( combined_pending ) if ':' in tag )
+            self._combined_namespaces_cache = HydrusData.BuildKeyToSetDict( tag.split( ':', 1 ) for tag in combined_current.union( combined_pending ) if ':' in tag )
             
         
         result = { namespace : self._combined_namespaces_cache[ namespace ] for namespace in namespaces }
@@ -309,14 +316,14 @@ class TagsManagerSimple( object ):
     
     def GetComparableNamespaceSlice( self, namespaces, collapse_siblings = False ):
         
-        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ]
         
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
         
         combined = combined_current.union( combined_pending )
         
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
         
         slice = []
         
@@ -340,7 +347,7 @@ class TagsManagerSimple( object ):
     
     def GetNamespaceSlice( self, namespaces, collapse_siblings = False ):
         
-        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ]
         
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
@@ -349,7 +356,7 @@ class TagsManagerSimple( object ):
         
         if collapse_siblings:
             
-            siblings_manager = HC.app.GetManager( 'tag_siblings' )
+            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
             
             slice = siblings_manager.CollapseTags( slice )
             
@@ -374,13 +381,13 @@ class TagsManager( TagsManagerSimple ):
         
         for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
             
-            if service_key == HC.COMBINED_TAG_SERVICE_KEY: continue
+            if service_key == ClientConstants.COMBINED_TAG_SERVICE_KEY: continue
             
             combined_statuses_to_tags[ HC.CURRENT ].update( statuses_to_tags[ HC.CURRENT ] )
             combined_statuses_to_tags[ HC.PENDING ].update( statuses_to_tags[ HC.PENDING ] )
             
         
-        self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
+        self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
         
         self._combined_namespaces_cache = None
         
@@ -398,14 +405,14 @@ class TagsManager( TagsManagerSimple ):
             
         
     
-    def GetCurrent( self, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
+    def GetCurrent( self, service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.CURRENT ] )
         
     
-    def GetDeleted( self, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
+    def GetDeleted( self, service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
@@ -424,14 +431,14 @@ class TagsManager( TagsManagerSimple ):
         return num_tags
         
     
-    def GetPending( self, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
+    def GetPending( self, service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.PENDING ] )
         
     
-    def GetPetitioned( self, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
+    def GetPetitioned( self, service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
@@ -444,7 +451,7 @@ class TagsManager( TagsManagerSimple ):
     
     def HasTag( self, tag ):
         
-        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ]
         
         return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
         
@@ -496,7 +503,7 @@ class TagCensorshipManager( object ):
         
         self.RefreshData()
         
-        HC.pubsub.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
         
     
     def GetInfo( self, service_key ):
@@ -507,7 +514,7 @@ class TagCensorshipManager( object ):
     
     def RefreshData( self ):
         
-        info = HC.app.Read( 'tag_censorship' )
+        info = wx.GetApp().Read( 'tag_censorship' )
         
         self._service_keys_to_predicates = {}
         
@@ -524,11 +531,11 @@ class TagCensorshipManager( object ):
     
     def FilterServiceKeysToStatusesToTags( self, service_keys_to_statuses_to_tags ):
         
-        filtered_service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        filtered_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
         for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
             
-            for service_key_lookup in ( HC.COMBINED_TAG_SERVICE_KEY, service_key ):
+            for service_key_lookup in ( ClientConstants.COMBINED_TAG_SERVICE_KEY, service_key ):
                 
                 if service_key_lookup in self._service_keys_to_predicates:
                     
@@ -553,7 +560,7 @@ class TagCensorshipManager( object ):
     
     def FilterTags( self, service_key, tags ):
         
-        for service_key in ( HC.COMBINED_TAG_SERVICE_KEY, service_key ):
+        for service_key in ( ClientConstants.COMBINED_TAG_SERVICE_KEY, service_key ):
             
             if service_key in self._service_keys_to_predicates:
                 
@@ -574,22 +581,22 @@ class TagParentsManager( object ):
         
         self._lock = threading.Lock()
         
-        HC.pubsub.sub( self, 'RefreshParents', 'notify_new_parents' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshParents', 'notify_new_parents' )
         
     
     def _RefreshParents( self ):
         
-        service_keys_to_statuses_to_pairs = HC.app.Read( 'tag_parents' )
+        service_keys_to_statuses_to_pairs = wx.GetApp().Read( 'tag_parents' )
         
         # first collapse siblings
         
-        sibling_manager = HC.app.GetManager( 'tag_siblings' )
+        sibling_manager = wx.GetApp().GetManager( 'tag_siblings' )
         
-        collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HC.default_dict_set )
+        collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
         
         for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
             
-            if service_key == HC.COMBINED_TAG_SERVICE_KEY: continue
+            if service_key == ClientConstants.COMBINED_TAG_SERVICE_KEY: continue
             
             for ( status, pairs ) in statuses_to_pairs.items():
                 
@@ -601,7 +608,7 @@ class TagParentsManager( object ):
         
         # now collapse current and pending
         
-        service_keys_to_pairs_flat = HC.default_dict_set()
+        service_keys_to_pairs_flat = HydrusData.default_dict_set()
         
         for ( service_key, statuses_to_pairs ) in collapsed_service_keys_to_statuses_to_pairs.items():
             
@@ -619,7 +626,7 @@ class TagParentsManager( object ):
             combined_pairs_flat.update( pairs_flat )
             
         
-        service_keys_to_pairs_flat[ HC.COMBINED_TAG_SERVICE_KEY ] = combined_pairs_flat
+        service_keys_to_pairs_flat[ ClientConstants.COMBINED_TAG_SERVICE_KEY ] = combined_pairs_flat
         
         #
         
@@ -631,7 +638,7 @@ class TagParentsManager( object ):
     def ExpandPredicates( self, service_key, predicates ):
         
         # for now -- we will make an option, later
-        service_key = HC.COMBINED_TAG_SERVICE_KEY
+        service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY
         
         results = []
         
@@ -649,7 +656,7 @@ class TagParentsManager( object ):
                     
                     for parent in parents:
                         
-                        parent_predicate = HC.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
+                        parent_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
                         
                         results.append( parent_predicate )
                         
@@ -665,7 +672,7 @@ class TagParentsManager( object ):
         with self._lock:
             
             # for now -- we will make an option, later
-            service_key = HC.COMBINED_TAG_SERVICE_KEY
+            service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY
             
             tags_results = set( tags )
             
@@ -680,7 +687,7 @@ class TagParentsManager( object ):
         with self._lock:
             
             # for now -- we will make an option, later
-            service_key = HC.COMBINED_TAG_SERVICE_KEY
+            service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY
             
             return self._service_keys_to_children_to_parents[ service_key ][ tag ]
             
@@ -699,27 +706,27 @@ class TagSiblingsManager( object ):
         
         self._lock = threading.Lock()
         
-        HC.pubsub.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
         
     
     def _RefreshSiblings( self ):
         
-        service_keys_to_statuses_to_pairs = HC.app.Read( 'tag_siblings' )
+        service_keys_to_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings' )
         
         processed_siblings = CombineTagSiblingPairs( service_keys_to_statuses_to_pairs )
         
         ( self._siblings, self._reverse_lookup ) = CollapseTagSiblingChains( processed_siblings )
         
-        HC.pubsub.pub( 'new_siblings_gui' )
+        HydrusGlobals.pubsub.pub( 'new_siblings_gui' )
         
     
     def GetAutocompleteSiblings( self, half_complete_tag ):
         
         with self._lock:
             
-            key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if HC.SearchEntryMatchesTag( half_complete_tag, key, search_siblings = False ) }
+            key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if ClientSearch.SearchEntryMatchesTag( half_complete_tag, key, search_siblings = False ) }
             
-            value_based_matching_values = { value for value in self._siblings.values() if HC.SearchEntryMatchesTag( half_complete_tag, value, search_siblings = False ) }
+            value_based_matching_values = { value for value in self._siblings.values() if ClientSearch.SearchEntryMatchesTag( half_complete_tag, value, search_siblings = False ) }
             
             matching_values = key_based_matching_values.union( value_based_matching_values )
             
@@ -821,7 +828,7 @@ class TagSiblingsManager( object ):
                         
                         ( old_pred_type, old_value, old_inclusive ) = old_predicate.GetInfo()
                         
-                        new_predicate = HC.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
+                        new_predicate = HydrusData.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
                         
                         tags_to_predicates[ new_tag ] = new_predicate
                         
@@ -882,6 +889,59 @@ class TagSiblingsManager( object ):
                 
             
             return results
+
+def CheckTagNotEmpty( tag ):
+    
+    empty_tag = False
+    
+    if tag == '': empty_tag = True
+    
+    if ':' in tag:
+        
+        ( namespace, subtag ) = tag.split( ':', 1 )
+        
+        if subtag == '': empty_tag = True
+        
+    
+    if empty_tag: raise HydrusExceptions.SizeException( 'Received a zero-length tag!' )
+
+def CleanTag( tag ):
+    
+    tag = tag[:1024]
+    
+    tag = tag.lower()
+    
+    tag = HydrusData.ToString( tag )
+    
+    tag = re.sub( '[\\s]+', ' ', tag, flags = re.UNICODE ) # turns multiple spaces into single spaces
+    
+    tag = re.sub( '\\s\\Z', '', tag, flags = re.UNICODE ) # removes space at the end
+    
+    while re.match( '\\s|-|system:', tag, flags = re.UNICODE ) is not None:
+        
+        tag = re.sub( '\\A(\\s|-|system:)', '', tag, flags = re.UNICODE ) # removes space at the beginning
+        
+    
+    return tag
+
+def CleanTags( tags ):
+    
+    clean_tags = set()
+    
+    for tag in tags:
+        
+        tag = CleanTag( tag )
+        
+        try: CheckTagNotEmpty( tag )
+        except HydrusExceptions.SizeException: continue
+        
+        clean_tags.add( tag )
+        
+    
+    return clean_tags
+    
+    
+    
             
         
     

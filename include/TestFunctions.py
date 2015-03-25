@@ -1,11 +1,13 @@
 import collections
 import HydrusConstants as HC
-import HydrusDownloading
+import ClientDownloading
 import os
 import TestConstants
 import unittest
+import HydrusData
+import ClientConstants
 
-class TestHydrusDownloadingFunctions( unittest.TestCase ):
+class TestClientDownloadingFunctions( unittest.TestCase ):
     
     def test_dict_to_content_updates( self ):
         
@@ -13,37 +15,37 @@ class TestHydrusDownloadingFunctions( unittest.TestCase ):
         
         hashes = set( [ hash ] )
         
-        local_key = HC.LOCAL_TAG_SERVICE_KEY
+        local_key = ClientConstants.LOCAL_TAG_SERVICE_KEY
         remote_key = os.urandom( 32 )
         
         service_keys_to_tags = { local_key : { 'a' } }
         
-        content_updates = { local_key : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'a', hashes ) ) ] }
+        content_updates = { local_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'a', hashes ) ) ] }
         
-        self.assertEqual( HydrusDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags ), content_updates )
+        self.assertEqual( ClientDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags ), content_updates )
         
         service_keys_to_tags = { remote_key : { 'c' } }
         
-        content_updates = { remote_key : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'c', hashes ) ) ] }
+        content_updates = { remote_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'c', hashes ) ) ] }
         
-        self.assertEqual( HydrusDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags ), content_updates )
+        self.assertEqual( ClientDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags ), content_updates )
         
         service_keys_to_tags = { local_key : [ 'a', 'character:b' ], remote_key : [ 'c', 'series:d' ] }
         
         content_updates = {}
         
-        content_updates[ local_key ] = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'a', hashes ) ), HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'character:b', hashes ) ) ]
-        content_updates[ remote_key ] = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'c', hashes ) ), HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'series:d', hashes ) ) ]
+        content_updates[ local_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'a', hashes ) ), HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'character:b', hashes ) ) ]
+        content_updates[ remote_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'c', hashes ) ), HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'series:d', hashes ) ) ]
         
-        self.assertEqual( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, 'c' ), HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, 'c' ) )
-        self.assertEqual( HydrusDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags ), content_updates )
+        self.assertEqual( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, 'c' ), HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, 'c' ) )
+        self.assertEqual( ClientDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags ), content_updates )
         
     
     def test_number_conversion( self ):
         
         i = 123456789
         
-        i_pretty = HC.ConvertIntToPrettyString( i )
+        i_pretty = HydrusData.ConvertIntToPrettyString( i )
         
         # this test only works on anglo computers; it is mostly so I can check it is working on mine
         
@@ -64,14 +66,6 @@ class TestHydrusDownloadingFunctions( unittest.TestCase ):
         
         service_keys_to_tags = { local_key : { 'a', 'character:b' }, remote_key : { 'a', 'character:b' } }
         
-        self.assertEqual( HydrusDownloading.ConvertTagsToServiceKeysToTags( tags, advanced_tag_options ), service_keys_to_tags )
+        self.assertEqual( ClientDownloading.ConvertTagsToServiceKeysToTags( tags, advanced_tag_options ), service_keys_to_tags )
         
-    
-if __name__ == '__main__':
-    
-    app = TestConstants.TestController()
-    
-    unittest.main( verbosity = 2, exit = False )
-    
-    raw_input()
     

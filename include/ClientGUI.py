@@ -8,7 +8,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIPages
-import HydrusDownloading
+import ClientDownloading
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
@@ -26,6 +26,10 @@ import traceback
 import webbrowser
 import wx
 import yaml
+import HydrusData
+import ClientSearch
+import HydrusNetworking
+import HydrusGlobals
 
 # timers
 
@@ -39,7 +43,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def __init__( self ):
         
-        ClientGUICommon.FrameThatResizes.__init__( self, None, resize_option_prefix = 'gui_', title = HC.app.PrepStringForDisplay( 'Hydrus Client' ) )
+        ClientGUICommon.FrameThatResizes.__init__( self, None, resize_option_prefix = 'gui_', title = wx.GetApp().PrepStringForDisplay( 'Hydrus Client' ) )
         
         self.SetDropTarget( ClientGUICommon.FileDropTarget( self.ImportFiles ) )
         
@@ -61,7 +65,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._notebook.Bind( wx.EVT_RIGHT_DCLICK, self.EventNotebookMiddleClick )
         self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventNotebookPageChanged )
         
-        HC.app.SetTopWindow( self )
+        wx.GetApp().SetTopWindow( self )
         
         self.RefreshAcceleratorTable()
         
@@ -71,27 +75,27 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self.Bind( wx.EVT_CLOSE, self.EventExit )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         
-        HC.pubsub.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
-        HC.pubsub.sub( self, 'NewCompose', 'new_compose_frame' )
-        HC.pubsub.sub( self, 'NewPageImportGallery', 'new_page_import_gallery' )
-        HC.pubsub.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
-        HC.pubsub.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
-        HC.pubsub.sub( self, 'NewPageImportURL', 'new_page_import_url' )
-        HC.pubsub.sub( self, 'NewPagePetitions', 'new_page_petitions' )
-        HC.pubsub.sub( self, 'NewPageQuery', 'new_page_query' )
-        HC.pubsub.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
-        HC.pubsub.sub( self, 'NewSimilarTo', 'new_similar_to' )
-        HC.pubsub.sub( self, 'NotifyNewOptions', 'notify_new_options' )
-        HC.pubsub.sub( self, 'NotifyNewPending', 'notify_new_pending' )
-        HC.pubsub.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
-        HC.pubsub.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
-        HC.pubsub.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
-        HC.pubsub.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
-        HC.pubsub.sub( self, 'RefreshStatusBar', 'refresh_status' )
-        HC.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
-        HC.pubsub.sub( self, 'SetDownloadsStatus', 'downloads_status' )
-        HC.pubsub.sub( self, 'SetInboxStatus', 'inbox_status' )
-        HC.pubsub.sub( self, 'SetMediaFocus', 'set_media_focus' )
+        HydrusGlobals.pubsub.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
+        HydrusGlobals.pubsub.sub( self, 'NewCompose', 'new_compose_frame' )
+        HydrusGlobals.pubsub.sub( self, 'NewPageImportGallery', 'new_page_import_gallery' )
+        HydrusGlobals.pubsub.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
+        HydrusGlobals.pubsub.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
+        HydrusGlobals.pubsub.sub( self, 'NewPageImportURL', 'new_page_import_url' )
+        HydrusGlobals.pubsub.sub( self, 'NewPagePetitions', 'new_page_petitions' )
+        HydrusGlobals.pubsub.sub( self, 'NewPageQuery', 'new_page_query' )
+        HydrusGlobals.pubsub.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
+        HydrusGlobals.pubsub.sub( self, 'NewSimilarTo', 'new_similar_to' )
+        HydrusGlobals.pubsub.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        HydrusGlobals.pubsub.sub( self, 'NotifyNewPending', 'notify_new_pending' )
+        HydrusGlobals.pubsub.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
+        HydrusGlobals.pubsub.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
+        HydrusGlobals.pubsub.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
+        HydrusGlobals.pubsub.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshStatusBar', 'refresh_status' )
+        HydrusGlobals.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
+        HydrusGlobals.pubsub.sub( self, 'SetDownloadsStatus', 'downloads_status' )
+        HydrusGlobals.pubsub.sub( self, 'SetInboxStatus', 'inbox_status' )
+        HydrusGlobals.pubsub.sub( self, 'SetMediaFocus', 'set_media_focus' )
         
         self._menus = {}
         
@@ -113,7 +117,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if HC.options[ 'default_gui_session' ] == 'just a blank page':
             
-            wx.CallLater( 1, self._NewPageQuery, HC.LOCAL_FILE_SERVICE_KEY )
+            wx.CallLater( 1, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
             
         else:
             
@@ -127,7 +131,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _THREADUploadPending( self, service_key ):
         
-        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
         service_name = service.GetName()
         service_type = service.GetServiceType()
@@ -136,19 +140,19 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             prefix = 'uploading pending to ' + service_name + ': '
             
-            job_key = HC.JobKey( pausable = True, cancellable = True )
+            job_key = HydrusData.JobKey( pausable = True, cancellable = True )
             
             job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering pending content' )
             
-            HC.pubsub.pub( 'message', job_key )
+            HydrusGlobals.pubsub.pub( 'message', job_key )
             
-            result = HC.app.Read( 'pending', service_key )
+            result = wx.GetApp().Read( 'pending', service_key )
             
             if service_type == HC.FILE_REPOSITORY:
                 
                 ( upload_hashes, update ) = result
                 
-                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
+                media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
                 
                 job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
                 
@@ -158,7 +162,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 for ( i, media_result ) in enumerate( media_results ):
                     
-                    while job_key.IsPaused() or job_key.IsCancelled() or HC.shutdown:
+                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
                         
                         time.sleep( 0.1 )
                         
@@ -168,12 +172,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
                             
-                            print( HC.ConvertJobKeyToString( job_key ) )
+                            print( job_key.ToString() )
                             
                             return
                             
                         
-                        if HC.shutdown: return
+                        if HydrusGlobals.shutdown: return
                         
                     
                     i += 1
@@ -181,7 +185,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     hash = media_result.GetHash()
                     mime = media_result.GetMime()
                     
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading file ' + HC.ConvertIntToPrettyString( i + 1 ) + ' of ' + HC.ConvertIntToPrettyString( len( media_results ) ) )
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading file ' + HydrusData.ConvertIntToPrettyString( i ) + ' of ' + HydrusData.ConvertIntToPrettyString( len( media_results ) ) )
                     job_key.SetVariable( 'popup_message_gauge_1', ( i, len( media_results ) ) )
                     
                     try:
@@ -194,24 +198,24 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
                         
-                        timestamp = HC.GetNow()
+                        timestamp = HydrusData.GetNow()
                         
                         content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
                         
-                        content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                         
-                        HC.app.Write( 'content_updates', { service_key : content_updates } )
+                        wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
                         
                     except Exception as e:
                         
-                        HC.ShowException( e )
+                        HydrusData.ShowException( e )
                         
                         time.sleep( 2 )
                         
                     
                     time.sleep( 0.1 )
                     
-                    HC.app.WaitUntilGoodTimeToUseGUIThread()
+                    wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
                     
                 
                 if not update.IsEmpty():
@@ -222,7 +226,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     content_updates = update.GetContentUpdates( for_client = True )
                     
-                    HC.app.Write( 'content_updates', { service_key : content_updates } )
+                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
                     
                 
             elif service_type == HC.TAG_REPOSITORY:
@@ -233,7 +237,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 for ( i, update ) in enumerate( updates ):
                     
-                    while job_key.IsPaused() or job_key.IsCancelled() or HC.shutdown:
+                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
                         
                         time.sleep( 0.1 )
                         
@@ -243,26 +247,26 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
                             
-                            print( HC.ConvertJobKeyToString( job_key ) )
+                            print( job_key.ToString() )
                             
                             return
                             
                         
-                        if HC.shutdown: return
+                        if HydrusGlobals.shutdown: return
                         
                     
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HC.ConvertIntToPrettyString( i + 1 ) + '/' + HC.ConvertIntToPrettyString( len( updates ) ) )
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HydrusData.ConvertIntToPrettyString( i + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( len( updates ) ) )
                     job_key.SetVariable( 'popup_message_gauge_1', ( i, len( updates ) ) )
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )
                     
                     content_updates = update.GetContentUpdates( for_client = True )
                     
-                    HC.app.Write( 'content_updates', { service_key : content_updates } )
+                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
                     
                     time.sleep( 0.5 )
                     
-                    HC.app.WaitUntilGoodTimeToUseGUIThread()
+                    wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
                     
                 
                 
@@ -277,13 +281,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         job_key.DeleteVariable( 'popup_message_gauge_1' )
         job_key.SetVariable( 'popup_message_text_1', prefix + 'upload done!' )
         
-        print( HC.ConvertJobKeyToString( job_key ) )
+        print( job_key.ToString() )
         
         job_key.Finish()
         
         wx.CallLater( 1000 * 3600, job_key.Delete )
         
-        HC.pubsub.pub( 'notify_new_pending' )
+        HydrusGlobals.pubsub.pub( 'notify_new_pending' )
         
     
     def _AboutWindow( self ):
@@ -292,7 +296,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         aboutinfo.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         aboutinfo.SetName( 'hydrus client' )
-        aboutinfo.SetVersion( HC.u( HC.SOFTWARE_VERSION ) )
+        aboutinfo.SetVersion( HydrusData.ToString( HC.SOFTWARE_VERSION ) )
         aboutinfo.SetDescription( CC.CLIENT_DESCRIPTION )
         
         with open( HC.BASE_DIR + os.path.sep + 'license.txt', 'rb' ) as f: license = f.read()
@@ -313,13 +317,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 subject_account_key = dlg.GetValue().decode( 'hex' )
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key.encode( 'hex' ) } )
                 
                 account_info = response[ 'account_info' ]
                 
-                wx.MessageBox( HC.u( account_info ) )
+                wx.MessageBox( HydrusData.ToString( account_info ) )
                 
             
         
@@ -340,7 +344,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             info[ 'port' ] = 45871
             info[ 'access_key' ] = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
             
-            edit_log.append( HC.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
+            edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
             
             service_key = os.urandom( 32 )
             service_type = HC.FILE_REPOSITORY
@@ -352,11 +356,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             info[ 'port' ] = 45872
             info[ 'access_key' ] = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
             
-            edit_log.append( HC.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
+            edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
             
-            HC.app.WriteSynchronous( 'update_services', edit_log )
+            wx.GetApp().WriteSynchronous( 'update_services', edit_log )
             
-            HC.ShowText( 'Auto repo setup done! Check services->review services to see your new services.' )
+            HydrusData.ShowText( 'Auto repo setup done! Check services->review services to see your new services.' )
             
         
         text = 'This will attempt to set up your client with my repositories\' credentials, letting you tag on the public tag repository and see some files.'
@@ -391,7 +395,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if already_running:
                 
-                HC.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + HC.u( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
+                HydrusData.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + HydrusData.ToString( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
                 
                 return
                 
@@ -399,7 +403,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 try:
                     
-                    HC.ShowText( u'Starting server\u2026' )
+                    HydrusData.ShowText( u'Starting server\u2026' )
                     
                     my_scriptname = sys.argv[0]
                     
@@ -420,13 +424,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                 except:
                     
-                    HC.ShowText( 'I tried to start the server, but something failed!' + os.linesep + traceback.format_exc() )
+                    HydrusData.ShowText( 'I tried to start the server, but something failed!' + os.linesep + traceback.format_exc() )
                     
                     return
                     
                 
             
-            HC.ShowText( u'Creating admin service\u2026' )
+            HydrusData.ShowText( u'Creating admin service\u2026' )
             
             admin_service_key = os.urandom( 32 )
             service_type = HC.SERVER_ADMIN
@@ -447,21 +451,21 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             info[ 'access_key' ] = access_key
             
-            edit_log = [ HC.EditLogActionAdd( ( admin_service_key, service_type, name, info ) ) ]
+            edit_log = [ HydrusData.EditLogActionAdd( ( admin_service_key, service_type, name, info ) ) ]
             
-            HC.app.WriteSynchronous( 'update_services', edit_log )
+            wx.GetApp().WriteSynchronous( 'update_services', edit_log )
             
             time.sleep( 2 )
             
-            HC.ShowText( 'Admin service initialised.' )
+            HydrusData.ShowText( 'Admin service initialised.' )
             
             wx.CallAfter( ClientGUICommon.ShowKeys, 'access', ( access_key, ) )
             
-            admin_service = HC.app.GetManager( 'services' ).GetService( admin_service_key )
+            admin_service = wx.GetApp().GetManager( 'services' ).GetService( admin_service_key )
             
             #
             
-            HC.ShowText( u'Creating tag and file services\u2026' )
+            HydrusData.ShowText( u'Creating tag and file services\u2026' )
             
             tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
             tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
@@ -478,9 +482,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
             
-            HC.app.WriteSynchronous( 'update_server_services', admin_service_key, [], edit_log, service_keys_to_access_keys )
+            wx.GetApp().WriteSynchronous( 'update_server_services', admin_service_key, [], edit_log, service_keys_to_access_keys )
             
-            HC.ShowText( 'Done! Check services->review services to see your new server and its services.' )
+            HydrusData.ShowText( 'Done! Check services->review services to see your new server and its services.' )
             
         
         text = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
@@ -499,11 +503,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
                 
-                HC.ShowText( 'Server backup done!' )
+                HydrusData.ShowText( 'Server backup done!' )
                 
             
         
@@ -520,8 +524,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             result = dlg.ShowModal()
             
-            if result == wx.ID_YES: HC.app.Write( 'file_integrity', 'quick' )
-            elif result == wx.ID_NO: HC.app.Write( 'file_integrity', 'thorough' )
+            if result == wx.ID_YES: wx.GetApp().Write( 'file_integrity', 'quick' )
+            elif result == wx.ID_NO: wx.GetApp().Write( 'file_integrity', 'thorough' )
             
         
     
@@ -551,13 +555,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         name = self._notebook.GetPageText( selection )
         
-        self._closed_pages.append( ( HC.GetNow(), selection, name, page ) )
+        self._closed_pages.append( ( HydrusData.GetNow(), selection, name, page ) )
         
         self._notebook.RemovePage( selection )
         
         if self._notebook.GetPageCount() == 0: self._focus_holder.SetFocus()
         
-        HC.pubsub.pub( 'notify_new_undo' )
+        HydrusGlobals.pubsub.pub( 'notify_new_undo' )
         
     
     def _DeleteAllClosedPages( self ):
@@ -568,7 +572,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._focus_holder.SetFocus()
         
-        HC.pubsub.pub( 'notify_new_undo' )
+        HydrusGlobals.pubsub.pub( 'notify_new_undo' )
         
     
     def _DeleteOrphans( self ):
@@ -577,17 +581,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_orphans' )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_orphans' )
             
         
     
     def _DeletePending( self, service_key ):
         
-        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service.GetName() + '?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_pending', service_key )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_pending', service_key )
             
         
     
@@ -595,7 +599,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to clear the cached service info? Rebuilding it may slow some GUI elements for a little while.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_service_info' )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_service_info' )
             
         
     
@@ -616,7 +620,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 hash = dlg.GetValue().decode( 'hex' )
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash.encode( 'hex' ) } )
                 
@@ -636,7 +640,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         menu = wx.Menu()
         
-        p = HC.app.PrepStringForDisplay
+        p = wx.GetApp().PrepStringForDisplay
         
         def file():
             
@@ -648,7 +652,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open Quick E&xport Folder' ), p( 'Open the export folder so you can easily access the files you have exported.' ) )
             menu.AppendSeparator()
             
-            gui_sessions = HC.app.Read( 'gui_sessions' )
+            gui_sessions = wx.GetApp().Read( 'gui_sessions' )
             
             gui_session_names = gui_sessions.keys()
             
@@ -694,7 +698,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             have_closed_pages = len( self._closed_pages ) > 0
             
-            undo_manager = HC.app.GetManager( 'undo' )
+            undo_manager = wx.GetApp().GetManager( 'undo' )
             
             ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
             
@@ -751,7 +755,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def view():
             
-            services = HC.app.GetManager( 'services' ).GetServices()
+            services = wx.GetApp().GetManager( 'services' ).GetServices()
             
             tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
             
@@ -767,7 +771,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
             for service in file_repositories: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
             if len( petition_resolve_tag_services ) > 0 or len( petition_resolve_file_services ) > 0:
                 
@@ -811,13 +815,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def pending():
             
-            nums_pending = HC.app.Read( 'nums_pending' )
+            nums_pending = wx.GetApp().Read( 'nums_pending' )
             
             total_num_pending = 0
             
             for ( service_key, info ) in nums_pending.items():
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 service_type = service.GetServiceType()
                 name = service.GetName()
@@ -840,7 +844,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_key ), p( '&Upload' ), p( 'Upload ' + name + '\'s Pending and Petitions.' ) )
                     submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_key ), p( '&Forget' ), p( 'Clear ' + name + '\'s Pending and Petitions.' ) )
                     
-                    menu.AppendMenu( CC.ID_NULL, p( name + ' Pending (' + HC.ConvertIntToPrettyString( num_pending ) + '/' + HC.ConvertIntToPrettyString( num_petitioned ) + ')' ), submenu )
+                    menu.AppendMenu( CC.ID_NULL, p( name + ' Pending (' + HydrusData.ConvertIntToPrettyString( num_pending ) + '/' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ')' ), submenu )
                     
                 
                 total_num_pending += num_pending + num_petitioned
@@ -848,13 +852,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             show = total_num_pending > 0
             
-            return ( menu, p( '&Pending (' + HC.ConvertIntToPrettyString( total_num_pending ) + ')' ), show )
+            return ( menu, p( '&Pending (' + HydrusData.ConvertIntToPrettyString( total_num_pending ) + ')' ), show )
             
         
         def services():
             
-            tag_services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
-            file_services = HC.app.GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
+            tag_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            file_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
             
             submenu = wx.Menu()
             
@@ -905,13 +909,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def admin():
             
-            tag_repositories = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            tag_repositories = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
             admin_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            file_repositories = HC.app.GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
+            file_repositories = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
             admin_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            servers_admin = HC.app.GetManager( 'services' ).GetServices( ( HC.SERVER_ADMIN, ) )
+            servers_admin = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.SERVER_ADMIN, ) )
             server_admins = [ service for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
             if len( admin_tag_services ) > 0 or len( admin_file_services ) > 0 or len( server_admins ) > 0:
@@ -1018,9 +1022,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_key ) as dlg: dlg.ShowModal()
         
     
-    def _ImportFiles( self, paths = [] ):
+    def _ImportFiles( self, paths = None ):
         
-        with ClientGUIDialogs.DialogInputLocalFiles( self, paths ) as dlg: dlg.ShowModal()
+        if paths is None: paths = []
+        
+        with ClientGUIDialogs.DialogInputLocalFiles( self, paths ) as dlg:
+            
+            dlg.ShowModal()
+            
         
     
     def _ImportMetadata( self ):
@@ -1037,7 +1046,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         with open( path, 'rb' ) as f: o = yaml.safe_load( f )
                         
-                        if isinstance( o, HC.ServerToClientUpdate ):
+                        if isinstance( o, HydrusData.ServerToClientUpdate ):
                             
                             # turn this into a thread that'll spam it to a gui-polite gauge
                             
@@ -1058,20 +1067,20 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                     
                                     if current_weight > 50:
                                         
-                                        HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
+                                        wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
                                         
                                         content_updates = []
                                         current_weight = 0
                                         
                                     
                                 
-                                if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
+                                if len( content_updates ) > 0: wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
                                 
                             
                         
                     except Exception as e:
                         
-                        HC.ShowException( e )
+                        HydrusData.ShowException( e )
                         
                     
                 
@@ -1095,9 +1104,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _LoadGUISession( self, name ):
         
-        names_to_info = HC.app.Read( 'gui_sessions' )
+        names_to_info = wx.GetApp().Read( 'gui_sessions' )
         
-        if name not in names_to_info: self._NewPageQuery( HC.LOCAL_FILE_SERVICE_KEY )
+        if name not in names_to_info: self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
         else:
             
             info = names_to_info[ name ]
@@ -1131,7 +1140,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                 except Exception as e:
                     
-                    HC.ShowException( e )
+                    HydrusData.ShowException( e )
                     
                 
             
@@ -1237,7 +1246,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ModifyAccount( self, service_key ):
         
-        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account key for the account to be modified.' ) as dlg:
             
@@ -1251,7 +1260,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     return
                     
                 
-                subject_identifiers = ( HC.AccountIdentifier( account_key = account_key ), )
+                subject_identifiers = ( HydrusData.AccountIdentifier( account_key = account_key ), )
                 
                 with ClientGUIDialogs.DialogModifyAccounts( self, service_key, subject_identifiers ) as dlg2: dlg2.ShowModal()
                 
@@ -1314,7 +1323,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if service_key is not None:
             
-            service = HC.app.GetManager( 'services' ).GetService( service_key )
+            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
             
             account = service.GetInfo( 'account' )
             
@@ -1324,7 +1333,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _NewPageQuery( self, service_key, initial_media_results = [], initial_predicates = [] ):
+    def _NewPageQuery( self, service_key, initial_media_results = None, initial_predicates = None ):
+        
+        if initial_media_results is None: initial_media_results = []
+        if initial_predicates is None: initial_predicates = []
         
         if service_key is None: service_key = ClientGUIDialogs.SelectServiceKey( service_types = ( HC.FILE_REPOSITORY, ) )
         
@@ -1345,14 +1357,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _OpenExportFolder( self ):
         
-        export_path = HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
+        export_path = HydrusData.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
         
         if export_path is None: wx.MessageBox( 'Export folder is missing or not set.' )
         else:
             
             export_path = os.path.normpath( export_path ) # windows complains about those forward slashes when launching from the command line
             
-            HC.LaunchDirectory( export_path )
+            HydrusFileHandling.LaunchDirectory( export_path )
             
         
     
@@ -1362,28 +1374,28 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
             
-            HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+            HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
             
         elif sync_type == 'subs':
             
             HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
             
-            HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
+            HydrusGlobals.pubsub.pub( 'notify_restart_subs_sync_daemon' )
             
         elif sync_type == 'export_folders':
             
             HC.options[ 'pause_export_folders_sync' ] = not HC.options[ 'pause_export_folders_sync' ]
             
-            HC.pubsub.pub( 'notify_restart_export_folders_daemon' )
+            HydrusGlobals.pubsub.pub( 'notify_restart_export_folders_daemon' )
             
         elif sync_type == 'import_folders':
             
             HC.options[ 'pause_import_folders_sync' ] = not HC.options[ 'pause_import_folders_sync' ]
             
-            HC.pubsub.pub( 'notify_restart_import_folders_daemon' )
+            HydrusGlobals.pubsub.pub( 'notify_restart_import_folders_daemon' )
             
         
-        try: HC.app.Write( 'save_options' )
+        try: wx.GetApp().Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
         
     
@@ -1395,7 +1407,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 news = dlg.GetValue()
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'news', { 'news' : news } )
                 
@@ -1429,11 +1441,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     prefix = 'regenerating thumbnails: '
                     
-                    job_key = HC.JobKey( pausable = True, cancellable = True )
+                    job_key = HydrusData.JobKey( pausable = True, cancellable = True )
                     
                     job_key.SetVariable( 'popup_message_text_1', prefix + 'creating directories' )
                     
-                    HC.pubsub.pub( 'message', job_key )
+                    HydrusGlobals.pubsub.pub( 'message', job_key )
                     
                     if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
                     
@@ -1452,7 +1464,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         try:
                             
-                            while job_key.IsPaused() or job_key.IsCancelled() or HC.shutdown:
+                            while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
                                 
                                 time.sleep( 0.1 )
                                 
@@ -1462,19 +1474,19 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                     
                                     job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
                                     
-                                    print( HC.ConvertJobKeyToString( job_key ) )
+                                    print( job_key.ToString() )
                                     
                                     return
                                     
                                 
-                                if HC.shutdown: return
+                                if HydrusGlobals.shutdown: return
                                 
                             
                             mime = HydrusFileHandling.GetMime( path )
                             
                             if mime in HC.MIMES_WITH_THUMBNAILS:
                                 
-                                job_key.SetVariable( 'popup_message_text_1', prefix + HC.ConvertIntToPrettyString( i ) + ' done' )
+                                job_key.SetVariable( 'popup_message_text_1', prefix + HydrusData.ConvertIntToPrettyString( i ) + ' done' )
                                 
                                 ( base, filename ) = os.path.split( path )
                                 
@@ -1504,10 +1516,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                         
                     
-                    if num_broken > 0: job_key.SetVariable( 'popup_message_text_1', prefix + 'done! ' + HC.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
+                    if num_broken > 0: job_key.SetVariable( 'popup_message_text_1', prefix + 'done! ' + HydrusData.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
                     else: job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
                     
-                    print( HC.ConvertJobKeyToString( job_key ) )
+                    print( job_key.ToString() )
                     
                     job_key.Finish()
                     
@@ -1561,9 +1573,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             info.append( ( page_name, c_text, args, kwargs ) )
             
         
-        HC.app.Write( 'gui_session', name, info )
+        wx.GetApp().Write( 'gui_session', name, info )
         
-        HC.pubsub.pub( 'notify_new_sessions' )
+        HydrusGlobals.pubsub.pub( 'notify_new_sessions' )
         
     
     def _SetPassword( self ):
@@ -1584,7 +1596,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if password == '': password = None
                 
-                HC.app.Write( 'set_password', password )
+                wx.GetApp().Write( 'set_password', password )
                 
             
         
@@ -1622,11 +1634,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 url_string = url
                 
-                job_key = HC.JobKey( pausable = True, cancellable = True )
+                job_key = HydrusData.JobKey( pausable = True, cancellable = True )
                 
-                HC.pubsub.pub( 'message', job_key )
+                HydrusGlobals.pubsub.pub( 'message', job_key )
                 
-                HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, job_key, url, url_string )
+                HydrusThreading.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
                 
             
         
@@ -1641,7 +1653,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 url = dlg.GetValue()
                 
-                info = HydrusDownloading.GetYoutubeFormats( url )
+                info = ClientDownloading.GetYoutubeFormats( url )
                 
                 with ClientGUIDialogs.DialogSelectYoutubeURL( self, info ) as select_dlg: select_dlg.ShowModal()
                 
@@ -1650,13 +1662,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _Stats( self, service_key ):
         
-        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
         response = service.Request( HC.GET, 'stats' )
         
         stats = response[ 'stats' ]
         
-        wx.MessageBox( HC.u( stats ) )
+        wx.MessageBox( HydrusData.ToString( stats ) )
         
     
     def _UnclosePage( self, closed_page_index ):
@@ -1671,7 +1683,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._notebook.InsertPage( index, page, name, True )
         
-        HC.pubsub.pub( 'notify_new_undo' )
+        HydrusGlobals.pubsub.pub( 'notify_new_undo' )
         
     
     def _UploadPending( self, service_key ):
@@ -1685,7 +1697,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'vacuum' )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'vacuum' )
             
         
     
@@ -1693,7 +1705,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         new_closed_pages = []
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         timeout = 60 * 60
         
@@ -1707,7 +1719,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._closed_pages = new_closed_pages
         
-        if len( old_closed_pages ) != len( new_closed_pages ): HC.pubsub.pub( 'notify_new_undo' )
+        if len( old_closed_pages ) != len( new_closed_pages ): HydrusGlobals.pubsub.pub( 'notify_new_undo' )
         
     
     def DoFirstStart( self ):
@@ -1766,9 +1778,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             if command == 'account_info': self._AccountInfo( data )
             elif command == 'auto_repo_setup': self._AutoRepoSetup()
             elif command == 'auto_server_setup': self._AutoServerSetup()
-            elif command == 'backup_database': HC.app.BackupDatabase()
+            elif command == 'backup_database': wx.GetApp().BackupDatabase()
             elif command == 'backup_service': self._BackupService( data )
-            elif command == 'clear_caches': HC.app.ClearCaches()
+            elif command == 'clear_caches': wx.GetApp().ClearCaches()
             elif command == 'close_page': self._CloseCurrentPage()
             elif command == 'debug_garbage':
                 
@@ -1803,14 +1815,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     if v > 100: print ( k, v )
                     
                 
-                print( 'garbage: ' + HC.u( gc.garbage ) )
+                print( 'garbage: ' + HydrusData.ToString( gc.garbage ) )
                 
             elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
             elif command == 'delete_gui_session':
                 
-                HC.app.Write( 'delete_gui_session', data )
+                wx.GetApp().Write( 'delete_gui_session', data )
                 
-                HC.pubsub.pub( 'notify_new_sessions' )
+                HydrusGlobals.pubsub.pub( 'notify_new_sessions' )
                 
             elif command == 'delete_orphans': self._DeleteOrphans()
             elif command == 'delete_pending': self._DeletePending( data )
@@ -1859,7 +1871,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
             elif command == 'petitions': self._NewPagePetitions( data )
             elif command == 'post_news': self._PostNews( data )
-            elif command == 'redo': HC.pubsub.pub( 'redo' )
+            elif command == 'redo': HydrusGlobals.pubsub.pub( 'redo' )
             elif command == 'refresh':
                 
                 page = self._notebook.GetCurrentPage()
@@ -1867,7 +1879,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.RefreshQuery()
                 
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
-            elif command == 'restore_database': HC.app.RestoreDatabase()
+            elif command == 'restore_database': wx.GetApp().RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()
             elif command == 'set_password': self._SetPassword()
@@ -1887,7 +1899,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
             elif command == 'twitter': webbrowser.open( 'http://twitter.com/#!/hydrusnetwork' )
             elif command == 'unclose_page': self._UnclosePage( data )
-            elif command == 'undo': HC.pubsub.pub( 'undo' )
+            elif command == 'undo': HydrusGlobals.pubsub.pub( 'undo' )
             elif command == 'upload_pending': self._UploadPending( data )
             elif command == 'vacuum_db': self._VacuumDatabase()
             else: event.Skip()
@@ -1935,7 +1947,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     '''
     def NewPageImportGallery( self, gallery_name, gallery_type ): self._NewPageImportGallery( gallery_name, gallery_type )
     
-    def NewPageImportHDD( self, paths_info, advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False ):
+    def NewPageImportHDD( self, paths_info, advanced_import_options = None, paths_to_tags = None, delete_after_success = False ):
         
         new_page = ClientGUIPages.PageImportHDD( self._notebook, paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
         
@@ -1950,7 +1962,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPagePetitions( self, service_key ): self._NewPagePetitions( service_key )
     
-    def NewPageQuery( self, service_key, initial_media_results = [], initial_predicates = [] ): self._NewPageQuery( service_key, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
+    def NewPageQuery( self, service_key, initial_media_results = None, initial_predicates = None ):
+        
+        if initial_media_results is None: initial_media_results = []
+        if initial_predicates is None: initial_predicates = []
+        
+        self._NewPageQuery( service_key, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
+        
     
     def NewPageThreadDumper( self, hashes ):
         
@@ -1969,7 +1987,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def NewSimilarTo( self, file_service_key, hash ): self._NewPageQuery( file_service_key, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ) ) ] )
+    def NewSimilarTo( self, file_service_key, hash ):
+        
+        hamming_distance = HC.options[ 'file_system_predicates' ][ 'hamming_distance' ]
+        
+        initial_predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, hamming_distance ) ) ) ]
+        
+        self._NewPageQuery( file_service_key, initial_predicates = initial_predicates )
+        
     
     def NotifyNewOptions( self ):
         
@@ -2106,7 +2131,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
             
         
-        HC.app.Write( 'save_options' )
+        wx.GetApp().Write( 'save_options' )
         
         self._SaveGUISession( 'last session' )
         
@@ -2191,13 +2216,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             self.SetInitialSize( ( 880, 620 ) )
             
         
-        ( pos_x, pos_y ) = HC.app.GetGUI().GetPositionTuple()
+        ( pos_x, pos_y ) = wx.GetApp().GetGUI().GetPositionTuple()
         
         pos = ( pos_x + 25, pos_y + 50 )
         
-        tlp = HC.app.GetTopWindow()
+        tlp = wx.GetApp().GetTopWindow()
         
-        ClientGUICommon.Frame.__init__( self, tlp, title = HC.app.PrepStringForDisplay( 'Review Services' ), pos = pos )
+        ClientGUICommon.Frame.__init__( self, tlp, title = wx.GetApp().PrepStringForDisplay( 'Review Services' ), pos = pos )
         
         InitialiseControls()
         
@@ -2207,7 +2232,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         self.Show( True )
         
-        HC.pubsub.sub( self, 'RefreshServices', 'notify_new_services_gui' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshServices', 'notify_new_services_gui' )
         
         wx.CallAfter( self.Raise )
         
@@ -2221,7 +2246,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         listbook_dict = {}
         
-        services = HC.app.GetManager( 'services' ).GetServices()
+        services = wx.GetApp().GetManager( 'services' ).GetServices()
         
         for service in services:
             
@@ -2519,7 +2544,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._service_key = service_key
             
-            self._service = HC.app.GetManager( 'services' ).GetService( service_key )
+            self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
             
             service_type = self._service.GetServiceType()
             
@@ -2538,16 +2563,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._timer_updates.Start( 1000, wx.TIMER_CONTINUOUS )
                 
             
-            HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
-            HC.pubsub.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
-            if service_type == HC.LOCAL_BOORU: HC.pubsub.sub( self, 'RefreshLocalBooruShares', 'refresh_local_booru_shares' )
+            HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+            HydrusGlobals.pubsub.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
+            if service_type == HC.LOCAL_BOORU: HydrusGlobals.pubsub.sub( self, 'RefreshLocalBooruShares', 'refresh_local_booru_shares' )
             
         
         def _DisplayAccountInfo( self ):
             
             service_type = self._service.GetServiceType()
             
-            now = HC.GetNow()
+            now = HydrusData.GetNow()
             
             if service_type == HC.LOCAL_BOORU:
                 
@@ -2558,13 +2583,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 used_monthly_requests = info[ 'used_monthly_requests' ]
                 
                 if used_monthly_requests == 0: monthly_requests_text = ''
-                else: monthly_requests_text = ' in ' + HC.ConvertIntToPrettyString( used_monthly_requests ) + ' requests'
+                else: monthly_requests_text = ' in ' + HydrusData.ConvertIntToPrettyString( used_monthly_requests ) + ' requests'
                 
                 if max_monthly_data is None:
                     
                     self._bytes.Hide()
                     
-                    self._bytes_text.SetLabel( 'used ' + HC.ConvertIntToBytes( used_monthly_data ) + monthly_requests_text + ' this month' )
+                    self._bytes_text.SetLabel( 'used ' + HydrusData.ConvertIntToBytes( used_monthly_data ) + monthly_requests_text + ' this month' )
                     
                 else:
                     
@@ -2573,7 +2598,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._bytes.SetRange( max_monthly_data )
                     self._bytes.SetValue( used_monthly_data )
                     
-                    self._bytes_text.SetLabel( 'used ' + HC.ConvertIntToBytes( used_monthly_data ) + '/' + HC.ConvertIntToBytes( max_monthly_data ) + monthly_requests_text + ' this month' )
+                    self._bytes_text.SetLabel( 'used ' + HydrusData.ConvertIntToBytes( used_monthly_data ) + '/' + HydrusData.ConvertIntToBytes( max_monthly_data ) + monthly_requests_text + ' this month' )
                     
                 
             
@@ -2669,7 +2694,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             self._thumbnails.SetRange( self._num_thumbs )
             self._thumbnails.SetValue( min( self._num_local_thumbs, self._num_thumbs ) )
             
-            self._thumbnails_text.SetLabel( HC.ConvertIntToPrettyString( self._num_local_thumbs ) + '/' + HC.ConvertIntToPrettyString( self._num_thumbs ) + ' thumbnails downloaded' )
+            self._thumbnails_text.SetLabel( HydrusData.ConvertIntToPrettyString( self._num_local_thumbs ) + '/' + HydrusData.ConvertIntToPrettyString( self._num_thumbs ) + ' thumbnails downloaded' )
             
         
         def _DisplayService( self ):
@@ -2680,7 +2705,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
                 
-                service_info = HC.app.Read( 'service_info', self._service_key )
+                service_info = wx.GetApp().Read( 'service_info', self._service_key )
                 
                 if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
                     
@@ -2688,9 +2713,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
                     num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                     
-                    self._files_text.SetLabel( HC.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) )
+                    self._files_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
                     
-                    self._deleted_files_text.SetLabel( HC.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
+                    self._deleted_files_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
                     
                     if service_type == HC.FILE_REPOSITORY:
                         
@@ -2707,32 +2732,32 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
                     num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
                     
-                    self._tags_text.SetLabel( HC.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HC.ConvertIntToPrettyString( num_namespaces ) + ' namespaces, ' + HC.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HC.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
+                    self._tags_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HydrusData.ConvertIntToPrettyString( num_namespaces ) + ' namespaces, ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HydrusData.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
                     
                     if service_type == HC.TAG_REPOSITORY:
                         
                         num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
                         
-                        self._deleted_tags_text.SetLabel( HC.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings' )
+                        self._deleted_tags_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings' )
                         
                     
                 elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
                     num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                     
-                    self._ratings_text.SetLabel( HC.u( num_ratings ) + ' files rated' )
+                    self._ratings_text.SetLabel( HydrusData.ToString( num_ratings ) + ' files rated' )
                     
                 elif service_type == HC.LOCAL_BOORU:
                     
                     num_shares = service_info[ HC.SERVICE_INFO_NUM_SHARES ]
                     
-                    self._num_shares.SetLabel( HC.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
+                    self._num_shares.SetLabel( HydrusData.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
                     
                 
             
             if service_type == HC.LOCAL_BOORU:
                 
-                booru_shares = HC.app.Read( 'local_booru_shares' )
+                booru_shares = wx.GetApp().Read( 'local_booru_shares' )
                 
                 self._booru_shares.DeleteAllItems()
                 
@@ -2743,7 +2768,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     timeout = info[ 'timeout' ]
                     hashes = info[ 'hashes' ]
                     
-                    self._booru_shares.Append( ( name, text, HC.ConvertTimestampToPrettyExpires( timeout ), len( hashes ) ), ( name, text, timeout, ( len( hashes ), hashes, share_key ) ) )
+                    self._booru_shares.Append( ( name, text, HydrusData.ConvertTimestampToPrettyExpires( timeout ), len( hashes ) ), ( name, text, timeout, ( len( hashes ), hashes, share_key ) ) )
                     
                 
             
@@ -2776,7 +2801,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
                 
-                HC.app.Write( 'delete_local_booru_share', share_key )
+                wx.GetApp().Write( 'delete_local_booru_share', share_key )
                 
             
         
@@ -2806,16 +2831,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                 
             
-            for ( share_key, info ) in writes: HC.app.Write( 'local_booru_share', share_key, info )
+            for ( share_key, info ) in writes: wx.GetApp().Write( 'local_booru_share', share_key, info )
             
         
         def EventBooruOpenSearch( self, event ):
             
             for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
                 
-                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
+                media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
                 
-                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+                HydrusGlobals.pubsub.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
                 
             
         
@@ -2825,7 +2850,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             account_key_hex = account_key.encode( 'hex' )
             
-            HC.pubsub.pub( 'clipboard', 'text', account_key_hex )
+            HydrusGlobals.pubsub.pub( 'clipboard', 'text', account_key_hex )
             
         
         def EventCopyExternalShareURL( self, event ):
@@ -2836,7 +2861,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
+                self._service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -2848,7 +2873,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
                 
-                HC.pubsub.pub( 'clipboard', 'text', url )
+                HydrusGlobals.pubsub.pub( 'clipboard', 'text', url )
                 
             
         
@@ -2860,7 +2885,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
+                self._service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -2870,7 +2895,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
                 
-                HC.pubsub.pub( 'clipboard', 'text', url )
+                HydrusGlobals.pubsub.pub( 'clipboard', 'text', url )
                 
             
         
@@ -2894,9 +2919,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             info_update = { 'access_key' : access_key }
             
-            edit_log = [ HC.EditLogActionEdit( service_key, ( service_key, service_type, name, info_update ) ) ]
+            edit_log = [ HydrusData.EditLogActionEdit( service_key, ( service_key, service_type, name, info_update ) ) ]
             
-            HC.app.Write( 'update_services', edit_log )
+            wx.GetApp().Write( 'update_services', edit_log )
             
             ClientGUICommon.ShowKeys( 'access', ( access_key, ) )
             
@@ -2911,7 +2936,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             account.MakeFresh()
             
-            HC.app.Write( 'service_updates', { self._service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
+            wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
             
         
         def ProcessServiceUpdates( self, service_keys_to_service_updates ):
@@ -2984,7 +3009,7 @@ class FrameSplash( ClientGUICommon.Frame ):
         
         self.Show( True )
         
-        HC.pubsub.sub( self, 'SetText', 'set_splash_text' )
+        HydrusGlobals.pubsub.sub( self, 'SetText', 'set_splash_text' )
         
         wx.CallAfter( my_thread.start )
         
@@ -2995,18 +3020,18 @@ class FrameSplash( ClientGUICommon.Frame ):
             
             wx.CallAfter( self.SetText, 'booting db' )
             
-            HC.app.InitDB()
+            wx.GetApp().InitDB()
             
             if HC.options[ 'password' ] is not None:
                 
                 wx.CallAfter( self.SetText, 'waiting for password' )
                 
-                HC.app.InitCheckPassword()
+                wx.GetApp().InitCheckPassword()
                 
             
             wx.CallAfter( self.SetText, 'booting gui' )
             
-            wx.CallAfter( HC.app.InitGUI )
+            wx.CallAfter( wx.GetApp().InitGUI )
             
         except sqlite3.OperationalError as e:
             
@@ -3078,7 +3103,7 @@ class FrameSplash( ClientGUICommon.Frame ):
             
             wx.CallAfter( self.SetText, 'exiting gui' )
             
-            gui = HC.app.GetGUI()
+            gui = wx.GetApp().GetGUI()
             
             try: gui.TestAbleToClose()
             except: return
@@ -3087,9 +3112,9 @@ class FrameSplash( ClientGUICommon.Frame ):
             
             wx.CallAfter( self.SetText, 'exiting db' )
             
-            db = HC.app.GetDB()
+            db = wx.GetApp().GetDB()
             
-            HC.app.MaintainDB()
+            wx.GetApp().MaintainDB()
             
             db.Shutdown()
             

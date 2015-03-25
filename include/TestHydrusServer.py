@@ -20,6 +20,9 @@ import unittest
 from twisted.internet import reactor
 from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 from twisted.internet.defer import deferredGenerator, waitForDeferred
+import HydrusData
+import HydrusGlobals
+import wx
 
 class TestServer( unittest.TestCase ):
     
@@ -32,7 +35,7 @@ class TestServer( unittest.TestCase ):
         self._tag_service = ClientData.Service( os.urandom( 32 ), HC.TAG_REPOSITORY, 'tag repo', {} )
         self._admin_service = ClientData.Service( os.urandom( 32 ), HC.SERVER_ADMIN, 'server admin', {} )
         
-        services_manager = HC.app.GetManager( 'services' )
+        services_manager = wx.GetApp().GetManager( 'services' )
         
         services_manager._keys_to_services[ self._file_service.GetServiceKey() ] = self._file_service
         services_manager._keys_to_services[ self._tag_service.GetServiceKey() ] = self._tag_service
@@ -41,13 +44,13 @@ class TestServer( unittest.TestCase ):
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
         account_key = os.urandom( 32 )
-        account_type = HC.AccountType( 'account', permissions, ( None, None ) )
-        created = HC.GetNow() - 100000
+        account_type = HydrusData.AccountType( 'account', permissions, ( None, None ) )
+        created = HydrusData.GetNow() - 100000
         expires = None
         used_bytes = 0
         used_requests = 0
         
-        self._account = HC.Account( account_key, account_type, created, expires, used_bytes, used_requests )
+        self._account = HydrusData.Account( account_key, account_type, created, expires, used_bytes, used_requests )
         
         self._access_key = os.urandom( 32 )
         self._file_hash = os.urandom( 32 )
@@ -55,8 +58,8 @@ class TestServer( unittest.TestCase ):
         def TWISTEDSetup():
             
             reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, HydrusServer.HydrusServiceAdmin( self._admin_service.GetServiceKey(), HC.SERVER_ADMIN, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, HydrusServer.HydrusServiceLocal( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, HydrusServer.HydrusServiceBooru( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, HydrusServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, HydrusServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, HydrusServer.HydrusServiceRepositoryFile( self._file_service.GetServiceKey(), HC.FILE_REPOSITORY, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, HydrusServer.HydrusServiceRepositoryTag( self._tag_service.GetServiceKey(), HC.TAG_REPOSITORY, 'hello' ) )
             
@@ -160,7 +163,7 @@ class TestServer( unittest.TestCase ):
         
         service.Request( HC.POST, 'file', { 'file' : file } )
         
-        written = HC.app.GetWrite( 'file' )
+        written = wx.GetApp().GetWrite( 'file' )
         
         [ ( args, kwargs ) ] = written
         
@@ -175,9 +178,9 @@ class TestServer( unittest.TestCase ):
         
         # ip
         
-        ( ip, timestamp ) = ( '94.45.87.123', HC.GetNow() - 100000 )
+        ( ip, timestamp ) = ( '94.45.87.123', HydrusData.GetNow() - 100000 )
         
-        HC.app.SetRead( 'ip', ( ip, timestamp ) )
+        wx.GetApp().SetRead( 'ip', ( ip, timestamp ) )
         
         response = service.Request( HC.GET, 'ip', { 'hash' : self._file_hash.encode( 'hex' ) } )
         
@@ -224,7 +227,7 @@ class TestServer( unittest.TestCase ):
         with open( ClientFiles.GetExpectedFilePath( hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
         with open( ClientFiles.GetExpectedThumbnailPath( hashes[0], False ), 'wb' ) as f: f.write( 'thumbnail' )
         
-        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
         
         #
         
@@ -242,9 +245,9 @@ class TestServer( unittest.TestCase ):
         
         media_results = [ ClientMedia.MediaResult( ( hash, True, 500, HC.IMAGE_JPEG, 0, 640, 480, None, None, None, None, None, None, None ) ) for hash in hashes ]
         
-        HC.app.SetRead( 'local_booru_share_keys', [ share_key ] )
-        HC.app.SetRead( 'local_booru_share', info )
-        HC.app.SetRead( 'media_results', media_results )
+        wx.GetApp().SetRead( 'local_booru_share_keys', [ share_key ] )
+        wx.GetApp().SetRead( 'local_booru_share', info )
+        wx.GetApp().SetRead( 'media_results', media_results )
         
         local_booru_manager.RefreshShares()
         
@@ -255,7 +258,7 @@ class TestServer( unittest.TestCase ):
         #
         
         info[ 'timeout' ] = None
-        HC.app.SetRead( 'local_booru_share', info )
+        wx.GetApp().SetRead( 'local_booru_share', info )
         
         local_booru_manager.RefreshShares()
         
@@ -265,7 +268,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        HC.app.SetRead( 'local_booru_share_keys', [] )
+        wx.GetApp().SetRead( 'local_booru_share_keys', [] )
         
         local_booru_manager.RefreshShares()
         
@@ -305,7 +308,7 @@ class TestServer( unittest.TestCase ):
         
         service.Request( HC.POST, 'news', { 'news' : news } )
         
-        written = HC.app.GetWrite( 'news' )
+        written = wx.GetApp().GetWrite( 'news' )
         
         [ ( args, kwargs ) ] = written
         
@@ -317,7 +320,7 @@ class TestServer( unittest.TestCase ):
         
         num_petitions = 23
         
-        HC.app.SetRead( 'num_petitions', num_petitions )
+        wx.GetApp().SetRead( 'num_petitions', num_petitions )
         
         response = service.Request( HC.GET, 'num_petitions' )
         
@@ -327,7 +330,7 @@ class TestServer( unittest.TestCase ):
         
         petition = 'petition'
         
-        HC.app.SetRead( 'petition', petition )
+        wx.GetApp().SetRead( 'petition', petition )
         
         response = service.Request( HC.GET, 'petition' )
         
@@ -351,7 +354,7 @@ class TestServer( unittest.TestCase ):
         
         service.Request( HC.POST, 'update', { 'update' : update } )
         
-        written = HC.app.GetWrite( 'update' )
+        written = wx.GetApp().GetWrite( 'update' )
         
         [ ( args, kwargs ) ] = written
         
@@ -366,7 +369,7 @@ class TestServer( unittest.TestCase ):
         
         registration_key = os.urandom( 32 )
         
-        HC.app.SetRead( 'access_key', self._access_key )
+        wx.GetApp().SetRead( 'access_key', self._access_key )
         
         request_headers = {}
         
@@ -386,10 +389,10 @@ class TestServer( unittest.TestCase ):
         
         account = self._account
         
-        HC.app.SetRead( 'service', service )
+        wx.GetApp().SetRead( 'service', service )
         
-        HC.app.SetRead( 'account_key_from_access_key', os.urandom( 32 ) )
-        HC.app.SetRead( 'account', self._account )
+        wx.GetApp().SetRead( 'account_key_from_access_key', os.urandom( 32 ) )
+        wx.GetApp().SetRead( 'account', self._account )
         
         # account
         
@@ -401,8 +404,8 @@ class TestServer( unittest.TestCase ):
         
         account_info = { 'message' : 'hello' }
         
-        HC.app.SetRead( 'account_info', account_info )
-        HC.app.SetRead( 'account_key_from_identifier', os.urandom( 32 ) )
+        wx.GetApp().SetRead( 'account_info', account_info )
+        wx.GetApp().SetRead( 'account_key_from_identifier', os.urandom( 32 ) )
         
         response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : os.urandom( 32 ).encode( 'hex' ) } )
         
@@ -420,7 +423,7 @@ class TestServer( unittest.TestCase ):
         
         account_types = { 'message' : 'hello' }
         
-        HC.app.SetRead( 'account_types', account_types )
+        wx.GetApp().SetRead( 'account_types', account_types )
         
         response = service.Request( HC.GET, 'account_types' )
         
@@ -430,7 +433,7 @@ class TestServer( unittest.TestCase ):
         
         service.Request( HC.POST, 'account_types', { 'edit_log' : edit_log } )
         
-        written = HC.app.GetWrite( 'account_types' )
+        written = wx.GetApp().GetWrite( 'account_types' )
         
         [ ( args, kwargs ) ] = written
         
@@ -442,7 +445,7 @@ class TestServer( unittest.TestCase ):
         
         registration_key = os.urandom( 32 )
         
-        HC.app.SetRead( 'registration_keys', [ registration_key ] )
+        wx.GetApp().SetRead( 'registration_keys', [ registration_key ] )
         
         response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'title' : 'blah' } )
         
@@ -456,7 +459,7 @@ class TestServer( unittest.TestCase ):
         
         stats = { 'message' : 'hello' }
         
-        HC.app.SetRead( 'stats', stats )
+        wx.GetApp().SetRead( 'stats', stats )
         
         response = service.Request( HC.GET, 'stats' )
         
@@ -474,7 +477,7 @@ class TestServer( unittest.TestCase ):
         
         access_key = os.urandom( 32 )
         
-        HC.app.SetRead( 'init', access_key )
+        wx.GetApp().SetRead( 'init', access_key )
         
         response = service.Request( HC.GET, 'init' )
         
@@ -492,7 +495,7 @@ class TestServer( unittest.TestCase ):
         
         services_info = { 'message' : 'hello' }
         
-        HC.app.SetRead( 'services_info', services_info )
+        wx.GetApp().SetRead( 'services_info', services_info )
         
         response = service.Request( HC.GET, 'services_info' )
         
@@ -502,7 +505,7 @@ class TestServer( unittest.TestCase ):
         
         registration_keys = service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
         
-        written = HC.app.GetWrite( 'services' )
+        written = wx.GetApp().GetWrite( 'services' )
         
         [ ( args, kwargs ) ] = written
         

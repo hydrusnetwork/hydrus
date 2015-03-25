@@ -5,6 +5,7 @@ import traceback
 import weakref
 import wx
 import wx.lib.newevent
+import HydrusGlobals
 
 ( PubSubEvent, EVT_PUBSUB ) = wx.lib.newevent.NewEvent()
 
@@ -94,7 +95,7 @@ class HydrusPubSub( object ):
                 
                 self._callables = [ ( callable, args, kwargs ) for callable in callables ]
                 
-                for i in range( len( self._callables ) ): wx.PostEvent( HC.app, PubSubEvent() )
+                for i in range( len( self._callables ) ): wx.PostEvent( wx.GetApp(), PubSubEvent() )
                 
             
         
@@ -108,7 +109,7 @@ class HydrusPubSub( object ):
             
             self._pubsubs.append( ( topic, args, kwargs ) )
             
-            wx.PostEvent( HC.app, PubSubEvent() )
+            wx.PostEvent( wx.GetApp(), PubSubEvent() )
             
         
     

@@ -9,6 +9,10 @@ import Queue
 import threading
 import time
 import wx
+import HydrusData
+import ClientData
+import ClientConstants
+import HydrusGlobals
 
 class DataCache( object ):
     
@@ -58,7 +62,7 @@ class DataCache( object ):
                 
                 self._keys_to_data[ key ] = data
                 
-                self._keys_fifo.append( ( key, HC.GetNow() ) )
+                self._keys_fifo.append( ( key, HydrusData.GetNow() ) )
                 
                 self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
                 
@@ -69,7 +73,7 @@ class DataCache( object ):
         
         with self._lock:
             
-            if key not in self._keys_to_data: raise Exception( 'Cache error! Looking for ' + HC.u( key ) + ', but it was missing.' )
+            if key not in self._keys_to_data: raise Exception( 'Cache error! Looking for ' + HydrusData.ToString( key ) + ', but it was missing.' )
             
             i = 0
             
@@ -84,7 +88,7 @@ class DataCache( object ):
                 else: i += 1
                 
             
-            self._keys_fifo.append( ( key, HC.GetNow() ) )
+            self._keys_fifo.append( ( key, HydrusData.GetNow() ) )
             
             return self._keys_to_data[ key ]
             
@@ -97,7 +101,7 @@ class DataCache( object ):
     
     def MaintainCache( self ):
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         with self._lock:
             
@@ -134,8 +138,8 @@ class LocalBooruCache( object ):
         
         self._RefreshShares()
         
-        HC.pubsub.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
-        HC.pubsub.sub( self, 'RefreshShares', 'restart_booru' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshShares', 'restart_booru' )
         
     
     def _CheckDataUsage( self ):
@@ -165,7 +169,7 @@ class LocalBooruCache( object ):
         
         timeout = info[ 'timeout' ]
         
-        if timeout is not None and HC.GetNow() > timeout: raise HydrusExceptions.ForbiddenException( 'This share has expired.' )
+        if timeout is not None and HydrusData.GetNow() > timeout: raise HydrusExceptions.ForbiddenException( 'This share has expired.' )
         
     
     def _GetInfo( self, share_key ):
@@ -175,13 +179,13 @@ class LocalBooruCache( object ):
         
         if info is None:
             
-            info = HC.app.Read( 'local_booru_share', share_key )
+            info = wx.GetApp().Read( 'local_booru_share', share_key )
             
             hashes = info[ 'hashes' ]
             
             info[ 'hashes_set' ] = set( hashes )
             
-            media_results = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
+            media_results = wx.GetApp().ReadDaemon( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, hashes )
             
             info[ 'media_results' ] = media_results
             
@@ -197,11 +201,11 @@ class LocalBooruCache( object ):
     
     def _RefreshShares( self ):
         
-        self._local_booru_service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
+        self._local_booru_service = wx.GetApp().GetManager( 'services' ).GetService( ClientConstants.LOCAL_BOORU_SERVICE_KEY )
         
         self._keys_to_infos = {}
         
-        share_keys = HC.app.Read( 'local_booru_share_keys' )
+        share_keys = wx.GetApp().Read( 'local_booru_share_keys' )
         
         for share_key in share_keys: self._keys_to_infos[ share_key ] = None
         
@@ -314,7 +318,7 @@ class RenderedImageCache( object ):
         
         self._keys_being_rendered = {}
         
-        HC.pubsub.sub( self, 'FinishedRendering', 'finished_rendering' )
+        HydrusGlobals.pubsub.sub( self, 'FinishedRendering', 'finished_rendering' )
         
     
     def Clear( self ): self._data_cache.Clear()
@@ -372,7 +376,7 @@ class ThumbnailCache( object ):
         
         threading.Thread( target = self.DAEMONWaterfall, name = 'Waterfall Daemon' ).start()
         
-        HC.pubsub.sub( self, 'Clear', 'thumbnail_resize' )
+        HydrusGlobals.pubsub.sub( self, 'Clear', 'thumbnail_resize' )
         
     
     def Clear( self ):
@@ -440,9 +444,9 @@ class ThumbnailCache( object ):
     
     def DAEMONWaterfall( self ):
         
-        last_paused = HC.GetNowPrecise()
+        last_paused = HydrusData.GetNowPrecise()
         
-        while not HC.shutdown:
+        while not HydrusGlobals.shutdown:
             
             try: ( page_key, medias ) = self._queue.get( timeout = 1 )
             except Queue.Empty: continue
@@ -455,19 +459,19 @@ class ThumbnailCache( object ):
                     
                     thumbnail = self.GetThumbnail( media )
                     
-                    HC.pubsub.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
+                    HydrusGlobals.pubsub.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
                     
-                    if HC.GetNowPrecise() - last_paused > 0.005:
+                    if HydrusData.GetNowPrecise() - last_paused > 0.005:
                         
                         time.sleep( 0.00001 )
                         
-                        last_paused = HC.GetNowPrecise()
+                        last_paused = HydrusData.GetNowPrecise()
                         
                     
                 
             except Exception as e:
                 
-                HC.ShowException( e )
+                HydrusData.ShowException( e )
                 
             
         

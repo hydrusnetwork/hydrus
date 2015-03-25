@@ -11,6 +11,10 @@ import random
 import time
 import traceback
 import wx
+import HydrusData
+import HydrusFileHandling
+import HydrusExceptions
+import HydrusGlobals
 
 class Media( object ):
     
@@ -37,7 +41,7 @@ class MediaList( object ):
         self._collect_map_singletons = {}
         self._collect_map_collected = {}
         
-        self._sorted_media = HC.SortedList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
+        self._sorted_media = SortedList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
         
         self._singleton_media = set( self._sorted_media )
         self._collected_media = set()
@@ -48,7 +52,7 @@ class MediaList( object ):
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
         ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
         
-        services_manager = HC.app.GetManager( 'services' )
+        services_manager = wx.GetApp().GetManager( 'services' )
         
         local_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         remote_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetServiceType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
@@ -167,7 +171,7 @@ class MediaList( object ):
             self._collected_media = set( self._collect_map_collected.values() )
             
         
-        self._sorted_media = HC.SortedList( list( self._singleton_media ) + list( self._collected_media ) )
+        self._sorted_media = SortedList( list( self._singleton_media ) + list( self._collected_media ) )
         
     
     def DeletePending( self, service_key ):
@@ -336,7 +340,7 @@ class MediaList( object ):
                 
                 ( x_local_ratings, x_remote_ratings ) = x.GetRatings()
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = deal_with_none( x_local_ratings.GetRating( service_key ) )
                 else: rating = deal_with_none( x_remote_ratings.GetScore( service_key ) )
@@ -362,8 +366,8 @@ class ListeningMediaList( MediaList ):
         
         self._file_query_result = ClientData.FileQueryResult( media_results )
         
-        HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
     def AddMediaResults( self, media_results, append = True ):
@@ -517,10 +521,10 @@ class MediaCollection( MediaList, Media ):
         
         all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
         
-        current = HC.IntelligentMassIntersect( [ locations_manager.GetCurrent() for locations_manager in all_locations_managers ] )
-        deleted = HC.IntelligentMassIntersect( [ locations_manager.GetDeleted() for locations_manager in all_locations_managers ] )
-        pending = HC.IntelligentMassIntersect( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
-        petitioned = HC.IntelligentMassIntersect( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
+        current = HydrusData.IntelligentMassIntersect( [ locations_manager.GetCurrent() for locations_manager in all_locations_managers ] )
+        deleted = HydrusData.IntelligentMassIntersect( [ locations_manager.GetDeleted() for locations_manager in all_locations_managers ] )
+        pending = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
+        petitioned = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
         self._locations_manager = ClientFiles.LocationsManager( current, deleted, pending, petitioned )
         
@@ -563,17 +567,17 @@ class MediaCollection( MediaList, Media ):
     
     def GetNumWords( self ): return sum( ( media.GetNumWords() for media in self._sorted_media ) )
     
-    def GetPrettyAge( self ): return 'imported ' + HC.ConvertTimestampToPrettyAgo( self._timestamp )
+    def GetPrettyAge( self ): return 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( self._timestamp )
     
     def GetPrettyInfo( self ):
         
-        size = HC.ConvertIntToBytes( self._size )
+        size = HydrusData.ConvertIntToBytes( self._size )
         
         mime = HC.mime_string_lookup[ HC.APPLICATION_HYDRUS_CLIENT_COLLECTION ]
         
         info_string = size + ' ' + mime
         
-        info_string += ' (' + HC.ConvertIntToPrettyString( self.GetNumFiles() ) + ' files)'
+        info_string += ' (' + HydrusData.ConvertIntToPrettyString( self.GetNumFiles() ) + ' files)'
         
         return info_string
         
@@ -690,21 +694,21 @@ class MediaSingleton( Media ):
         else: return timestamp
         
     
-    def GetPrettyAge( self ): return 'imported ' + HC.ConvertTimestampToPrettyAgo( self._media_result.GetTimestamp() )
+    def GetPrettyAge( self ): return 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( self._media_result.GetTimestamp() )
     
     def GetPrettyInfo( self ):
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._media_result.ToTuple()
         
-        info_string = HC.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
+        info_string = HydrusData.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         
-        if width is not None and height is not None: info_string += ' (' + HC.ConvertIntToPrettyString( width ) + 'x' + HC.ConvertIntToPrettyString( height ) + ')'
+        if width is not None and height is not None: info_string += ' (' + HydrusData.ConvertIntToPrettyString( width ) + 'x' + HydrusData.ConvertIntToPrettyString( height ) + ')'
         
-        if duration is not None: info_string += ', ' + HC.ConvertMillisecondsToPrettyTime( duration )
+        if duration is not None: info_string += ', ' + HydrusData.ConvertMillisecondsToPrettyTime( duration )
         
-        if num_frames is not None: info_string += ' (' + HC.ConvertIntToPrettyString( num_frames ) + ' frames)'
+        if num_frames is not None: info_string += ' (' + HydrusData.ConvertIntToPrettyString( num_frames ) + ' frames)'
         
-        if num_words is not None: info_string += ' (' + HC.ConvertIntToPrettyString( num_words ) + ' words)'
+        if num_words is not None: info_string += ' (' + HydrusData.ConvertIntToPrettyString( num_words ) + ' words)'
         
         return info_string
         
@@ -739,7 +743,7 @@ class MediaSingleton( Media ):
     
     def IsCollection( self ): return False
     
-    def IsImage( self ): return HC.IsImage( self._media_result.GetMime() )
+    def IsImage( self ): return HydrusFileHandling.IsImage( self._media_result.GetMime() )
     
     def IsNoisy( self ): return self.GetMime() in HC.NOISY_MIMES
     
@@ -758,7 +762,7 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -796,7 +800,7 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -831,5 +835,94 @@ class MediaResult( object ):
         
     
     def ToTuple( self ): return self._tuple
+
+class SortedList( object ):
+    
+    def __init__( self, initial_items = None, sort_function = None ):
+        
+        if initial_items is None: initial_items = []
+        
+        do_sort = sort_function is not None
+        
+        if sort_function is None: sort_function = lambda x: x
+        
+        self._sort_function = sort_function
+        
+        self._sorted_list = list( initial_items )
+        
+        self._items_to_indices = None
+        
+        if do_sort: self.sort()
+        
+    
+    def __contains__( self, item ): return self._items_to_indices.__contains__( item )
+    
+    def __getitem__( self, value ): return self._sorted_list.__getitem__( value )
+    
+    def __iter__( self ):
+        
+        for item in self._sorted_list: yield item
+        
+    
+    def __len__( self ): return self._sorted_list.__len__()
+    
+    def _DirtyIndices( self ): self._items_to_indices = None
+    
+    def _RecalcIndices( self ): self._items_to_indices = { item : index for ( index, item ) in enumerate( self._sorted_list ) }
+    
+    def append_items( self, items ):
+        
+        self._sorted_list.extend( items )
+        
+        self._DirtyIndices()
+        
+    
+    def index( self, item ):
+        
+        if self._items_to_indices is None: self._RecalcIndices()
+        
+        try:
+            
+            result = self._items_to_indices[ item ]
+            
+        except KeyError:
+            
+            raise HydrusExceptions.NotFoundException()
+            
+        
+        return result
+        
+    
+    def insert_items( self, items ):
+        
+        self.append_items( items )
+        
+        self.sort()
+        
+    
+    def remove_items( self, items ):
+        
+        deletee_indices = [ self.index( item ) for item in items ]
+        
+        deletee_indices.sort()
+        
+        deletee_indices.reverse()
+        
+        for index in deletee_indices: del self._sorted_list[ index ]
+        
+        self._DirtyIndices()
+        
+    
+    def sort( self, f = None ):
+        
+        if f is not None: self._sort_function = f
+        
+        self._sorted_list.sort( key = f )
+        
+        self._DirtyIndices()
+        
+
+# adding tuple to yaml
+
     
     

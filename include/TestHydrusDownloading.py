@@ -3,25 +3,28 @@ import ClientData
 import ClientDefaults
 import collections
 import HydrusConstants as HC
-import HydrusDownloading
+import ClientDownloading
 import os
 import TestConstants
 import unittest
+import HydrusFileHandling
+import HydrusGlobals
+import wx
 
 class TestDownloaders( unittest.TestCase ):
     
     @classmethod
     def setUpClass( self ):
         
-        self.old_http = HC.http
+        self.old_http = HydrusGlobals.http
         
-        HC.http = TestConstants.FakeHTTPConnectionManager()
+        HydrusGlobals.http = TestConstants.FakeHTTPConnectionManager()
         
     
     @classmethod
     def tearDownClass( self ):
         
-        HC.http = self.old_http
+        HydrusGlobals.http = self.old_http
         
         
     
@@ -30,14 +33,14 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_gallery.html' ) as f: da_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_page.html' ) as f: da_page = f.read()
         
-        HC.http.SetResponse( HC.GET, 'http://sakimichan.deviantart.com/gallery/?catpath=/&offset=0', da_gallery )
-        HC.http.SetResponse( HC.GET, 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', da_page )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://sakimichan.deviantart.com/gallery/?catpath=/&offset=0', da_gallery )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', da_page )
         
-        HC.http.SetResponse( HC.GET, 'http://fc00.deviantart.net/fs71/f/2015/013/3/c/3c026edbe356b22c802e7be0db6fbd0b-d8dt0go.jpg', 'image file' )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://fc00.deviantart.net/fs71/f/2015/013/3/c/3c026edbe356b22c802e7be0db6fbd0b-d8dt0go.jpg', 'image file' )
         
         #
         
-        downloader = HydrusDownloading.DownloaderDeviantArt( 'sakimichan' )
+        downloader = ClientDownloading.DownloaderDeviantArt( 'sakimichan' )
         
         #
         
@@ -51,11 +54,18 @@ class TestDownloaders( unittest.TestCase ):
         
         tags = ['title:Sailor moon in PJs', 'creator:sakimichan']
         
-        info = downloader.GetFileAndTags( 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', tags )
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        ( temp_path, tags ) = info
-        
-        with open( temp_path, 'rb' ) as f: data = f.read()
+        try:
+            
+            tags = downloader.GetFileAndTags( temp_path, 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', tags )
+            
+            with open( temp_path, 'rb' ) as f: data = f.read()
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
         info = ( data, tags )
         
@@ -69,12 +79,12 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_games.html' ) as f: newgrounds_gallery_games = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_movies.html' ) as f: newgrounds_gallery_movies = f.read()
         
-        HC.http.SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/games/', newgrounds_gallery_games )
-        HC.http.SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/movies/', newgrounds_gallery_movies )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/games/', newgrounds_gallery_games )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/movies/', newgrounds_gallery_movies )
         
         #
         
-        downloader = HydrusDownloading.DownloaderNewgrounds( 'warlord-of-noodles' )
+        downloader = ClientDownloading.DownloaderNewgrounds( 'warlord-of-noodles' )
         
         #
         
@@ -88,15 +98,22 @@ class TestDownloaders( unittest.TestCase ):
         
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_page.html' ) as f: newgrounds_page = f.read()
         
-        HC.http.SetResponse( HC.GET, 'http://www.newgrounds.com/portal/view/583715', newgrounds_page )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://www.newgrounds.com/portal/view/583715', newgrounds_page )
         
-        HC.http.SetResponse( HC.GET, 'http://uploads.ungrounded.net/583000/583715_catdust.swf', 'swf file' )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://uploads.ungrounded.net/583000/583715_catdust.swf', 'swf file' )
         
-        info = downloader.GetFileAndTags( 'http://www.newgrounds.com/portal/view/583715' )
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        ( temp_path, tags ) = info
-        
-        with open( temp_path, 'rb' ) as f: data = f.read()
+        try:
+            
+            tags = downloader.GetFileAndTags( temp_path, 'http://www.newgrounds.com/portal/view/583715' )
+            
+            with open( temp_path, 'rb' ) as f: data = f.read()
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
         info = ( data, tags )
         
@@ -110,14 +127,14 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_gallery.html' ) as f: pixiv_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_page.html' ) as f: pixiv_page = f.read()
         
-        HC.http.SetResponse( HC.GET, 'http://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
-        HC.http.SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=43718605', pixiv_page )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=43718605', pixiv_page )
         
-        HC.http.SetResponse( HC.GET, 'http://i1.pixiv.net/img59/img/dbhope/43718605.jpg', 'image file' )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://i1.pixiv.net/img59/img/dbhope/43718605.jpg', 'image file' )
         
         #
         
-        downloader = HydrusDownloading.DownloaderPixiv( 'tags', 'naruto' )
+        downloader = ClientDownloading.DownloaderPixiv( 'tags', 'naruto' )
         
         #
         
@@ -129,11 +146,18 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        info = downloader.GetFileAndTags( 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=43718605' )
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        ( temp_path, tags ) = info
-        
-        with open( temp_path, 'rb' ) as f: data = f.read()
+        try:
+            
+            tags = downloader.GetFileAndTags( temp_path, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=43718605' )
+            
+            with open( temp_path, 'rb' ) as f: data = f.read()
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
         info = ( data, tags )
         
@@ -149,12 +173,12 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_gallery.html' ) as f: sankaku_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_page.html' ) as f: sankaku_page = f.read()
         
-        HC.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/?tags=animal_ears&page=1', sankaku_gallery )
-        HC.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4324703', sankaku_page )
+        HydrusGlobals.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/?tags=animal_ears&page=1', sankaku_gallery )
+        HydrusGlobals.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4324703', sankaku_page )
         
         #
         
-        downloader = HydrusDownloading.DownloaderBooru( ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ], [ 'animal_ears' ] )
+        downloader = ClientDownloading.DownloaderBooru( ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ], [ 'animal_ears' ] )
         
         #
         
@@ -166,13 +190,20 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        HC.http.SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/c5/c3/c5c3c91ca68bd7662f546cc44fe0d378.jpg?4324703', 'image file' )
+        HydrusGlobals.http.SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/c5/c3/c5c3c91ca68bd7662f546cc44fe0d378.jpg?4324703', 'image file' )
         
-        info = downloader.GetFileAndTags( 'https://chan.sankakucomplex.com/post/show/4324703' )
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        ( temp_path, tags ) = info
-        
-        with open( temp_path, 'rb' ) as f: data = f.read()
+        try:
+            
+            tags = downloader.GetFileAndTags( temp_path, 'https://chan.sankakucomplex.com/post/show/4324703' )
+            
+            with open( temp_path, 'rb' ) as f: data = f.read()
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
         info = ( data, tags )
         
@@ -184,12 +215,21 @@ class TestDownloaders( unittest.TestCase ):
         
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_flash.html' ) as f: sankaku_flash = f.read()
         
-        HC.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4318061', sankaku_flash )
-        HC.http.SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/48/ce/48cecd707d8a562d47db74d934505f51.swf?4318061', 'swf file' )
+        HydrusGlobals.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4318061', sankaku_flash )
+        HydrusGlobals.http.SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/48/ce/48cecd707d8a562d47db74d934505f51.swf?4318061', 'swf file' )
         
-        temp_path = downloader.GetFile( 'https://chan.sankakucomplex.com/post/show/4318061' )
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        with open( temp_path, 'rb' ) as f: data = f.read()
+        try:
+            
+            downloader.GetFile( temp_path, 'https://chan.sankakucomplex.com/post/show/4318061' )
+            
+            with open( temp_path, 'rb' ) as f: data = f.read()
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
         self.assertEqual( data, 'swf file' )
         
@@ -199,12 +239,12 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_gallery.html' ) as f: e621_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_page.html' ) as f: e621_page = f.read()
         
-        HC.http.SetResponse( HC.GET, 'http://e621.net/post/index?page=1&tags=flash', e621_gallery )
-        HC.http.SetResponse( HC.GET, 'http://e621.net/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia', e621_page )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://e621.net/post/index?page=1&tags=flash', e621_gallery )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://e621.net/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia', e621_page )
         
         #
         
-        downloader = HydrusDownloading.DownloaderBooru( ClientDefaults.GetDefaultBoorus()[ 'e621' ], [ 'flash' ] )
+        downloader = ClientDownloading.DownloaderBooru( ClientDefaults.GetDefaultBoorus()[ 'e621' ], [ 'flash' ] )
         
         #
         
@@ -216,13 +256,20 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        HC.http.SetResponse( HC.GET, 'https://static1.e621.net/data/f5/48/f54897c2543e0264e1a64d7f7c33c9f9.swf', 'swf file' )
+        HydrusGlobals.http.SetResponse( HC.GET, 'https://static1.e621.net/data/f5/48/f54897c2543e0264e1a64d7f7c33c9f9.swf', 'swf file' )
         
-        info = downloader.GetFileAndTags( 'http://e621.net/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia' )
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        ( temp_path, tags ) = info
-        
-        with open( temp_path, 'rb' ) as f: data = f.read()
+        try:
+            
+            tags = downloader.GetFileAndTags( temp_path, 'http://e621.net/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia' )
+            
+            with open( temp_path, 'rb' ) as f: data = f.read()
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
         info = ( data, tags )
         
@@ -240,14 +287,14 @@ class TestDownloaders( unittest.TestCase ):
         
         # what about page/1 or whatever?
         
-        HC.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/page/1', picture_gallery )
-        HC.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/scraps/page/1', scrap_gallery )
-        HC.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae', picture_page )
-        HC.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027', scrap_page )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/page/1', picture_gallery )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/scraps/page/1', scrap_gallery )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae', picture_page )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027', scrap_page )
         
         cookies = { 'YII_CSRF_TOKEN' : '19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B' }
         
-        HC.app.SetWebCookies( 'hentai foundry', cookies )
+        wx.GetApp().SetWebCookies( 'hentai foundry', cookies )
         
         #
         
@@ -275,8 +322,8 @@ class TestDownloaders( unittest.TestCase ):
         info[ 'filter_order' ] = 0
         info[ 'filter_type' ] = 0
         
-        pictures_downloader = HydrusDownloading.GetDownloader( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist pictures', 'Sparrow', info )
-        scraps_downloader = HydrusDownloading.GetDownloader( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist scraps', 'Sparrow', info )
+        pictures_downloader = ClientDownloading.GetDownloader( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist pictures', 'Sparrow', info )
+        scraps_downloader = ClientDownloading.GetDownloader( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist scraps', 'Sparrow', info )
         
         #
         
@@ -294,16 +341,23 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        HC.http.SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226304.jpg', 'picture' )
-        HC.http.SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226084.jpg', 'scrap' )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226304.jpg', 'picture' )
+        HydrusGlobals.http.SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226084.jpg', 'scrap' )
         
         # ask for specific url
         
-        info = pictures_downloader.GetFileAndTags( 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae' )
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        ( temp_path, tags ) = info
-        
-        with open( temp_path, 'rb' ) as f: data = f.read()
+        try:
+            
+            tags = pictures_downloader.GetFileAndTags( temp_path, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae' )
+            
+            with open( temp_path, 'rb' ) as f: data = f.read()
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
         info = ( data, tags )
         
@@ -311,11 +365,18 @@ class TestDownloaders( unittest.TestCase ):
         
         self.assertEqual( info, expected_info )
         
-        info = scraps_downloader.GetFileAndTags( 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027' )
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
-        ( temp_path, tags ) = info
-        
-        with open( temp_path, 'rb' ) as f: data = f.read()
+        try:
+            
+            tags = scraps_downloader.GetFileAndTags( temp_path, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027' )
+            
+            with open( temp_path, 'rb' ) as f: data = f.read()
+            
+        finally:
+            
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
         
         info = ( data, tags )
         

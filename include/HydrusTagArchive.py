@@ -212,6 +212,15 @@ class HydrusTagArchive( object ):
     
     def GetMappings( self, hash ): return self.GetTags( hash )
     
+    def GetName( self ):
+        
+        filename = os.path.basename( self._path )
+        
+        if '.' in filename: filename = filename.split( '.', 1 )[0]
+        
+        return filename
+        
+    
     def GetNamespaces( self ): return self._namespaces
     
     def GetTags( self, hash ):
@@ -233,6 +242,11 @@ class HydrusTagArchive( object ):
             return True
             
         except: return False
+        
+    
+    def IterateHashes( self ):
+        
+        for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes;' ): yield hash
         
     
     def IterateMappings( self ):

@@ -20,42 +20,44 @@ import time
 import traceback
 import yaml
 import wx
+import HydrusData
+import HydrusGlobals
 
-def DAEMONCheckDataUsage(): HC.app.WriteDaemon( 'check_data_usage' )
+def DAEMONCheckDataUsage(): wx.GetApp().WriteDaemon( 'check_data_usage' )
 
-def DAEMONCheckMonthlyData(): HC.app.WriteDaemon( 'check_monthly_data' )
+def DAEMONCheckMonthlyData(): wx.GetApp().WriteDaemon( 'check_monthly_data' )
 
-def DAEMONClearBans(): HC.app.WriteDaemon( 'clear_bans' )
+def DAEMONClearBans(): wx.GetApp().WriteDaemon( 'clear_bans' )
 
-def DAEMONDeleteOrphans(): HC.app.WriteDaemon( 'delete_orphans' )
+def DAEMONDeleteOrphans(): wx.GetApp().WriteDaemon( 'delete_orphans' )
 
-def DAEMONFlushRequestsMade( all_requests ): HC.app.WriteDaemon( 'flush_requests_made', all_requests )
+def DAEMONFlushRequestsMade( all_requests ): wx.GetApp().WriteDaemon( 'flush_requests_made', all_requests )
 
 def DAEMONGenerateUpdates():
     
-    dirty_updates = HC.app.ReadDaemon( 'dirty_updates' )
+    dirty_updates = wx.GetApp().ReadDaemon( 'dirty_updates' )
     
     for ( service_key, tuples ) in dirty_updates.items():
         
-        for ( begin, end ) in tuples: HC.app.WriteDaemon( 'clean_update', service_key, begin, end )
+        for ( begin, end ) in tuples: wx.GetApp().WriteDaemon( 'clean_update', service_key, begin, end )
         
     
-    update_ends = HC.app.ReadDaemon( 'update_ends' )
+    update_ends = wx.GetApp().ReadDaemon( 'update_ends' )
     
     for ( service_key, biggest_end ) in update_ends.items():
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         next_begin = biggest_end + 1
         next_end = biggest_end + HC.UPDATE_DURATION
         
         while next_end < now:
             
-            HC.app.WriteDaemon( 'create_update', service_key, next_begin, next_end )
+            wx.GetApp().WriteDaemon( 'create_update', service_key, next_begin, next_end )
             
             biggest_end = next_end
             
-            now = HC.GetNow()
+            now = HydrusData.GetNow()
             
             next_begin = biggest_end + 1
             next_end = biggest_end + HC.UPDATE_DURATION
@@ -74,7 +76,7 @@ def DAEMONUPnP():
         
     except: return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
     
-    services_info = HC.app.ReadDaemon( 'services_info' )
+    services_info = wx.GetApp().ReadDaemon( 'services_info' )
     
     for ( service_key, service_type, options ) in services_info:
         

@@ -6,7 +6,7 @@ import ClientGUIManagement
 import ClientGUIMedia
 import ClientGUIMessages
 import ClientGUICanvas
-import HydrusDownloading
+import ClientDownloading
 import HydrusThreading
 import inspect
 import os
@@ -14,6 +14,8 @@ import sys
 import time
 import traceback
 import wx
+import ClientData
+import HydrusGlobals
 
 class PageBase( object ):
     
@@ -31,7 +33,7 @@ class PageBase( object ):
         
         self._pretty_status = ''
         
-        HC.pubsub.sub( self, 'SetPrettyStatus', 'new_page_status' )
+        HydrusGlobals.pubsub.sub( self, 'SetPrettyStatus', 'new_page_status' )
         
     
     def _InitControllers( self ): pass
@@ -59,17 +61,17 @@ class PageBase( object ):
     
     def IsStorable( self ): return self._is_storable
     
-    def PageHidden( self ): HC.pubsub.pub( 'page_hidden', self._page_key )
+    def PageHidden( self ): HydrusGlobals.pubsub.pub( 'page_hidden', self._page_key )
     
-    def PageShown( self ): HC.pubsub.pub( 'page_shown', self._page_key )
+    def PageShown( self ): HydrusGlobals.pubsub.pub( 'page_shown', self._page_key )
     
     def Pause( self ):
         
         self._PauseControllers()
         
-        HC.pubsub.pub( 'pause', self._page_key )
+        HydrusGlobals.pubsub.pub( 'pause', self._page_key )
         
-        HC.pubsub.pub( 'set_focus', self._page_key, None )
+        HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, None )
         
     
     def SetPrettyStatus( self, page_key, status ):
@@ -78,17 +80,17 @@ class PageBase( object ):
             
             self._pretty_status = status
             
-            HC.pubsub.pub( 'refresh_status' )
+            HydrusGlobals.pubsub.pub( 'refresh_status' )
             
         
     
-    def RefreshQuery( self ): HC.pubsub.pub( 'refresh_query', self._page_key )
+    def RefreshQuery( self ): HydrusGlobals.pubsub.pub( 'refresh_query', self._page_key )
     
     def SetMediaFocus( self ): pass
     
-    def SetSearchFocus( self ): HC.pubsub.pub( 'set_search_focus', self._page_key )
+    def SetSearchFocus( self ): HydrusGlobals.pubsub.pub( 'set_search_focus', self._page_key )
     
-    def SetSynchronisedWait( self ): HC.pubsub.pub( 'synchronised_wait_switch', self._page_key )
+    def SetSynchronisedWait( self ): HydrusGlobals.pubsub.pub( 'synchronised_wait_switch', self._page_key )
     
     def ShowHideSplit( self ): pass
     
@@ -98,7 +100,7 @@ class PageBase( object ):
         
         self._ResumeControllers()
         
-        HC.pubsub.pub( 'resume', self._page_key )
+        HydrusGlobals.pubsub.pub( 'resume', self._page_key )
         
     
 class PageMessages( PageBase, wx.SplitterWindow ):
@@ -121,7 +123,7 @@ class PageMessages( PageBase, wx.SplitterWindow ):
         self._search_preview_split.Bind( wx.EVT_SPLITTER_DCLICK, self.EventPreviewUnsplit )
         
         self._InitManagementPanel()
-        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, HC.LOCAL_FILE_SERVICE_KEY )
+        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, CC.LOCAL_FILE_SERVICE_KEY )
         self._InitMessagesPanel()
         
         self.SplitVertically( self._search_preview_split, self._messages_panel, HC.options[ 'hpos' ] )
@@ -155,12 +157,15 @@ class PageMessages( PageBase, wx.SplitterWindow ):
     
 class PageWithMedia( PageBase, wx.SplitterWindow ):
     
-    def __init__( self, parent, file_service_key = HC.LOCAL_FILE_SERVICE_KEY, initial_hashes = [], initial_media_results = [], starting_from_session = False ):
+    def __init__( self, parent, file_service_key = CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = None, initial_media_results = None, starting_from_session = False ):
+        
+        if initial_hashes is None: initial_hashes = []
+        if initial_media_results is None: initial_media_results = []
         
         wx.SplitterWindow.__init__( self, parent )
         PageBase.__init__( self, starting_from_session = starting_from_session )
         
-        if len( initial_hashes ) > 0: initial_media_results = HC.app.Read( 'media_results', file_service_key, initial_hashes )
+        if len( initial_hashes ) > 0: initial_media_results = wx.GetApp().Read( 'media_results', file_service_key, initial_hashes )
         
         self._file_service_key = file_service_key
         self._initial_media_results = initial_media_results
@@ -184,7 +189,7 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
         self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
         wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
-        HC.pubsub.sub( self, 'SwapMediaPanel', 'swap_media_panel' )
+        HydrusGlobals.pubsub.sub( self, 'SwapMediaPanel', 'swap_media_panel' )
         
     
     def CleanBeforeDestroy( self ): self._management_panel.CleanBeforeDestroy()
@@ -249,7 +254,7 @@ class PageImport( PageWithMedia ):
             
             advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
             
-            return HydrusDownloading.ImportArgsGenerator( job_key, item, advanced_import_options )
+            return ClientDownloading.ImportArgsGenerator( job_key, item, advanced_import_options )
             
         
         return factory
@@ -259,7 +264,7 @@ class PageImport( PageWithMedia ):
         
         def factory( job_key, item ):
             
-            return HydrusDownloading.ImportQueueBuilder( job_key, item )
+            return ClientDownloading.ImportQueueBuilder( job_key, item )
             
         
         return factory
@@ -272,7 +277,7 @@ class PageImport( PageWithMedia ):
         import_args_generator_factory = self._GenerateImportArgsGeneratorFactory()
         import_queue_builder_factory = self._GenerateImportQueueBuilderFactory()
         
-        self._import_controller = HydrusDownloading.ImportController( import_args_generator_factory, import_queue_builder_factory, page_key = self._page_key )
+        self._import_controller = ClientDownloading.ImportController( import_args_generator_factory, import_queue_builder_factory, page_key = self._page_key )
         
         self._import_controller.StartDaemon()
         
@@ -310,7 +315,9 @@ class PageImport( PageWithMedia ):
     
 class PageImportGallery( PageImport ):
     
-    def __init__( self, parent, gallery_name, gallery_type, initial_hashes = [], starting_from_session = False ):
+    def __init__( self, parent, gallery_name, gallery_type, initial_hashes = None, starting_from_session = False ):
+        
+        if initial_hashes is None: initial_hashes = []
         
         self._gallery_name = gallery_name
         self._gallery_type = gallery_type
@@ -328,7 +335,7 @@ class PageImportGallery( PageImport ):
             
             downloaders_factory = self._GetDownloadersFactory()
             
-            return HydrusDownloading.ImportArgsGeneratorGallery( job_key, item, advanced_import_options, advanced_tag_options, downloaders_factory )
+            return ClientDownloading.ImportArgsGeneratorGallery( job_key, item, advanced_import_options, advanced_tag_options, downloaders_factory )
             
         
         return factory
@@ -340,7 +347,7 @@ class PageImportGallery( PageImport ):
             
             downloaders_factory = self._GetDownloadersFactory()
             
-            return HydrusDownloading.ImportQueueBuilderGallery( job_key, item, downloaders_factory )
+            return ClientDownloading.ImportQueueBuilderGallery( job_key, item, downloaders_factory )
             
         
         return factory
@@ -355,7 +362,7 @@ class PageImportGallery( PageImport ):
                 booru = self._gallery_type
                 tags = raw_tags.split( ' ' )
                 
-                return ( HydrusDownloading.DownloaderBooru( booru, tags ), )
+                return ( ClientDownloading.DownloaderBooru( booru, tags ), )
                 
             
         elif self._gallery_name == 'deviant art':
@@ -364,7 +371,7 @@ class PageImportGallery( PageImport ):
                 
                 def downloaders_factory( artist ):
                     
-                    return ( HydrusDownloading.DownloaderDeviantArt( artist ), )
+                    return ( ClientDownloading.DownloaderDeviantArt( artist ), )
                     
                 
             
@@ -372,7 +379,7 @@ class PageImportGallery( PageImport ):
             
             def downloaders_factory( tag ):
                 
-                return ( HydrusDownloading.DownloaderGiphy( tag ), )
+                return ( ClientDownloading.DownloaderGiphy( tag ), )
                 
             
         elif self._gallery_name == 'hentai foundry':
@@ -383,8 +390,8 @@ class PageImportGallery( PageImport ):
                     
                     advanced_hentai_foundry_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedHentaiFoundryOptions )
                     
-                    pictures_downloader = HydrusDownloading.DownloaderHentaiFoundry( 'artist pictures', artist, advanced_hentai_foundry_options )
-                    scraps_downloader = HydrusDownloading.DownloaderHentaiFoundry( 'artist scraps', artist, advanced_hentai_foundry_options )
+                    pictures_downloader = ClientDownloading.DownloaderHentaiFoundry( 'artist pictures', artist, advanced_hentai_foundry_options )
+                    scraps_downloader = ClientDownloading.DownloaderHentaiFoundry( 'artist scraps', artist, advanced_hentai_foundry_options )
                     
                     return ( pictures_downloader, scraps_downloader )
                     
@@ -397,7 +404,7 @@ class PageImportGallery( PageImport ):
                     
                     tags = raw_tags.split( ' ' )
                     
-                    return ( HydrusDownloading.DownloaderHentaiFoundry( 'tags', tags, advanced_hentai_foundry_options ), )
+                    return ( ClientDownloading.DownloaderHentaiFoundry( 'tags', tags, advanced_hentai_foundry_options ), )
                     
                 
             
@@ -405,7 +412,7 @@ class PageImportGallery( PageImport ):
             
             def downloaders_factory( artist ):
                 
-                return ( HydrusDownloading.DownloaderNewgrounds( artist ), )
+                return ( ClientDownloading.DownloaderNewgrounds( artist ), )
                 
             
         elif self._gallery_name == 'pixiv':
@@ -414,14 +421,14 @@ class PageImportGallery( PageImport ):
                 
                 def downloaders_factory( artist_id ):
                     
-                    return ( HydrusDownloading.DownloaderPixiv( 'artist_id', artist_id ), )
+                    return ( ClientDownloading.DownloaderPixiv( 'artist_id', artist_id ), )
                     
                 
             elif self._gallery_type == 'tag':
                 
                 def downloaders_factory( tag ):
                     
-                    return ( HydrusDownloading.DownloaderPixiv( 'tags', tag ), )
+                    return ( ClientDownloading.DownloaderPixiv( 'tags', tag ), )
                     
                 
             
@@ -429,7 +436,7 @@ class PageImportGallery( PageImport ):
             
             def downloaders_factory( username ):
                 
-                return ( HydrusDownloading.DownloaderTumblr( username ), )
+                return ( ClientDownloading.DownloaderTumblr( username ), )
                 
             
         
@@ -446,7 +453,7 @@ class PageImportGallery( PageImport ):
             if self._gallery_type == 'artist': initial_search_value = 'artist username'
             elif self._gallery_type == 'tags': initial_search_value = 'search tags'
             
-            ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_HENTAI_FOUNDRY )
+            ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_HENTAI_FOUNDRY )
             
             self._management_panel = ClientGUIManagement.ManagementPanelImportsGalleryHentaiFoundry( self._search_preview_split, self, self._page_key, self._import_controller, name, namespaces, ato, initial_search_value, starting_from_session = self._starting_from_session )
             
@@ -460,7 +467,7 @@ class PageImportGallery( PageImport ):
                 namespaces = booru.GetNamespaces()
                 initial_search_value = 'search tags'
                 
-                ato = HC.GetDefaultAdvancedTagOptions( ( HC.SITE_TYPE_BOORU, name ) )
+                ato = ClientData.GetDefaultAdvancedTagOptions( ( HC.SITE_TYPE_BOORU, name ) )
                 
             elif self._gallery_name == 'deviant art':
                 
@@ -471,7 +478,7 @@ class PageImportGallery( PageImport ):
                     initial_search_value = 'artist username'
                     
                 
-                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_DEVIANT_ART )
+                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_DEVIANT_ART )
                 
             elif self._gallery_name == 'giphy':
                 
@@ -480,7 +487,7 @@ class PageImportGallery( PageImport ):
         
                 initial_search_value = 'search tag'
                 
-                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_GIPHY )
+                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_GIPHY )
                 
             elif self._gallery_name == 'newgrounds':
                 
@@ -488,7 +495,7 @@ class PageImportGallery( PageImport ):
                 namespaces = [ 'creator', 'title', '' ]
                 initial_search_value = 'artist username'
                 
-                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_NEWGROUNDS )
+                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_NEWGROUNDS )
                 
             elif self._gallery_name == 'pixiv':
                 
@@ -498,7 +505,7 @@ class PageImportGallery( PageImport ):
                 if self._gallery_type in ( 'artist', 'artist_id' ): initial_search_value = 'numerical artist id'
                 elif self._gallery_type == 'tag': initial_search_value = 'search tag'
                 
-                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_PIXIV )
+                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_PIXIV )
                 
             elif self._gallery_name == 'tumblr':
                 
@@ -506,7 +513,7 @@ class PageImportGallery( PageImport ):
                 namespaces = [ '' ]
                 initial_search_value = 'username'
                 
-                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_TUMBLR )
+                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_TUMBLR )
                 
             
             self._management_panel = ClientGUIManagement.ManagementPanelImportsGallery( self._search_preview_split, self, self._page_key, self._import_controller, name, namespaces, ato, initial_search_value, starting_from_session = self._starting_from_session )
@@ -525,7 +532,10 @@ class PageImportGallery( PageImport ):
     
 class PageImportHDD( PageImport ):
     
-    def __init__( self, parent, paths_info, initial_hashes = [], advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False, starting_from_session = False ):
+    def __init__( self, parent, paths_info, initial_hashes = None, advanced_import_options = None, paths_to_tags = None, delete_after_success = False, starting_from_session = False ):
+        
+        if advanced_import_options is None: advanced_import_options = {}
+        if paths_to_tags is None: paths_to_tags = {}
         
         self._paths_info = paths_info
         self._advanced_import_options = advanced_import_options
@@ -541,7 +551,7 @@ class PageImportHDD( PageImport ):
         
         def factory( job_key, item ):
             
-            return HydrusDownloading.ImportArgsGeneratorHDD( job_key, item, self._advanced_import_options, self._paths_to_tags, self._delete_after_success )
+            return ClientDownloading.ImportArgsGeneratorHDD( job_key, item, self._advanced_import_options, self._paths_to_tags, self._delete_after_success )
             
         
         return factory
@@ -572,7 +582,7 @@ class PageImportThreadWatcher( PageImport ):
             # we should not be getting it from the management_panel
             # we should have access to this info from the job_key or w/e
             
-            return HydrusDownloading.ImportArgsGeneratorThread( job_key, item, advanced_import_options, advanced_tag_options )
+            return ClientDownloading.ImportArgsGeneratorThread( job_key, item, advanced_import_options, advanced_tag_options )
             
         
         return factory
@@ -582,7 +592,7 @@ class PageImportThreadWatcher( PageImport ):
         
         def factory( job_key, item ):
             
-            return HydrusDownloading.ImportQueueBuilderThread( job_key, item )
+            return ClientDownloading.ImportQueueBuilderThread( job_key, item )
             
         
         return factory
@@ -598,7 +608,7 @@ class PageImportURL( PageImport ):
             
             advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
             
-            return HydrusDownloading.ImportArgsGeneratorURLs( job_key, item, advanced_import_options )
+            return ClientDownloading.ImportArgsGeneratorURLs( job_key, item, advanced_import_options )
             
         
         return factory
@@ -608,7 +618,7 @@ class PageImportURL( PageImport ):
         
         def factory( job_key, item ):
             
-            return HydrusDownloading.ImportQueueBuilderURLs( job_key, item )
+            return ClientDownloading.ImportQueueBuilderURLs( job_key, item )
             
         
         return factory
@@ -622,12 +632,12 @@ class PagePetitions( PageWithMedia ):
         
         self._petition_service_key = petition_service_key
         
-        petition_service = HC.app.GetManager( 'services' ).GetService( petition_service_key )
+        petition_service = wx.GetApp().GetManager( 'services' ).GetService( petition_service_key )
         
         petition_service_type = petition_service.GetServiceType()
         
         if petition_service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): self._file_service_key = self._petition_service_key
-        else: self._file_service_key = HC.COMBINED_FILE_SERVICE_KEY
+        else: self._file_service_key = CC.COMBINED_FILE_SERVICE_KEY
         
         PageWithMedia.__init__( self, parent, self._file_service_key, starting_from_session = starting_from_session )
         
@@ -640,7 +650,11 @@ class PageQuery( PageWithMedia ):
     
     _is_storable = True
     
-    def __init__( self, parent, file_service_key, initial_hashes = [], initial_media_results = [], initial_predicates = [], starting_from_session = False ):
+    def __init__( self, parent, file_service_key, initial_hashes = None, initial_media_results = None, initial_predicates = None, starting_from_session = False ):
+        
+        if initial_hashes is None: initial_hashes = []
+        if initial_media_results is None: initial_media_results = []
+        if initial_predicates is None: initial_predicates = []
         
         self._initial_predicates = initial_predicates
         
@@ -682,7 +696,7 @@ class PageThreadDumper( PageWithMedia ):
         
         self._imageboard = imageboard
         
-        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
+        media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
         
         hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
         
@@ -690,12 +704,12 @@ class PageThreadDumper( PageWithMedia ):
         
         self._media_results = filter( self._imageboard.IsOkToPost, self._media_results )
         
-        PageWithMedia.__init__( self, parent, HC.LOCAL_FILE_SERVICE_KEY, starting_from_session = starting_from_session )
+        PageWithMedia.__init__( self, parent, CC.LOCAL_FILE_SERVICE_KEY, starting_from_session = starting_from_session )
         
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelDumper( self._search_preview_split, self, self._page_key, self._imageboard, self._media_results, starting_from_session = self._starting_from_session )
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_KEY, self._media_results )
+    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, self._media_results )
     
 class_to_text = {}
 text_to_class = {}

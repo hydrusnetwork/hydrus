@@ -8,6 +8,7 @@ import os
 import TestConstants
 import unittest
 import wx
+import HydrusGlobals
 
 def HitCancelButton( window ): wx.PostEvent( window, wx.CommandEvent( wx.EVT_BUTTON.typeId, wx.ID_CANCEL ) )
 
@@ -27,7 +28,7 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_select_booru( self ):
         
-        HC.app.SetRead( 'remote_boorus', ClientDefaults.GetDefaultBoorus() )
+        wx.GetApp().SetRead( 'remote_boorus', ClientDefaults.GetDefaultBoorus() )
         
         with ClientGUIDialogs.DialogSelectBooru( None ) as dlg:
             

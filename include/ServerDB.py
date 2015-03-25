@@ -20,6 +20,10 @@ import time
 import traceback
 import yaml
 import wx
+import HydrusData
+import HydrusTags
+import HydrusNetworking
+import HydrusGlobals
 
 class MessageDB( object ):
     
@@ -30,7 +34,7 @@ class MessageDB( object ):
         
         message_key = os.urandom( 32 )
         
-        self._c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, HC.GetNow() ) )
+        self._c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, HydrusData.GetNow() ) )
         
         dest_path = ServerFiles.GetExpectedPath( 'message', message_key )
         
@@ -42,7 +46,7 @@ class MessageDB( object ):
         try: ( service_id, account_id ) = self._c.execute( 'SELECT service_id, account_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( contact_key ), ) ).fetchone()
         except: raise HydrusExceptions.ForbiddenException( 'Did not find that contact key for the message depot!' )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.executemany( 'INSERT OR REPLACE INTO message_statuses ( status_key, service_id, account_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ? );', [ ( sqlite3.Binary( status_key ), service_id, account_id, sqlite3.Binary( status ), now ) for ( status_key, status ) in statuses ] )
         
@@ -107,7 +111,7 @@ class ServiceDB( MessageDB ):
         
         hash_id = self._GetHashId( hash )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         if self._c.execute( 'SELECT 1 FROM file_map WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone() is None or self._c.execute( 'SELECT 1 FROM file_petitions WHERE service_id = ? AND hash_id = ? AND status = ?;', ( service_id, hash_id, HC.DELETED ) ).fetchone() is None:
             
@@ -145,18 +149,21 @@ class ServiceDB( MessageDB ):
             
             dest_path = ServerFiles.GetExpectedPath( 'file', hash )
             
-            if not os.path.exists( dest_path ): shutil.move( source_path, dest_path )
+            with open( source_path, 'rb' ) as f_source:
+                
+                with open( dest_path, 'wb' ) as f_dest:
+                    
+                    HydrusFileHandling.CopyFileLikeToFileLike( f_source, f_dest )
+                    
+                
             
             if 'thumbnail' in file_dict:
                 
                 thumbnail_dest_path = ServerFiles.GetExpectedPath( 'thumbnail', hash )
                 
-                if not os.path.exists( thumbnail_dest_path ):
-                    
-                    thumbnail = file_dict[ 'thumbnail' ]
-                    
-                    with open( thumbnail_dest_path, 'wb' ) as f: f.write( thumbnail )
-                    
+                thumbnail = file_dict[ 'thumbnail' ]
+                
+                with open( thumbnail_dest_path, 'wb' ) as f: f.write( thumbnail )
                 
             
             if self._c.execute( 'SELECT 1 FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone() is None:
@@ -179,12 +186,12 @@ class ServiceDB( MessageDB ):
         
         self._ApproveFilePetitionOptimised( service_id, account_id, hash_ids )
         
-        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_map WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ]
+        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_map WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ]
         
         # this clears out any old reasons, if the user wants to overwrite them
-        self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HC.SplayListForDB( valid_hash_ids ) + ' AND status = ?;', ( service_id, account_id, HC.PETITIONED ) )
+        self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( valid_hash_ids ) + ' AND status = ?;', ( service_id, account_id, HC.PETITIONED ) )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, account_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, hash_id, reason_id, now, HC.PETITIONED ) for hash_id in valid_hash_ids ] )
         
@@ -193,7 +200,7 @@ class ServiceDB( MessageDB ):
         
         service_id = self._GetServiceId( service_key )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, now ) )
         
@@ -202,7 +209,7 @@ class ServiceDB( MessageDB ):
         
         if overwrite_deleted:
             
-            splayed_hash_ids = HC.SplayListForDB( hash_ids )
+            splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
             
             affected_timestamps = [ timestamp for ( timestamp, ) in self._c.execute( 'SELECT DISTINCT timestamp FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) ) ]
             
@@ -212,12 +219,12 @@ class ServiceDB( MessageDB ):
             
         else:
             
-            already_deleted = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) ) ]
+            already_deleted = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) ) ]
             
             hash_ids = set( hash_ids ).difference( already_deleted )
             
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, tag_id, hash_id, account_id, timestamp ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, tag_id, hash_id, account_id, now ) for hash_id in hash_ids ] )
         
@@ -226,11 +233,11 @@ class ServiceDB( MessageDB ):
         
         self._ApproveMappingPetitionOptimised( service_id, account_id, tag_id, hash_ids )
         
-        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
+        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
         
-        self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( valid_hash_ids ) + ' AND STATUS = ?;', ( service_id, account_id, tag_id, HC.PETITIONED ) )
+        self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( valid_hash_ids ) + ' AND STATUS = ?;', ( service_id, account_id, tag_id, HC.PETITIONED ) )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, account_id, tag_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, tag_id, hash_id, reason_id, now, HC.PETITIONED ) for hash_id in valid_hash_ids ] )
         
@@ -270,7 +277,7 @@ class ServiceDB( MessageDB ):
         
         self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND account_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, account_id, old_tag_id, new_tag_id, status ) )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, now ) )
         
@@ -292,18 +299,18 @@ class ServiceDB( MessageDB ):
         
         self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND account_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, account_id, old_tag_id, new_tag_id, status ) )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, now ) )
         
     
-    def _AddToExpires( self, account_ids, timespan ): self._c.execute( 'UPDATE accounts SET expires = expires + ? WHERE account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( timespan, ) )
+    def _AddToExpires( self, account_ids, timespan ): self._c.execute( 'UPDATE accounts SET expires = expires + ? WHERE account_id IN ' + HydrusData.SplayListForDB( account_ids ) + ';', ( timespan, ) )
     
     def _ApproveFilePetition( self, service_id, account_id, hash_ids, reason_id ):
         
         self._ApproveFilePetitionOptimised( service_id, account_id, hash_ids )
         
-        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_map WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ]
+        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_map WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ]
         
         self._RewardFilePetitioners( service_id, valid_hash_ids, 1 )
         
@@ -314,14 +321,14 @@ class ServiceDB( MessageDB ):
         
         ( biggest_end, ) = self._c.execute( 'SELECT end FROM update_cache ORDER BY end DESC LIMIT 1;' ).fetchone()
         
-        self._c.execute( 'DELETE FROM file_map WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND timestamp > ?;', ( service_id, account_id, biggest_end ) )
+        self._c.execute( 'DELETE FROM file_map WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND timestamp > ?;', ( service_id, account_id, biggest_end ) )
         
     
     def _ApproveMappingPetition( self, service_id, account_id, tag_id, hash_ids, reason_id ):
         
         self._ApproveMappingPetitionOptimised( service_id, account_id, tag_id, hash_ids )
         
-        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
+        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
         
         self._RewardMappingPetitioners( service_id, tag_id, valid_hash_ids, 1 )
         
@@ -332,7 +339,7 @@ class ServiceDB( MessageDB ):
         
         ( biggest_end, ) = self._c.execute( 'SELECT end FROM update_cache WHERE service_id = ? ORDER BY end DESC LIMIT 1;', ( service_id, ) ).fetchone()
         
-        self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND timestamp > ?;', ( service_id, account_id, tag_id, biggest_end ) )
+        self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND timestamp > ?;', ( service_id, account_id, tag_id, biggest_end ) )
         
     
     def _ApproveTagParentPetition( self, service_id, account_id, old_tag_id, new_tag_id, reason_id, status ):
@@ -361,7 +368,7 @@ class ServiceDB( MessageDB ):
         if status == HC.PENDING: new_status = HC.CURRENT
         elif status == HC.PETITIONED: new_status = HC.DELETED
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
         
@@ -394,7 +401,7 @@ class ServiceDB( MessageDB ):
         if status == HC.PENDING: new_status = HC.CURRENT
         elif status == HC.PETITIONED: new_status = HC.DELETED
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
         
@@ -403,9 +410,9 @@ class ServiceDB( MessageDB ):
     
     def _Ban( self, service_id, action, admin_account_id, subject_account_ids, reason_id, expires = None, lifetime = None ):
         
-        splayed_subject_account_ids = HC.SplayListForDB( subject_account_ids )
+        splayed_subject_account_ids = HydrusData.SplayListForDB( subject_account_ids )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         if expires is not None: pass
         elif lifetime is not None: expires = now + lifetime
@@ -427,7 +434,7 @@ class ServiceDB( MessageDB ):
             
             if len( hash_ids ) > 0: self._DeleteLocalFiles( admin_account_id, hash_ids, reason_id )
             
-            mappings_dict = HC.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM mappings WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) ) )
+            mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM mappings WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) ) )
             
             if len( mappings_dict ) > 0:
                 
@@ -436,7 +443,7 @@ class ServiceDB( MessageDB ):
             
         
     
-    def _ChangeAccountType( self, account_ids, account_type_id ): self._c.execute( 'UPDATE accounts SET account_type_id = ? WHERE account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( account_type_id, ) )
+    def _ChangeAccountType( self, account_ids, account_type_id ): self._c.execute( 'UPDATE accounts SET account_type_id = ? WHERE account_id IN ' + HydrusData.SplayListForDB( account_ids ) + ';', ( account_type_id, ) )
     
     def _CheckDataUsage( self ):
         
@@ -517,7 +524,7 @@ class ServiceDB( MessageDB ):
     
     def _ClearBans( self ):
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.execute( 'DELETE FROM bans WHERE expires < ?;', ( now, ) )
         
@@ -540,14 +547,14 @@ class ServiceDB( MessageDB ):
     
     def _DeleteFiles( self, service_id, account_id, hash_ids, reason_id ):
         
-        splayed_hash_ids = HC.SplayListForDB( hash_ids )
+        splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
         affected_timestamps = [ timestamp for ( timestamp, ) in self._c.execute( 'SELECT DISTINCT timestamp FROM file_map WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ) ]
         
         self._c.execute( 'DELETE FROM file_map WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
         self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, account_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( ( service_id, account_id, hash_id, reason_id, now, HC.DELETED ) for hash_id in hash_ids ) )
         
@@ -556,14 +563,14 @@ class ServiceDB( MessageDB ):
     
     def _DeleteMappings( self, service_id, account_id, tag_id, hash_ids, reason_id ):
         
-        splayed_hash_ids = HC.SplayListForDB( hash_ids )
+        splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
         affected_timestamps = [ timestamp for ( timestamp, ) in self._c.execute( 'SELECT DISTINCT timestamp FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) ) ]
         
         self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
         self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
         
-        self._c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, tag_id, hash_id, account_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( ( service_id, tag_id, hash_id, account_id, reason_id, HC.GetNow(), HC.DELETED ) for hash_id in hash_ids ) )
+        self._c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, tag_id, hash_id, account_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( ( service_id, tag_id, hash_id, account_id, reason_id, HydrusData.GetNow(), HC.DELETED ) for hash_id in hash_ids ) )
         
         self._RefreshUpdateCache( service_id, affected_timestamps )
         
@@ -584,7 +591,7 @@ class ServiceDB( MessageDB ):
             for hash in local_files_hashes & deletee_hashes: os.remove( ServerFiles.GetPath( 'file', hash ) )
             for hash in thumbnails_hashes & deletee_hashes: os.remove( ServerFiles.GetPath( 'thumbnail', hash ) )
             
-            self._c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( deletees ) + ';' )
+            self._c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HydrusData.SplayListForDB( deletees ) + ';' )
             
         
         # messages
@@ -602,14 +609,14 @@ class ServiceDB( MessageDB ):
         
         self._RewardFilePetitioners( service_id, hash_ids, -1 )
         
-        self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
+        self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
     
     def _DenyMappingPetition( self, service_id, tag_id, hash_ids ):
         
         self._RewardMappingPetitioners( service_id, tag_id, hash_ids, -1 )
         
-        self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
+        self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
         
     
     def _DenyTagParentPetition( self, service_id, old_tag_id, new_tag_id, action ):
@@ -634,7 +641,7 @@ class ServiceDB( MessageDB ):
     
     def _FlushRequestsMade( self, all_requests ):
         
-        requests_dict = HC.BuildKeyToListDict( all_requests )
+        requests_dict = HydrusData.BuildKeyToListDict( all_requests )
         
         self._c.executemany( 'UPDATE accounts SET used_bytes = used_bytes + ?, used_requests = used_requests + ? WHERE account_key = ?;', [ ( sum( num_bytes_list ), len( num_bytes_list ), sqlite3.Binary( account_key ) ) for ( account_key, num_bytes_list ) in requests_dict.items() ] )
         
@@ -644,7 +651,7 @@ class ServiceDB( MessageDB ):
         hash_ids = set()
         
         service_data = {}
-        content_data = HC.GetEmptyDataDict()
+        content_data = HydrusData.GetEmptyDataDict()
         
         #
         
@@ -673,7 +680,7 @@ class ServiceDB( MessageDB ):
         
         hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
         
-        return HC.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
+        return HydrusData.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
         
     
     def _GenerateRatingUpdate( self, service_id, begin, end ):
@@ -684,7 +691,7 @@ class ServiceDB( MessageDB ):
         
         hash_ids = [ rating_info[1] for rating_info in ratings_info ]
         
-        self._c.execute( 'UPDATE aggregate_ratings SET current_timestamp = new_timestamp AND new_timestamp = 0 WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
+        self._c.execute( 'UPDATE aggregate_ratings SET current_timestamp = new_timestamp AND new_timestamp = 0 WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
         
         self._c.executemany( 'UPDATE updates SET dirty = ? WHERE service_id = ? AND ? BETWEEN begin AND end;', [ ( True, service_id, current_timestamp ) for current_timestamp in current_timestamps if current_timestamp != 0 ] )
         
@@ -701,7 +708,7 @@ class ServiceDB( MessageDB ):
         
         account_type_id = self._GetAccountTypeId( service_id, title )
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         if lifetime is not None: expires = now + lifetime
         else: expires = None
@@ -716,13 +723,13 @@ class ServiceDB( MessageDB ):
     def _GenerateTagUpdate( self, service_id, begin, end ):
         
         service_data = {}
-        content_data = HC.GetEmptyDataDict()
+        content_data = HydrusData.GetEmptyDataDict()
         
         hash_ids = set()
         
         # mappings
         
-        mappings_dict = HC.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mappings USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) )
+        mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mappings USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) )
         
         hash_ids.update( itertools.chain.from_iterable( mappings_dict.values() ) )
         
@@ -732,7 +739,7 @@ class ServiceDB( MessageDB ):
         
         #
         
-        deleted_mappings_dict = HC.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mapping_petitions USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) )
+        deleted_mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mapping_petitions USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) )
         
         hash_ids.update( itertools.chain.from_iterable( deleted_mappings_dict.values() ) )
         
@@ -781,7 +788,7 @@ class ServiceDB( MessageDB ):
         service_data[ HC.SERVICE_UPDATE_BEGIN_END ] = ( begin, end )
         service_data[ HC.SERVICE_UPDATE_NEWS ] = news_rows
         
-        return HC.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
+        return HydrusData.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
         
     
     def _GetAccessKey( self, registration_key ):
@@ -805,7 +812,7 @@ class ServiceDB( MessageDB ):
         
         banned_info = self._c.execute( 'SELECT reason, created, expires FROM bans, reasons USING ( reason_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
         
-        return HC.Account( account_key, account_type, created, expires, used_bytes, used_requests, banned_info = banned_info )
+        return HydrusData.Account( account_key, account_type, created, expires, used_bytes, used_requests, banned_info = banned_info )
         
     
     def _GetAccountFileInfo( self, service_id, account_id ):
@@ -850,7 +857,7 @@ class ServiceDB( MessageDB ):
             
             #
             
-            now = HC.GetNow()
+            now = HydrusData.GetNow()
             
             service_id = self._GetServiceId( service_key )
             
@@ -988,7 +995,7 @@ class ServiceDB( MessageDB ):
         
         result = self._c.execute( 'SELECT account_type_id FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + HC.u( title ) + ' in db for this service.' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + HydrusData.ToString( title ) + ' in db for this service.' )
         
         ( account_type_id, ) = result
         
@@ -1004,7 +1011,7 @@ class ServiceDB( MessageDB ):
     
     def _GetDirtyUpdates( self ):
         
-        service_ids_to_tuples = HC.BuildKeyToListDict( [ ( service_id, ( begin, end ) ) for ( service_id, begin, end ) in self._c.execute( 'SELECT service_id, begin, end FROM update_cache WHERE dirty = ?;', ( True, ) ) ] )
+        service_ids_to_tuples = HydrusData.BuildKeyToListDict( [ ( service_id, ( begin, end ) ) for ( service_id, begin, end ) in self._c.execute( 'SELECT service_id, begin, end FROM update_cache WHERE dirty = ?;', ( True, ) ) ] )
         
         service_keys_to_tuples = {}
         
@@ -1037,7 +1044,7 @@ class ServiceDB( MessageDB ):
         
         account_key = self._GetAccountKeyFromAccountId( account_id )
         
-        petitioner_account_identifier = HC.AccountIdentifier( account_key = account_key )
+        petitioner_account_identifier = HydrusData.AccountIdentifier( account_key = account_key )
         
         reason = self._GetReason( reason_id )
         
@@ -1047,7 +1054,7 @@ class ServiceDB( MessageDB ):
         
         petition_data = hashes
         
-        return HC.ServerToClientPetition( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, petitioner_account_identifier, petition_data, reason )
+        return HydrusData.ServerToClientPetition( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, petitioner_account_identifier, petition_data, reason )
         
     
     def _GetHash( self, hash_id ):
@@ -1061,7 +1068,7 @@ class ServiceDB( MessageDB ):
         return hash
         
     
-    def _GetHashes( self, hash_ids ): return [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) ]
+    def _GetHashes( self, hash_ids ): return [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) ]
     
     def _GetHashId( self, hash ):
         
@@ -1111,7 +1118,7 @@ class ServiceDB( MessageDB ):
         return hash_ids
         
     
-    def _GetHashIdsToHashes( self, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in self._c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) }
+    def _GetHashIdsToHashes( self, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in self._c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) }
     
     def _GetIPTimestamp( self, service_key, hash ):
         
@@ -1128,11 +1135,11 @@ class ServiceDB( MessageDB ):
     
     def _GetMessagingSessions( self ):
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.execute( 'DELETE FROM messaging_sessions WHERE ? > expiry;', ( now, ) )
         
-        existing_session_ids = HC.BuildKeyToListDict( [ ( service_id, ( session_key, account_id, identifier, name, expires ) ) for ( service_id, session_key, account_id, identifier, name, expires ) in self._c.execute( 'SELECT service_id, session_key, account_id, identifier, name, expiry FROM messaging_sessions;' ) ] )
+        existing_session_ids = HydrusData.BuildKeyToListDict( [ ( service_id, ( session_key, account_id, identifier, name, expires ) ) for ( service_id, session_key, account_id, identifier, name, expires ) in self._c.execute( 'SELECT service_id, session_key, account_id, identifier, name, expiry FROM messaging_sessions;' ) ] )
         
         existing_sessions = {}
         
@@ -1244,7 +1251,7 @@ class ServiceDB( MessageDB ):
         return service_id
         
     
-    def _GetServiceIds( self, limited_types = HC.ALL_SERVICES ): return [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE type IN ' + HC.SplayListForDB( limited_types ) + ';' ) ]
+    def _GetServiceIds( self, limited_types = HC.ALL_SERVICES ): return [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE type IN ' + HydrusData.SplayListForDB( limited_types ) + ';' ) ]
     
     def _GetServiceKey( self, service_id ):
         
@@ -1253,7 +1260,7 @@ class ServiceDB( MessageDB ):
         return service_key
         
     
-    def _GetServiceKeys( self, limited_types = HC.ALL_SERVICES ): return [ service_key for ( service_key, ) in self._c.execute( 'SELECT service_key FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ) ]
+    def _GetServiceKeys( self, limited_types = HC.ALL_SERVICES ): return [ service_key for ( service_key, ) in self._c.execute( 'SELECT service_key FROM services WHERE type IN '+ HydrusData.SplayListForDB( limited_types ) + ';' ) ]
     
     def _GetServiceType( self, service_id ):
         
@@ -1268,11 +1275,11 @@ class ServiceDB( MessageDB ):
     
     def _GetServiceInfo( self, service_key ): return self._c.execute( 'SELECT type, options FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
     
-    def _GetServicesInfo( self, limited_types = HC.ALL_SERVICES ): return self._c.execute( 'SELECT service_key, type, options FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ).fetchall()
+    def _GetServicesInfo( self, limited_types = HC.ALL_SERVICES ): return self._c.execute( 'SELECT service_key, type, options FROM services WHERE type IN '+ HydrusData.SplayListForDB( limited_types ) + ';' ).fetchall()
     
     def _GetSessions( self ):
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         self._c.execute( 'DELETE FROM sessions WHERE ? > expiry;', ( now, ) )
         
@@ -1333,9 +1340,9 @@ class ServiceDB( MessageDB ):
     
     def _GetTagId( self, tag ):
         
-        tag = HC.CleanTag( tag )
+        tag = HydrusTags.CleanTag( tag )
         
-        HC.CheckTagNotEmpty( tag )
+        HydrusTags.CheckTagNotEmpty( tag )
         
         result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
         
@@ -1402,11 +1409,11 @@ class ServiceDB( MessageDB ):
             
             account_key = self._GetAccountKeyFromAccountId( account_id )
             
-            petitioner_account_identifier = HC.AccountIdentifier( account_key = account_key )
+            petitioner_account_identifier = HydrusData.AccountIdentifier( account_key = account_key )
             
             reason = self._GetReason( reason_id )
             
-            return HC.ServerToClientPetition( petition_type, action, petitioner_account_identifier, petition_data, reason )
+            return HydrusData.ServerToClientPetition( petition_type, action, petitioner_account_identifier, petition_data, reason )
             
         
         raise HydrusExceptions.NotFoundException( 'No petitions!' )
@@ -1514,7 +1521,7 @@ class ServiceDB( MessageDB ):
                 
                 title = account_type.GetTitle()
                 
-                if self._AccountTypeExists( service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HC.u( title ) + ' in the db for this service, so could not add!' )
+                if self._AccountTypeExists( service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HydrusData.ToString( title ) + ' in the db for this service, so could not add!' )
                 
                 self._c.execute( 'INSERT OR IGNORE INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( service_id, title, account_type ) )
                 
@@ -1537,7 +1544,7 @@ class ServiceDB( MessageDB ):
                 
                 title = account_type.GetTitle()
                 
-                if old_title != title and self._AccountTypeExists( service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HC.u( title ) + ' in the database, so could not rename ' + HC.u( old_title ) + '!' )
+                if old_title != title and self._AccountTypeExists( service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HydrusData.ToString( title ) + ' in the database, so could not rename ' + HydrusData.ToString( old_title ) + '!' )
                 
                 account_type_id = self._GetAccountTypeId( service_id, old_title )
                 
@@ -1552,7 +1559,7 @@ class ServiceDB( MessageDB ):
         
         service_keys_to_access_keys = {}
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         for ( action, data ) in edit_log:
             
@@ -1564,7 +1571,7 @@ class ServiceDB( MessageDB ):
                 
                 service_id = self._c.lastrowid
                 
-                service_admin_account_type = HC.AccountType( 'service admin', [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ], ( None, None ) )
+                service_admin_account_type = HydrusData.AccountType( 'service admin', [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ], ( None, None ) )
                 
                 self._c.execute( 'INSERT INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( service_id, 'service admin', service_admin_account_type ) )
                 
@@ -1577,7 +1584,7 @@ class ServiceDB( MessageDB ):
                 if service_type in HC.REPOSITORIES:
                     
                     begin = 0
-                    end = HC.GetNow()
+                    end = HydrusData.GetNow()
                     
                     self._CreateUpdate( service_key, begin, end )
                     
@@ -1811,14 +1818,14 @@ class ServiceDB( MessageDB ):
     
     def _RewardFilePetitioners( self, service_id, hash_ids, multiplier ):
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in self._c.execute( 'SELECT account_id, COUNT( * ) FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ? GROUP BY account_id;', ( service_id, HC.PETITIONED ) ) ]
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in self._c.execute( 'SELECT account_id, COUNT( * ) FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ? GROUP BY account_id;', ( service_id, HC.PETITIONED ) ) ]
         
         self._RewardAccounts( service_id, HC.SCORE_PETITION, scores )
         
     
     def _RewardMappingPetitioners( self, service_id, tag_id, hash_ids, multiplier ):
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in self._c.execute( 'SELECT account_id, COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ? GROUP BY account_id;', ( service_id, tag_id, HC.PETITIONED ) ) ]
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in self._c.execute( 'SELECT account_id, COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ? GROUP BY account_id;', ( service_id, tag_id, HC.PETITIONED ) ) ]
         
         self._RewardAccounts( service_id, HC.SCORE_PETITION, scores )
         
@@ -1855,7 +1862,7 @@ class ServiceDB( MessageDB ):
         self._RewardAccounts( service_id, HC.SCORE_PETITION, scores )
         
     
-    def _SetExpires( self, account_ids, expires ): self._c.execute( 'UPDATE accounts SET expires = ? WHERE account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( expires, ) )
+    def _SetExpires( self, account_ids, expires ): self._c.execute( 'UPDATE accounts SET expires = ? WHERE account_id IN ' + HydrusData.SplayListForDB( account_ids ) + ';', ( expires, ) )
     
     def _UnbanKey( self, service_id, account_id ): self._c.execute( 'DELETE FROM bans WHERE service_id = ? AND account_id = ?;', ( account_id, ) )
     
@@ -1873,15 +1880,15 @@ class ServiceDB( MessageDB ):
         
         hash_ids = set( hashes_to_hash_ids.values() )
         
-        aggregates = self._c.execute( 'SELECT hash_id, SUM( rating ), COUNT( * ) FROM ratings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' GROUP BY hash_id;' )
+        aggregates = self._c.execute( 'SELECT hash_id, SUM( rating ), COUNT( * ) FROM ratings WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' GROUP BY hash_id;' )
         
         missed_aggregate_hash_ids = hash_ids.difference( aggregate[0] for aggregate in aggregates )
         
         aggregates.extend( [ ( hash_id, 0.0, 0 ) for hash_id in missed_aggregate_hash_ids ] )        
         
-        hash_ids_to_new_timestamps = { hash_id : new_timestamp for ( hash_id, new_timestamp ) in self._c.execute( 'SELECT hash_id, new_timestamp FROM aggregate_ratings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) }
+        hash_ids_to_new_timestamps = { hash_id : new_timestamp for ( hash_id, new_timestamp ) in self._c.execute( 'SELECT hash_id, new_timestamp FROM aggregate_ratings WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) }
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         for ( hash_id, total_score, count ) in aggregates:
             
@@ -1945,7 +1952,7 @@ class DB( ServiceDB ):
         
         ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
-        if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + HC.u( version ) + ' is too old for this version ' + HC.u( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + HC.u( version + 45 ) + ' or earlier first.' )
+        if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + HydrusData.ToString( version ) + ' is too old for this version ' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + HydrusData.ToString( version + 45 ) + ' or earlier first.' )
         
         while version < HC.SOFTWARE_VERSION:
             
@@ -1954,7 +1961,7 @@ class DB( ServiceDB ):
             try: self._c.execute( 'BEGIN IMMEDIATE' )
             except Exception as e:
                 
-                raise HydrusExceptions.DBAccessException( HC.u( e ) )
+                raise HydrusExceptions.DBAccessException( HydrusData.ToString( e ) )
                 
             
             try:
@@ -1967,7 +1974,7 @@ class DB( ServiceDB ):
                 
                 self._c.execute( 'ROLLBACK' )
                 
-                raise Exception( 'Updating the server db to version ' + HC.u( version ) + ' caused this error:' + os.linesep + traceback.format_exc() )
+                raise Exception( 'Updating the server db to version ' + HydrusData.ToString( version ) + ' caused this error:' + os.linesep + traceback.format_exc() )
                 
             
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
@@ -2022,7 +2029,7 @@ class DB( ServiceDB ):
             self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
             self._c.execute( 'PRAGMA journal_mode=WAL;' )
             
-            now = HC.GetNow()
+            now = HydrusData.GetNow()
             
             self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, options TEXT_YAML );' )
             
@@ -2130,7 +2137,7 @@ class DB( ServiceDB ):
             
             server_admin_service_id = self._c.lastrowid
             
-            server_admin_account_type = HC.AccountType( 'server admin', [ HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ], ( None, None ) )
+            server_admin_account_type = HydrusData.AccountType( 'server admin', [ HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ], ( None, None ) )
             
             self._c.execute( 'INSERT INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( server_admin_service_id, 'server admin', server_admin_account_type ) )
             
@@ -2452,7 +2459,7 @@ class DB( ServiceDB ):
                     
                     self._c.execute( 'COMMIT' )
                     
-                    for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
+                    for ( topic, args, kwargs ) in self._pubsubs: HydrusGlobals.pubsub.pub( topic, *args, **kwargs )
                     
                     job.PutResult( result )
                     
@@ -2477,7 +2484,7 @@ class DB( ServiceDB ):
                     
                     if job_type == 'write': self._c.execute( 'COMMIT' )
                     
-                    for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
+                    for ( topic, args, kwargs ) in self._pubsubs: HydrusGlobals.pubsub.pub( topic, *args, **kwargs )
                     
                     job.PutResult( result )
                     
@@ -2496,7 +2503,7 @@ class DB( ServiceDB ):
         
         self._InitDBCursor()
         
-        while not ( ( self._local_shutdown or HC.shutdown ) and self._jobs.empty() ):
+        while not ( ( self._local_shutdown or HydrusGlobals.shutdown ) and self._jobs.empty() ):
             
             try:
                 
@@ -2529,7 +2536,7 @@ class DB( ServiceDB ):
         
         synchronous = True
         
-        job = HC.JobDatabase( action, job_type, synchronous, *args, **kwargs )
+        job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
@@ -2544,7 +2551,7 @@ class DB( ServiceDB ):
         
         synchronous = True
         
-        job = HC.JobDatabase( action, job_type, synchronous, *args, **kwargs )
+        job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
         self._jobs.put( ( priority, job ) )
         

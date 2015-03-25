@@ -20,6 +20,7 @@ try:
     from include import ServerController
     import threading
     from twisted.internet import reactor
+    from include import HydrusGlobals
     
     initial_sys_stdout = sys.stdout
     initial_sys_stderr = sys.stderr
@@ -53,11 +54,11 @@ try:
     sys.stdout = initial_sys_stdout
     sys.stderr = initial_sys_stderr
     
-    HC.shutdown = True
+    HydrusGlobals.shutdown = True
     
     reactor.callFromThread( reactor.stop )
     
-    HC.pubsub.WXpubimmediate( 'shutdown' )
+    HydrusGlobals.pubsub.WXpubimmediate( 'shutdown' )
     
 except:
     

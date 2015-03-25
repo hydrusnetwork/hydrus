@@ -6,12 +6,15 @@ import HydrusSessions
 import os
 import TestConstants
 import unittest
+import HydrusData
+import HydrusGlobals
+import wx
 
 class TestSessions( unittest.TestCase ):
     
     def test_server( self ):
         
-        discard = HC.app.GetWrite( 'session' ) # just to discard gumph from testserver
+        discard = wx.GetApp().GetWrite( 'session' ) # just to discard gumph from testserver
         
         session_key_1 = os.urandom( 32 )
         service_key = os.urandom( 32 )
@@ -20,17 +23,17 @@ class TestSessions( unittest.TestCase ):
         
         access_key = os.urandom( 32 )
         account_key = os.urandom( 32 )
-        account_type = HC.AccountType( 'account', permissions, ( None, None ) )
-        created = HC.GetNow() - 100000
-        expires = HC.GetNow() + 300
+        account_type = HydrusData.AccountType( 'account', permissions, ( None, None ) )
+        created = HydrusData.GetNow() - 100000
+        expires = HydrusData.GetNow() + 300
         used_bytes = 0
         used_requests = 0
         
-        account = HC.Account( account_key, account_type, created, expires, used_bytes, used_requests )
+        account = HydrusData.Account( account_key, account_type, created, expires, used_bytes, used_requests )
         
-        expires = HC.GetNow() - 10
+        expires = HydrusData.GetNow() - 10
         
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
+        wx.GetApp().SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -41,9 +44,9 @@ class TestSessions( unittest.TestCase ):
         
         # test fetching a session already in db, after bootup
         
-        expires = HC.GetNow() + 300
+        expires = HydrusData.GetNow() + 300
         
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
+        wx.GetApp().SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -53,18 +56,18 @@ class TestSessions( unittest.TestCase ):
         
         # test adding a session
         
-        expires = HC.GetNow() + 300
+        expires = HydrusData.GetNow() + 300
         
         account_key_2 = os.urandom( 32 )
         
-        account_2 = HC.Account( account_key_2, account_type, created, expires, used_bytes, used_requests )
+        account_2 = HydrusData.Account( account_key_2, account_type, created, expires, used_bytes, used_requests )
         
-        HC.app.SetRead( 'account_key_from_access_key', account_key_2 )
-        HC.app.SetRead( 'account', account_2 )
+        wx.GetApp().SetRead( 'account_key_from_access_key', account_key_2 )
+        wx.GetApp().SetRead( 'account', account_2 )
         
         ( session_key_2, expires_2 ) = session_manager.AddSession( service_key, access_key )
         
-        [ ( args, kwargs ) ] = HC.app.GetWrite( 'session' )
+        [ ( args, kwargs ) ] = wx.GetApp().GetWrite( 'session' )
         
         ( written_session_key, written_service_key, written_account_key, written_expires ) = args
         
@@ -76,12 +79,12 @@ class TestSessions( unittest.TestCase ):
         
         # test adding a new session for an account already in the manager
         
-        HC.app.SetRead( 'account_key_from_access_key', account_key )
-        HC.app.SetRead( 'account', account )
+        wx.GetApp().SetRead( 'account_key_from_access_key', account_key )
+        wx.GetApp().SetRead( 'account', account )
         
         ( session_key_3, expires_3 ) = session_manager.AddSession( service_key, access_key )
         
-        [ ( args, kwargs ) ] = HC.app.GetWrite( 'session' )
+        [ ( args, kwargs ) ] = wx.GetApp().GetWrite( 'session' )
         
         ( written_session_key, written_service_key, written_account_key, written_expires ) = args
         
@@ -97,11 +100,11 @@ class TestSessions( unittest.TestCase ):
         
         # test individual account refresh
         
-        expires = HC.GetNow() + 300
+        expires = HydrusData.GetNow() + 300
         
-        updated_account = HC.Account( account_key, account_type, created, expires, 1, 1 )
+        updated_account = HydrusData.Account( account_key, account_type, created, expires, 1, 1 )
         
-        HC.app.SetRead( 'account', updated_account )
+        wx.GetApp().SetRead( 'account', updated_account )
         
         session_manager.RefreshAccounts( service_key, [ account_key ] )
         
@@ -115,11 +118,11 @@ class TestSessions( unittest.TestCase ):
         
         # test all account refresh
         
-        expires = HC.GetNow() + 300
+        expires = HydrusData.GetNow() + 300
         
-        updated_account_2 = HC.Account( account_key, account_type, created, expires, 2, 2 )
+        updated_account_2 = HydrusData.Account( account_key, account_type, created, expires, 2, 2 )
         
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_2, expires ), ( session_key_2, service_key, account_2, expires ), ( session_key_3, service_key, updated_account_2, expires ) ] )
+        wx.GetApp().SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_2, expires ), ( session_key_2, service_key, account_2, expires ), ( session_key_3, service_key, updated_account_2, expires ) ] )
         
         session_manager.RefreshAllAccounts()
         

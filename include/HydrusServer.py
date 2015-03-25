@@ -1,33 +1,15 @@
-import BaseHTTPServer
-import ClientConstants as CC
 import collections
-import Cookie
-import hashlib
-import httplib
-import HydrusAudioHandling
 import HydrusConstants as HC
-import HydrusDocumentHandling
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusFlashHandling
-import HydrusImageHandling
 import HydrusServerAMP
 import HydrusServerResources
 import os
 import random
-import ServerFiles
-import SocketServer
 import traceback
-import urllib
-import wx
-import yaml
-from twisted.internet import reactor, defer
 from twisted.internet.protocol import ServerFactory
-from twisted.internet.threads import deferToThread
 from twisted.protocols import amp
-from twisted.web.server import Request, Site, NOT_DONE_YET
+from twisted.web.server import Request, Site
 from twisted.web.resource import Resource
-from twisted.web.static import File as FileResource, NoRangeStaticProducer
+import HydrusData
 
 eris = '''<html><head><title>hydrus</title></head><body><pre>
                          <font color="red">8888  8888888</font>
@@ -125,7 +107,7 @@ eris = '''<html><head><title>hydrus</title></head><body><pre>
                  <font color="gray">MM</font>:::::<font color="gray">M</font>:::::::::::::::::::::<font color="gray">MMM</font>
                   <font color="gray">MM</font>::::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font> 
                   <font color="gray">MM</font>:::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font>
-                   <font color="gray">MM</font>::<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>              THIS IS THE HYDRUS SERVER ADMIN SERVICE, VERSION ''' + HC.u( HC.SOFTWARE_VERSION ) + '''
+                   <font color="gray">MM</font>::<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>              THIS IS THE HYDRUS SERVER ADMIN SERVICE, VERSION ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + '''
                    <font color="gray">MM</font>:<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>
                     <font color="gray">MMM</font>::::::::::::::::::<font color="gray">MMM</font>
                     <font color="gray">MM</font>::::::::::::::::::<font color="gray">MMM</font>
@@ -197,7 +179,7 @@ CLIENT_ROOT_MESSAGE = '''<html>
         <title>hydrus client</title>
     </head>
     <body>
-        <p>This hydrus client uses software version ''' + HC.u( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HC.u( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus client uses software version ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HydrusData.ToString( HC.NETWORK_VERSION ) + '''.</p>
         <p>It only serves requests from 127.0.0.1.</p>
     </body>
 </html>'''
@@ -207,7 +189,7 @@ ROOT_MESSAGE_BEGIN = '''<html>
         <title>hydrus service</title>
     </head>
     <body>
-        <p>This hydrus service uses software version ''' + HC.u( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HC.u( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus service uses software version ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HydrusData.ToString( HC.NETWORK_VERSION ) + '''.</p>
         <p>'''
 
 ROOT_MESSAGE_END = '''</p>

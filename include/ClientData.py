@@ -10,6 +10,9 @@ import sqlite3
 import sys
 import wx
 import yaml
+import HydrusData
+import ClientSearch
+import HydrusGlobals
 
 def AddPaddingToDimensions( dimensions, padding ):
     
@@ -21,7 +24,7 @@ def CatchExceptionClient( etype, value, tb ):
     
     try:
         
-        job_key = HC.JobKey()
+        job_key = HydrusData.JobKey()
         
         if etype == HydrusExceptions.DBException:
             
@@ -41,19 +44,19 @@ def CatchExceptionClient( etype, value, tb ):
             if etype == wx.PyDeadObjectError:
                 
                 print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-                print( HC.u( value ) )
+                print( HydrusData.ToString( value ) )
                 print( trace )
                 
                 return
                 
             
-            try: job_key.SetVariable( 'popup_message_title', HC.u( etype.__name__ ) )
-            except: job_key.SetVariable( 'popup_message_title', HC.u( etype ) )
-            job_key.SetVariable( 'popup_message_text_1', HC.u( value ) )
+            try: job_key.SetVariable( 'popup_message_title', HydrusData.ToString( etype.__name__ ) )
+            except: job_key.SetVariable( 'popup_message_title', HydrusData.ToString( etype ) )
+            job_key.SetVariable( 'popup_message_text_1', HydrusData.ToString( value ) )
             job_key.SetVariable( 'popup_message_traceback', trace )
             
         
-        HC.pubsub.pub( 'message', job_key )
+        HydrusGlobals.pubsub.pub( 'message', job_key )
         
     except:
         
@@ -61,25 +64,12 @@ def CatchExceptionClient( etype, value, tb ):
         
         text += os.linesep
         
-        text += HC.u( ( etype, value, tb ) )
+        text += HydrusData.ToString( ( etype, value, tb ) )
         
         try: text += traceback.format_exc()
         except: pass
         
-        HC.ShowText( text )
-    
-def FilterPredicates( search_entry, predicates, service_key = None, expand_parents = False ):
-    
-    matches = [ predicate for predicate in predicates if HC.SearchEntryMatchesPredicate( search_entry, predicate ) ]
-    
-    if service_key is not None and expand_parents:
-        
-        parents_manager = HC.app.GetManager( 'tag_parents' )
-        
-        matches = parents_manager.ExpandPredicates( service_key, matches )
-        
-    
-    return matches
+        HydrusData.ShowText( text )
     
 def GenerateExportFilename( media, terms ):
 
@@ -129,27 +119,7 @@ def GenerateExportFilename( media, terms ):
     
     return filename
     
-def GetHammingDistance( phash1, phash2 ):
-    
-    distance = 0
-    
-    phash1 = bytearray( phash1 )
-    phash2 = bytearray( phash2 )
-    
-    for i in range( len( phash1 ) ):
-        
-        xor = phash1[i] ^ phash2[i]
-        
-        while xor > 0:
-            
-            distance += 1
-            xor &= xor - 1
-            
-        
-    
-    return distance
-    
-def GetMediasTagCount( pool, tag_service_key = HC.COMBINED_TAG_SERVICE_KEY ):
+def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
     
     tags_managers = []
     
@@ -254,7 +224,7 @@ def ParseExportPhrase( phrase ):
     
 def ShowExceptionClient( e ):
     
-    job_key = HC.JobKey()
+    job_key = HydrusData.JobKey()
     
     if isinstance( e, HydrusExceptions.DBException ):
         
@@ -272,7 +242,7 @@ def ShowExceptionClient( e ):
         if etype is None:
             
             etype = type( e )
-            value = HC.u( e )
+            value = HydrusData.ToString( e )
             
             trace = ''.join( traceback.format_stack() )
             
@@ -281,46 +251,31 @@ def ShowExceptionClient( e ):
         if etype == wx.PyDeadObjectError:
             
             print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-            print( HC.u( value ) )
+            print( HydrusData.ToString( value ) )
             print( trace )
             
             return
             
         
-        if hasattr( etype, '__name__' ): title = HC.u( etype.__name__ )
-        else: title = HC.u( etype )
+        if hasattr( etype, '__name__' ): title = HydrusData.ToString( etype.__name__ )
+        else: title = HydrusData.ToString( etype )
         
         job_key.SetVariable( 'popup_message_title', title )
-        job_key.SetVariable( 'popup_message_text_1', HC.u( value ) )
+        job_key.SetVariable( 'popup_message_text_1', HydrusData.ToString( value ) )
         job_key.SetVariable( 'popup_message_traceback', trace )
         
     
-    HC.pubsub.pub( 'message', job_key )
+    HydrusGlobals.pubsub.pub( 'message', job_key )
     
 def ShowTextClient( text ):
     
-    job_key = HC.JobKey()
+    job_key = HydrusData.JobKey()
     
-    job_key.SetVariable( 'popup_message_text_1', HC.u( text ) )
+    job_key.SetVariable( 'popup_message_text_1', HydrusData.ToString( text ) )
     
-    HC.pubsub.pub( 'message', job_key )
+    HydrusGlobals.pubsub.pub( 'message', job_key )
     
-def SortPredicates( predicates, collapse_siblings = False ):
-    
-    if collapse_siblings:
-        
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
-        
-        predicates = siblings_manager.CollapsePredicates( predicates )
-        
-    
-    def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )
-    
-    predicates.sort( cmp = cmp_func, reverse = True )
-    
-    return predicates
-    
-class Booru( HC.HydrusYAMLBase ):
+class Booru( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Booru'
     
@@ -346,13 +301,13 @@ class Booru( HC.HydrusYAMLBase ):
     
 sqlite3.register_adapter( Booru, yaml.safe_dump )
 
-class Credentials( HC.HydrusYAMLBase ):
+class Credentials( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Credentials'
     
     def __init__( self, host, port, access_key = None ):
         
-        HC.HydrusYAMLBase.__init__( self )
+        HydrusData.HydrusYAMLBase.__init__( self )
         
         if host == 'localhost': host = '127.0.0.1'
         
@@ -367,7 +322,7 @@ class Credentials( HC.HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Credentials: ' + HC.u( ( self._host, self._port, self._access_key.encode( 'hex' ) ) )
+    def __repr__( self ): return 'Credentials: ' + HydrusData.ToString( ( self._host, self._port, self._access_key.encode( 'hex' ) ) )
     
     def GetAccessKey( self ): return self._access_key
     
@@ -379,7 +334,7 @@ class Credentials( HC.HydrusYAMLBase ):
         
         if self.HasAccessKey(): connection_string += self._access_key.encode( 'hex' ) + '@'
         
-        connection_string += self._host + ':' + HC.u( self._port )
+        connection_string += self._host + ':' + HydrusData.ToString( self._port )
         
         return connection_string
         
@@ -396,8 +351,8 @@ class FileQueryResult( object ):
         self._hashes_ordered = [ media_result.GetHash() for media_result in media_results ]
         self._hashes = set( self._hashes_ordered )
         
-        HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
-        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
     def __iter__( self ):
@@ -487,7 +442,7 @@ class FileQueryResult( object ):
     
 class FileSearchContext( object ):
     
-    def __init__( self, file_service_key = HC.COMBINED_FILE_SERVICE_KEY, tag_service_key = HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = None ):
+    def __init__( self, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = None ):
         
         if predicates is None: predicates = []
         
@@ -625,7 +580,7 @@ class FileSystemPredicates( object ):
                 
                 age = ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
                 
-                now = HC.GetNow()
+                now = HydrusData.GetNow()
                 
                 # this is backwards because we are talking about age, not timestamp
                 
@@ -817,7 +772,7 @@ class FileSystemPredicates( object ):
     
     def MustNotBeLocal( self ): return self._not_local
     
-class Imageboard( HC.HydrusYAMLBase ):
+class Imageboard( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Imageboard'
     
@@ -861,13 +816,13 @@ class Imageboard( HC.HydrusYAMLBase ):
     
 sqlite3.register_adapter( Imageboard, yaml.safe_dump )
 
-class Service( HC.HydrusYAMLBase ):
+class Service( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Service'
     
     def __init__( self, service_key, service_type, name, info ):
         
-        HC.HydrusYAMLBase.__init__( self )
+        HydrusData.HydrusYAMLBase.__init__( self )
         
         self._service_key = service_key
         self._service_type = service_type
@@ -876,7 +831,7 @@ class Service( HC.HydrusYAMLBase ):
         
         self._lock = threading.Lock()
         
-        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
     def __hash__( self ): return self._service_key.__hash__()
@@ -885,7 +840,7 @@ class Service( HC.HydrusYAMLBase ):
     
     def CanDownloadUpdate( self ):
         
-        update_due = self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 < HC.GetNow()
+        update_due = self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 < HydrusData.GetNow()
         
         return not self.IsPaused() and self.CanDownload() and update_due
         
@@ -922,8 +877,8 @@ class Service( HC.HydrusYAMLBase ):
     
     def GetRecentErrorPending( self ):
         
-        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return HC.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 600 )
-        else: return HC.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 3600 * 4 )
+        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return HydrusData.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 600 )
+        else: return HydrusData.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 3600 * 4 )
         
     
     def GetServiceType( self ): return self._service_type
@@ -934,7 +889,7 @@ class Service( HC.HydrusYAMLBase ):
         
         account = self._info[ 'account' ]
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         first_timestamp = self._info[ 'first_timestamp' ]
         next_download_timestamp = self._info[ 'next_download_timestamp' ]
         next_processing_timestamp = self._info[ 'next_processing_timestamp' ]
@@ -952,15 +907,15 @@ class Service( HC.HydrusYAMLBase ):
             num_updates_processed = ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION
             
         
-        downloaded_text = HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates )
+        downloaded_text = HydrusData.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HydrusData.ConvertIntToPrettyString( num_updates )
         
         if not self._info[ 'account' ].HasPermission( HC.GET_DATA ): status = 'updates on hold'
         else:
             
-            if self.CanDownloadUpdate(): status = 'downloaded up to ' + HC.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
-            elif self.CanProcessUpdate(): status = 'processed up to ' + HC.ConvertTimestampToPrettySync( self._info[ 'next_processing_timestamp' ] )
+            if self.CanDownloadUpdate(): status = 'downloaded up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
+            elif self.CanProcessUpdate(): status = 'processed up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_processing_timestamp' ] )
             elif self.HasRecentError(): status = 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
-            else: status = 'fully synchronised - next update ' + HC.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+            else: status = 'fully synchronised - next update ' + HydrusData.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
             
         
         return downloaded_text + ' - ' + status
@@ -968,8 +923,8 @@ class Service( HC.HydrusYAMLBase ):
     
     def HasRecentError( self ):
         
-        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return self._info[ 'last_error' ] + 900 > HC.GetNow()
-        else: return self._info[ 'last_error' ] + 3600 * 4 > HC.GetNow()
+        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return self._info[ 'last_error' ] + 900 > HydrusData.GetNow()
+        else: return self._info[ 'last_error' ] + 3600 * 4 > HydrusData.GetNow()
         
     
     def IsInitialised( self ):
@@ -990,7 +945,7 @@ class Service( HC.HydrusYAMLBase ):
                     
                     ( action, row ) = service_update.ToTuple()
                     
-                    if action == HC.SERVICE_UPDATE_ERROR: self._info[ 'last_error' ] = HC.GetNow()
+                    if action == HC.SERVICE_UPDATE_ERROR: self._info[ 'last_error' ] = HydrusData.GetNow()
                     elif action == HC.SERVICE_UPDATE_RESET:
                         
                         self._info[ 'last_error' ] = 0
@@ -1040,7 +995,7 @@ class Service( HC.HydrusYAMLBase ):
             
         
     
-    def Request( self, method, command, request_args = None, request_headers = None, report_hooks = None, response_to_path = False, return_cookies = False ):
+    def Request( self, method, command, request_args = None, request_headers = None, report_hooks = None, temp_path = None, return_cookies = False ):
         
         if request_args is None: request_args = {}
         if request_headers is None: request_headers = {}
@@ -1092,9 +1047,9 @@ class Service( HC.HydrusYAMLBase ):
             
             ( host, port ) = credentials.GetAddress()
             
-            url = 'http://' + host + ':' + HC.u( port ) + path_and_query
+            url = 'http://' + host + ':' + HydrusData.ToString( port ) + path_and_query
             
-            ( response, size_of_response, response_headers, cookies ) = HC.http.Request( method, url, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, return_everything = True, long_timeout = long_timeout )
+            ( response, size_of_response, response_headers, cookies ) = HydrusGlobals.http.Request( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True, long_timeout = long_timeout )
             
             HydrusNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
             
@@ -1110,15 +1065,15 @@ class Service( HC.HydrusYAMLBase ):
             
             if isinstance( e, HydrusExceptions.ForbiddenException ):
                 
-                if HC.u( e ) == 'Session not found!':
+                if HydrusData.ToString( e ) == 'Session not found!':
                     
-                    session_manager = HC.app.GetManager( 'hydrus_sessions' )
+                    session_manager = wx.GetApp().GetManager( 'hydrus_sessions' )
                     
                     session_manager.DeleteSessionKey( self._service_key )
                     
                 
             
-            HC.app.Write( 'service_updates', { self._service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HC.u( e ) ) ] } )
+            wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HydrusData.ToString( e ) ) ] } )
             
             if isinstance( e, HydrusExceptions.PermissionException ):
                 
@@ -1126,11 +1081,11 @@ class Service( HC.HydrusYAMLBase ):
                     
                     account_key = self._info[ 'account' ].GetAccountKey()
                     
-                    unknown_account = HC.GetUnknownAccount( account_key )
+                    unknown_account = HydrusData.GetUnknownAccount( account_key )
                     
-                else: unknown_account = HC.GetUnknownAccount()
+                else: unknown_account = HydrusData.GetUnknownAccount()
                 
-                HC.app.Write( 'service_updates', { self._service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, unknown_account ) ] } )
+                wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, unknown_account ) ] } )
                 
             
             raise
@@ -1158,7 +1113,7 @@ class ServicesManager( object ):
         
         self.RefreshServices()
         
-        HC.pubsub.sub( self, 'RefreshServices', 'notify_new_services_data' )
+        HydrusGlobals.pubsub.sub( self, 'RefreshServices', 'notify_new_services_data' )
         
     
     def GetService( self, service_key ):
@@ -1179,7 +1134,7 @@ class ServicesManager( object ):
         
         with self._lock:
             
-            services = HC.app.Read( 'services' )
+            services = wx.GetApp().Read( 'services' )
             
             self._keys_to_services = { service.GetServiceKey() : service for service in services }
 
@@ -1191,8 +1146,8 @@ class UndoManager( object ):
         self._inverted_commands = []
         self._current_index = 0
         
-        HC.pubsub.sub( self, 'Undo', 'undo' )
-        HC.pubsub.sub( self, 'Redo', 'redo' )
+        HydrusGlobals.pubsub.sub( self, 'Undo', 'undo' )
+        HydrusGlobals.pubsub.sub( self, 'Redo', 'redo' )
         
     
     def _FilterServiceKeysToContentUpdates( self, service_keys_to_content_updates ):
@@ -1215,7 +1170,7 @@ class UndoManager( object ):
                     
                 else: continue
                 
-                filtered_content_update = HC.ContentUpdate( data_type, action, row )
+                filtered_content_update = HydrusData.ContentUpdate( data_type, action, row )
                 
                 filtered_content_updates.append( filtered_content_update )
                 
@@ -1274,7 +1229,7 @@ class UndoManager( object ):
                         
                     
                 
-                inverted_content_update = HC.ContentUpdate( data_type, inverted_action, inverted_row )
+                inverted_content_update = HydrusData.ContentUpdate( data_type, inverted_action, inverted_row )
                 
                 inverted_content_updates.append( inverted_content_update )
                 
@@ -1316,7 +1271,7 @@ class UndoManager( object ):
         
         self._current_index += 1
         
-        HC.pubsub.pub( 'notify_new_undo' )
+        HydrusGlobals.pubsub.pub( 'notify_new_undo' )
         
     
     def GetUndoRedoStrings( self ):
@@ -1333,7 +1288,7 @@ class UndoManager( object ):
                 
                 ( service_keys_to_content_updates, ) = args
                 
-                undo_string = 'undo ' + HC.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                undo_string = 'undo ' + HydrusData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
                 
             
         
@@ -1347,7 +1302,7 @@ class UndoManager( object ):
                 
                 ( service_keys_to_content_updates, ) = args
                 
-                redo_string = 'redo ' + HC.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                redo_string = 'redo ' + HydrusData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
                 
             
         
@@ -1362,9 +1317,9 @@ class UndoManager( object ):
             
             ( action, args, kwargs ) = self._inverted_commands[ self._current_index ]
             
-            HC.app.WriteSynchronous( action, *args, **kwargs )
+            wx.GetApp().WriteSynchronous( action, *args, **kwargs )
             
-            HC.pubsub.pub( 'notify_new_undo' )
+            HydrusGlobals.pubsub.pub( 'notify_new_undo' )
             
         
     
@@ -1376,9 +1331,67 @@ class UndoManager( object ):
             
             self._current_index += 1
             
-            HC.app.WriteSynchronous( action, *args, **kwargs )
+            wx.GetApp().WriteSynchronous( action, *args, **kwargs )
             
-            HC.pubsub.pub( 'notify_new_undo' )
-            
+            HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+
+def GetDefaultAdvancedTagOptions( lookup ):
+    
+    backup_lookup = None
+    
+    if type( lookup ) == tuple:
+        
+        ( site_type, site_name ) = lookup
+        
+        if site_type == HC.SITE_TYPE_BOORU: backup_lookup = HC.SITE_TYPE_BOORU
         
     
+    ato_options = HC.options[ 'default_advanced_tag_options' ]
+    
+    if lookup in ato_options: ato = ato_options[ lookup ]
+    elif backup_lookup is not None and backup_lookup in ato_options: ato = ato_options[ backup_lookup ]
+    elif 'default' in ato_options: ato = ato_options[ 'default' ]
+    else: ato = {}
+    
+    return ato
+
+def GetShortcutFromEvent( event ):
+    
+    modifier = wx.ACCEL_NORMAL
+    
+    if event.AltDown(): modifier = wx.ACCEL_ALT
+    elif event.CmdDown(): modifier = wx.ACCEL_CTRL
+    elif event.ShiftDown(): modifier = wx.ACCEL_SHIFT
+    
+    key = event.KeyCode
+    
+    return ( modifier, key )
+
+class ClientServiceIdentifier( HydrusData.HydrusYAMLBase ):
+    
+    yaml_tag = u'!ClientServiceIdentifier'
+    
+    def __init__( self, service_key, service_type, name ):
+        
+        HydrusData.HydrusYAMLBase.__init__( self )
+        
+        self._service_key = service_key
+        self._type = service_type
+        self._name = name
+        
+    
+    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    
+    def __hash__( self ): return self._service_key.__hash__()
+    
+    def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def __repr__( self ): return 'Client Service Identifier: ' + HydrusData.ToString( ( self._name, HC.service_string_lookup[ self._type ] ) )
+    
+    def GetInfo( self ): return ( self._service_key, self._type, self._name )
+    
+    def GetName( self ): return self._name
+    
+    def GetServiceKey( self ): return self._service_key
+    
+    def GetServiceType( self ): return self._type

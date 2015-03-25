@@ -22,6 +22,9 @@ import traceback
 import urllib
 import wx
 import wx.media
+import HydrusData
+import HydrusFileHandling
+import HydrusGlobals
 
 if HC.PLATFORM_WINDOWS: import wx.lib.flashwin
 
@@ -168,7 +171,7 @@ class Animation( wx.Window ):
         
         self._current_frame_drawn = True
         
-        now_in_ms = HC.GetNowPrecise()
+        now_in_ms = HydrusData.GetNowPrecise()
         frame_was_supposed_to_be_at = self._current_frame_drawn_at + ( self._video_container.GetDuration( self._current_frame_index ) / 1000 )
         
         if 1000.0 * ( now_in_ms - frame_was_supposed_to_be_at ) > 16.7: self._current_frame_drawn_at = now_in_ms
@@ -287,7 +290,7 @@ class Animation( wx.Window ):
             
             if self._current_frame_drawn:
                 
-                ms_since_current_frame_drawn = int( 1000.0 * ( HC.GetNowPrecise() - self._current_frame_drawn_at ) )
+                ms_since_current_frame_drawn = int( 1000.0 * ( HydrusData.GetNowPrecise() - self._current_frame_drawn_at ) )
                 
                 time_to_update = ms_since_current_frame_drawn + MIN_TIMER_TIME / 2 > self._video_container.GetDuration( self._current_frame_index )
                 
@@ -307,7 +310,7 @@ class Animation( wx.Window ):
             
             if not self._current_frame_drawn or not self._paused:
                 
-                ms_since_current_frame_drawn = int( 1000.0 * ( HC.GetNowPrecise() - self._current_frame_drawn_at ) )
+                ms_since_current_frame_drawn = int( 1000.0 * ( HydrusData.GetNowPrecise() - self._current_frame_drawn_at ) )
                 
                 ms_until_next_frame = max( MIN_TIMER_TIME, self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn )
                 
@@ -371,7 +374,7 @@ class AnimationBar( wx.Window ):
         
         dc.SetTextForeground( wx.BLACK )
         
-        s = HC.ConvertIntToPrettyString( self._current_frame_index + 1 ) + '/' + HC.ConvertIntToPrettyString( self._num_frames )
+        s = HydrusData.ConvertIntToPrettyString( self._current_frame_index + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( self._num_frames )
         
         ( x, y ) = dc.GetTextExtent( s )
         
@@ -467,7 +470,7 @@ class Canvas( object ):
         self._image_cache = image_cache
         self._claim_focus = claim_focus
         
-        self._file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
+        self._file_service = wx.GetApp().GetManager( 'services' ).GetService( self._file_service_key )
         
         self._canvas_key = os.urandom( 32 )
         
@@ -502,7 +505,7 @@ class Canvas( object ):
         
         hex_hash = self._current_display_media.GetHash().encode( 'hex' )
         
-        HC.pubsub.pub( 'clipboard', 'text', hex_hash )
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', hex_hash )
         
     
     def _DrawBackgroundBitmap( self ):
@@ -585,7 +588,7 @@ class Canvas( object ):
             
             path = ClientFiles.GetFilePath( hash, mime )
             
-            HC.LaunchFile( path )
+            HydrusFileHandling.LaunchFile( path )
             
         
     
@@ -788,7 +791,7 @@ class Canvas( object ):
         
         if media != self._current_media:
             
-            HC.app.ResetIdleTimer()
+            wx.GetApp().ResetIdleTimer()
             
             with wx.FrozenWindow( self ):
                 
@@ -846,7 +849,7 @@ class CanvasWithDetails( Canvas ):
             
             tags_manager = self._current_media.GetDisplayMedia().GetTagsManager()
             
-            siblings_manager = HC.app.GetManager( 'tag_siblings' )
+            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
             
             current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
             pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
@@ -929,7 +932,7 @@ class CanvasWithDetails( Canvas ):
                 
                 if service_key not in self._service_keys_to_services:
                     
-                    service = HC.app.GetManager( 'services' ).GetService( service_key )
+                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                     
                     self._service_keys_to_services[ service_key ] = service
                     
@@ -949,7 +952,7 @@ class CanvasWithDetails( Canvas ):
                     
                     ( lower, upper ) = service.GetLowerUpper()
                     
-                    s = HC.ConvertNumericalRatingToPrettyString( lower, upper, rating )
+                    s = HydrusData.ConvertNumericalRatingToPrettyString( lower, upper, rating )
                     
                 
                 top_right_strings.append( s )
@@ -993,12 +996,12 @@ class CanvasPanel( Canvas, wx.Window ):
     def __init__( self, parent, page_key, file_service_key ):
         
         wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER )
-        Canvas.__init__( self, file_service_key, HC.app.GetPreviewImageCache(), claim_focus = False )
+        Canvas.__init__( self, file_service_key, wx.GetApp().GetPreviewImageCache(), claim_focus = False )
         
         self._page_key = page_key
         
-        HC.pubsub.sub( self, 'FocusChanged', 'focus_changed' )
-        HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.pubsub.sub( self, 'FocusChanged', 'focus_changed' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
         wx.CallAfter( self.Refresh )
         
@@ -1040,7 +1043,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     def __init__( self, my_parent, page_key, file_service_key, media_results ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
-        CanvasWithDetails.__init__( self, file_service_key, HC.app.GetFullscreenImageCache() )
+        CanvasWithDetails.__init__( self, file_service_key, wx.GetApp().GetFullscreenImageCache() )
         ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self._page_key = page_key
@@ -1051,7 +1054,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         self.Show( True )
         
-        HC.app.SetTopWindow( self )
+        wx.GetApp().SetTopWindow( self )
         
         self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
         
@@ -1063,7 +1066,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
         self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
         
-        HC.pubsub.pub( 'set_focus', self._page_key, None )
+        HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, None )
         
     
     def _DoManualPan( self, delta_x, delta_y ):
@@ -1085,7 +1088,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         collections_string = ''
         
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
         
         namespaces = self._current_media.GetDisplayMedia().GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
         
@@ -1132,13 +1135,13 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
                 
                 ( volume, ) = volumes
                 
-                collections_string_append = 'volume ' + HC.u( volume )
+                collections_string_append = 'volume ' + HydrusData.ToString( volume )
                 
             else:
                 
                 volumes_sorted = HydrusTags.SortTags( volumes )
                 
-                collections_string_append = 'volumes ' + HC.u( volumes_sorted[0] ) + '-' + HC.u( volumes_sorted[-1] )
+                collections_string_append = 'volumes ' + HydrusData.ToString( volumes_sorted[0] ) + '-' + HydrusData.ToString( volumes_sorted[-1] )
                 
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
@@ -1151,13 +1154,13 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
                 
                 ( chapter, ) = chapters
                 
-                collections_string_append = 'chapter ' + HC.u( chapter )
+                collections_string_append = 'chapter ' + HydrusData.ToString( chapter )
                 
             else:
                 
                 chapters_sorted = HydrusTags.SortTags( chapters )
                 
-                collections_string_append = 'chapters ' + HC.u( chapters_sorted[0] ) + '-' + HC.u( chapters_sorted[-1] )
+                collections_string_append = 'chapters ' + HydrusData.ToString( chapters_sorted[0] ) + '-' + HydrusData.ToString( chapters_sorted[-1] )
                 
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
@@ -1170,13 +1173,13 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
                 
                 ( page, ) = pages
                 
-                collections_string_append = 'page ' + HC.u( page )
+                collections_string_append = 'page ' + HydrusData.ToString( page )
                 
             else:
                 
                 pages_sorted = HydrusTags.SortTags( pages )
                 
-                collections_string_append = 'pages ' + HC.u( pages_sorted[0] ) + '-' + HC.u( pages_sorted[-1] )
+                collections_string_append = 'pages ' + HydrusData.ToString( pages_sorted[0] ) + '-' + HydrusData.ToString( pages_sorted[-1] )
                 
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
@@ -1188,14 +1191,14 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     
     def _GetInfoString( self ):
         
-        info_string = self._current_media.GetPrettyInfo() + ' | ' + HC.ConvertZoomToPercentage( self._current_zoom ) + ' | ' + self._current_media.GetPrettyAge()
+        info_string = self._current_media.GetPrettyInfo() + ' | ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) + ' | ' + self._current_media.GetPrettyAge()
         
         return info_string
         
     
     def _GetIndexString( self ):
         
-        index_string = HC.ConvertIntToPrettyString( self._sorted_media.index( self._current_media ) + 1 ) + os.path.sep + HC.ConvertIntToPrettyString( len( self._sorted_media ) )
+        index_string = HydrusData.ConvertIntToPrettyString( self._sorted_media.index( self._current_media ) + 1 ) + os.path.sep + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) )
         
         return index_string
         
@@ -1252,7 +1255,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         hashes = { self._current_display_media.GetHash() }
         
-        HC.pubsub.pub( 'remove_media', self._page_key, hashes )
+        HydrusGlobals.pubsub.pub( 'remove_media', self._page_key, hashes )
         
         singleton_media = { self._current_display_media }
         
@@ -1307,7 +1310,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         self._closing = True
         
-        HC.pubsub.pub( 'set_focus', self._page_key, self._current_media )
+        HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, self._current_media )
         
         if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False )
         
@@ -1510,10 +1513,10 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                             
                             content_updates = []
                             
-                            content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
-                            content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
+                            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
+                            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
                             
-                            HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : content_updates } )
+                            wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : content_updates } )
                             
                             self._kept = set()
                             self._deleted = set()
@@ -1534,7 +1537,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
         
-            ( modifier, key ) = HC.GetShortcutFromEvent( event )
+            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
             
             if modifier == wx.ACCEL_NORMAL and key == wx.WXK_SPACE: self._Keep()
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
@@ -1544,7 +1547,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
             elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
             elif not event.ShiftDown() and key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
             else:
                 
@@ -1597,7 +1600,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                 elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
                 elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
                 elif command == 'manage_ratings': self._ManageRatings()
-                elif command == 'manage_tags': self._ManageTags()
+                elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
                 elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
                     distance = 20
@@ -1652,13 +1655,13 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
         
         CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
         
-        HC.pubsub.sub( self, 'ShowNext', 'canvas_show_next' )
-        HC.pubsub.sub( self, 'ShowPrevious', 'canvas_show_previous' )
+        HydrusGlobals.pubsub.sub( self, 'ShowNext', 'canvas_show_next' )
+        HydrusGlobals.pubsub.sub( self, 'ShowPrevious', 'canvas_show_previous' )
         
     
     def _BroadcastCurrentDisplayMedia( self ):
         
-        HC.pubsub.pub( 'canvas_broadcast_current_display_media', self._canvas_key, self._current_display_media )
+        HydrusGlobals.pubsub.pub( 'canvas_broadcast_current_display_media', self._canvas_key, self._current_display_media )
         
     
     def _ManageTags( self ):
@@ -1710,36 +1713,36 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         if first_hash is None: self.SetMedia( self._GetFirst() )
         else: self.SetMedia( self._GetMedia( { first_hash } )[0] )
         
-        HC.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
+        HydrusGlobals.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
     
-    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
+    def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
         local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_display_media.GetHash().encode( 'hex' )
         
-        HC.pubsub.pub( 'clipboard', 'text', local_url )
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', local_url )
         
     
     def _CopyPathToClipboard( self ):
         
         path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
-        HC.pubsub.pub( 'clipboard', 'text', path )
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', path )
         
     
     def _Delete( self ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _PausePlaySlideshow( self ):
         
@@ -1771,7 +1774,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
             
-            ( modifier, key ) = HC.GetShortcutFromEvent( event )
+            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
             
             if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self._Delete()
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): self._PausePlaySlideshow()
@@ -1780,7 +1783,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
             elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
             else:
                 
                 key_dict = HC.options[ 'shortcuts' ][ modifier ]
@@ -1810,7 +1813,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
-                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                    with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
@@ -1824,7 +1827,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
                 elif command == 'inbox': self._Inbox()
                 elif command == 'manage_ratings': self._ManageRatings()
-                elif command == 'manage_tags': self._ManageTags()
+                elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
                 elif command == 'open_externally': self._OpenExternally()
                 elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
@@ -1866,7 +1869,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     
     def EventShowMenu( self, event ):
         
-        services = HC.app.GetManager( 'services' ).GetServices()
+        services = wx.GetApp().GetManager( 'services' ).GetServices()
         
         local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         
@@ -1881,7 +1884,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         menu.AppendSeparator()
         
-        menu.Append( CC.ID_NULL, 'current zoom: ' + HC.ConvertZoomToPercentage( self._current_zoom ) )
+        menu.Append( CC.ID_NULL, 'current zoom: ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) )
         
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
@@ -1917,12 +1920,12 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', CC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
         menu.AppendSeparator()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', CC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
         
         share_menu = wx.Menu()
         
@@ -1991,36 +1994,36 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         FullscreenPopoutFilterCustom( self )
         
-        HC.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
+        HydrusGlobals.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
     
-    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
+    def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
         local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_display_media.GetHash().encode( 'hex' )
         
-        HC.pubsub.pub( 'clipboard', 'text', local_url )
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', local_url )
         
     
     def _CopyPathToClipboard( self ):
         
         path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
-        HC.pubsub.pub( 'clipboard', 'text', path )
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', path )
         
     
     def _Delete( self ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def EventActions( self, event ):
         
@@ -2035,7 +2038,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
             
-            ( modifier, key ) = HC.GetShortcutFromEvent( event )
+            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
             
             key_dict = self._actions[ modifier ]
             
@@ -2054,7 +2057,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                     elif action == 'fullscreen_switch': self._FullscreenSwitch()
                     elif action == 'inbox': self._Inbox()
                     elif action == 'manage_ratings': self._ManageRatings()
-                    elif action == 'manage_tags': self._ManageTags()
+                    elif action == 'manage_tags': wx.CallAfter( self._ManageTags )
                     elif action in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                         
                         distance = 20
@@ -2071,7 +2074,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                     
                 else:
                     
-                    service = HC.app.GetManager( 'services' ).GetService( service_key )
+                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                     
                     service_type = service.GetServiceType()
                     
@@ -2094,7 +2097,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                                 
                                 content_update_action = HC.CONTENT_UPDATE_ADD
                                 
-                                tag_parents_manager = HC.app.GetManager( 'tag_parents' )
+                                tag_parents_manager = wx.GetApp().GetManager( 'tag_parents' )
                                 
                                 parents = tag_parents_manager.GetParents( service_key, tag )
                                 
@@ -2133,7 +2136,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                                     
                                     content_update_action = HC.CONTENT_UPDATE_PENDING
                                     
-                                    tag_parents_manager = HC.app.GetManager( 'tag_parents' )
+                                    tag_parents_manager = wx.GetApp().GetManager( 'tag_parents' )
                                     
                                     parents = tag_parents_manager.GetParents( service_key, tag )
                                     
@@ -2144,7 +2147,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                                 
                             
                         
-                        content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, content_update_action, row ) for row in rows ]
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, content_update_action, row ) for row in rows ]
                         
                     elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                         
@@ -2155,10 +2158,10 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                         
                         row = ( rating, hashes )
                         
-                        content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
                         
                     
-                    HC.app.Write( 'content_updates', { service_key : content_updates } )
+                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
                     
                 
             else:
@@ -2168,7 +2171,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
                 elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
                 elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                    with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 else:
                     
                     key_dict = HC.options[ 'shortcuts' ][ modifier ]
@@ -2199,7 +2202,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
-                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                    with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
@@ -2213,7 +2216,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
                 elif command == 'inbox': self._Inbox()
                 elif command == 'manage_ratings': self._ManageRatings()
-                elif command == 'manage_tags': self._ManageTags()
+                elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
                 elif command == 'open_externally': self._OpenExternally()
                 elif command == 'remove': self._Remove()
                 elif command == 'slideshow': self._StartSlideshow( data )
@@ -2246,7 +2249,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
     
     def EventShowMenu( self, event ):
         
-        services = HC.app.GetManager( 'services' ).GetServices()
+        services = wx.GetApp().GetManager( 'services' ).GetServices()
         
         local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         
@@ -2263,7 +2266,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu.AppendSeparator()
         
-        menu.Append( CC.ID_NULL, 'current zoom: ' + HC.ConvertZoomToPercentage( self._current_zoom ) )
+        menu.Append( CC.ID_NULL, 'current zoom: ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) )
         
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
@@ -2300,11 +2303,11 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), '&remove' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
         menu.AppendSeparator()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', CC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
         
         share_menu = wx.Menu()
         
@@ -2610,7 +2613,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             HC.options[ 'ratings_filter_accuracy' ] = 1
             
-            HC.app.Write( 'save_options' )
+            wx.GetApp().Write( 'save_options' )
             
         
         value = HC.options[ 'ratings_filter_accuracy' ]
@@ -2630,7 +2633,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             HC.options[ 'ratings_filter_compare_same' ] = False
             
-            HC.app.Write( 'save_options' )
+            wx.GetApp().Write( 'save_options' )
             
         
         compare_same = HC.options[ 'ratings_filter_compare_same' ]
@@ -2649,7 +2652,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             HC.options[ 'ratings_filter_left_right' ] = 'left'
             
-            HC.app.Write( 'save_options' )
+            wx.GetApp().Write( 'save_options' )
             
         
         left_right = HC.options[ 'ratings_filter_left_right' ]
@@ -2742,10 +2745,10 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
     
     def __init__( self, my_parent, page_key, service_key, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, HC.LOCAL_FILE_SERVICE_KEY, media_results )
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._rating_service_key = service_key
-        self._service = HC.app.GetManager( 'services' ).GetService( service_key )
+        self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
         FullscreenPopoutFilterLike( self )
         
@@ -2777,10 +2780,10 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
                             
                             content_updates = []
                             
-                            content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, set( ( hash, ) ) ) ) for hash in self._deleted_hashes ] )
-                            content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, set( ( hash, ) ) ) ) for hash in self._kept_hashes ] )
+                            content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, set( ( hash, ) ) ) ) for hash in self._deleted_hashes ] )
+                            content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, set( ( hash, ) ) ) ) for hash in self._kept_hashes ] )
                             
-                            HC.app.Write( 'content_updates', { self._rating_service_key : content_updates } )
+                            wx.GetApp().Write( 'content_updates', { self._rating_service_key : content_updates } )
                             
                             self._kept = set()
                             self._deleted = set()
@@ -2813,7 +2816,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         self._media_still_to_rate = { ClientMedia.MediaSingleton( media_result ) for media_result in media_results }
         self._current_media_to_rate = None
         
-        self._service = HC.app.GetManager( 'services' ).GetService( service_key )
+        self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
         self._file_query_result = ClientData.FileQueryResult( media_results )
         
@@ -2825,7 +2828,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             self._score_gap = 1.0 / ( self._upper - self._lower )
             
         
-        hashes_to_min_max = HC.app.Read( 'ratings_filter', service_key, [ media_result.GetHash() for media_result in media_results ] )
+        hashes_to_min_max = wx.GetApp().Read( 'ratings_filter', service_key, [ media_result.GetHash() for media_result in media_results ] )
         
         self._media_to_initial_scores_dict = { media : hashes_to_min_max[ media.GetHash() ] for media in self._media_still_to_rate }
         
@@ -2853,7 +2856,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         self.Show( True )
         
-        HC.app.SetTopWindow( self )
+        wx.GetApp().SetTopWindow( self )
         
         self._left_window = self._Panel( self._splitter )
         FullscreenPopoutFilterNumerical( self._left_window, self )
@@ -2874,10 +2877,10 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         self._ShowNewMedia()
         
-        HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
-        HC.pubsub.pub( 'set_focus', self._page_key, None )
+        HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, None )
         
     
     def _FullscreenSwitch( self ):
@@ -2947,19 +2950,19 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 else: against_string += ' - like'
                 
             
-            center_string = HC.u( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + HC.u( len( self._decision_log ) ) + ' decisions, ' + HC.u( len( certain_ratings ) ) + ' are certain'
+            center_string = HydrusData.ToString( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + HydrusData.ToString( len( self._decision_log ) ) + ' decisions, ' + HydrusData.ToString( len( certain_ratings ) ) + ' are certain'
             
         elif service_type == HC.LOCAL_RATING_NUMERICAL:
             
             ( min, max ) = self._media_to_current_scores_dict[ self._current_media_to_rate ]
             
-            current_string = 'between ' + HC.ConvertNumericalRatingToPrettyString( self._lower, self._upper, min, out_of = False ) + ' and ' + HC.ConvertNumericalRatingToPrettyString( self._lower, self._upper, max, out_of = False )
+            current_string = 'between ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, min, out_of = False ) + ' and ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, max, out_of = False )
             
             if self._current_media_to_rate_against in self._media_still_to_rate:
                 
                 ( other_min, other_max ) = self._media_to_current_scores_dict[ self._current_media_to_rate_against ]
                 
-                against_string = 'between ' + HC.ConvertNumericalRatingToPrettyString( self._lower, self._upper, other_min, out_of = False ) + ' and ' + HC.ConvertNumericalRatingToPrettyString( self._lower, self._upper, other_max, out_of = False )
+                against_string = 'between ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, other_min, out_of = False ) + ' and ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, other_max, out_of = False )
                 
             else:
                 
@@ -2978,10 +2981,10 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     rating = local_ratings.GetRating( self._service_key )
                     
                 
-                against_string += ' - ' + HC.ConvertNumericalRatingToPrettyString( self._lower, self._upper, rating )
+                against_string += ' - ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, rating )
                 
             
-            center_string = HC.u( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + HC.u( len( self._decision_log ) ) + ' decisions, ' + HC.u( len( certain_ratings ) ) + ' are certain and ' + HC.u( len( uncertain_ratings ) ) + ' are uncertain'
+            center_string = HydrusData.ToString( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + HydrusData.ToString( len( self._decision_log ) ) + ' decisions, ' + HydrusData.ToString( len( certain_ratings ) ) + ' are certain and ' + HydrusData.ToString( len( uncertain_ratings ) ) + ' are uncertain'
             
         
         if self._unrated_is_on_the_left:
@@ -3034,7 +3037,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         ( min, max ) = self._media_to_current_scores_dict[ self._current_media_to_rate ]
         
-        media_result_to_rate_against = HC.app.Read( 'ratings_media_result', self._service_key, min, max )
+        media_result_to_rate_against = wx.GetApp().Read( 'ratings_media_result', self._service_key, min, max )
         
         if media_result_to_rate_against is not None:
             
@@ -3351,15 +3354,15 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     
                     content_updates = []
                     
-                    content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, set( ( hash, ) ) ) ) for ( rating, hash ) in certain_ratings ] )
-                    content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_RATINGS_FILTER, ( min, max, set( ( hash, ) ) ) ) for ( min, max, hash ) in uncertain_ratings ] )
+                    content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, set( ( hash, ) ) ) ) for ( rating, hash ) in certain_ratings ] )
+                    content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_RATINGS_FILTER, ( min, max, set( ( hash, ) ) ) ) for ( min, max, hash ) in uncertain_ratings ] )
                     
-                    HC.app.Write( 'content_updates', { self._service_key : content_updates } )
+                    wx.GetApp().Write( 'content_updates', { self._service_key : content_updates } )
                     
                 
             
         
-        HC.pubsub.pub( 'set_focus', self._page_key, self._current_media_to_rate )
+        HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, self._current_media_to_rate )
         
         if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False )
         
@@ -3370,7 +3373,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
     
     def EventCharHook( self, event ):
         
-        ( modifier, key ) = HC.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
         
         if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Skip()
         elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._ProcessAction( 'equal' )
@@ -3379,7 +3382,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self._GoBack()
         elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
         elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-            with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+            with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
         else:
             
             key_dict = HC.options[ 'shortcuts' ][ modifier ]
@@ -3460,14 +3463,14 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         HC.options[ 'ratings_filter_accuracy' ] = accuracy
         
-        HC.app.Write( 'save_options' )
+        wx.GetApp().Write( 'save_options' )
         
     
     def SetCompareSame( self, compare_same ):
         
         HC.options[ 'ratings_filter_compare_same' ] = compare_same
         
-        HC.app.Write( 'save_options' )
+        wx.GetApp().Write( 'save_options' )
         
         self._compare_same = compare_same
         
@@ -3476,7 +3479,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         HC.options[ 'ratings_filter_left_right' ] = left_right
         
-        HC.app.Write( 'save_options' )
+        wx.GetApp().Write( 'save_options' )
         
         self._left_right = left_right
         
@@ -3486,7 +3489,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         def __init__( self, parent ):
             
             wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER | wx.WANTS_CHARS )
-            CanvasWithDetails.__init__( self, HC.LOCAL_FILE_SERVICE_KEY, HC.app.GetFullscreenImageCache() )
+            CanvasWithDetails.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, wx.GetApp().GetFullscreenImageCache() )
             
             wx.CallAfter( self.Refresh )
             
@@ -3589,7 +3592,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
                 keys_i_want_to_bump_up_regardless = [ wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN, wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT, wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT, wx.WXK_BACK, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ]
                 
-                ( modifier, key ) = HC.GetShortcutFromEvent( event )
+                ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
                 
                 key_dict = HC.options[ 'shortcuts' ][ modifier ]
                 
@@ -3605,7 +3608,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
                     elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
                     elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                        with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                        with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                     else: self.GetParent().ProcessEvent( event )
                     
             
@@ -3624,7 +3627,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     if command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
                     elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
                     elif command == 'manage_ratings': self._ManageRatings()
-                    elif command == 'manage_tags': self._ManageTags()
+                    elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
                     elif command == 'zoom_in': self._ZoomIn()
                     elif command == 'zoom_out': self._ZoomOut()
                     else: event.Skip()
@@ -3922,7 +3925,7 @@ class EmbedWindowAudio( wx.Window ):
         
         path = ClientFiles.GetFilePath( self._hash, self._mime )
         
-        HC.LaunchFile( path )
+        HydrusFileHandling.LaunchFile( path )
         
     
 class EmbedWindowVideo( wx.Window ):
@@ -3969,7 +3972,7 @@ class EmbedWindowVideo( wx.Window ):
         
         path = ClientFiles.GetFilePath( self._hash, self._mime )
         
-        HC.LaunchFile( path )
+        HydrusFileHandling.LaunchFile( path )
         
     
 class PDFButton( wx.Button ):
@@ -3989,7 +3992,7 @@ class PDFButton( wx.Button ):
         
         path = ClientFiles.GetFilePath( self._hash, HC.APPLICATION_PDF )
         
-        HC.LaunchFile( path )
+        HydrusFileHandling.LaunchFile( path )
         
     
 class StaticImage( wx.Window ):

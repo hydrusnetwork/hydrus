@@ -1,12 +1,16 @@
-import ClientCaches
+import HydrusConstants as HC
+import HydrusData
 import ClientData
+import HydrusGlobals
+
+import ClientCaches
 import collections
 import gc
 import hashlib
 import httplib
-import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetworking
+import HydrusPubSub
 import HydrusSessions
 import HydrusServer
 import HydrusTags
@@ -43,7 +47,7 @@ class Controller( wx.App ):
         if last_maintenance_time == 0: return False
         
         # this tests if we probably just woke up from a sleep
-        if HC.GetNow() - last_maintenance_time > MAINTENANCE_PERIOD + ( 5 * 60 ): self._just_woke_from_sleep = True
+        if HydrusData.GetNow() - last_maintenance_time > MAINTENANCE_PERIOD + ( 5 * 60 ): self._just_woke_from_sleep = True
         else: self._just_woke_from_sleep = False
         
     
@@ -128,7 +132,7 @@ class Controller( wx.App ):
             
             media = data
             
-            image_container = HC.app.GetFullscreenImageCache().GetImage( media )
+            image_container = wx.GetApp().GetFullscreenImageCache().GetImage( media )
             
             def THREADWait():
                 
@@ -171,15 +175,15 @@ class Controller( wx.App ):
         
         if HC.options[ 'idle_period' ] == 0: return False
         
-        return HC.GetNow() - self._timestamps[ 'last_user_action' ] > HC.options[ 'idle_period' ]
+        return HydrusData.GetNow() - self._timestamps[ 'last_user_action' ] > HC.options[ 'idle_period' ]
         
     
     def EventPubSub( self, event ):
         
-        HC.currently_doing_pubsub = True
+        self._currently_doing_pubsub = True
         
-        try: HC.pubsub.WXProcessQueueItem()
-        finally: HC.currently_doing_pubsub = False
+        try: HydrusGlobals.pubsub.WXProcessQueueItem()
+        finally: self._currently_doing_pubsub = False
         
     
     def GetDB( self ): return self._db
@@ -211,26 +215,6 @@ class Controller( wx.App ):
     
     def InitDB( self ):
         
-        try:
-            
-            def make_temp_files_deletable( function_called, path, traceback_gumpf ):
-                
-                os.chmod( path, stat.S_IWRITE )
-                
-                try: function_called( path ) # try again
-                except: pass
-                
-            
-            if os.path.exists( HC.TEMP_DIR ): shutil.rmtree( HC.TEMP_DIR, onerror = make_temp_files_deletable )
-            
-        except: pass
-        
-        try:
-            
-            if not os.path.exists( HC.TEMP_DIR ): os.mkdir( HC.TEMP_DIR )
-            
-        except: pass
-        
         db_initialised = False
         
         while not db_initialised:
@@ -243,8 +227,8 @@ class Controller( wx.App ):
                 
             except HydrusExceptions.DBAccessException as e:
                 
-                try: print( HC.u( e ) )
-                except: print( repr( HC.u( e ) ) )
+                try: print( HydrusData.ToString( e ) )
+                except: print( repr( HydrusData.ToString( e ) ) )
                 
                 message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
                 message += os.linesep * 2
@@ -284,9 +268,9 @@ class Controller( wx.App ):
         
         self._gui = ClientGUI.FrameGUI()
         
-        HC.pubsub.sub( self, 'Clipboard', 'clipboard' )
-        HC.pubsub.sub( self, 'RestartServer', 'restart_server' )
-        HC.pubsub.sub( self, 'RestartBooru', 'restart_booru' )
+        HydrusGlobals.pubsub.sub( self, 'Clipboard', 'clipboard' )
+        HydrusGlobals.pubsub.sub( self, 'RestartServer', 'restart_server' )
+        HydrusGlobals.pubsub.sub( self, 'RestartBooru', 'restart_booru' )
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventMaintenance, id = ID_MAINTENANCE_EVENT_TIMER )
         
@@ -297,8 +281,8 @@ class Controller( wx.App ):
         wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
         wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextXMLHandler() )
         
-        if HC.is_first_start: wx.CallAfter( self._gui.DoFirstStart )
-        if HC.is_db_updated: wx.CallLater( 1, HC.ShowText, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' )
+        if HydrusGlobals.is_first_start: wx.CallAfter( self._gui.DoFirstStart )
+        if HydrusGlobals.is_db_updated: wx.CallLater( 1, HydrusData.ShowText, 'The client has updated to version ' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + '!' )
         
         self.RestartServer()
         self.RestartBooru()
@@ -316,7 +300,7 @@ class Controller( wx.App ):
         
         gc.collect()
         
-        now = HC.GetNow()
+        now = HydrusData.GetNow()
         
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
         
@@ -332,7 +316,7 @@ class Controller( wx.App ):
         
         if now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
             
-            HC.pubsub.pub( 'set_splash_text', 'fattening service info' )
+            HydrusGlobals.pubsub.pub( 'set_splash_text', 'fattening service info' )
             
             services = self.GetManager( 'services' ).GetServices()
             
@@ -342,29 +326,28 @@ class Controller( wx.App ):
                 except: pass # sometimes this breaks when a service has just been removed and the client is closing, so ignore the error
                 
             
-            self._timestamps[ 'last_service_info_cache_fatten' ] = HC.GetNow()
+            self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
             
         
-        HC.pubsub.pub( 'clear_closed_pages' )
+        HydrusGlobals.pubsub.pub( 'clear_closed_pages' )
         
     
     def OnInit( self ):
         
         self.SetAssertMode( wx.PYAPP_ASSERT_SUPPRESS )
         
-        HC.app = self
-        HC.http = HydrusNetworking.HTTPConnectionManager()
+        self._currently_doing_pubsub = False
         
         self._timestamps = collections.defaultdict( lambda: 0 )
         
-        self._timestamps[ 'boot' ] = HC.GetNow()
+        self._timestamps[ 'boot' ] = HydrusData.GetNow()
         
         self._just_woke_from_sleep = False
         
         self._local_service = None
         self._booru_service = None
         
-        self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
+        self.Bind( HydrusPubSub.EVT_PUBSUB, self.EventPubSub )
         
         try:
             
@@ -402,11 +385,11 @@ class Controller( wx.App ):
         return result
         
     
-    def ResetIdleTimer( self ): self._timestamps[ 'last_user_action' ] = HC.GetNow()
+    def ResetIdleTimer( self ): self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
     
     def RestartBooru( self ):
         
-        service = self.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
+        service = self.GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         info = service.GetInfo()
         
@@ -425,17 +408,17 @@ class Controller( wx.App ):
                         connection.connect()
                         connection.close()
                         
-                        text = 'The client\'s booru server could not start because something was already bound to port ' + HC.u( port ) + '.'
+                        text = 'The client\'s booru server could not start because something was already bound to port ' + HydrusData.ToString( port ) + '.'
                         text += os.linesep * 2
                         text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
                         text += os.linesep * 2
                         text += 'You can change the port this client tries to host its local server on in services->manage services.'
                         
-                        wx.CallLater( 1, HC.ShowText, text )
+                        wx.CallLater( 1, HydrusData.ShowText, text )
                         
                     except:
                         
-                        self._booru_service = reactor.listenTCP( port, HydrusServer.HydrusServiceBooru( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'This is the local booru.' ) )
+                        self._booru_service = reactor.listenTCP( port, HydrusServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'This is the local booru.' ) )
                         
                         connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
                         
@@ -446,13 +429,13 @@ class Controller( wx.App ):
                             
                         except:
                             
-                            text = 'Tried to bind port ' + HC.u( port ) + ' for the local booru, but it failed.'
+                            text = 'Tried to bind port ' + HydrusData.ToString( port ) + ' for the local booru, but it failed.'
                             
-                            wx.CallLater( 1, HC.ShowText, text )
+                            wx.CallLater( 1, HydrusData.ShowText, text )
                             
                         
                     
-                except Exception as e: wx.CallAfter( HC.ShowException, e )
+                except Exception as e: wx.CallAfter( HydrusData.ShowException, e )
                 
             
             if self._booru_service is None: StartServer()
@@ -484,17 +467,17 @@ class Controller( wx.App ):
                         connection.connect()
                         connection.close()
                         
-                        text = 'The client\'s local server could not start because something was already bound to port ' + HC.u( port ) + '.'
+                        text = 'The client\'s local server could not start because something was already bound to port ' + HydrusData.ToString( port ) + '.'
                         text += os.linesep * 2
                         text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
                         text += os.linesep * 2
                         text += 'You can change the port this client tries to host its local server on in file->options.'
                         
-                        wx.CallLater( 1, HC.ShowText, text )
+                        wx.CallLater( 1, HydrusData.ShowText, text )
                         
                     except:
                         
-                        self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ) )
+                        self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ) )
                         
                         connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
                         
@@ -505,13 +488,13 @@ class Controller( wx.App ):
                             
                         except:
                             
-                            text = 'Tried to bind port ' + HC.u( port ) + ' for the local server, but it failed.'
+                            text = 'Tried to bind port ' + HydrusData.ToString( port ) + ' for the local server, but it failed.'
                             
-                            wx.CallLater( 1, HC.ShowText, text )
+                            wx.CallLater( 1, HydrusData.ShowText, text )
                             
                         
                     
-                except Exception as e: wx.CallAfter( HC.ShowException, e )
+                except Exception as e: wx.CallAfter( HydrusData.ShowException, e )
                 
             
             if self._local_service is None: StartServer()
@@ -604,12 +587,12 @@ class Controller( wx.App ):
             
             media_results.extend( more_media_results )
             
-            HC.pubsub.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
+            HydrusGlobals.pubsub.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
             
             self.WaitUntilGoodTimeToUseGUIThread()
             
         
-        HC.pubsub.pub( 'file_query_done', query_key, media_results )
+        HydrusGlobals.pubsub.pub( 'file_query_done', query_key, media_results )
         
     
     def TIMEREventMaintenance( self, event ):
@@ -619,7 +602,7 @@ class Controller( wx.App ):
         
         self._CheckIfJustWokeFromSleep()
         
-        self._timestamps[ 'last_maintenance_time' ] = HC.GetNow()
+        self._timestamps[ 'last_maintenance_time' ] = HydrusData.GetNow()
         
         if not self._just_woke_from_sleep and self.CurrentlyIdle(): self.MaintainDB()
         
@@ -628,8 +611,8 @@ class Controller( wx.App ):
         
         while True:
             
-            if HC.shutdown: raise Exception( 'Client shutting down!' )
-            elif HC.pubsub.NoJobsQueued() and not HC.currently_doing_pubsub: return
+            if HydrusGlobals.shutdown: raise Exception( 'Client shutting down!' )
+            elif HydrusGlobals.pubsub.NoJobsQueued() and not self._currently_doing_pubsub: return
             else: time.sleep( 0.00001 )
             
         
