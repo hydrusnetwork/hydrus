@@ -1278,6 +1278,18 @@ class JobKey( object ):
             
         
     
+class SerialisableBase( object ):
+    
+    def __init__( self, name, info ):
+        
+        self._name = name
+        self._info = info
+        
+    
+    def GetInfo( self ): return self._info
+    
+    def GetName( self ): return self._name
+    
 class ServerToClientPetition( HydrusYAMLBase ):
     
     yaml_tag = u'!ServerToClientPetition'

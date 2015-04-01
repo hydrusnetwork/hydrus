@@ -1049,7 +1049,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             url = 'http://' + host + ':' + HydrusData.ToString( port ) + path_and_query
             
-            ( response, size_of_response, response_headers, cookies ) = HydrusGlobals.http.Request( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True, long_timeout = long_timeout )
+            ( response, size_of_response, response_headers, cookies ) = wx.GetApp().DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True, long_timeout = long_timeout )
             
             HydrusNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
             

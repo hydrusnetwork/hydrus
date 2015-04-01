@@ -236,13 +236,13 @@ class CaptchaControl( wx.Panel ):
     
     def EventRefreshCaptcha( self, event ):
         
-        javascript_string = HydrusGlobals.http.Request( HC.GET, 'http://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
+        javascript_string = wx.GetApp().DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
         
         ( trash, rest ) = javascript_string.split( 'challenge : \'', 1 )
         
         ( self._captcha_challenge, trash ) = rest.split( '\'', 1 )
         
-        jpeg = HydrusGlobals.http.Request( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
+        jpeg = wx.GetApp().DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
         
         ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
@@ -589,7 +589,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         try:
             
-            response = HydrusGlobals.http.Request( HC.POST, self._post_url, request_headers = headers, body = body )
+            response = wx.GetApp().DoHTTP( HC.POST, self._post_url, request_headers = headers, body = body )
             
             ( status, phrase ) = ClientDownloading.Parse4chanPostScreen( response )
             
@@ -1376,8 +1376,14 @@ class ManagementPanelImports( ManagementPanelImport ):
         queue_pause_buttons_hbox.AddF( self._building_import_queue_pause_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_pause_buttons_hbox.AddF( self._building_import_queue_cancel_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        text = 'file limit'
+        
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._building_import_queue_panel, text, none_phrase = 'no limit', max = 1000000 )
+        self._file_limit.SetValue( 500 )
+        
         self._building_import_queue_panel.AddF( self._building_import_queue_info, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._building_import_queue_panel.AddF( queue_pause_buttons_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._building_import_queue_panel.AddF( self._file_limit, CC.FLAGS_SIZER_CENTER )
         
         vbox.AddF( self._building_import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1476,6 +1482,10 @@ class ManagementPanelImports( ManagementPanelImport ):
             self._import_gauge.SetRange( range )
             self._import_gauge.SetValue( value )
             
+        
+        # file limit
+        
+        import_queue_builder_job_key.SetVariable( 'file_limit', self._file_limit.GetValue() )
         
         # pending import queues
         
@@ -1631,6 +1641,7 @@ class ManagementPanelImportsURL( ManagementPanelImports ):
         
         self._building_import_queue_pause_button.Hide()
         self._building_import_queue_cancel_button.Hide()
+        self._file_limit.Hide()
         
     
 class ManagementPanelImportHDD( ManagementPanelImport ):

@@ -251,8 +251,6 @@ class HTTPConnectionManager( object ):
     
     def DAEMONMaintainConnections( self ):
         
-        time.sleep( 1 )
-        
         while True:
             
             if HydrusGlobals.shutdown: break

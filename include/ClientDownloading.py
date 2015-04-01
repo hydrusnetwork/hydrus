@@ -123,12 +123,17 @@ class Downloader( object ):
         
         self._AddSessionCookies( request_headers )
         
-        return HydrusGlobals.http.Request( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
+        return wx.GetApp().DoHTTP( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def _GetNextGalleryPageURL( self ): return ''
     
     def _GetNextGalleryPageURLs( self ): return ( self._GetNextGalleryPageURL(), )
+    
+    def _ParseGalleryPage( self, data, url ):
+        
+        raise NotImplementedError()
+        
     
     def AddReportHook( self, hook ): self._report_hooks.append( hook )
     
@@ -696,7 +701,7 @@ class DownloaderHentaiFoundry( Downloader ):
         
         self._AddSessionCookies( request_headers )
         
-        HydrusGlobals.http.Request( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
+        wx.GetApp().DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
         
     
 class DownloaderNewgrounds( Downloader ):
@@ -1110,6 +1115,11 @@ class ImportArgsGenerator( object ):
     
     def _CheckCurrentStatus( self ): return ( 'new', None )
     
+    def _GetArgs( self, temp_path ):
+        
+        raise NotImplementedError()
+        
+    
 class ImportArgsGeneratorGallery( ImportArgsGenerator ):
     
     def __init__( self, job_key, item, advanced_import_options, advanced_tag_options, downloaders_factory ):
@@ -1173,7 +1183,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = wx.GetApp().ReadDaemon( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = wx.GetApp().Read( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             do_tags = len( self._advanced_tag_options ) > 0
             
@@ -1285,7 +1295,7 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
             self._job_key.SetVariable( 'value', value )
             
         
-        HydrusGlobals.http.Request( HC.GET, image_url, report_hooks = [ hook ], temp_path = temp_path )
+        wx.GetApp().DoHTTP( HC.GET, image_url, report_hooks = [ hook ], temp_path = temp_path )
         
         tags = [ 'filename:' + filename ]
         
@@ -1308,7 +1318,7 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = wx.GetApp().ReadDaemon( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = wx.GetApp().Read( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             do_tags = len( self._advanced_tag_options ) > 0
             
@@ -1344,7 +1354,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
             self._job_key.SetVariable( 'value', value )
             
         
-        HydrusGlobals.http.Request( HC.GET, url, report_hooks = [ hook ], temp_path = temp_path )
+        wx.GetApp().DoHTTP( HC.GET, url, report_hooks = [ hook ], temp_path = temp_path )
         
         service_keys_to_tags = {}
         
@@ -1363,7 +1373,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = wx.GetApp().ReadDaemon( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = wx.GetApp().Read( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             return ( status, media_result )
             
@@ -1416,6 +1426,7 @@ class ImportController( object ):
             elif job_type == 'import_queue_builder':
                 
                 job_key.SetVariable( 'queue', [] )
+                job_key.SetVariable( 'file_limit', None )
                 
             
         
@@ -1726,6 +1737,10 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                 
                 if HydrusGlobals.shutdown or self._job_key.IsDone(): break
                 
+                file_limit = self._job_key.GetVariable( 'file_limit' )
+                
+                if file_limit is not None and total_urls_found > file_limit: break
+                
             
             self._job_key.SetVariable( 'status', 'finished. found ' + urls_in_pages )
             
@@ -1754,7 +1769,7 @@ class ImportQueueBuilderURLs( ImportQueueBuilder ):
             
             self._job_key.SetVariable( 'status', 'Connecting to address' )
             
-            try: html = HydrusGlobals.http.Request( HC.GET, url )
+            try: html = wx.GetApp().DoHTTP( HC.GET, url )
             except: raise Exception( 'Could not download that url' )
             
             self._job_key.SetVariable( 'status', 'parsing html' )
@@ -1836,7 +1851,7 @@ class ImportQueueBuilderThread( ImportQueueBuilder ):
                     
                     try:
                         
-                        raw_json = HydrusGlobals.http.Request( HC.GET, json_url )
+                        raw_json = wx.GetApp().DoHTTP( HC.GET, json_url )
                         
                         json_dict = json.loads( raw_json )
                         
@@ -1920,7 +1935,7 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     try:
         
-        HydrusGlobals.http.Request( HC.GET, url, temp_path = temp_path, report_hooks = [ hook ] )
+        wx.GetApp().DoHTTP( HC.GET, url, temp_path = temp_path, report_hooks = [ hook ] )
         
         job_key.DeleteVariable( 'popup_message_gauge_1' )
         job_key.SetVariable( 'popup_message_text_1', 'importing ' + url_string )

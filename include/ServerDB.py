@@ -2545,11 +2545,9 @@ class DB( ServiceDB ):
     
     def Shutdown( self ): self._local_shutdown = True
     
-    def Write( self, action, priority, *args, **kwargs ):
+    def Write( self, action, priority, synchronous, *args, **kwargs ):
         
         job_type = 'write'
-        
-        synchronous = True
         
         job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         

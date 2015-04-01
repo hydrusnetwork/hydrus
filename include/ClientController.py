@@ -1,16 +1,13 @@
-import HydrusConstants as HC
-import HydrusData
-import ClientData
-import HydrusGlobals
-
 import ClientCaches
-import collections
-import gc
+import ClientData
 import hashlib
 import httplib
+import HydrusConstants as HC
+import HydrusController
+import HydrusData
 import HydrusExceptions
+import HydrusGlobals
 import HydrusNetworking
-import HydrusPubSub
 import HydrusSessions
 import HydrusServer
 import HydrusTags
@@ -21,11 +18,8 @@ import ClientGUI
 import ClientGUIDialogs
 import os
 import random
-import shutil
-import stat
 import subprocess
 import sys
-import threading
 import time
 import traceback
 import wx
@@ -38,22 +32,9 @@ ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
 
 MAINTENANCE_PERIOD = 5 * 60
 
-class Controller( wx.App ):
+class Controller( HydrusController.HydrusController ):
     
-    def _CheckIfJustWokeFromSleep( self ):
-        
-        last_maintenance_time = self._timestamps[ 'last_maintenance_time' ]
-        
-        if last_maintenance_time == 0: return False
-        
-        # this tests if we probably just woke up from a sleep
-        if HydrusData.GetNow() - last_maintenance_time > MAINTENANCE_PERIOD + ( 5 * 60 ): self._just_woke_from_sleep = True
-        else: self._just_woke_from_sleep = False
-        
-    
-    def _Read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-    
-    def _Write( self, action, priority, synchronous, *args, **kwargs ): return self._db.Write( action, priority, synchronous, *args, **kwargs )
+    db_class = ClientDB.DB
     
     def BackupDatabase( self ):
         
@@ -78,13 +59,6 @@ class Controller( wx.App ):
                     
                 
             
-        
-    
-    def ClearCaches( self ):
-        
-        self._thumbnail_cache.Clear()
-        self._fullscreen_image_cache.Clear()
-        self._preview_image_cache.Clear()
         
     
     def Clipboard( self, data_type, data ):
@@ -132,7 +106,7 @@ class Controller( wx.App ):
             
             media = data
             
-            image_container = wx.GetApp().GetFullscreenImageCache().GetImage( media )
+            image_container = wx.GetApp().Cache( 'fullscreen' ).GetImage( media )
             
             def THREADWait():
                 
@@ -178,25 +152,11 @@ class Controller( wx.App ):
         return HydrusData.GetNow() - self._timestamps[ 'last_user_action' ] > HC.options[ 'idle_period' ]
         
     
-    def EventPubSub( self, event ):
-        
-        self._currently_doing_pubsub = True
-        
-        try: HydrusGlobals.pubsub.WXProcessQueueItem()
-        finally: self._currently_doing_pubsub = False
-        
-    
-    def GetDB( self ): return self._db
-    
-    def GetFullscreenImageCache( self ): return self._fullscreen_image_cache
+    def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
     
     def GetGUI( self ): return self._gui
     
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
-    
-    def GetPreviewImageCache( self ): return self._preview_image_cache
-    
-    def GetThumbnailCache( self ): return self._thumbnail_cache
     
     def InitCheckPassword( self ):
         
@@ -221,7 +181,7 @@ class Controller( wx.App ):
             
             try:
                 
-                self._db = ClientDB.DB()
+                HydrusController.HydrusController.InitDB( self )
                 
                 db_initialised = True
                 
@@ -242,8 +202,6 @@ class Controller( wx.App ):
                 
             
         
-        threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
-        
     
     def InitGUI( self ):
         
@@ -259,10 +217,9 @@ class Controller( wx.App ):
         self._managers[ 'undo' ] = ClientData.UndoManager()
         self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
         
-        self._fullscreen_image_cache = ClientCaches.RenderedImageCache( 'fullscreen' )
-        self._preview_image_cache = ClientCaches.RenderedImageCache( 'preview' )
-        
-        self._thumbnail_cache = ClientCaches.ThumbnailCache()
+        self._caches[ 'fullscreen' ] = ClientCaches.RenderedImageCache( 'fullscreen' )
+        self._caches[ 'preview' ] = ClientCaches.RenderedImageCache( 'preview' )
+        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache()
         
         CC.GlobalBMPs.STATICInitialise()
         
@@ -271,11 +228,6 @@ class Controller( wx.App ):
         HydrusGlobals.pubsub.sub( self, 'Clipboard', 'clipboard' )
         HydrusGlobals.pubsub.sub( self, 'RestartServer', 'restart_server' )
         HydrusGlobals.pubsub.sub( self, 'RestartBooru', 'restart_booru' )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventMaintenance, id = ID_MAINTENANCE_EVENT_TIMER )
-        
-        self._maintenance_event_timer = wx.Timer( self, ID_MAINTENANCE_EVENT_TIMER )
-        self._maintenance_event_timer.Start( MAINTENANCE_PERIOD * 1000, wx.TIMER_CONTINUOUS )
         
         # this is because of some bug in wx C++ that doesn't add these by default
         wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
@@ -289,16 +241,7 @@ class Controller( wx.App ):
         self._db.StartDaemons()
         
     
-    def JustWokeFromSleep( self ):
-        
-        if not self._just_woke_from_sleep: self._CheckIfJustWokeFromSleep()
-        
-        return self._just_woke_from_sleep
-        
-    
     def MaintainDB( self ):
-        
-        gc.collect()
         
         now = HydrusData.GetNow()
         
@@ -334,20 +277,12 @@ class Controller( wx.App ):
     
     def OnInit( self ):
         
-        self.SetAssertMode( wx.PYAPP_ASSERT_SUPPRESS )
-        
-        self._currently_doing_pubsub = False
-        
-        self._timestamps = collections.defaultdict( lambda: 0 )
-        
-        self._timestamps[ 'boot' ] = HydrusData.GetNow()
-        
-        self._just_woke_from_sleep = False
+        HydrusController.HydrusController.OnInit( self )
         
         self._local_service = None
         self._booru_service = None
         
-        self.Bind( HydrusPubSub.EVT_PUBSUB, self.EventPubSub )
+        self._http = HydrusNetworking.HTTPConnectionManager()
         
         try:
             
@@ -372,17 +307,6 @@ class Controller( wx.App ):
         
         if HC.options[ 'gui_capitalisation' ]: return text
         else: return text.lower()
-        
-    
-    def Read( self, action, *args, **kwargs ): return self._Read( action, *args, **kwargs )
-    
-    def ReadDaemon( self, action, *args, **kwargs ):
-        
-        result = self._Read( action, *args, **kwargs )
-        
-        time.sleep( 0.1 )
-        
-        return result
         
     
     def ResetIdleTimer( self ): self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
@@ -564,11 +488,7 @@ class Controller( wx.App ):
         
         service_key = search_context.GetFileServiceKey()
         
-        include_current_tags = search_context.IncludeCurrentTags()
-        
         media_results = []
-        
-        include_pending_tags = search_context.IncludePendingTags()
         
         i = 0
         
@@ -589,47 +509,16 @@ class Controller( wx.App ):
             
             HydrusGlobals.pubsub.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
             
-            self.WaitUntilGoodTimeToUseGUIThread()
+            self.WaitUntilWXThreadIdle()
             
         
         HydrusGlobals.pubsub.pub( 'file_query_done', query_key, media_results )
-        
-    
-    def TIMEREventMaintenance( self, event ):
-        
-        sys.stdout.flush()
-        sys.stderr.flush()
-        
-        self._CheckIfJustWokeFromSleep()
-        
-        self._timestamps[ 'last_maintenance_time' ] = HydrusData.GetNow()
-        
-        if not self._just_woke_from_sleep and self.CurrentlyIdle(): self.MaintainDB()
-        
-    
-    def WaitUntilGoodTimeToUseGUIThread( self ):
-        
-        while True:
-            
-            if HydrusGlobals.shutdown: raise Exception( 'Client shutting down!' )
-            elif HydrusGlobals.pubsub.NoJobsQueued() and not self._currently_doing_pubsub: return
-            else: time.sleep( 0.00001 )
-            
         
     
     def Write( self, action, *args, **kwargs ):
         
         if action == 'content_updates': self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
         
-        return self._Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
-        
-    
-    def WriteSynchronous( self, action, *args, **kwargs ):
-        
-        result = self._Write( action, HC.LOW_PRIORITY, True, *args, **kwargs )
-        
-        time.sleep( 0.1 )
-        
-        return result
+        return HydrusController.HydrusController.Write( self, action, *args, **kwargs )
         
     

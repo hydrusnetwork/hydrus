@@ -1,7 +1,5 @@
-import HydrusNetworking
 import HydrusPubSub
 
-http = HydrusNetworking.HTTPConnectionManager()
 shutdown = False
 
 pubsub = HydrusPubSub.HydrusPubSub()

@@ -157,7 +157,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             request_headers = {}
             request_headers[ 'Content-Type' ] = ct
             
-            response = HydrusGlobals.http.Request( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
+            response = wx.GetApp().DoHTTP( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
             
             self._timeout = HydrusData.GetNow() + 365 * 24 * 3600
             
@@ -4151,7 +4151,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         headers = {}
         headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
         
-        ( response_gumpf, cookies ) = HydrusGlobals.http.Request( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+        ( response_gumpf, cookies ) = wx.GetApp().DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
         
         # _ only given to logged in php sessions
         if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabel( 'OK!' )
@@ -6152,6 +6152,10 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
                 
+                text = 'initial sync file limit'
+                
+                self._initial_limit = ClientGUICommon.NoneableSpinCtrl( self._info_panel, text, none_phrase = 'no limit', max = 1000000 )
+                
                 self._paused = wx.CheckBox( self._info_panel, label = 'paused' )
                 
                 self._reset_cache_button = wx.Button( self._info_panel, label = '     reset cache on dialog ok     ' )
@@ -6196,6 +6200,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 self._info_panel.AddF( wx.StaticText( self._info_panel, label = last_checked_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._info_panel.AddF( wx.StaticText( self._info_panel, label = HydrusData.ToString( len( info[ 'url_cache' ] ) ) + ' urls in cache' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._info_panel.AddF( self._initial_limit, CC.FLAGS_LONE_BUTTON )
                 self._info_panel.AddF( self._paused, CC.FLAGS_LONE_BUTTON )
                 self._info_panel.AddF( self._reset_cache_button, CC.FLAGS_LONE_BUTTON )
                 
@@ -6221,6 +6226,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 info[ 'query' ] = ''
                 info[ 'frequency_type' ] = 86400
                 info[ 'frequency' ] = 7
+                info[ 'initial_limit' ] = 500
                 info[ 'advanced_tag_options' ] = {}
                 info[ 'advanced_import_options' ] = {} # blaaah not sure
                 info[ 'last_checked' ] = None
@@ -6329,6 +6335,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             query = info[ 'query' ]
             frequency_type = info[ 'frequency_type' ]
             frequency = info[ 'frequency' ]
+            initial_limit = info[ 'initial_limit' ]
             advanced_tag_options = info[ 'advanced_tag_options' ]
             advanced_import_options = info[ 'advanced_import_options' ]
             last_checked = info[ 'last_checked' ]
@@ -6376,6 +6383,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
             
             if index_to_select is not None: self._frequency_type.Select( index_to_select )
+            
+            self._initial_limit.SetValue( initial_limit )
             
             self._paused.SetValue( paused )
             
@@ -6431,6 +6440,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             info[ 'frequency' ] = self._frequency.GetValue()
             info[ 'frequency_type' ] = self._frequency_type.GetClientData( self._frequency_type.GetSelection() )
+            
+            info[ 'initial_limit' ] = self._initial_limit.GetValue()
             
             info[ 'advanced_tag_options' ] = self._advanced_tag_options.GetInfo()
             
@@ -7764,6 +7775,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 self._next = wx.Button( self, label = '->' )
                 self._next.Bind( wx.EVT_BUTTON, self.EventNext )
                 
+                self._delete = wx.Button( self, label = 'delete' )
+                self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+                
                 self._previous = wx.Button( self, label = '<-' )
                 self._previous.Bind( wx.EVT_BUTTON, self.EventPrevious )
                 
@@ -7816,6 +7830,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 hbox.AddF( self._previous, CC.FLAGS_MIXED )
                 hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._delete, CC.FLAGS_MIXED )
+                hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
                 hbox.AddF( self._next, CC.FLAGS_MIXED )
                 
                 vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -7839,6 +7855,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         self._canvas_key = canvas_key
         
+        self._current_media = media
+        
         for m in media: self._hashes.update( m.GetHashes() )
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage tags for ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files' )
@@ -7853,7 +7871,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         self.RefreshAcceleratorTable()
         
-        if self._canvas_key is not None: HydrusGlobals.pubsub.sub( self, 'CanvasHasNewMedia', 'canvas_broadcast_current_display_media' )
+        if self._canvas_key is not None: HydrusGlobals.pubsub.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
         
     
     def _ClearPanels( self ):
@@ -7874,7 +7892,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         if len( service_keys_to_content_updates ) > 0:
             
-            wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
+            wx.GetApp().WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
         
     
@@ -7889,7 +7907,22 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         if canvas_key == self._canvas_key:
             
+            self._current_media = new_media
+            
             for page in self._tag_repositories.GetNameToPageDict().values(): page.SetMedia( ( new_media, ) )
+            
+        
+    
+    def EventDelete( self, event ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._CommitCurrentChanges()
+                
+                wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+                
             
         
     
@@ -8123,13 +8156,13 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def SetMedia( self, media ):
             
-            self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
-            
             self._content_updates = []
             
-            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) )
+            if media is None: media = []
             
-            if len( hashes ) > 0: media_results = wx.GetApp().Read( 'media_results', self._file_service_key, hashes )
+            self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
+            
+            if len( self._hashes ) > 0: media_results = wx.GetApp().Read( 'media_results', self._file_service_key, self._hashes )
             else: media_results = []
             
             # this should now be a nice clean copy of the original media

@@ -1,23 +1,16 @@
+import httplib
 import HydrusConstants as HC
+import HydrusController
 import HydrusData
 import HydrusGlobals
-
-import httplib
-import HydrusPubSub
 import HydrusServer
 import HydrusSessions
 import HydrusThreading
-import ServerFiles
 import ServerDaemons
 import ServerDB
 import os
-import random
-import sys
-import threading
-import time
 import traceback
 import wx
-import yaml
 from twisted.internet import reactor
 from twisted.internet import defer
 
@@ -25,7 +18,9 @@ ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
 
 MAINTENANCE_PERIOD = 5 * 60
 
-class Controller( wx.App ):
+class Controller( HydrusController.HydrusController ):
+    
+    db_class = ServerDB.DB
     
     def _AlreadyRunning( self, port ):
         
@@ -40,10 +35,6 @@ class Controller( wx.App ):
             
         except: return False
         
-    
-    def _Read( self, action, priority, *args, **kwargs ): return self._db.Read( action, priority, *args, **kwargs )
-    
-    def _Write( self, action, priority, *args, **kwargs ): return self._db.Write( action, priority, *args, **kwargs )
     
     def ActionService( self, service_key, action ):
         
@@ -112,27 +103,31 @@ class Controller( wx.App ):
         reactor.callFromThread( TWISTEDDoIt )
         
     
-    def EventExit( self, event ): wx.CallAfter( self._tbicon.Destroy )
-    
-    def EventPubSub( self, event ): HydrusGlobals.pubsub.WXProcessQueueItem()
+    def EventExit( self, event ):
+        
+        wx.CallAfter( self._tbicon.Destroy )
+        
+        self.ShutdownDB()
+        
     
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
     def JustWokeFromSleep( self ): return False
     
+    def MaintainDB( self ):
+        
+        pass
+        
+    
     def OnInit( self ):
         
         try:
             
-            self.Bind( HydrusPubSub.EVT_PUBSUB, self.EventPubSub )
+            HydrusController.HydrusController.OnInit( self )
             
-            self._db = ServerDB.DB()
-            
-            threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
+            self.InitDB()
             
             self.Bind( wx.EVT_MENU, self.EventExit, id=wx.ID_EXIT )
-            
-            self._managers = {}
             
             self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
             self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
@@ -140,13 +135,6 @@ class Controller( wx.App ):
             HydrusGlobals.pubsub.sub( self, 'ActionService', 'action_service' )
             
             self._services = {}
-            
-            #
-            
-            self.Bind( wx.EVT_TIMER, self.TIMEREventMaintenance, id = ID_MAINTENANCE_EVENT_TIMER )
-            
-            self._maintenance_event_timer = wx.Timer( self, ID_MAINTENANCE_EVENT_TIMER )
-            self._maintenance_event_timer.Start( MAINTENANCE_PERIOD * 1000, wx.TIMER_CONTINUOUS )
             
             #
             
@@ -205,16 +193,6 @@ class Controller( wx.App ):
             
         
     
-    def Read( self, action, *args, **kwargs ):
-        
-        return self._Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-        
-    
-    def ReadDaemon( self, action, *args, **kwargs ):
-        
-        return self._Read( action, HC.LOW_PRIORITY, *args, **kwargs )
-        
-    
     def StartDaemons( self ):
         
         HydrusThreading.DAEMONQueue( 'FlushRequestsMade', ServerDaemons.DAEMONFlushRequestsMade, 'request_made', period = 60 )
@@ -225,22 +203,6 @@ class Controller( wx.App ):
         HydrusThreading.DAEMONWorker( 'GenerateUpdates', ServerDaemons.DAEMONGenerateUpdates, period = 1200 )
         HydrusThreading.DAEMONWorker( 'CheckDataUsage', ServerDaemons.DAEMONCheckDataUsage, period = 86400 )
         HydrusThreading.DAEMONWorker( 'UPnP', ServerDaemons.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 )
-        
-    
-    def TIMEREventMaintenance( self, event ):
-        
-        sys.stdout.flush()
-        sys.stderr.flush()
-        
-    
-    def Write( self, action, *args, **kwargs ):
-        
-        return self._Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
-        
-    
-    def WriteDaemon( self, action, *args, **kwargs ):
-        
-        return self._Write( action, HC.LOW_PRIORITY, *args, **kwargs )
         
     
 class TaskBarIcon( wx.TaskBarIcon ):

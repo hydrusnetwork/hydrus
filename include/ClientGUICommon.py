@@ -1378,7 +1378,7 @@ class FrameThatResizes( Frame ):
         
         if client_size[ self._resize_option_prefix + 'maximised' ]: self.Maximize()
         
-        if client_size[ self._resize_option_prefix + 'fullscreen' ]: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
+        if client_size[ self._resize_option_prefix + 'fullscreen' ]: wx.CallAfter( self.ShowFullScreen, True, wx.FULLSCREEN_ALL )
         
     
     def _RecordSizeAndPosition( self ):
@@ -2470,7 +2470,7 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
                 
             
         
-        ListBox._Select( self, index )
+        ListBoxTags._Select( self, index )
         
     
     def SetPredicates( self, predicates ):
@@ -3112,6 +3112,13 @@ class NoneableSpinCtrl( wx.Panel ):
         hbox.AddF( self._checkbox, CC.FLAGS_MIXED )
         
         self.SetSizer( hbox )
+        
+    
+    def Bind( self, event_type, callback ):
+        
+        self._checkbox.Bind( wx.EVT_CHECKBOX, callback )
+        self._one.Bind( wx.EVT_SPINCTRL, callback )
+        if self._num_dimensions == 2: self._two.Bind( wx.EVT_SPINCTRL, callback )
         
     
     def EventCheckBox( self, event ):

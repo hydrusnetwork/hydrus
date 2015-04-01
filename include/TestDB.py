@@ -1127,7 +1127,7 @@ class TestClientDB( unittest.TestCase ):
 class TestServerDB( unittest.TestCase ):
     
     def _read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-    def _write( self, action, *args, **kwargs ): return self._db.Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return self._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
     
     @classmethod
     def setUpClass( self ):

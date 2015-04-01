@@ -1,5 +1,4 @@
 import BaseHTTPServer
-import ClientConstants as CC
 import collections
 import Cookie
 import hashlib

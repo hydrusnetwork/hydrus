@@ -2502,8 +2502,8 @@ class DialogInputLocalFiles( Dialog ):
             
             gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
-            gauge_sizer.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
             gauge_sizer.AddF( self._gauge_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gauge_sizer.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
             gauge_sizer.AddF( self._gauge_pause, CC.FLAGS_MIXED )
             gauge_sizer.AddF( self._gauge_cancel, CC.FLAGS_MIXED )
             
@@ -2523,7 +2523,7 @@ class DialogInputLocalFiles( Dialog ):
             
             vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( file_buttons, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
             vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._delete_after_success, CC.FLAGS_LONE_BUTTON )
             vbox.AddF( ( 0, 5 ), CC.FLAGS_NONE )

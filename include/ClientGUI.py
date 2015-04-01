@@ -215,7 +215,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     time.sleep( 0.1 )
                     
-                    wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                    wx.GetApp().WaitUntilWXThreadIdle()
                     
                 
                 if not update.IsEmpty():
@@ -266,7 +266,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     time.sleep( 0.5 )
                     
-                    wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                    wx.GetApp().WaitUntilWXThreadIdle()
                     
                 
                 
@@ -3112,13 +3112,9 @@ class FrameSplash( ClientGUICommon.Frame ):
             
             wx.CallAfter( self.SetText, 'exiting db' )
             
-            db = wx.GetApp().GetDB()
-            
             wx.GetApp().MaintainDB()
             
-            db.Shutdown()
-            
-            while not db.LoopIsFinished(): time.sleep( 0.1 )
+            wx.GetApp().ShutdownDB()
             
         except sqlite3.OperationalError as e:
             

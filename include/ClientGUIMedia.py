@@ -957,7 +957,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 else: thumbnails_to_render_later.append( thumbnail )
                 
             
-            wx.GetApp().GetThumbnailCache().Waterfall( self._page_key, thumbnails_to_render_later )
+            wx.GetApp().GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
             
         
     
@@ -2199,7 +2199,7 @@ class Thumbnail( Selectable ):
         self._my_dimensions = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
     
-    def _LoadFromDB( self ): self._hydrus_bmp = wx.GetApp().GetThumbnailCache().GetThumbnail( self )
+    def _LoadFromDB( self ): self._hydrus_bmp = wx.GetApp().GetCache( 'thumbnail' ).GetThumbnail( self )
     
     def Dumped( self, dump_status ): self._dump_status = dump_status
     
@@ -2487,8 +2487,6 @@ class ThumbnailMediaSingleton( Thumbnail, ClientMedia.MediaSingleton ):
         
     
     def ProcessContentUpdate( self, service_key, content_update ):
-        
-        ClientMedia.MediaSingleton.ProcessContentUpdate( self, service_key, content_update )
         
         if service_key == CC.LOCAL_FILE_SERVICE_KEY:
             

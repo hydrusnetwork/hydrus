@@ -33,6 +33,7 @@ ID_TIMER_RENDER_WAIT = wx.NewId()
 ID_TIMER_ANIMATION_BAR_UPDATE = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_CURSOR_HIDE = wx.NewId()
+ID_TIMER_HOVER_SHOW = wx.NewId()
 
 ANIMATED_SCANBAR_HEIGHT = 20
 ANIMATED_SCANBAR_CARET_WIDTH = 10
@@ -828,6 +829,8 @@ class Canvas( object ):
                     else: self._current_media = None
                     
                 
+                HydrusGlobals.pubsub.pub( 'canvas_new_display_media', self._canvas_key, self._current_display_media )
+                
                 self._DrawBackgroundBitmap()
                 
                 self._DrawCurrentMedia()
@@ -836,6 +839,13 @@ class Canvas( object ):
         
     
 class CanvasWithDetails( Canvas ):
+    
+    def __init__( self, *args, **kwargs ):
+        
+        Canvas.__init__( self, *args, **kwargs )
+        
+        self._hover_tags = FullscreenHoverFrameTags( self, self._canvas_key )
+        
     
     def _DrawBackgroundDetails( self, dc ):
         
@@ -996,7 +1006,7 @@ class CanvasPanel( Canvas, wx.Window ):
     def __init__( self, parent, page_key, file_service_key ):
         
         wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER )
-        Canvas.__init__( self, file_service_key, wx.GetApp().GetPreviewImageCache(), claim_focus = False )
+        Canvas.__init__( self, file_service_key, wx.GetApp().GetCache( 'preview' ), claim_focus = False )
         
         self._page_key = page_key
         
@@ -1043,7 +1053,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     def __init__( self, my_parent, page_key, file_service_key, media_results ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
-        CanvasWithDetails.__init__( self, file_service_key, wx.GetApp().GetFullscreenImageCache() )
+        CanvasWithDetails.__init__( self, file_service_key, wx.GetApp().GetCache( 'fullscreen' ) )
         ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self._page_key = page_key
@@ -1080,7 +1090,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     
     def _FullscreenSwitch( self ):
         
-        if self.IsFullScreen(): self.ShowFullScreen( False )
+        if self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
         else: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
         
     
@@ -1312,7 +1322,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, self._current_media )
         
-        if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False )
+        if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
         
         wx.CallAfter( self.Destroy )
         
@@ -1659,11 +1669,6 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
         HydrusGlobals.pubsub.sub( self, 'ShowPrevious', 'canvas_show_previous' )
         
     
-    def _BroadcastCurrentDisplayMedia( self ):
-        
-        HydrusGlobals.pubsub.pub( 'canvas_broadcast_current_display_media', self._canvas_key, self._current_display_media )
-        
-    
     def _ManageTags( self ):
         
         if self._current_display_media is not None:
@@ -1678,8 +1683,6 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
             
             self._ShowNext()
             
-            self._BroadcastCurrentDisplayMedia()
-            
         
     
     def ShowPrevious( self, canvas_key ):
@@ -1687,8 +1690,6 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
         if canvas_key == self._canvas_key:
             
             self._ShowPrevious()
-            
-            self._BroadcastCurrentDisplayMedia()
             
         
     
@@ -2338,6 +2339,130 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         event.Skip()
         
     
+class FullscreenHoverFrame( wx.Frame ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.NO_BORDER )
+        
+        self._canvas_key = canvas_key
+        
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        
+        tlp = self.GetParent().GetTopLevelParent()
+        
+        tlp.Bind( wx.EVT_SIZE, self.EventResize )
+        tlp.Bind( wx.EVT_MOVE, self.EventMove )
+        
+        self._timer_check_show = wx.Timer( self, id = ID_TIMER_HOVER_SHOW )
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREventCheckIfShouldShow, id = ID_TIMER_HOVER_SHOW )
+        
+        self._timer_check_show.Start( 100, wx.TIMER_CONTINUOUS )
+        
+    
+    def _SizeAndPosition( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def EventMove( self, event ):
+        
+        self._SizeAndPosition()
+        
+        event.Skip()
+        
+    
+    def EventResize( self, event ):
+        
+        self._SizeAndPosition()
+        
+        event.Skip()
+        
+    
+    def TIMEREventCheckIfShouldShow( self, event ):
+        
+        ( mouse_x, mouse_y ) = wx.GetMousePosition()
+        
+        ( my_x, my_y ) = self.GetPosition()
+        
+        ( my_width, my_height ) = self.GetSize()
+        
+        in_x = my_x <= mouse_x and mouse_x <= my_x + my_width
+        in_y = my_y <= mouse_y and mouse_y <= my_y + my_height
+        
+        a_dialog_is_open = False
+        
+        tlps = wx.GetTopLevelWindows()
+        
+        for tlp in tlps:
+            
+            if isinstance( tlp, wx.Dialog ): a_dialog_is_open = True
+            
+        
+        if in_x and in_y and not a_dialog_is_open: self.Show()
+        else: self.Hide()
+        
+        
+    
+class FullscreenHoverFrameTags( FullscreenHoverFrame ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._tags = ClientGUICommon.ListBoxTags( self )
+        
+        vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        HydrusGlobals.pubsub.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        
+    
+    def _SizeAndPosition( self ):
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        if my_height != parent_height:
+            
+            self.SetSize( ( 200, parent_height ) )
+            
+        
+        self.SetPosition( parent.ClientToScreenXY( 0, 0 ) )
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            if media is None: tags_i_want_to_display = []
+            else:
+                
+                tags_manager = media.GetTagsManager()
+                
+                siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+                
+                current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
+                pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
+                
+                tags_i_want_to_display = list( current.union( pending ) )
+                
+                tags_i_want_to_display.sort()
+                
+            
+            self._tags.SetTexts( tags_i_want_to_display )
+            
+        
+    
 class FullscreenPopout( wx.Frame ):
     
     def __init__( self, parent ):
@@ -2885,7 +3010,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
     
     def _FullscreenSwitch( self ):
         
-        if self.IsFullScreen(): self.ShowFullScreen( False )
+        if self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
         else: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
         
     
@@ -3364,7 +3489,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, self._current_media_to_rate )
         
-        if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False )
+        if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
         
         wx.CallAfter( self.Destroy )
         
@@ -3489,7 +3614,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         def __init__( self, parent ):
             
             wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER | wx.WANTS_CHARS )
-            CanvasWithDetails.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, wx.GetApp().GetFullscreenImageCache() )
+            CanvasWithDetails.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, wx.GetApp().GetCache( 'fullscreen' ) )
             
             wx.CallAfter( self.Refresh )
             

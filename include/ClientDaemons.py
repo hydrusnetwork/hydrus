@@ -39,7 +39,7 @@ def DAEMONCheckExportFolders():
     
     if not HC.options[ 'pause_export_folders_sync' ]:
         
-        export_folders = wx.GetApp().ReadDaemon( 'export_folders' )
+        export_folders = wx.GetApp().Read( 'export_folders' )
         
         for ( folder_path, details ) in export_folders.items():
             
@@ -124,7 +124,7 @@ def DAEMONCheckImportFolders():
     
     if not HC.options[ 'pause_import_folders_sync' ]:
         
-        import_folders = wx.GetApp().ReadDaemon( 'import_folders' )
+        import_folders = wx.GetApp().Read( 'import_folders' )
         
         for ( folder_path, details ) in import_folders.items():
             
@@ -246,13 +246,13 @@ def DAEMONCheckImportFolders():
     
 def DAEMONDownloadFiles():
     
-    hashes = wx.GetApp().ReadDaemon( 'downloads' )
+    hashes = wx.GetApp().Read( 'downloads' )
     
     num_downloads = len( hashes )
     
     for hash in hashes:
         
-        ( media_result, ) = wx.GetApp().ReadDaemon( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
+        ( media_result, ) = wx.GetApp().Read( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
         
         service_keys = list( media_result.GetLocationsManager().GetCurrent() )
         
@@ -281,7 +281,7 @@ def DAEMONDownloadFiles():
                         
                         num_downloads -= 1
                         
-                        wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                        wx.GetApp().WaitUntilWXThreadIdle()
                         
                         HydrusGlobals.pubsub.pub( 'downloads_status', HydrusData.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
                         
@@ -472,7 +472,7 @@ def DAEMONSynchroniseMessages():
             
             if service.CanDownload():
                 
-                serverside_message_keys = wx.GetApp().ReadDaemon( 'message_keys_to_download', service_key )
+                serverside_message_keys = wx.GetApp().Read( 'message_keys_to_download', service_key )
                 
                 if len( serverside_message_keys ) > 0:
                     
@@ -519,11 +519,11 @@ def DAEMONSynchroniseMessages():
     
     # send messages to recipients and update my status to sent/failed
     
-    messages_to_send = wx.GetApp().ReadDaemon( 'messages_to_send' )
+    messages_to_send = wx.GetApp().Read( 'messages_to_send' )
     
     for ( message_key, contacts_to ) in messages_to_send:
         
-        message = wx.GetApp().ReadDaemon( 'transport_message', message_key )
+        message = wx.GetApp().Read( 'transport_message', message_key )
         
         contact_from = message.GetContactFrom()
         
@@ -576,7 +576,7 @@ def DAEMONSynchroniseMessages():
         wx.GetApp().WriteSynchronous( 'message_statuses', message_key, local_status_updates )
         
     
-    wx.GetApp().ReadDaemon( 'status_num_inbox' )
+    wx.GetApp().Read( 'status_num_inbox' )
     
 def DAEMONSynchroniseRepositories():
     
@@ -638,6 +638,10 @@ def DAEMONSynchroniseRepositories():
                                 
                                 print( job_key.ToString() )
                                 
+                                time.sleep( 5 )
+                                
+                                job_key.Cancel()
+                                
                                 HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
                                 
                                 return
@@ -685,7 +689,7 @@ def DAEMONSynchroniseRepositories():
                         wx.GetApp().WriteSynchronous( 'service_updates', service_keys_to_service_updates )
                         
                         # this waits for pubsubs to flush, so service updates are processed
-                        wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                        wx.GetApp().WaitUntilWXThreadIdle()
                         
                         num_updates_downloaded += 1
                         
@@ -726,6 +730,10 @@ def DAEMONSynchroniseRepositories():
                                 job_key.SetVariable( 'popup_message_text_1', 'repositories were changed during processing; this job was abandoned' )
                                 
                                 print( job_key.ToString() )
+                                
+                                time.sleep( 5 )
+                                
+                                job_key.Cancel()
                                 
                                 HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
                                 
@@ -788,6 +796,10 @@ def DAEMONSynchroniseRepositories():
                                     
                                     print( job_key.ToString() )
                                     
+                                    time.sleep( 5 )
+                                    
+                                    job_key.Cancel()
+                                    
                                     HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
                                     
                                     return
@@ -806,7 +818,7 @@ def DAEMONSynchroniseRepositories():
                                 
                                 job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' )
                                 
-                                wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                                wx.GetApp().WaitUntilWXThreadIdle()
                                 
                                 before_precise = HydrusData.GetNowPrecise()
                                 
@@ -868,7 +880,7 @@ def DAEMONSynchroniseRepositories():
                         HydrusGlobals.pubsub.pub( 'notify_new_pending' )
                         
                         # this waits for pubsubs to flush, so service updates are processed
-                        wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                        wx.GetApp().WaitUntilWXThreadIdle()
                         
                         job_key.SetVariable( 'popup_message_gauge_2', ( 0, 1 ) )
                         job_key.SetVariable( 'popup_message_text_2', '' )
@@ -889,7 +901,7 @@ def DAEMONSynchroniseRepositories():
                     
                     job_key.SetVariable( 'popup_message_text_1', 'reviewing service thumbnails' )
                     
-                    thumbnail_hashes_i_should_have = wx.GetApp().ReadDaemon( 'thumbnail_hashes_i_should_have', service_key )
+                    thumbnail_hashes_i_should_have = wx.GetApp().Read( 'thumbnail_hashes_i_should_have', service_key )
                     
                     thumbnail_hashes_i_need = thumbnail_hashes_i_should_have.difference( thumbnail_hashes_i_have )
                     
@@ -919,6 +931,10 @@ def DAEMONSynchroniseRepositories():
                                 job_key.SetVariable( 'popup_message_text_1', 'repositories were changed during processing; this job was abandoned' )
                                 
                                 print( job_key.ToString() )
+                                
+                                time.sleep( 5 )
+                                
+                                job_key.Cancel()
                                 
                                 HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
                                 
@@ -955,7 +971,7 @@ def DAEMONSynchroniseRepositories():
                                 thumbnails = []
                                 
                             
-                            wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                            wx.GetApp().WaitUntilWXThreadIdle()
                             
                         
                         if len( thumbnails ) > 0: SaveThumbnails( thumbnails )
@@ -1001,17 +1017,18 @@ def DAEMONSynchroniseSubscriptions():
     
     if not HC.options[ 'pause_subs_sync' ]:
         
-        subscription_names = wx.GetApp().ReadDaemon( 'subscription_names' )
+        subscription_names = wx.GetApp().Read( 'subscription_names' )
         
         for name in subscription_names:
             
-            info = wx.GetApp().ReadDaemon( 'subscription', name )
+            info = wx.GetApp().Read( 'subscription', name )
             
             site_type = info[ 'site_type' ]
             query_type = info[ 'query_type' ]
             query = info[ 'query' ]
             frequency_type = info[ 'frequency_type' ]
             frequency = info[ 'frequency' ]
+            initial_limit = info[ 'initial_limit' ]
             advanced_tag_options = info[ 'advanced_tag_options' ]
             advanced_import_options = info[ 'advanced_import_options' ]
             last_checked = info[ 'last_checked' ]
@@ -1041,7 +1058,7 @@ def DAEMONSynchroniseSubscriptions():
                         
                         ( booru_name, booru_query_type ) = query_type
                         
-                        try: booru = wx.GetApp().ReadDaemon( 'remote_booru', booru_name )
+                        try: booru = wx.GetApp().Read( 'remote_booru', booru_name )
                         except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
                         
                         tags = query.split( ' ' )
@@ -1120,15 +1137,23 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 print( job_key.ToString() )
                                 
+                                time.sleep( 5 )
+                                
+                                job_key.Cancel()
+                                
                                 HydrusGlobals.pubsub.pub( 'notify_restart_subs_sync_daemon' )
                                 
                                 return
                                 
                             
                         
+                        if last_checked == 0 and len( all_url_args ) > initial_limit: break
+                        
                         downloaders_to_remove = []
                         
                         for downloader in downloaders:
+                            
+                            if last_checked == 0 and len( all_url_args ) > initial_limit: break
                             
                             page_of_url_args = downloader.GetAnotherPage()
                             
@@ -1186,6 +1211,10 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 print( job_key.ToString() )
                                 
+                                time.sleep( 5 )
+                                
+                                job_key.Cancel()
+                                
                                 HydrusGlobals.pubsub.pub( 'notify_restart_subs_sync_daemon' )
                                 
                                 return
@@ -1210,7 +1239,7 @@ def DAEMONSynchroniseSubscriptions():
                                 job_key.SetVariable( 'popup_message_files', job_key_s_h )
                                 
                             
-                            ( status, hash ) = wx.GetApp().ReadDaemon( 'url_status', url )
+                            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
                             
                             if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
                             
@@ -1279,6 +1308,7 @@ def DAEMONSynchroniseSubscriptions():
                             info[ 'query' ] = query
                             info[ 'frequency_type' ] = frequency_type
                             info[ 'frequency' ] = frequency
+                            info[ 'initial_limit' ] = initial_limit
                             info[ 'advanced_tag_options' ] = advanced_tag_options
                             info[ 'advanced_import_options' ] = advanced_import_options
                             info[ 'last_checked' ] = last_checked
@@ -1288,7 +1318,7 @@ def DAEMONSynchroniseSubscriptions():
                             wx.GetApp().WriteSynchronous( 'subscription', name, info )
                             
                         
-                        wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                        wx.GetApp().WaitUntilWXThreadIdle()
                         
                         time.sleep( 3 )
                         
@@ -1329,6 +1359,7 @@ def DAEMONSynchroniseSubscriptions():
                 info[ 'query' ] = query
                 info[ 'frequency_type' ] = frequency_type
                 info[ 'frequency' ] = frequency
+                info[ 'initial_limit' ] = initial_limit
                 info[ 'advanced_tag_options' ] = advanced_tag_options
                 info[ 'advanced_import_options' ] = advanced_import_options
                 info[ 'last_checked' ] = last_checked

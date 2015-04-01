@@ -185,7 +185,7 @@ class LocalBooruCache( object ):
             
             info[ 'hashes_set' ] = set( hashes )
             
-            media_results = wx.GetApp().ReadDaemon( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, hashes )
+            media_results = wx.GetApp().Read( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, hashes )
             
             info[ 'media_results' ] = media_results
             

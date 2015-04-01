@@ -11,7 +11,7 @@ import HydrusData
 import HydrusExceptions
 import re
 import ClientSearch
-import ClientConstants
+import ClientConstants as CC
 import HydrusGlobals
 
 # important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
@@ -74,7 +74,7 @@ def CensorshipMatch( tag, censorship ):
     if ':' in censorship:
         
         if censorship == ':': return ':' in tag # ':' - all namespaced tags
-        else: return tag == censorship
+        else: return tag.startswith( censorship )
         
     else:
         
@@ -301,7 +301,7 @@ class TagsManagerSimple( object ):
         
         if self._combined_namespaces_cache is None:
     
-            combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ]
+            combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
             
             combined_current = combined_statuses_to_tags[ HC.CURRENT ]
             combined_pending = combined_statuses_to_tags[ HC.PENDING ]
@@ -316,7 +316,7 @@ class TagsManagerSimple( object ):
     
     def GetComparableNamespaceSlice( self, namespaces, collapse_siblings = False ):
         
-        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
@@ -347,7 +347,7 @@ class TagsManagerSimple( object ):
     
     def GetNamespaceSlice( self, namespaces, collapse_siblings = False ):
         
-        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
@@ -381,13 +381,13 @@ class TagsManager( TagsManagerSimple ):
         
         for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
             
-            if service_key == ClientConstants.COMBINED_TAG_SERVICE_KEY: continue
+            if service_key == CC.COMBINED_TAG_SERVICE_KEY: continue
             
             combined_statuses_to_tags[ HC.CURRENT ].update( statuses_to_tags[ HC.CURRENT ] )
             combined_statuses_to_tags[ HC.PENDING ].update( statuses_to_tags[ HC.PENDING ] )
             
         
-        self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
+        self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
         
         self._combined_namespaces_cache = None
         
@@ -405,14 +405,14 @@ class TagsManager( TagsManagerSimple ):
             
         
     
-    def GetCurrent( self, service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY ):
+    def GetCurrent( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.CURRENT ] )
         
     
-    def GetDeleted( self, service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY ):
+    def GetDeleted( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
@@ -431,14 +431,14 @@ class TagsManager( TagsManagerSimple ):
         return num_tags
         
     
-    def GetPending( self, service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY ):
+    def GetPending( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.PENDING ] )
         
     
-    def GetPetitioned( self, service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY ):
+    def GetPetitioned( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
@@ -451,7 +451,7 @@ class TagsManager( TagsManagerSimple ):
     
     def HasTag( self, tag ):
         
-        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ ClientConstants.COMBINED_TAG_SERVICE_KEY ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
         return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
         
@@ -535,7 +535,7 @@ class TagCensorshipManager( object ):
         
         for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
             
-            for service_key_lookup in ( ClientConstants.COMBINED_TAG_SERVICE_KEY, service_key ):
+            for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
                 
                 if service_key_lookup in self._service_keys_to_predicates:
                     
@@ -560,7 +560,7 @@ class TagCensorshipManager( object ):
     
     def FilterTags( self, service_key, tags ):
         
-        for service_key in ( ClientConstants.COMBINED_TAG_SERVICE_KEY, service_key ):
+        for service_key in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
             
             if service_key in self._service_keys_to_predicates:
                 
@@ -596,7 +596,7 @@ class TagParentsManager( object ):
         
         for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
             
-            if service_key == ClientConstants.COMBINED_TAG_SERVICE_KEY: continue
+            if service_key == CC.COMBINED_TAG_SERVICE_KEY: continue
             
             for ( status, pairs ) in statuses_to_pairs.items():
                 
@@ -626,7 +626,7 @@ class TagParentsManager( object ):
             combined_pairs_flat.update( pairs_flat )
             
         
-        service_keys_to_pairs_flat[ ClientConstants.COMBINED_TAG_SERVICE_KEY ] = combined_pairs_flat
+        service_keys_to_pairs_flat[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_pairs_flat
         
         #
         
@@ -638,7 +638,7 @@ class TagParentsManager( object ):
     def ExpandPredicates( self, service_key, predicates ):
         
         # for now -- we will make an option, later
-        service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY
+        service_key = CC.COMBINED_TAG_SERVICE_KEY
         
         results = []
         
@@ -672,7 +672,7 @@ class TagParentsManager( object ):
         with self._lock:
             
             # for now -- we will make an option, later
-            service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
             
             tags_results = set( tags )
             
@@ -687,7 +687,7 @@ class TagParentsManager( object ):
         with self._lock:
             
             # for now -- we will make an option, later
-            service_key = ClientConstants.COMBINED_TAG_SERVICE_KEY
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
             
             return self._service_keys_to_children_to_parents[ service_key ][ tag ]
             

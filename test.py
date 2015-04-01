@@ -12,11 +12,11 @@ from include import HydrusSessions
 from include import HydrusTags
 from include import TestClientConstants
 from include import TestClientDaemons
+from include import TestClientDownloading
 from include import TestConstants
 from include import TestDialogs
 from include import TestDB
 from include import TestFunctions
-from include import TestHydrusDownloading
 from include import TestHydrusEncryption
 from include import TestHydrusImageHandling
 from include import TestHydrusNATPunch
@@ -44,6 +44,8 @@ class App( wx.App ):
         def show_text( text ): pass
         
         HydrusData.ShowText = show_text
+        
+        self._http = HydrusNetworking.HTTPConnectionManager()
         
         self._reads = {}
         
@@ -94,7 +96,7 @@ class App( wx.App ):
         if run_all or only_run == 'daemons': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
         if run_all or only_run == 'dialogs': suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
         if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
-        if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusDownloading ) )
+        if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
         if run_all or only_run == 'encryption': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusEncryption ) )
         if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
         if run_all or only_run == 'image': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusImageHandling ) )
@@ -116,6 +118,10 @@ class App( wx.App ):
         return True
         
     
+    def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
+    
+    def GetHTTP( self ): return self._http
+    
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
     def GetWrite( self, name ):
@@ -129,9 +135,9 @@ class App( wx.App ):
     
     def Read( self, name, *args, **kwargs ): return self._reads[ name ]
     
-    def ReadDaemon( self, name, *args, **kwargs ): return self.Read( name )
-    
     def ResetIdleTimer( self ): pass
+    
+    def SetHTTP( self, http ): self._http = http
     
     def SetRead( self, name, value ): self._reads[ name ] = value
     

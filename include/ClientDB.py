@@ -1931,14 +1931,14 @@ class ServiceDB( MessageDB ):
                 else: query_hash_ids.intersection_update( wildcard_query_hash_ids )
                 
             
-            if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
-            
         else:
             
             if file_service_key != CC.COMBINED_FILE_SERVICE_KEY: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
             elif tag_service_key != CC.COMBINED_TAG_SERVICE_KEY: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( tag_service_id, HC.CURRENT, HC.PENDING ) ) }
             else: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
             
+        
+        if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
         
         #
         
@@ -5863,6 +5863,19 @@ class DB( ServiceDB ):
             self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
+        if version == 151:
+            
+            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) ).fetchall()
+            
+            for ( dump_type, dump_name, dump ) in results:
+                
+                dump[ 'initial_limit' ] = 500
+                
+                self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
+                
+            
+            
+        
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HydrusGlobals.is_db_updated = True
@@ -6170,16 +6183,6 @@ class DB( ServiceDB ):
         HydrusThreading.DAEMONWorker( 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )
         
         HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
-        
-    
-    def WaitUntilGoodTimeToUseDBThread( self ):
-        
-        while True:
-            
-            if HydrusGlobals.shutdown: raise Exception( 'Client shutting down!' )
-            elif self._jobs.empty() and not self._currently_doing_job: return
-            else: time.sleep( 0.00001 )
-            
         
     
     def Write( self, action, priority, synchronous, *args, **kwargs ):

@@ -275,7 +275,7 @@ class WebSessionManagerClient( object ):
             
             if name == 'hentai foundry':
                 
-                ( response_gumpf, cookies ) = HydrusGlobals.http.Request( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
+                ( response_gumpf, cookies ) = wx.GetApp().DoHTTP( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
                 
                 expires = now + 60 * 60
                 
@@ -300,7 +300,7 @@ class WebSessionManagerClient( object ):
                 headers = {}
                 headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
                 
-                ( response_gumpf, cookies ) = HydrusGlobals.http.Request( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+                ( response_gumpf, cookies ) = wx.GetApp().DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
                 
                 # _ only given to logged in php sessions
                 if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Pixiv login credentials not accepted!' )

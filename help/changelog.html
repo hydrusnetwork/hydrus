@@ -8,6 +8,27 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 152</h3></li>
+				<ul>
+					<li>added prototype hover frame for tags in media view</li>
+					<li>hover frame shouldn't show when a dialog is open</li>
+					<li>manage tags dialog launched from media viewer now has a delete button</li>
+					<li>subscriptions now have an 'initial limit' variable, defaulting to 500, that limits the total number of files the subscription daemon will look for on the initial sync</li>
+					<li>added a similar file limit spinctrl to gallery download pages</li>
+					<li>updated layout of import files dialog</li>
+					<li>cleaned up some ugly global variable scope stuff</li>
+					<li>fixed initialisation of advanced import options in file import dialog</li>
+					<li>made a good start to better object serialisation</li>
+					<li>subscription and repository sync daemon jobs that stop due to a dialog-driven change during processing will now cancel themselves after five seconds</li>
+					<li>fixed namespace (e.g. 'series:') tag censorship</li>
+					<li>fixed the fullscreen switch bug that was breaking an (initially fullscreen)->(non fullscreen) media viewer</li>
+					<li>fixed some search logic (some system predicates were not firing when there were no regular tags present)</li>
+					<li>removed some artificial delays on daemon db access, let's see if it chokes anything</li>
+					<li>harmonised a bunch of client and server controller code</li>
+					<li>created a common controller class and merged a lot of the client and server controller code into it</li>
+					<li>general code cleanup</li>
+					<li>more general code cleanup</li>
+				</ul>
 				<li><h3>version 151</h3></li>
 				<ul>
 					<li>added a possible solution to the manage tags dialog next/previous buttons crash</li>
