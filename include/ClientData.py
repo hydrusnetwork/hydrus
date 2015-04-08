@@ -520,33 +520,7 @@ class FileSystemPredicates( object ):
         self._local = False
         self._not_local = False
         
-        self._min_num_tags = None
-        self._num_tags = None
-        self._max_num_tags = None
-        
-        self._hash = None
-        self._min_size = None
-        self._size = None
-        self._max_size = None
-        self._mimes = None
-        self._min_timestamp = None
-        self._max_timestamp = None
-        self._min_width = None
-        self._width = None
-        self._max_width = None
-        self._min_height = None
-        self._height = None
-        self._max_height = None
-        self._min_ratio = None
-        self._ratio = None
-        self._max_ratio = None
-        self._min_num_words = None
-        self._num_words = None
-        self._max_num_words = None
-        self._min_duration = None
-        self._duration = None
-        self._max_duration = None
-        
+        self._common_info = {}
         
         self._limit = None
         self._similar_to = None
@@ -571,7 +545,7 @@ class FileSystemPredicates( object ):
                 
                 hash = info
                 
-                self._hash = hash
+                self._common_info[ 'hash' ] = hash
                 
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_AGE:
@@ -584,12 +558,12 @@ class FileSystemPredicates( object ):
                 
                 # this is backwards because we are talking about age, not timestamp
                 
-                if operator == '<': self._min_timestamp = now - age
-                elif operator == '>': self._max_timestamp = now - age
+                if operator == '<': self._common_info[ 'min_timestamp' ] = now - age
+                elif operator == '>': self._common_info[ 'max_timestamp' ] = now - age
                 elif operator == u'\u2248':
                     
-                    self._min_timestamp = now - int( age * 1.15 )
-                    self._max_timestamp = now - int( age * 0.85 )
+                    self._common_info[ 'min_timestamp' ] = now - int( age * 1.15 )
+                    self._common_info[ 'max_timestamp' ] = now - int( age * 0.85 )
                     
                 
             
@@ -599,23 +573,23 @@ class FileSystemPredicates( object ):
                 
                 if type( mimes ) == int: mimes = ( mimes, )
                 
-                self._mimes = mimes
+                self._common_info[ 'mimes' ] = mimes
                 
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_DURATION:
                 
                 ( operator, duration ) = info
                 
-                if operator == '<': self._max_duration = duration
-                elif operator == '>': self._min_duration = duration
-                elif operator == '=': self._duration = duration
+                if operator == '<': self._common_info[ 'max_duration' ] = duration
+                elif operator == '>': self._common_info[ 'min_duration' ] = duration
+                elif operator == '=': self._common_info[ 'duration' ] = duration
                 elif operator == u'\u2248':
                     
-                    if duration == 0: self._duration = 0
+                    if duration == 0: self._common_info[ 'duration' ] = 0
                     else:
                         
-                        self._min_duration = int( duration * 0.85 )
-                        self._max_duration = int( duration * 1.15 )
+                        self._common_info[ 'min_duration' ] = int( duration * 0.85 )
+                        self._common_info[ 'max_duration' ] = int( duration * 1.15 )
                         
                     
                 
@@ -631,11 +605,11 @@ class FileSystemPredicates( object ):
                 
                 ( operator, ratio_width, ratio_height ) = info
                 
-                if operator == '=': self._ratio = ( ratio_width, ratio_height )
+                if operator == '=': self._common_info[ 'ratio' ] = ( ratio_width, ratio_height )
                 elif operator == u'\u2248':
                     
-                    self._min_ratio = ( ratio_width * 0.85, ratio_height )
-                    self._max_ratio = ( ratio_width * 1.15, ratio_height )
+                    self._common_info[ 'min_ratio' ] = ( ratio_width * 0.85, ratio_height )
+                    self._common_info[ 'max_ratio' ] = ( ratio_width * 1.15, ratio_height )
                     
                 
             
@@ -645,13 +619,13 @@ class FileSystemPredicates( object ):
                 
                 size = size * unit
                 
-                if operator == '<': self._max_size = size
-                elif operator == '>': self._min_size = size
-                elif operator == '=': self._size = size
+                if operator == '<': self._common_info[ 'max_size' ] = size
+                elif operator == '>': self._common_info[ 'min_size' ] = size
+                elif operator == '=': self._common_info[ 'size' ] = size
                 elif operator == u'\u2248':
                     
-                    self._min_size = int( size * 0.85 )
-                    self._max_size = int( size * 1.15 )
+                    self._common_info[ 'min_size' ] = int( size * 0.85 )
+                    self._common_info[ 'max_size' ] = int( size * 1.15 )
                     
                 
             
@@ -659,26 +633,42 @@ class FileSystemPredicates( object ):
                 
                 ( operator, num_tags ) = info
                 
-                if operator == '<': self._max_num_tags = num_tags
-                elif operator == '=': self._num_tags = num_tags
-                elif operator == '>': self._min_num_tags = num_tags
+                if operator == '<': self._common_info[ 'max_num_tags' ] = num_tags
+                elif operator == '=': self._common_info[ 'num_tags' ] = num_tags
+                elif operator == '>': self._common_info[ 'min_num_tags' ] = num_tags
                 
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_WIDTH:
                 
                 ( operator, width ) = info
                 
-                if operator == '<': self._max_width = width
-                elif operator == '>': self._min_width = width
-                elif operator == '=': self._width = width
+                if operator == '<': self._common_info[ 'max_width' ] = width
+                elif operator == '>': self._common_info[ 'min_width' ] = width
+                elif operator == '=': self._common_info[ 'width' ] = width
                 elif operator == u'\u2248':
                     
-                    if width == 0: self._width = 0
+                    if width == 0: self._common_info[ 'width' ] = 0
                     else:
                         
-                        self._min_width = int( width * 0.85 )
-                        self._max_width = int( width * 1.15 )
+                        self._common_info[ 'min_width' ] = int( width * 0.85 )
+                        self._common_info[ 'max_width' ] = int( width * 1.15 )
                         
+                    
+                
+            
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_PIXELS:
+                
+                ( operator, num_pixels, unit ) = info
+                
+                num_pixels = num_pixels * unit
+                
+                if operator == '<': self._common_info[ 'max_num_pixels' ] = num_pixels
+                elif operator == '>': self._common_info[ 'min_num_pixels' ] = num_pixels
+                elif operator == '=': self._common_info[ 'num_pixels' ] = num_pixels
+                elif operator == u'\u2248':
+                    
+                    self._common_info[ 'min_num_pixels' ] = int( num_pixels * 0.85 )
+                    self._common_info[ 'max_num_pixels' ] = int( num_pixels * 1.15 )
                     
                 
             
@@ -686,16 +676,16 @@ class FileSystemPredicates( object ):
                 
                 ( operator, height ) = info
                 
-                if operator == '<': self._max_height = height
-                elif operator == '>': self._min_height = height
-                elif operator == '=': self._height = height
+                if operator == '<': self._common_info[ 'max_height' ] = height
+                elif operator == '>': self._common_info[ 'min_height' ] = height
+                elif operator == '=': self._common_info[ 'height' ] = height
                 elif operator == u'\u2248':
                     
-                    if height == 0: self._height = 0
+                    if height == 0: self._common_info[ 'height' ] = 0
                     else:
                         
-                        self._min_height = int( height * 0.85 )
-                        self._max_height = int( height * 1.15 )
+                        self._common_info[ 'min_height' ] = int( height * 0.85 )
+                        self._common_info[ 'max_height' ] = int( height * 1.15 )
                         
                     
                 
@@ -704,16 +694,16 @@ class FileSystemPredicates( object ):
                 
                 ( operator, num_words ) = info
                 
-                if operator == '<': self._max_num_words = num_words
-                elif operator == '>': self._min_num_words = num_words
-                elif operator == '=': self._num_words = num_words
+                if operator == '<': self._common_info[ 'max_num_words' ] = num_words
+                elif operator == '>': self._common_info[ 'min_num_words' ] = num_words
+                elif operator == '=': self._common_info[ 'num_words' ] = num_words
                 elif operator == u'\u2248':
                     
-                    if num_words == 0: self._num_words = 0
+                    if num_words == 0: self._common_info[ 'num_words' ] = 0
                     else:
                         
-                        self._min_num_words = int( num_words * 0.85 )
-                        self._max_num_words = int( num_words * 1.15 )
+                        self._common_info[ 'min_num_words' ] = int( num_words * 0.85 )
+                        self._common_info[ 'max_num_words' ] = int( num_words * 1.15 )
                         
                     
                 
@@ -752,11 +742,9 @@ class FileSystemPredicates( object ):
     
     def GetFileServiceInfo( self ): return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
     
-    def GetInfo( self ): return ( self._hash, self._min_size, self._size, self._max_size, self._mimes, self._min_timestamp, self._max_timestamp, self._min_width, self._width, self._max_width, self._min_height, self._height, self._max_height, self._min_ratio, self._ratio, self._max_ratio, self._min_num_words, self._num_words, self._max_num_words, self._min_duration, self._duration, self._max_duration )
+    def GetSimpleInfo( self ): return self._common_info
     
     def GetLimit( self ): return self._limit
-    
-    def GetNumTagsInfo( self ): return ( self._min_num_tags, self._num_tags, self._max_num_tags )
     
     def GetRatingsPredicates( self ): return self._ratings_predicates
     

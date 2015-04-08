@@ -55,7 +55,7 @@ def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
     if ShouldHaveAnimationBar( media ): canvas_height -= ANIMATED_SCANBAR_HEIGHT
     
-    if media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: canvas_width -= 2
+    if media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: canvas_width -= 10
     
     width_zoom = canvas_width / float( media_width )
     
@@ -534,15 +534,6 @@ class Canvas( object ):
             
         
     
-    def _GetCollectionsString( self ): return ''
-    
-    def _GetInfoString( self ):
-        
-        info_string = self._current_media.GetPrettyInfo() + ' | ' + self._current_media.GetPrettyAge()
-        
-        return info_string
-        
-    
     def _GetIndexString( self ): return ''
     
     def _GetMediaContainerSizeAndPosition( self ):
@@ -560,6 +551,21 @@ class Canvas( object ):
         new_position = ( x_offset, y_offset )
         
         return ( new_size, new_position )
+        
+    
+    def _HydrusShouldNotProcessInput( self ):
+        
+        if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
+            
+            ( x, y ) = self._media_container.GetPosition()
+            ( width, height ) = self._media_container.GetSize()
+            
+            ( mouse_x, mouse_y ) = self.ScreenToClient( wx.GetMousePosition() )
+            
+            if mouse_x > x and mouse_x < x + width and mouse_y > y and mouse_y < y + height: return True
+            
+        
+        return False
         
     
     def _ManageRatings( self ):
@@ -613,20 +619,7 @@ class Canvas( object ):
             else: self._current_zoom = 1.0
             
         
-    
-    def _ShouldSkipInputDueToFlash( self ):
-        
-        if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
-            
-            ( x, y ) = self._media_container.GetPosition()
-            ( width, height ) = self._media_container.GetSize()
-            
-            ( mouse_x, mouse_y ) = self.ScreenToClient( wx.GetMousePosition() )
-            
-            if mouse_x > x and mouse_x < x + width and mouse_y > y and mouse_y < y + height: return True
-            
-        
-        return False
+        HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         
     
     def _SizeAndPositionMediaContainer( self ):
@@ -673,6 +666,8 @@ class Canvas( object ):
                         
                         self._current_zoom = zoom
                         
+                        HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+                        
                         self._DrawBackgroundBitmap()
                         
                         self._DrawCurrentMedia()
@@ -709,6 +704,8 @@ class Canvas( object ):
                         
                         self._current_zoom = zoom
                         
+                        HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+                        
                         self._DrawBackgroundBitmap()
                         
                         self._DrawCurrentMedia()
@@ -740,6 +737,8 @@ class Canvas( object ):
                 self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
                 
                 self._current_zoom = new_zoom
+                
+                HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
                 
                 self._DrawBackgroundBitmap()
                 
@@ -782,6 +781,11 @@ class Canvas( object ):
             
         
         event.Skip()
+        
+    
+    def HydrusShouldNotProcessInput( self ):
+        
+        return self._HydrusShouldNotProcessInput()
         
     
     def KeepCursorAlive( self ): pass
@@ -830,6 +834,7 @@ class Canvas( object ):
                     
                 
                 HydrusGlobals.pubsub.pub( 'canvas_new_display_media', self._canvas_key, self._current_display_media )
+                HydrusGlobals.pubsub.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
                 
                 self._DrawBackgroundBitmap()
                 
@@ -844,6 +849,7 @@ class CanvasWithDetails( Canvas ):
         
         Canvas.__init__( self, *args, **kwargs )
         
+        self._hover_commands = FullscreenHoverFrameCommands( self, self._canvas_key )
         self._hover_tags = FullscreenHoverFrameTags( self, self._canvas_key )
         
     
@@ -928,9 +934,9 @@ class CanvasWithDetails( Canvas ):
             
             top_right_strings = []
             
-            collections_string = self._GetCollectionsString()
+            title_string = self._current_display_media.GetTitleString()
             
-            if len( collections_string ) > 0: top_right_strings.append( collections_string )
+            if len( title_string ) > 0: top_right_strings.append( title_string )
             
             ( local_ratings, remote_ratings ) = self._current_display_media.GetRatings()
             
@@ -1094,111 +1100,6 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         else: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
         
     
-    def _GetCollectionsString( self ):
-        
-        collections_string = ''
-        
-        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
-        
-        namespaces = self._current_media.GetDisplayMedia().GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
-        
-        creators = namespaces[ 'creator' ]
-        series = namespaces[ 'series' ]
-        titles = namespaces[ 'title' ]
-        volumes = namespaces[ 'volume' ]
-        chapters = namespaces[ 'chapter' ]
-        pages = namespaces[ 'page' ]
-        
-        if len( creators ) > 0:
-            
-            creators = siblings_manager.CollapseNamespacedTags( 'creator', creators )
-            
-            collections_string_append = ', '.join( creators )
-            
-            if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
-            else: collections_string = collections_string_append
-            
-        
-        if len( series ) > 0:
-            
-            series = siblings_manager.CollapseNamespacedTags( 'series', series )
-            
-            collections_string_append = ', '.join( series )
-            
-            if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
-            else: collections_string = collections_string_append
-            
-        
-        if len( titles ) > 0:
-            
-            titles = siblings_manager.CollapseNamespacedTags( 'title', titles )
-            
-            collections_string_append = ', '.join( titles )
-            
-            if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
-            else: collections_string = collections_string_append
-            
-        
-        if len( volumes ) > 0:
-            
-            if len( volumes ) == 1:
-                
-                ( volume, ) = volumes
-                
-                collections_string_append = 'volume ' + HydrusData.ToString( volume )
-                
-            else:
-                
-                volumes_sorted = HydrusTags.SortTags( volumes )
-                
-                collections_string_append = 'volumes ' + HydrusData.ToString( volumes_sorted[0] ) + '-' + HydrusData.ToString( volumes_sorted[-1] )
-                
-            
-            if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
-            else: collections_string = collections_string_append
-            
-        
-        if len( chapters ) > 0:
-            
-            if len( chapters ) == 1:
-                
-                ( chapter, ) = chapters
-                
-                collections_string_append = 'chapter ' + HydrusData.ToString( chapter )
-                
-            else:
-                
-                chapters_sorted = HydrusTags.SortTags( chapters )
-                
-                collections_string_append = 'chapters ' + HydrusData.ToString( chapters_sorted[0] ) + '-' + HydrusData.ToString( chapters_sorted[-1] )
-                
-            
-            if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
-            else: collections_string = collections_string_append
-            
-        
-        if len( pages ) > 0:
-            
-            if len( pages ) == 1:
-                
-                ( page, ) = pages
-                
-                collections_string_append = 'page ' + HydrusData.ToString( page )
-                
-            else:
-                
-                pages_sorted = HydrusTags.SortTags( pages )
-                
-                collections_string_append = 'pages ' + HydrusData.ToString( pages_sorted[0] ) + '-' + HydrusData.ToString( pages_sorted[-1] )
-                
-            
-            if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
-            else: collections_string = collections_string_append
-            
-        
-        return collections_string
-        
-    
     def _GetInfoString( self ):
         
         info_string = self._current_media.GetPrettyInfo() + ' | ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) + ' | ' + self._current_media.GetPrettyAge()
@@ -1208,7 +1109,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     
     def _GetIndexString( self ):
         
-        index_string = HydrusData.ConvertIntToPrettyString( self._sorted_media.index( self._current_media ) + 1 ) + os.path.sep + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) )
+        index_string = HydrusData.ConvertIntToPrettyString( self._sorted_media.index( self._current_media ) + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) )
         
         return index_string
         
@@ -1274,6 +1175,8 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         if self.HasNoMedia(): self.EventClose( None )
         elif self.HasMedia( self._current_media ):
             
+            HydrusGlobals.pubsub.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
+            
             self._DrawBackgroundBitmap()
             
             self._DrawCurrentMedia()
@@ -1296,6 +1199,8 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         if page_key == self._page_key:
             
             ClientMedia.ListeningMediaList.AddMediaResults( self, media_results )
+            
+            HydrusGlobals.pubsub.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
             self._DrawBackgroundBitmap()
             
@@ -1367,9 +1272,9 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         ( client_x, client_y ) = self.GetClientSize()
         
-        if x < 20 or x > client_x - 20 or y < 20 or y > client_y -20:
+        if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES: # to stop warping over flash
             
-            try:
+            if x < 20 or x > client_x - 20 or y < 20 or y > client_y -20:
                 
                 better_x = x
                 better_y = y
@@ -1380,14 +1285,14 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
                 if x > client_x - 20: better_x = client_x - 20
                 if y > client_y - 20: better_y = client_y - 20
                 
-                if HC.PLATFORM_OSX: raise Exception() # can't warppointer in os x
+                if not HC.PLATFORM_OSX: # can't warppointer in os x
+                    
+                    self.WarpPointer( better_x, better_y )
+                    
+                    x = better_x
+                    y = better_y
+                    
                 
-                self.WarpPointer( better_x, better_y )
-                
-                x = better_x
-                y = better_y
-                
-            except: pass
             
         
         self._last_drag_coordinates = ( x, y )
@@ -1416,6 +1321,8 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         if self.HasNoMedia(): self.EventClose( None )
         elif self.HasMedia( self._current_media ):
+            
+            HydrusGlobals.pubsub.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
             self._DrawBackgroundBitmap()
             
@@ -1474,7 +1381,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
     def EventBack( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             if self._current_media == self._GetFirst(): return
@@ -1500,7 +1407,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
     def EventClose( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             if len( self._kept ) > 0 or len( self._deleted ) > 0:
@@ -1544,7 +1451,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
     def EventCharHook( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
         
             ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
@@ -1576,13 +1483,13 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
     def EventDelete( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else: self._Delete()
         
     
     def EventMouseKeep( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             if event.ShiftDown(): self.EventDragBegin( event )
@@ -1592,7 +1499,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
     def EventMenu( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -1629,7 +1536,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
     def EventMouseWheel( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             if event.CmdDown():
@@ -1642,7 +1549,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
     def EventSkip( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             if self._current_media == self._GetLast(): self.EventClose( event )
@@ -1656,7 +1563,12 @@ class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
         
         CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_key, media_results )
         
-        FullscreenPopoutFilterInbox( self )
+        self._hover_commands.AddCommand( 'archive', self.EventButtonKeep )
+        self._hover_commands.AddCommand( 'delete', self.EventButtonDelete )
+        self._hover_commands.AddCommand( 'back', self.EventButtonBack )
+        self._hover_commands.AddCommand( 'skip', self.EventButtonSkip )
+        self._hover_commands.AddCommand( 'done', self.EventButtonDone )
+        self._hover_commands.AddCommand( 'switch fullscreen', self.EventFullscreenSwitch )
         
     
 class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
@@ -1669,12 +1581,44 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
         HydrusGlobals.pubsub.sub( self, 'ShowPrevious', 'canvas_show_previous' )
         
     
+    def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+            
+        
+        self.SetFocus() # annoying bug because of the modal dialog
+        
+    
     def _ManageTags( self ):
         
         if self._current_display_media is not None:
             
             with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key ) as dlg: dlg.ShowModal()
             
+        
+    
+    def EventArchive( self, event ):
+        
+        self._Archive()
+        
+    
+    def EventDelete( self, event ):
+        
+        self._Delete()
+        
+    
+    def EventNext( self, event ):
+        
+        self._ShowNext()
+        
+    
+    def EventPrevious( self, event ):
+        
+        self._ShowPrevious()
         
     
     def ShowNext( self, canvas_key ):
@@ -1714,10 +1658,15 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         if first_hash is None: self.SetMedia( self._GetFirst() )
         else: self.SetMedia( self._GetMedia( { first_hash } )[0] )
         
+        self._hover_commands.AddCommand( 'previous', self.EventPrevious )
+        self._hover_commands.AddCommand( 'archive', self.EventArchive )
+        self._hover_commands.AddCommand( 'delete', self.EventDelete )
+        self._hover_commands.AddCommand( 'close', self.EventClose )
+        self._hover_commands.AddCommand( 'switch fullscreen', self.EventFullscreenSwitch )
+        self._hover_commands.AddCommand( 'next', self.EventNext )
+        
         HydrusGlobals.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
-    
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -1731,16 +1680,6 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
         HydrusGlobals.pubsub.pub( 'clipboard', 'text', path )
-        
-    
-    def _Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
-            
-        
-        self.SetFocus() # annoying bug because of the modal dialog
         
     
     def _Inbox( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
@@ -1772,7 +1711,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     
     def EventCharHook( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
@@ -1803,7 +1742,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     def EventMenu( self, event ):
         
         # is None bit means this is prob from a keydown->menu event
-        if event.GetEventObject() is None and self._ShouldSkipInputDueToFlash(): event.Skip()
+        if event.GetEventObject() is None and self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -1852,7 +1791,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     
     def EventMouseWheel( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             if event.CmdDown():
@@ -1993,12 +1932,16 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         self.SetMedia( self._GetFirst() )
         
-        FullscreenPopoutFilterCustom( self )
+        self._hover_commands.AddCommand( 'previous', self.EventPrevious )
+        self._hover_commands.AddCommand( 'archive', self.EventArchive )
+        self._hover_commands.AddCommand( 'delete', self.EventDelete )
+        self._hover_commands.AddCommand( 'edit actions', self.EventActions )
+        self._hover_commands.AddCommand( 'done', self.EventClose )
+        self._hover_commands.AddCommand( 'switch fullscreen', self.EventFullscreenSwitch )
+        self._hover_commands.AddCommand( 'next', self.EventNext )
         
         HydrusGlobals.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
-    
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -2014,16 +1957,6 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         HydrusGlobals.pubsub.pub( 'clipboard', 'text', path )
         
     
-    def _Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
-            
-        
-        self.SetFocus() # annoying bug because of the modal dialog
-        
-    
     def _Inbox( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def EventActions( self, event ):
@@ -2036,7 +1969,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
     
     def EventCharHook( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
@@ -2192,7 +2125,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
     def EventMenu( self, event ):
         
         # is None bit means this is prob from a keydown->menu event
-        if event.GetEventObject() is None and self._ShouldSkipInputDueToFlash(): event.Skip()
+        if event.GetEventObject() is None and self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -2232,7 +2165,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
     
     def EventMouseWheel( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             if event.CmdDown():
@@ -2347,8 +2280,8 @@ class FullscreenHoverFrame( wx.Frame ):
         
         self._canvas_key = canvas_key
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-        
+        #self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        self.SetBackgroundColour( wx.WHITE )
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
         tlp = self.GetParent().GetTopLevelParent()
@@ -2402,9 +2335,127 @@ class FullscreenHoverFrame( wx.Frame ):
             if isinstance( tlp, wx.Dialog ): a_dialog_is_open = True
             
         
-        if in_x and in_y and not a_dialog_is_open: self.Show()
+        can_show = not self.GetParent().HydrusShouldNotProcessInput()
+        
+        if in_x and in_y and can_show and not a_dialog_is_open: self.Show()
         else: self.Hide()
         
+        
+    
+class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        
+        self._current_media = None
+        self._current_zoom = 1.0
+        self._current_index_string = ''
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._title_text = wx.StaticText( self, label = 'title' )
+        self._info_text = wx.StaticText( self, label = 'info' )
+        self._button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        vbox.AddF( self._title_text, CC.FLAGS_CENTER )
+        vbox.AddF( self._info_text, CC.FLAGS_CENTER )
+        vbox.AddF( self._button_hbox, CC.FLAGS_CENTER )
+        
+        self.SetSizer( vbox )
+        
+        HydrusGlobals.pubsub.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        HydrusGlobals.pubsub.sub( self, 'SetCurrentZoom', 'canvas_new_zoom' )
+        HydrusGlobals.pubsub.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        
+    
+    def _ResetText( self ):
+        
+        if self._current_media is None:
+            
+            self._title_text.Hide()
+            self._info_text.Hide()
+            
+        else:
+            
+            label = self._current_media.GetTitleString()
+            
+            if len( label ) > 0:
+                
+                self._title_text.SetLabel( label )
+                
+                self._title_text.Show()
+                
+            else: self._title_text.Hide()
+            
+            label = self._current_media.GetPrettyInfo() + ' | ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) + ' | ' + self._current_media.GetPrettyAge() + ' | ' + self._current_index_string
+            
+            self._info_text.SetLabel( label )
+            
+            self._info_text.Show()
+            
+        
+        self._SizeAndPosition()
+        
+    
+    def _SizeAndPosition( self ):
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        my_ideal_width = min( parent_width, max( 400, parent_width * 0.6 ) )
+        
+        if my_height != parent_height or my_ideal_width != my_width:
+            
+            self.Fit()
+            
+            self.SetSize( ( my_ideal_width, -1 ) )
+            
+        
+        x = ( parent_width - my_ideal_width ) / 2
+        
+        self.SetPosition( parent.ClientToScreenXY( x, 0 ) )
+        
+    
+    def AddCommand( self, label, callback ):
+        
+        command = wx.Button( self, label = label )
+        command.Bind( wx.EVT_BUTTON, callback )
+        
+        self._button_hbox.AddF( command, CC.FLAGS_MIXED )
+        
+    
+    def SetCurrentZoom( self, canvas_key, zoom ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_zoom = zoom
+            
+            self._ResetText()
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = media
+            
+            self._ResetText()
+            
+        
+    
+    def SetIndexString( self, canvas_key, text ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_index_string = text
+            
+            self._ResetText()
+            
         
     
 class FullscreenHoverFrameTags( FullscreenHoverFrame ):
@@ -2422,6 +2473,27 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         self.SetSizer( vbox )
         
         HydrusGlobals.pubsub.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        
+    
+    def _ResetTags( self ):
+        
+        if self._current_media is None: tags_i_want_to_display = []
+        else:
+            
+            tags_manager = self._current_media.GetTagsManager()
+            
+            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+            
+            current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
+            pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
+            
+            tags_i_want_to_display = list( current.union( pending ) )
+            
+            tags_i_want_to_display.sort()
+            
+        
+        self._tags.SetTexts( tags_i_want_to_display )
         
     
     def _SizeAndPosition( self ):
@@ -2432,34 +2504,50 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        if my_height != parent_height:
+        my_ideal_width = max( 200, parent_width / 5 )
+        
+        my_ideal_height = parent_height
+        
+        if my_ideal_width != my_width or my_ideal_height != my_height:
             
-            self.SetSize( ( 200, parent_height ) )
+            self.SetSize( ( my_ideal_width, my_ideal_height ) )
             
         
         self.SetPosition( parent.ClientToScreenXY( 0, 0 ) )
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            my_hash = self._current_media.GetHash()
+            
+            do_redraw = False
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
+                    
+                    do_redraw = True
+                    
+                    break
+                    
+                
+            
+            if do_redraw:
+                
+                self._ResetTags()
+                
+            
         
     
     def SetDisplayMedia( self, canvas_key, media ):
         
         if canvas_key == self._canvas_key:
             
-            if media is None: tags_i_want_to_display = []
-            else:
-                
-                tags_manager = media.GetTagsManager()
-                
-                siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
-                
-                current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
-                pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
-                
-                tags_i_want_to_display = list( current.union( pending ) )
-                
-                tags_i_want_to_display.sort()
-                
+            self._current_media = media
             
-            self._tags.SetTexts( tags_i_want_to_display )
+            self._ResetTags()
             
         
     
@@ -2875,12 +2963,17 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
         self._rating_service_key = service_key
         self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
         
-        FullscreenPopoutFilterLike( self )
+        self._hover_commands.AddCommand( 'archive', self.EventButtonKeep )
+        self._hover_commands.AddCommand( 'delete', self.EventButtonDelete )
+        self._hover_commands.AddCommand( 'back', self.EventButtonBack )
+        self._hover_commands.AddCommand( 'skip', self.EventButtonSkip )
+        self._hover_commands.AddCommand( 'done', self.EventButtonDone )
+        self._hover_commands.AddCommand( 'switch fullscreen', self.EventFullscreenSwitch )
         
     
     def EventClose( self, event ):
         
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
             if len( self._kept ) > 0 or len( self._deleted ) > 0:
@@ -3675,9 +3768,9 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
                 ( client_x, client_y ) = self.GetClientSize()
                 
-                if x < 20 or x > client_x - 20 or y < 20 or y > client_y -20:
+                if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES: # to stop warping over flash
                     
-                    try:
+                    if x < 20 or x > client_x - 20 or y < 20 or y > client_y -20:
                         
                         better_x = x
                         better_y = y
@@ -3688,14 +3781,14 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                         if x > client_x - 20: better_x = client_x - 20
                         if y > client_y - 20: better_y = client_y - 20
                         
-                        if HC.PLATFORM_OSX: raise Exception() # can't warppointer in os x
+                        if not HC.PLATFORM_OSX: # can't warppointer in os x
+                            
+                            self.WarpPointer( better_x, better_y )
+                            
+                            x = better_x
+                            y = better_y
+                            
                         
-                        self.WarpPointer( better_x, better_y )
-                        
-                        x = better_x
-                        y = better_y
-                        
-                    except: pass
                     
                 
                 self._last_drag_coordinates = ( x, y )
@@ -3712,7 +3805,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         def EventCharHook( self, event ):
             
-            if self._ShouldSkipInputDueToFlash(): event.Skip()
+            if self._HydrusShouldNotProcessInput(): event.Skip()
             else:
                 
                 keys_i_want_to_bump_up_regardless = [ wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN, wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT, wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT, wx.WXK_BACK, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ]
@@ -3740,7 +3833,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         def EventMenu( self, event ):
             
-            if self._ShouldSkipInputDueToFlash(): event.Skip()
+            if self._HydrusShouldNotProcessInput(): event.Skip()
             else:
                 
                 action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -3762,7 +3855,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         def EventMouseWheel( self, event ):
             
-            if self._ShouldSkipInputDueToFlash(): event.Skip()
+            if self._HydrusShouldNotProcessInput(): event.Skip()
             else:
                 
                 if event.CmdDown():

@@ -102,7 +102,7 @@ FLAGS_NONE = wx.SizerFlags( 0 )
 FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
 FLAGS_BIG_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 10 )
 
-FLAGS_CENTER = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Center()
+FLAGS_CENTER = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Center()
 
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()

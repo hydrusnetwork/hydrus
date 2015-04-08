@@ -1282,7 +1282,7 @@ class ServiceDB( MessageDB ):
     
     def _DeleteOrphans( self ):
         
-        HydrusGlobals.pubsub.pub( 'set_splash_text', 'deleting orphan files' )
+        HydrusGlobals.pubsub.pub( 'splash_set_text', 'deleting orphan files' )
         
         prefix = 'database maintenance - delete orphans: '
         
@@ -1840,13 +1840,15 @@ class ServiceDB( MessageDB ):
         
         sql_predicates = [ 'service_id = ' + HydrusData.ToString( file_service_id ) ]
         
-        ( hash, min_size, size, max_size, mimes, min_timestamp, max_timestamp, min_width, width, max_width, min_height, height, max_height, min_ratio, ratio, max_ratio, min_num_words, num_words, max_num_words, min_duration, duration, max_duration ) = system_predicates.GetInfo()
+        simple_preds = system_predicates.GetSimpleInfo()
         
-        if min_size is not None: sql_predicates.append( 'size > ' + HydrusData.ToString( min_size ) )
-        if size is not None: sql_predicates.append( 'size = ' + HydrusData.ToString( size ) )
-        if max_size is not None: sql_predicates.append( 'size < ' + HydrusData.ToString( max_size ) )
+        if 'min_size' in simple_preds: sql_predicates.append( 'size > ' + HydrusData.ToString( simple_preds[ 'min_size' ] ) )
+        if 'size' in simple_preds: sql_predicates.append( 'size = ' + HydrusData.ToString( simple_preds[ 'size' ] ) )
+        if 'max_size' in simple_preds: sql_predicates.append( 'size < ' + HydrusData.ToString( simple_preds[ 'max_size' ] ) )
         
-        if mimes is not None:
+        if 'mimes' in simple_preds:
+            
+            mimes = simple_preds[ 'mimes' ]
             
             if len( mimes ) == 1:
                 
@@ -1857,53 +1859,67 @@ class ServiceDB( MessageDB ):
             else: sql_predicates.append( 'mime IN ' + HydrusData.SplayListForDB( mimes ) )
             
         
-        if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + HydrusData.ToString( min_timestamp ) )
-        if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + HydrusData.ToString( max_timestamp ) )
+        if 'min_timestamp' in simple_preds: sql_predicates.append( 'timestamp >= ' + HydrusData.ToString( simple_preds[ 'min_timestamp' ] ) )
+        if 'max_timestamp' in simple_preds: sql_predicates.append( 'timestamp <= ' + HydrusData.ToString( simple_preds[ 'max_timestamp' ] ) )
         
-        if min_width is not None: sql_predicates.append( 'width > ' + HydrusData.ToString( min_width ) )
-        if width is not None: sql_predicates.append( 'width = ' + HydrusData.ToString( width ) )
-        if max_width is not None: sql_predicates.append( 'width < ' + HydrusData.ToString( max_width ) )
+        if 'min_width' in simple_preds: sql_predicates.append( 'width > ' + HydrusData.ToString( simple_preds[ 'min_width' ] ) )
+        if 'width' in simple_preds: sql_predicates.append( 'width = ' + HydrusData.ToString( simple_preds[ 'width' ] ) )
+        if 'max_width' in simple_preds: sql_predicates.append( 'width < ' + HydrusData.ToString( simple_preds[ 'max_width' ] ) )
         
-        if min_height is not None: sql_predicates.append( 'height > ' + HydrusData.ToString( min_height ) )
-        if height is not None: sql_predicates.append( 'height = ' + HydrusData.ToString( height ) )
-        if max_height is not None: sql_predicates.append( 'height < ' + HydrusData.ToString( max_height ) )
+        if 'min_height' in simple_preds: sql_predicates.append( 'height > ' + HydrusData.ToString( simple_preds[ 'min_height' ] ) )
+        if 'height' in simple_preds: sql_predicates.append( 'height = ' + HydrusData.ToString( simple_preds[ 'height' ] ) )
+        if 'max_height' in simple_preds: sql_predicates.append( 'height < ' + HydrusData.ToString( simple_preds[ 'max_height' ] ) )
         
-        if min_ratio is not None:
+        if 'min_num_pixels' in simple_preds: sql_predicates.append( 'width * height > ' + HydrusData.ToString( simple_preds[ 'min_num_pixels' ] ) )
+        if 'num_pixels' in simple_preds: sql_predicates.append( 'width * height = ' + HydrusData.ToString( simple_preds[ 'num_pixels' ] ) )
+        if 'max_num_pixels' in simple_preds: sql_predicates.append( 'width * height < ' + HydrusData.ToString( simple_preds[ 'max_num_pixels' ] ) )
+        
+        if 'min_ratio' in simple_preds:
             
-            ( ratio_width, ratio_height ) = min_ratio
+            ( ratio_width, ratio_height ) = simple_preds[ 'min_ratio' ]
             
             sql_predicates.append( '( width * 1.0 ) / height > ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
             
-        if ratio is not None:
+        if 'ratio' in simple_preds:
             
-            ( ratio_width, ratio_height ) = ratio
+            ( ratio_width, ratio_height ) = simple_preds[ 'ratio' ]
             
             sql_predicates.append( '( width * 1.0 ) / height = ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
             
-        if max_ratio is not None:
+        if 'max_ratio' in simple_preds:
             
-            ( ratio_width, ratio_height ) = max_ratio
+            ( ratio_width, ratio_height ) = simple_preds[ 'max_ratio' ]
             
             sql_predicates.append( '( width * 1.0 ) / height < ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
             
         
-        if min_num_words is not None: sql_predicates.append( 'num_words > ' + HydrusData.ToString( min_num_words ) )
-        if num_words is not None:
+        if 'min_num_words' in simple_preds: sql_predicates.append( 'num_words > ' + HydrusData.ToString( simple_preds[ 'min_num_words' ] ) )
+        if 'num_words' in simple_preds:
+            
+            num_words = simple_preds[ 'num_words' ]
             
             if num_words == 0: sql_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
             else: sql_predicates.append( 'num_words = ' + HydrusData.ToString( num_words ) )
             
-        if max_num_words is not None:
+        if 'max_num_words' in simple_preds:
+            
+            max_num_words = simple_preds[ 'max_num_words' ]
+            
             if max_num_words == 0: sql_predicates.append( 'num_words < ' + HydrusData.ToString( max_num_words ) )
             else: sql_predicates.append( '( num_words < ' + HydrusData.ToString( max_num_words ) + ' OR num_words IS NULL )' )
+            
         
-        if min_duration is not None: sql_predicates.append( 'duration > ' + HydrusData.ToString( min_duration ) )
-        if duration is not None:
+        if 'min_duration' in simple_preds: sql_predicates.append( 'duration > ' + HydrusData.ToString( simple_preds[ 'min_duration' ] ) )
+        if 'duration' in simple_preds:
+            
+            duration = simple_preds[ 'duration' ]
             
             if duration == 0: sql_predicates.append( '( duration IS NULL OR duration = 0 )' )
             else: sql_predicates.append( 'duration = ' + HydrusData.ToString( duration ) )
             
-        if max_duration is not None:
+        if 'max_duration' in simple_preds:
+            
+            max_duration = simple_preds[ 'max_duration' ]
             
             if max_duration == 0: sql_predicates.append( 'duration < ' + HydrusData.ToString( max_duration ) )
             else: sql_predicates.append( '( duration < ' + HydrusData.ToString( max_duration ) + ' OR duration IS NULL )' )
@@ -1942,26 +1958,30 @@ class ServiceDB( MessageDB ):
         
         #
         
-        ( min_num_tags, num_tags, max_num_tags ) = system_predicates.GetNumTagsInfo()
-        
         num_tags_zero = False
         num_tags_nonzero = False
         
         tag_predicates = []
         
-        if min_num_tags is not None:
+        if 'min_num_tags' in simple_preds:
+            
+            min_num_tags = simple_preds[ 'min_num_tags' ]
             
             if min_num_tags == 0: num_tags_nonzero = True
             else: tag_predicates.append( lambda x: x > min_num_tags )
             
         
-        if num_tags is not None:
+        if 'num_tags' in simple_preds:
+            
+            num_tags = simple_preds[ 'num_tags' ]
             
             if num_tags == 0: num_tags_zero = True
             else: tag_predicates.append( lambda x: x == num_tags )
             
         
-        if max_num_tags is not None:
+        if 'max_num_tags' in simple_preds:
+            
+            max_num_tags = simple_preds[ 'max_num_tags' ]
             
             if max_num_tags == 1: num_tags_zero = True
             else: tag_predicates.append( lambda x: x < max_num_tags )
@@ -1972,30 +1992,12 @@ class ServiceDB( MessageDB ):
         if include_current_tags: statuses.append( HC.CURRENT )
         if include_pending_tags: statuses.append( HC.PENDING )
         
-        if num_tags_zero or num_tags_nonzero or len( tag_predicates ) > 0:
-            
-            tag_censorship_manager = wx.GetApp().GetManager( 'tag_censorship' )
-            
-            ( blacklist, tags ) = tag_censorship_manager.GetInfo( tag_service_key )
-            
-            namespaces = [ tag for tag in tags if ':' in tag ]
-            
-            if len( namespaces ) == 0: namespace_predicate = ''
-            else:
-                
-                namespace_ids = [ self._GetNamespaceId( namespace ) for namespace in namespaces ]
-                
-                if blacklist: namespace_predicate = ' AND namespace_id NOT IN ' + HydrusData.SplayListForDB( namespace_ids )
-                else: namespace_predicate = ' AND namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids )
-                
-            
-        
         if num_tags_zero or num_tags_nonzero:
             
             if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
             else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
             
-            nonzero_tag_query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + namespace_predicate + ';' ) }
+            nonzero_tag_query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + ';' ) }
             
             if num_tags_zero: query_hash_ids.difference_update( nonzero_tag_query_hash_ids )
             elif num_tags_nonzero: query_hash_ids = nonzero_tag_query_hash_ids
@@ -2006,14 +2008,14 @@ class ServiceDB( MessageDB ):
             if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
             else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
             
-            query_hash_ids = { id for ( id, count ) in self._c.execute( 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + namespace_predicate + ' GROUP BY hash_id;' ) if False not in ( pred( count ) for pred in tag_predicates ) }
+            query_hash_ids = { id for ( id, count ) in self._c.execute( 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + ' GROUP BY hash_id;' ) if False not in ( pred( count ) for pred in tag_predicates ) }
             
         
         #
         
-        if hash is not None:
+        if 'hash' in simple_preds:
             
-            hash_id = self._GetHashId( hash )
+            hash_id = self._GetHashId( simple_preds[ 'hash' ] )
             
             query_hash_ids.intersection_update( { hash_id } )
             
@@ -2197,7 +2199,13 @@ class ServiceDB( MessageDB ):
                 predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), counts = { HC.CURRENT : num_not_local } ) )
                 
             
-            predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
+            predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME ] ] )
+            
+            ratings_service_ids = self._GetServiceIds( HC.RATINGS_SERVICES )
+            
+            if len( ratings_service_ids ) > 0: predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATING, None ) ) )
+            
+            predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
             
         
         return predicates
@@ -2806,7 +2814,20 @@ class ServiceDB( MessageDB ):
             
             pending_dict = HydrusData.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
             
+            pending_chunks = []
+            
             for ( ( namespace_id, tag_id ), hash_ids ) in pending_dict.items():
+                
+                if len( hash_ids ) > max_update_weight:
+                    
+                    chunks_of_hash_ids = HydrusData.SplitListIntoChunks( hash_ids, max_update_weight )
+                    
+                    for chunk_of_hash_ids in chunks_of_hash_ids: pending_chunks.append( ( namespace_id, tag_id, chunk_of_hash_ids ) )
+                    
+                else: pending_chunks.append( ( namespace_id, tag_id, hash_ids ) )
+                
+            
+            for ( namespace_id, tag_id, hash_ids ) in pending_chunks:
                 
                 pending = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids )
                 
@@ -2816,7 +2837,7 @@ class ServiceDB( MessageDB ):
                 
                 current_update_weight += len( hash_ids )
                 
-                if current_update_weight > max_update_weight:
+                if current_update_weight >= max_update_weight:
                     
                     hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                     
@@ -2832,7 +2853,20 @@ class ServiceDB( MessageDB ):
             
             petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( namespace_id, tag_id, reason_id ), hash_id ) for ( namespace_id, tag_id, hash_id, reason_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
             
+            petitioned_chunks = []
+            
             for ( ( namespace_id, tag_id, reason_id ), hash_ids ) in petitioned_dict.items():
+                
+                if len( hash_ids ) > max_update_weight:
+                    
+                    chunks_of_hash_ids = HydrusData.SplitListIntoChunks( hash_ids, max_update_weight )
+                    
+                    for chunk_of_hash_ids in chunks_of_hash_ids: petitioned_chunks.append( ( namespace_id, tag_id, reason_id, chunk_of_hash_ids ) )
+                    
+                else: petitioned_chunks.append( ( namespace_id, tag_id, hash_ids ) )
+                
+            
+            for ( namespace_id, tag_id, reason_id, hash_ids ) in petitioned_chunks:
                 
                 petitioned = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids, self._GetReason( reason_id ) )
                 
@@ -2842,7 +2876,7 @@ class ServiceDB( MessageDB ):
                 
                 current_update_weight += len( hash_ids )
                 
-                if current_update_weight > max_update_weight:
+                if current_update_weight >= max_update_weight:
                     
                     hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                     
@@ -4850,7 +4884,7 @@ class DB( ServiceDB ):
         
         while version < HC.SOFTWARE_VERSION:
             
-            HydrusGlobals.pubsub.pub( 'set_splash_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
+            HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
             
             time.sleep( 2 )
             
@@ -5476,7 +5510,7 @@ class DB( ServiceDB ):
             
             for ( i, service_id ) in enumerate( service_ids ):
                 
-                HydrusGlobals.pubsub.pub( 'set_splash_text', 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
+                HydrusGlobals.pubsub.pub( 'splash_set_text', 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
                 
                 self._c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( service_id, ) )
                 
@@ -5494,7 +5528,7 @@ class DB( ServiceDB ):
             
             for ( i, filename ) in enumerate( current_updates ):
                 
-                if i % 100 == 0: HydrusGlobals.pubsub.pub( 'set_splash_text', 'renaming updates ' + str( i ) + '/' + str( len( current_updates ) ) )
+                if i % 100 == 0: HydrusGlobals.pubsub.pub( 'splash_set_text', 'renaming updates ' + str( i ) + '/' + str( len( current_updates ) ) )
                 
                 ( service_key_hex, gumpf ) = filename.split( '_' )
                 
@@ -5601,7 +5635,7 @@ class DB( ServiceDB ):
                         
                         i += 1
                         
-                        if i % 100 == 0: HydrusGlobals.pubsub.pub( 'set_splash_text', 'reprocessing thumbs: ' + HydrusData.ConvertIntToPrettyString( i ) )
+                        if i % 100 == 0: HydrusGlobals.pubsub.pub( 'splash_set_text', 'reprocessing thumbs: ' + HydrusData.ConvertIntToPrettyString( i ) )
                         
                     except: print( 'When updating to v118, ' + path + '\'s phash could not be recalculated.' )
                     
@@ -5642,7 +5676,7 @@ class DB( ServiceDB ):
                     
                     i += 1
                     
-                    if i % 100 == 0: HydrusGlobals.pubsub.pub( 'set_splash_text', 'creating video thumbs: ' + HydrusData.ConvertIntToPrettyString( i ) )
+                    if i % 100 == 0: HydrusGlobals.pubsub.pub( 'splash_set_text', 'creating video thumbs: ' + HydrusData.ConvertIntToPrettyString( i ) )
                     
                 except:
                     print( traceback.format_exc())
@@ -5784,7 +5818,7 @@ class DB( ServiceDB ):
                 
                 self._c.execute( 'INSERT INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
                 
-                if i % 100 == 0: HydrusGlobals.pubsub.pub( 'set_splash_text', 'generating sha512 hashes: ' + HydrusData.ConvertIntToPrettyString( i ) )
+                if i % 100 == 0: HydrusGlobals.pubsub.pub( 'splash_set_text', 'generating sha512 hashes: ' + HydrusData.ConvertIntToPrettyString( i ) )
                 
             
             #
@@ -5874,6 +5908,14 @@ class DB( ServiceDB ):
                 self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
                 
             
+        
+        if version == 152:
+            
+            HC.options = self._GetOptions()
+            
+            HC.options[ 'file_system_predicates' ][ 'num_pixels' ] = ( 1, 2, 2 )
+            
+            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -5883,7 +5925,7 @@ class DB( ServiceDB ):
     
     def _Vacuum( self ):
         
-        HydrusGlobals.pubsub.pub( 'set_splash_text', 'vacuuming db' )
+        HydrusGlobals.pubsub.pub( 'splash_set_text', 'vacuuming db' )
         
         prefix = 'database maintenance - vacuum: '
         

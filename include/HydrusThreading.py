@@ -205,6 +205,9 @@ def CallBlockingToWx( callable, *args, **kwargs ):
             
         except Exception as e:
             
+            print( 'CallBlockingToWx just caught this error:' )
+            print( traceback.format_exc() )
+            
             job_key.SetVariable( 'error', e )
             
         finally: job_key.Finish()

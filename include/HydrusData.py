@@ -71,6 +71,12 @@ def ConvertIntToBytes( size ):
     
     return '%.0f' % size + suffixes[ suffix_index ] + 'B'
     
+def ConvertIntToPixels( i ):
+    
+    if i == 1: return 'pixels'
+    elif i == 1000: return 'kilopixels'
+    elif i == 1000000: return 'megapixels'
+    
 def ConvertIntToPrettyString( num ): return ToString( locale.format( "%d", num, grouping = True ) )
 
 def ConvertMillisecondsToPrettyTime( ms ):
@@ -125,6 +131,12 @@ def ConvertNumericalRatingToPrettyString( lower, upper, rating, rounded_result =
         
     
     return s
+    
+def ConvertPixelsToInteger( unit ):
+    
+    if unit == 'pixels': return 1
+    elif unit == 'kilopixels': return 1000
+    elif unit == 'megapixels': return 1000000
     
 def ConvertPortablePathToAbsPath( portable_path ):
     
@@ -572,6 +584,10 @@ def SplayListForDB( xs ): return '(' + ','.join( ( '"' + ToString( x ) + '"' for
 
 def SplayTupleListForDB( first_column_name, second_column_name, xys ): return ' OR '.join( [ '( ' + first_column_name + '=' + ToString( x ) + ' AND ' + second_column_name + ' IN ' + SplayListForDB( ys ) + ' )' for ( x, ys ) in xys ] )
 
+def SplitListIntoChunks( xs, n ):
+    
+    for i in xrange( 0, len( xs ), n ): yield xs[ i : i + n ]
+    
 def ToBytes( text_producing_object ):
     
     if type( text_producing_object ) == unicode: return text_producing_object.encode( 'utf-8' )
@@ -1611,6 +1627,7 @@ class Predicate( HydrusYAMLBase ):
             elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_UNTAGGED: base = u'system:untagged'
             elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_LOCAL: base = u'system:local'
             elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL: base = u'system:not local'
+            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS: base = u'system:dimensions'
             elif system_predicate_type in ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS ):
                 
                 if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS: base = u'system:number of tags'
@@ -1668,6 +1685,17 @@ class Predicate( HydrusYAMLBase ):
                     ( operator, years, months, days, hours ) = info
                     
                     base += u' ' + operator + u' ' + ToString( years ) + u'y' + ToString( months ) + u'm' + ToString( days ) + u'd' + ToString( hours ) + u'h'
+                    
+                    
+            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_PIXELS:
+                
+                base = u'system:num_pixels'
+                
+                if info is not None:
+                    
+                    ( operator, num_pixels, unit ) = info
+                    
+                    base += u' ' + operator + u' ' + ToString( num_pixels ) + ' ' + ConvertIntToPixels( unit )
                     
                 
             elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_HASH:

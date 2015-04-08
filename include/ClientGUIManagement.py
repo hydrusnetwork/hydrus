@@ -1378,7 +1378,7 @@ class ManagementPanelImports( ManagementPanelImport ):
         
         text = 'file limit'
         
-        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._building_import_queue_panel, text, none_phrase = 'no limit', max = 1000000 )
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._building_import_queue_panel, text, none_phrase = 'no limit', min = 1, max = 1000000 )
         self._file_limit.SetValue( 500 )
         
         self._building_import_queue_panel.AddF( self._building_import_queue_info, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2202,7 +2202,7 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     ( system_predicate_type, info ) = value
                     
-                    if system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ]:
+                    if system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ]:
                         
                         with ClientGUIDialogs.DialogInputFileSystemPredicate( self, system_predicate_type ) as dlg:
                             

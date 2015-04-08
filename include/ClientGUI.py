@@ -37,7 +37,7 @@ ID_TIMER_UPDATES = wx.NewId()
 
 # Sizer Flags
 
-MENU_ORDER = [ 'file', 'undo', 'view', 'download', 'database', 'pending', 'services', 'admin', 'help' ]
+MENU_ORDER = [ 'file', 'undo', 'view', 'search', 'download', 'database', 'pending', 'services', 'admin', 'help' ]
 
 class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
@@ -77,7 +77,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         HydrusGlobals.pubsub.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
         HydrusGlobals.pubsub.sub( self, 'NewCompose', 'new_compose_frame' )
-        HydrusGlobals.pubsub.sub( self, 'NewPageImportGallery', 'new_page_import_gallery' )
+        HydrusGlobals.pubsub.sub( self, 'NewPageImportGallery', 'new_import_gallery' )
         HydrusGlobals.pubsub.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         HydrusGlobals.pubsub.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
         HydrusGlobals.pubsub.sub( self, 'NewPageImportURL', 'new_page_import_url' )
@@ -127,167 +127,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
-        
-    
-    def _THREADUploadPending( self, service_key ):
-        
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-        
-        service_name = service.GetName()
-        service_type = service.GetServiceType()
-        
-        try:
-            
-            prefix = 'uploading pending to ' + service_name + ': '
-            
-            job_key = HydrusData.JobKey( pausable = True, cancellable = True )
-            
-            job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering pending content' )
-            
-            HydrusGlobals.pubsub.pub( 'message', job_key )
-            
-            result = wx.GetApp().Read( 'pending', service_key )
-            
-            if service_type == HC.FILE_REPOSITORY:
-                
-                ( upload_hashes, update ) = result
-                
-                media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
-                
-                job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
-                
-                good_hashes = []
-                
-                error_messages = set()
-                
-                for ( i, media_result ) in enumerate( media_results ):
-                    
-                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
-                        
-                        time.sleep( 0.1 )
-                        
-                        if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
-                        
-                        if job_key.IsCancelled():
-                            
-                            job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
-                            
-                            print( job_key.ToString() )
-                            
-                            return
-                            
-                        
-                        if HydrusGlobals.shutdown: return
-                        
-                    
-                    i += 1
-                    
-                    hash = media_result.GetHash()
-                    mime = media_result.GetMime()
-                    
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading file ' + HydrusData.ConvertIntToPrettyString( i ) + ' of ' + HydrusData.ConvertIntToPrettyString( len( media_results ) ) )
-                    job_key.SetVariable( 'popup_message_gauge_1', ( i, len( media_results ) ) )
-                    
-                    try:
-                        
-                        path = ClientFiles.GetFilePath( hash, mime )
-                        
-                        with open( path, 'rb' ) as f: file = f.read()
-                        
-                        service.Request( HC.POST, 'file', { 'file' : file } )
-                        
-                        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
-                        
-                        timestamp = HydrusData.GetNow()
-                        
-                        content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
-                        
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
-                        
-                        wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.ShowException( e )
-                        
-                        time.sleep( 2 )
-                        
-                    
-                    time.sleep( 0.1 )
-                    
-                    wx.GetApp().WaitUntilWXThreadIdle()
-                    
-                
-                if not update.IsEmpty():
-                    
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading petitions' )
-                    
-                    service.Request( HC.POST, 'update', { 'update' : update } )
-                    
-                    content_updates = update.GetContentUpdates( for_client = True )
-                    
-                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
-                    
-                
-            elif service_type == HC.TAG_REPOSITORY:
-                
-                updates = result
-                
-                job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
-                
-                for ( i, update ) in enumerate( updates ):
-                    
-                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
-                        
-                        time.sleep( 0.1 )
-                        
-                        if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
-                        
-                        if job_key.IsCancelled():
-                            
-                            job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
-                            
-                            print( job_key.ToString() )
-                            
-                            return
-                            
-                        
-                        if HydrusGlobals.shutdown: return
-                        
-                    
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HydrusData.ConvertIntToPrettyString( i + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( len( updates ) ) )
-                    job_key.SetVariable( 'popup_message_gauge_1', ( i, len( updates ) ) )
-                    
-                    service.Request( HC.POST, 'update', { 'update' : update } )
-                    
-                    content_updates = update.GetContentUpdates( for_client = True )
-                    
-                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
-                    
-                    time.sleep( 0.5 )
-                    
-                    wx.GetApp().WaitUntilWXThreadIdle()
-                    
-                
-                
-            
-        except Exception as e:
-            
-            job_key.Cancel()
-            
-            raise
-            
-        
-        job_key.DeleteVariable( 'popup_message_gauge_1' )
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'upload done!' )
-        
-        print( job_key.ToString() )
-        
-        job_key.Finish()
-        
-        wx.CallLater( 1000 * 3600, job_key.Delete )
-        
-        HydrusGlobals.pubsub.pub( 'notify_new_pending' )
         
     
     def _AboutWindow( self ):
@@ -755,6 +594,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def view():
             
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_hide_splitters' ), p( 'Show/Hide Splitters' ), p( 'Show or hide the current page\'s splitters.' ) )
+            menu.AppendSeparator()
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
+            
+            return ( menu, p( '&View' ), True )
+            
+        
+        def search():
+            
             services = wx.GetApp().GetManager( 'services' ).GetServices()
             
             tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
@@ -766,11 +615,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             petition_resolve_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
             menu = wx.Menu()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_hide_splitters' ), p( 'Show/Hide Splitters' ), p( 'Show or hide the current page\'s splitters.' ) )
-            menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
-            menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
             for service in file_repositories: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
             if len( petition_resolve_tag_services ) > 0 or len( petition_resolve_file_services ) > 0:
@@ -779,16 +623,41 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 for service in petition_resolve_tag_services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
                 for service in petition_resolve_file_services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
                 
-            menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_url' ), p( '&New URL Download Page' ), p( 'Open a new tab to download files from galleries or threads.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_booru' ), p( '&New Booru Download Page' ), p( 'Open a new tab to download files from a booru.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
             
-            return ( menu, p( '&View' ), True )
+            return ( menu, p( '&Search' ), True )
             
         
         def download():
             
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_url' ), p( '&New URL Download Page' ), p( 'Open a new tab to download files from galleries or threads.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
+            
+            submenu = wx.Menu()
+            
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_booru' ), p( 'Booru' ), p( 'Open a new tab to download files from a booru.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'giphy', None ) ), p( 'Giphy' ), p( 'Open a new tab to download files from Giphy.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'deviant art', 'artist' ) ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
+            hf_submenu = wx.Menu()
+            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'hentai foundry', 'artist' ) ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
+            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'hentai foundry', 'tags' ) ), p( 'By Tags' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
+            submenu.AppendMenu( CC.ID_NULL, p( '&Hentai Foundry' ), hf_submenu )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'newgrounds', None ) ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
+            
+            ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+            
+            if id != '' and password != '':
+                
+                pixiv_submenu = wx.Menu()
+                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'pixiv', 'artist_id' ) ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
+                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'pixiv', 'tag' ) ), p( 'By Tag' ), p( 'Open a new tab to download files from Hentai Pixiv.' ) )
+                submenu.AppendMenu( CC.ID_NULL, p( '&Pixiv' ), pixiv_submenu )
+                
+            
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'tumblr', None ) ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
+            
+            menu.AppendMenu( CC.ID_NULL, p( '&New Gallery Download Page' ), submenu )
+            
+            menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
             
@@ -1012,6 +881,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         elif name == 'download': return download()
         elif name == 'database': return database()
         elif name == 'pending': return pending()
+        elif name == 'search': return search()
         elif name == 'services': return services()
         elif name == 'admin': return admin()
         elif name == 'help': return help()
@@ -1701,6 +1571,167 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def _THREADUploadPending( self, service_key ):
+        
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        
+        service_name = service.GetName()
+        service_type = service.GetServiceType()
+        
+        try:
+            
+            prefix = 'uploading pending to ' + service_name + ': '
+            
+            job_key = HydrusData.JobKey( pausable = True, cancellable = True )
+            
+            job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering pending content' )
+            
+            HydrusGlobals.pubsub.pub( 'message', job_key )
+            
+            result = wx.GetApp().Read( 'pending', service_key )
+            
+            if service_type == HC.FILE_REPOSITORY:
+                
+                ( upload_hashes, update ) = result
+                
+                media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
+                
+                job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
+                
+                good_hashes = []
+                
+                error_messages = set()
+                
+                for ( i, media_result ) in enumerate( media_results ):
+                    
+                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
+                        
+                        time.sleep( 0.1 )
+                        
+                        if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
+                        
+                        if job_key.IsCancelled():
+                            
+                            job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                            
+                            print( job_key.ToString() )
+                            
+                            return
+                            
+                        
+                        if HydrusGlobals.shutdown: return
+                        
+                    
+                    i += 1
+                    
+                    hash = media_result.GetHash()
+                    mime = media_result.GetMime()
+                    
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading file ' + HydrusData.ConvertIntToPrettyString( i ) + ' of ' + HydrusData.ConvertIntToPrettyString( len( media_results ) ) )
+                    job_key.SetVariable( 'popup_message_gauge_1', ( i, len( media_results ) ) )
+                    
+                    try:
+                        
+                        path = ClientFiles.GetFilePath( hash, mime )
+                        
+                        with open( path, 'rb' ) as f: file = f.read()
+                        
+                        service.Request( HC.POST, 'file', { 'file' : file } )
+                        
+                        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
+                        
+                        timestamp = HydrusData.GetNow()
+                        
+                        content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        
+                        wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowException( e )
+                        
+                        time.sleep( 2 )
+                        
+                    
+                    time.sleep( 0.1 )
+                    
+                    wx.GetApp().WaitUntilWXThreadIdle()
+                    
+                
+                if not update.IsEmpty():
+                    
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading petitions' )
+                    
+                    service.Request( HC.POST, 'update', { 'update' : update } )
+                    
+                    content_updates = update.GetContentUpdates( for_client = True )
+                    
+                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
+                    
+                
+            elif service_type == HC.TAG_REPOSITORY:
+                
+                updates = result
+                
+                job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
+                
+                for ( i, update ) in enumerate( updates ):
+                    
+                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
+                        
+                        time.sleep( 0.1 )
+                        
+                        if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
+                        
+                        if job_key.IsCancelled():
+                            
+                            job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                            
+                            print( job_key.ToString() )
+                            
+                            return
+                            
+                        
+                        if HydrusGlobals.shutdown: return
+                        
+                    
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HydrusData.ConvertIntToPrettyString( i + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( len( updates ) ) )
+                    job_key.SetVariable( 'popup_message_gauge_1', ( i, len( updates ) ) )
+                    
+                    service.Request( HC.POST, 'update', { 'update' : update } )
+                    
+                    content_updates = update.GetContentUpdates( for_client = True )
+                    
+                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
+                    
+                    time.sleep( 0.5 )
+                    
+                    wx.GetApp().WaitUntilWXThreadIdle()
+                    
+                
+                
+            
+        except Exception as e:
+            
+            job_key.Cancel()
+            
+            raise
+            
+        
+        job_key.DeleteVariable( 'popup_message_gauge_1' )
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'upload done!' )
+        
+        print( job_key.ToString() )
+        
+        job_key.Finish()
+        
+        wx.CallLater( 1000 * 3600, job_key.Delete )
+        
+        HydrusGlobals.pubsub.pub( 'notify_new_pending' )
+        
+    
     def ClearClosedPages( self ):
         
         new_closed_pages = []
@@ -1748,7 +1779,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        try: splash = FrameSplash( 'exit' )
+        try: splash = FrameSplash()
         except:
             
             print( 'There was an error trying to start the splash screen!' )
@@ -1758,6 +1789,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             try: wx.CallAfter( splash.Destroy )
             except: pass
             
+        
+        exit_thread = threading.Thread( target = wx.GetApp().THREADExitEverything, name = 'Application Exit Thread' )
+        
+        wx.CallAfter( exit_thread.start )
         
     
     def EventFocus( self, event ):
@@ -1855,6 +1890,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'modify_account': self._ModifyAccount( data )
             elif command == 'new_accounts': self._GenerateNewAccounts( data )
             elif command == 'new_import_booru': self._NewPageImportBooru()
+            elif command == 'new_import_gallery':
+                
+                ( gallery_name, gallery_type ) = data
+                
+                self._NewPageImportGallery( gallery_name, gallery_type )
+                
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_url': self._NewPageImportURL()
             elif command == 'new_page':
@@ -2007,13 +2048,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NotifyNewPermissions( self ):
         
-        self.RefreshMenu( 'view' )
+        self.RefreshMenu( 'search' )
         self.RefreshMenu( 'admin' )
         
     
     def NotifyNewServices( self ):
         
-        self.RefreshMenu( 'view' )
+        self.RefreshMenu( 'search' )
         self.RefreshMenu( 'services' )
         self.RefreshMenu( 'admin' )
         
@@ -2971,7 +3012,7 @@ class FrameSplash( ClientGUICommon.Frame ):
     WIDTH = 254
     HEIGHT = 220
     
-    def __init__( self, action ):
+    def __init__( self ):
         
         wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR, title = 'hydrus client' )
         
@@ -2994,67 +3035,10 @@ class FrameSplash( ClientGUICommon.Frame ):
         self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
-        if action == 'boot':
-            
-            self.SetText( 'initialising startup' )
-            
-            my_thread = threading.Thread( target = self.BootApp, name = 'Application Boot Thread' )
-            
-        elif action == 'exit':
-            
-            self.SetText( 'initialising shutdown' )
-            
-            my_thread = threading.Thread( target = self.ExitApp, name = 'Application Boot Thread' )
-            
-        
         self.Show( True )
         
-        HydrusGlobals.pubsub.sub( self, 'SetText', 'set_splash_text' )
-        
-        wx.CallAfter( my_thread.start )
-        
-    
-    def BootApp( self ):
-        
-        try:
-            
-            wx.CallAfter( self.SetText, 'booting db' )
-            
-            wx.GetApp().InitDB()
-            
-            if HC.options[ 'password' ] is not None:
-                
-                wx.CallAfter( self.SetText, 'waiting for password' )
-                
-                wx.GetApp().InitCheckPassword()
-                
-            
-            wx.CallAfter( self.SetText, 'booting gui' )
-            
-            wx.CallAfter( wx.GetApp().InitGUI )
-            
-        except sqlite3.OperationalError as e:
-            
-            text = 'Database error!' + os.linesep * 2 + traceback.format_exc()
-            
-            print( text )
-            
-            wx.CallAfter( wx.MessageBox, text )
-            
-        except HydrusExceptions.PermissionException as e: pass
-        except:
-            
-            text = 'Woah, bad error during startup!' + os.linesep * 2 + traceback.format_exc()
-            
-            print( text )
-            
-            wx.CallAfter( wx.MessageBox, text )
-            
-        finally:
-            
-            try: wx.CallAfter( self.Destroy )
-            except: pass
-            
+        HydrusGlobals.pubsub.sub( self, 'SetText', 'splash_set_text' )
+        HydrusGlobals.pubsub.sub( self, 'Destroy', 'splash_destroy' )
         
     
     def EventDrag( self, event ):
@@ -3096,49 +3080,6 @@ class FrameSplash( ClientGUICommon.Frame ):
     def EventEraseBackground( self, event ): pass
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._bmp )
-    
-    def ExitApp( self ):
-        
-        try:
-            
-            wx.CallAfter( self.SetText, 'exiting gui' )
-            
-            gui = wx.GetApp().GetGUI()
-            
-            try: gui.TestAbleToClose()
-            except: return
-            
-            gui.Shutdown()
-            
-            wx.CallAfter( self.SetText, 'exiting db' )
-            
-            wx.GetApp().MaintainDB()
-            
-            wx.GetApp().ShutdownDB()
-            
-        except sqlite3.OperationalError as e:
-            
-            text = 'Database error!' + os.linesep * 2 + traceback.format_exc()
-            
-            print( text )
-            
-            wx.CallAfter( wx.MessageBox, text )
-            
-        except HydrusExceptions.PermissionException as e: pass
-        except:
-            
-            text = 'Woah, bad error during shutdown!' + os.linesep * 2 + 'You may need to quit the program from task manager.' + os.linesep * 2 + traceback.format_exc()
-            
-            print( text )
-            
-            wx.CallAfter( wx.MessageBox, text )
-            
-        finally:
-            
-            try: wx.CallAfter( self.Destroy )
-            except: pass
-            
-        
     
     def SetText( self, text ):
         

@@ -4100,6 +4100,13 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            text = 'In order to search and download from Pixiv, the client needs to log in to it.'
+            text += os.linesep
+            text += 'Until you put something in here, you will not see the option to download from Pixiv.'
+            text += os.linesep
+            text += 'You can use a throwaway account if you want--this only needs to log in.'
+            
+            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._test, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -6154,7 +6161,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 text = 'initial sync file limit'
                 
-                self._initial_limit = ClientGUICommon.NoneableSpinCtrl( self._info_panel, text, none_phrase = 'no limit', max = 1000000 )
+                self._initial_limit = ClientGUICommon.NoneableSpinCtrl( self._info_panel, text, none_phrase = 'no limit', min = 1, max = 1000000 )
                 
                 self._paused = wx.CheckBox( self._info_panel, label = 'paused' )
                 

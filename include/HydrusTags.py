@@ -508,7 +508,7 @@ class TagCensorshipManager( object ):
     
     def GetInfo( self, service_key ):
         
-        if service_key in self._service_keys_to_predicates: return self._service_keys_to_predicates[ service_key ]
+        if service_key in self._service_keys_to_info: return self._service_keys_to_info[ service_key ]
         else: return ( True, set() )
         
     
@@ -516,9 +516,12 @@ class TagCensorshipManager( object ):
         
         info = wx.GetApp().Read( 'tag_censorship' )
         
+        self._service_keys_to_info = {}
         self._service_keys_to_predicates = {}
         
         for ( service_key, blacklist, censorships ) in info:
+            
+            self._service_keys_to_info[ service_key ] = ( blacklist, censorships )
             
             tag_matches = lambda tag: True in ( CensorshipMatch( tag, censorship ) for censorship in censorships )
             

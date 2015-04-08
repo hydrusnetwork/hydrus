@@ -640,8 +640,6 @@ class MediaSingleton( Media ):
         self._media_result = media_result
         
     
-    #def __hash__( self ): return self.GetHash().__hash__()
-    
     def GetDisplayMedia( self ): return self
     
     def GetDuration( self ): return self._media_result.GetDuration()
@@ -732,6 +730,111 @@ class MediaSingleton( Media ):
         
     
     def GetTagsManager( self ): return self._media_result.GetTagsManager()
+    
+    def GetTitleString( self ):
+        
+        title_string = ''
+        
+        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        
+        namespaces = self._media_result.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
+        
+        creators = namespaces[ 'creator' ]
+        series = namespaces[ 'series' ]
+        titles = namespaces[ 'title' ]
+        volumes = namespaces[ 'volume' ]
+        chapters = namespaces[ 'chapter' ]
+        pages = namespaces[ 'page' ]
+        
+        if len( creators ) > 0:
+            
+            creators = siblings_manager.CollapseNamespacedTags( 'creator', creators )
+            
+            title_string_append = ', '.join( creators )
+            
+            if len( title_string ) > 0: title_string += ' - ' + title_string_append
+            else: title_string = title_string_append
+            
+        
+        if len( series ) > 0:
+            
+            series = siblings_manager.CollapseNamespacedTags( 'series', series )
+            
+            title_string_append = ', '.join( series )
+            
+            if len( title_string ) > 0: title_string += ' - ' + title_string_append
+            else: title_string = title_string_append
+            
+        
+        if len( titles ) > 0:
+            
+            titles = siblings_manager.CollapseNamespacedTags( 'title', titles )
+            
+            title_string_append = ', '.join( titles )
+            
+            if len( title_string ) > 0: title_string += ' - ' + title_string_append
+            else: title_string = title_string_append
+            
+        
+        if len( volumes ) > 0:
+            
+            if len( volumes ) == 1:
+                
+                ( volume, ) = volumes
+                
+                title_string_append = 'volume ' + HydrusData.ToString( volume )
+                
+            else:
+                
+                volumes_sorted = HydrusTags.SortTags( volumes )
+                
+                title_string_append = 'volumes ' + HydrusData.ToString( volumes_sorted[0] ) + '-' + HydrusData.ToString( volumes_sorted[-1] )
+                
+            
+            if len( title_string ) > 0: title_string += ' - ' + title_string_append
+            else: title_string = title_string_append
+            
+        
+        if len( chapters ) > 0:
+            
+            if len( chapters ) == 1:
+                
+                ( chapter, ) = chapters
+                
+                title_string_append = 'chapter ' + HydrusData.ToString( chapter )
+                
+            else:
+                
+                chapters_sorted = HydrusTags.SortTags( chapters )
+                
+                title_string_append = 'chapters ' + HydrusData.ToString( chapters_sorted[0] ) + '-' + HydrusData.ToString( chapters_sorted[-1] )
+                
+            
+            if len( title_string ) > 0: title_string += ' - ' + title_string_append
+            else: title_string = title_string_append
+            
+        
+        if len( pages ) > 0:
+            
+            if len( pages ) == 1:
+                
+                ( page, ) = pages
+                
+                title_string_append = 'page ' + HydrusData.ToString( page )
+                
+            else:
+                
+                pages_sorted = HydrusTags.SortTags( pages )
+                
+                title_string_append = 'pages ' + HydrusData.ToString( pages_sorted[0] ) + '-' + HydrusData.ToString( pages_sorted[-1] )
+                
+            
+            if len( title_string ) > 0: title_string += ' - ' + title_string_append
+            else: title_string = title_string_append
+            
+        
+        return title_string
+        
     
     def HasArchive( self ): return not self._media_result.GetInbox()
     

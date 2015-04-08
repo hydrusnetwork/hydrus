@@ -18,8 +18,10 @@ import ClientGUI
 import ClientGUIDialogs
 import os
 import random
+import sqlite3
 import subprocess
 import sys
+import threading
 import time
 import traceback
 import wx
@@ -190,15 +192,20 @@ class Controller( HydrusController.HydrusController ):
                 try: print( HydrusData.ToString( e ) )
                 except: print( repr( HydrusData.ToString( e ) ) )
                 
-                message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
-                message += os.linesep * 2
-                message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
+                def wx_code():
+                    
+                    message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
+                    message += os.linesep * 2
+                    message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( None, message, 'There was a problem connecting to the database.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
+                        else: raise HydrusExceptions.PermissionException()
+                        
+                    
                 
-                with ClientGUIDialogs.DialogYesNo( None, message, 'There was a problem connecting to the database.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
-                    else: raise HydrusExceptions.PermissionException()
-                    
+                HydrusThreading.CallBlockingToWx( wx_code )
                 
             
         
@@ -257,9 +264,9 @@ class Controller( HydrusController.HydrusController ):
             if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > HC.options[ 'maintenance_delete_orphans_period' ]: self.Write( 'delete_orphans' )
             
         
-        if now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
+        if self._timestamps[ 'last_service_info_cache_fatten' ] != 0 and now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
             
-            HydrusGlobals.pubsub.pub( 'set_splash_text', 'fattening service info' )
+            HydrusGlobals.pubsub.pub( 'splash_set_text', 'fattening service info' )
             
             services = self.GetManager( 'services' ).GetServices()
             
@@ -286,9 +293,7 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            splash = ClientGUI.FrameSplash( 'boot' )
-            
-            return True
+            splash = ClientGUI.FrameSplash()
             
         except:
             
@@ -301,6 +306,12 @@ class Controller( HydrusController.HydrusController ):
             
             return False
             
+        
+        boot_thread = threading.Thread( target = self.THREADBootEverything, name = 'Application Boot Thread' )
+        
+        wx.CallAfter( boot_thread.start )
+        
+        return True
         
     
     def PrepStringForDisplay( self, text ):
@@ -513,6 +524,74 @@ class Controller( HydrusController.HydrusController ):
             
         
         HydrusGlobals.pubsub.pub( 'file_query_done', query_key, media_results )
+        
+    
+    def THREADBootEverything( self ):
+        
+        try:
+            
+            HydrusGlobals.pubsub.pub( 'splash_set_text', 'booting db' )
+            
+            self.InitDB() # can't run on wx thread because we need event queue free to update splash text
+            
+            if HC.options[ 'password' ] is not None:
+                
+                HydrusGlobals.pubsub.pub( 'splash_set_text', 'waiting for password' )
+                
+                HydrusThreading.CallBlockingToWx( self.InitCheckPassword )
+                
+            
+            HydrusGlobals.pubsub.pub( 'splash_set_text', 'booting gui' )
+            
+            HydrusThreading.CallBlockingToWx( self.InitGUI )
+            
+        except HydrusExceptions.PermissionException as e: pass
+        except:
+            
+            text = 'A serious error occured while trying to start the program. Its traceback has been written to client.log.'
+            
+            print( text )
+            
+            wx.CallAfter( wx.MessageBox, text )
+            
+        finally:
+            
+            HydrusGlobals.pubsub.pub( 'splash_destroy' )
+            
+        
+    
+    def THREADExitEverything( self ):
+    
+        HydrusGlobals.pubsub.pub( 'splash_set_text', 'exiting gui' )
+        
+        gui = self.GetGUI()
+        
+        try: HydrusThreading.CallBlockingToWx( gui.TestAbleToClose )
+        except: return
+        
+        try:
+            
+            HydrusThreading.CallBlockingToWx( gui.Shutdown )
+            
+            HydrusGlobals.pubsub.pub( 'splash_set_text', 'exiting db' )
+            
+            HydrusThreading.CallBlockingToWx( self.MaintainDB )
+            
+            self.ShutdownDB() # can't run on wx thread because we need event queue free to update splash text
+            
+        except HydrusExceptions.PermissionException as e: pass
+        except:
+            
+            text = 'A serious error occured while trying to exit the program. Its traceback has been written to client.log. You may need to quit the program from task manager.'
+            
+            print( text )
+            
+            wx.CallAfter( wx.MessageBox, text )
+            
+        finally:
+            
+            HydrusGlobals.pubsub.pub( 'splash_destroy' )
+            
         
     
     def Write( self, action, *args, **kwargs ):

@@ -14,6 +14,7 @@ import ClientCaches
 import ClientFiles
 import ClientGUICommon
 import ClientGUICollapsible
+import ClientGUIPredicates
 import collections
 import gc
 import itertools
@@ -1331,956 +1332,93 @@ class DialogInputFileSystemPredicate( Dialog ):
     
     def __init__( self, parent, predicate_type ):
         
-        def Age():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '>' ] )
-                
-                self._years = wx.SpinCtrl( self, max = 30 )
-                self._months = wx.SpinCtrl( self, max = 60 )
-                self._days = wx.SpinCtrl( self, max = 90 )
-                self._hours = wx.SpinCtrl( self, max = 24 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( sign, years, months, days ) = system_predicates[ 'age' ]
-                
-                self._sign.SetSelection( sign )
-                
-                self._years.SetValue( years )
-                self._months.SetValue( months )
-                self._days.SetValue( days )
-                self._hours.SetValue( 0 )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:age' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._years, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'years' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._months, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'months' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._days, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._hours, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'hours' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter age predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
+        Dialog.__init__( self, parent, 'enter predicate' )
         
-            ( x, y ) = self.GetEffectiveMinSize()
+        pred_classes = []
+        
+        if predicate_type == HC.SYSTEM_PREDICATE_TYPE_AGE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemAge )
+        if predicate_type == HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS:
             
-            self.SetInitialSize( ( x, y ) )
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemHeight )
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemWidth )
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatio )
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumPixels )
             
-            wx.CallAfter( self._days.SetFocus )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_DURATION: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemDuration )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemFileService )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_HASH: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemHash )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_LIMIT: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemLimit )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_MIME: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemMime )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumTags )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumWords )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATING:
+            
+            services_manager = wx.GetApp().GetManager( 'services' )
+            
+            ratings_like = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+            ratings_numerical = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+            
+            if len( ratings_like ) > 0: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatingLike )
+            if len( ratings_numerical ) > 0: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatingNumerical )
+            
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSimilarTo )
+        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIZE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSize )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        for pred_class in pred_classes:
+            
+            panel = self._Panel( self, pred_class )
+            
+            vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        def Duration():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
-                
-                self._duration_s = wx.SpinCtrl( self, max = 3599 )
-                self._duration_ms = wx.SpinCtrl( self, max = 999 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( sign, s, ms ) = system_predicates[ 'duration' ]
-                
-                self._sign.SetSelection( sign )
-                
-                self._duration_s.SetValue( s )
-                self._duration_ms.SetValue( ms )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:duration' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._duration_s, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 's' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._duration_ms, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'ms' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter duration predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._duration_s.SetFocus )
-            
-        
-        def FileService():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self )
-                self._sign.Append( 'is', True )
-                self._sign.Append( 'is not', False )
-                
-                self._current_pending = wx.Choice( self )
-                self._current_pending.Append( 'currently in', HC.CURRENT )
-                self._current_pending.Append( 'pending to', HC.PENDING )
-                
-                self._file_service_key = wx.Choice( self )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                self._sign.SetSelection( 0 )
-                self._current_pending.SetSelection( 0 )
-                
-                services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
-                
-                for service in services: self._file_service_key.Append( service.GetName(), service.GetServiceKey() )
-                self._file_service_key.SetSelection( 0 )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:file service:' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._current_pending, CC.FLAGS_MIXED )
-                hbox.AddF( self._file_service_key, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter file service predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._sign.SetFocus )
-            
-        
-        def Hash():
-            
-            def InitialiseControls():
-                
-                self._hash = wx.TextCtrl( self )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                pass
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:hash=' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._hash, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter hash predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._hash.SetFocus )
-            
-        
-        def Height():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
-                
-                self._height = wx.SpinCtrl( self, max = 200000 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( sign, height ) = system_predicates[ 'height' ]
-                
-                self._sign.SetSelection( sign )
-                
-                self._height.SetValue( height )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:height' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._height, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter height predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._height.SetFocus )
-            
-        
-        def Limit():
-            
-            def InitialiseControls():
-                
-                self._limit = wx.SpinCtrl( self, max = 1000000 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                limit = system_predicates[ 'limit' ]
-                
-                self._limit.SetValue( limit )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:limit=' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._limit, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter limit predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._limit.SetFocus )
-            
-        
-        def Mime():
-            
-            def InitialiseControls():
-                
-                self._mime_media = wx.Choice( self, choices = [ 'image', 'application', 'audio', 'video' ] )
-                self._mime_media.Bind( wx.EVT_CHOICE, self.EventMime )
-                
-                self._mime_type = wx.Choice( self, choices = [], size = ( 120, -1 ) )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( media, media_type ) = system_predicates[ 'mime' ]
-                
-                self._mime_media.SetSelection( media )
-                
-                self.EventMime( None )
-                
-                self._mime_type.SetSelection( media_type )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:mime' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._mime_media, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = '/' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._mime_type, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter mime predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._mime_media.SetFocus )
-            
-        
-        def NumTags():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
-                
-                self._num_tags = wx.SpinCtrl( self, max = 2000 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( sign, num_tags ) = system_predicates[ 'num_tags' ]
-                
-                self._sign.SetSelection( sign )
-                
-                self._num_tags.SetValue( num_tags )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:num_tags' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._num_tags, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter number of tags predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._num_tags.SetFocus )
-            
-        
-        def NumWords():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
-                
-                self._num_words = wx.SpinCtrl( self, max = 1000000 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( sign, num_words ) = system_predicates[ 'num_words' ]
-                
-                self._sign.SetSelection( sign )
-                
-                self._num_words.SetValue( num_words )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:num_words' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._num_words, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter number of words predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._num_words.SetFocus )
-            
-        
-        def Rating():
-            
-            def InitialiseControls():
-                
-                self._service_numerical = wx.Choice( self )
-                self._service_numerical.Bind( wx.EVT_CHOICE, self.EventRatingsService )
-                
-                self._sign_numerical = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248', '=rated', '=not rated', '=uncertain' ] )
-                
-                self._value_numerical = wx.SpinCtrl( self, min = 0, max = 50000 ) # set bounds based on current service
-                
-                self._first_ok = wx.Button( self, label = 'Ok', id = HC.LOCAL_RATING_NUMERICAL )
-                self._first_ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._first_ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-                self._service_like = wx.Choice( self )
-                self._service_like.Bind( wx.EVT_CHOICE, self.EventRatingsService )
-                
-                self._value_like = wx.Choice( self, choices=[ 'like', 'dislike', 'rated', 'not rated' ] ) # set words based on current service
-                
-                self._second_ok = wx.Button( self, label = 'Ok', id = HC.LOCAL_RATING_LIKE )
-                self._second_ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._second_ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                self._local_numericals = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
-                self._local_likes = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-                
-                for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service.GetServiceKey() )
-                
-                ( sign, value ) = system_predicates[ 'local_rating_numerical' ]
-                
-                self._sign_numerical.SetSelection( sign )
-                
-                self._value_numerical.SetValue( value )
-                
-                for service in self._local_likes: self._service_like.Append( service.GetName(), service.GetServiceKey() )
-                
-                value = system_predicates[ 'local_rating_like' ]
-                
-                self._value_like.SetSelection( value )
-                
-                if len( self._local_numericals ) > 0: self._service_numerical.SetSelection( 0 )
-                if len( self._local_likes ) > 0: self._service_like.SetSelection( 0 )
-                
-                self.EventRatingsService( None )
-                
-            
-            def ArrangeControls():
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._service_numerical, CC.FLAGS_MIXED )
-                hbox.AddF( self._sign_numerical, CC.FLAGS_MIXED )
-                hbox.AddF( self._value_numerical, CC.FLAGS_MIXED )
-                hbox.AddF( self._first_ok, CC.FLAGS_MIXED )
-                
-                vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._service_like, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = '=' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._value_like, CC.FLAGS_MIXED )
-                hbox.AddF( self._second_ok, CC.FLAGS_MIXED )
-                
-                vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
-                self.SetSizer( vbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter rating predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._value_numerical.SetFocus )
-            
-        
-        def Ratio():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices = [ '=', u'\u2248' ] )
-                
-                self._width = wx.SpinCtrl( self, max = 50000 )
-                
-                self._height = wx.SpinCtrl( self, max = 50000 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( sign, width, height ) = system_predicates[ 'ratio' ]
-                
-                self._sign.SetSelection( sign )
-                
-                self._width.SetValue( width )
-                
-                self._height.SetValue( height )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:ratio' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._width, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = ':' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._height, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter ratio predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._sign.SetFocus )
-            
-        
-        def Size():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices = [ '<', u'\u2248', '=', '>' ] )
-                
-                self._size = wx.SpinCtrl( self, max = 1048576 )
-                
-                self._unit = wx.Choice( self, choices = [ 'B', 'KB', 'MB', 'GB' ] )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( sign, size, unit ) = system_predicates[ 'size' ]
-                
-                self._sign.SetSelection( sign )
-                
-                self._size.SetValue( size )
-                
-                self._unit.SetSelection( unit )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:size' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._size, CC.FLAGS_MIXED )
-                hbox.AddF( self._unit, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter size predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._size.SetFocus )
-            
-        
-        def Width():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices = [ '<', u'\u2248', '=', '>' ] )
-                
-                self._width = wx.SpinCtrl( self, max = 200000 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                ( sign, width ) = system_predicates[ 'width' ]
-                
-                self._sign.SetSelection( sign )
-                
-                self._width.SetValue( width )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:width' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._width, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter width predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._width.SetFocus )
-            
-        
-        def SimilarTo():
-            
-            def InitialiseControls():
-                
-                self._hash = wx.TextCtrl( self )
-                
-                self._max_hamming = wx.SpinCtrl( self, max = 256 )
-                
-                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-                self._ok.SetDefault()
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                self._hash.SetValue( 'enter hash' )
-                
-                hamming_distance = system_predicates[ 'hamming_distance' ]
-                
-                self._max_hamming.SetValue( hamming_distance )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:similar_to' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._hash, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label=u'\u2248' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._max_hamming, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter similar to predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._hash.SetFocus )
-            
-        
-        system_predicates = HC.options[ 'file_system_predicates' ]
-        
-        self._type = predicate_type
-        
-        if self._type == HC.SYSTEM_PREDICATE_TYPE_AGE: Age()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_DURATION: Duration()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_HASH: Hash()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_HEIGHT: Height()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_LIMIT: Limit()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_MIME: Mime()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS: NumTags()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATING: Rating()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATIO: Ratio()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIZE: Size()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: Width()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO: SimilarTo()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: NumWords()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: FileService()
+        self.SetSizer( vbox )
         
         self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+    
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
     
-    def EventMime( self, event ):
+    def SubPanelOK( self, predicate ):
         
-        media = self._mime_media.GetStringSelection()
-        
-        self._mime_type.Clear()
-        
-        if media == 'image':
-            
-            self._mime_type.Append( 'any', HC.IMAGES )
-            self._mime_type.Append( 'gif', HC.IMAGE_GIF )
-            self._mime_type.Append( 'jpeg', HC.IMAGE_JPEG )
-            self._mime_type.Append( 'png', HC.IMAGE_PNG )
-            
-        elif media == 'application':
-            
-            self._mime_type.Append( 'any', HC.APPLICATIONS )
-            self._mime_type.Append( 'pdf', HC.APPLICATION_PDF )
-            self._mime_type.Append( 'x-shockwave-flash', HC.APPLICATION_FLASH )
-            
-        elif media == 'audio':
-            
-            self._mime_type.Append( 'any', HC.AUDIO )
-            self._mime_type.Append( 'flac', HC.AUDIO_FLAC )
-            self._mime_type.Append( 'mp3', HC.AUDIO_MP3 )
-            self._mime_type.Append( 'ogg', HC.AUDIO_OGG )
-            self._mime_type.Append( 'x-ms-wma', HC.AUDIO_WMA )
-            
-        elif media == 'video':
-            
-            self._mime_type.Append( 'any', HC.VIDEO )
-            self._mime_type.Append( 'mp4', HC.VIDEO_MP4 )
-            self._mime_type.Append( 'webm', HC.VIDEO_WEBM )
-            self._mime_type.Append( 'x-matroska', HC.VIDEO_MKV )
-            self._mime_type.Append( 'x-ms-wmv', HC.VIDEO_WMV )
-            self._mime_type.Append( 'x-flv', HC.VIDEO_FLV )
-            
-        
-        self._mime_type.SetSelection( 0 )
-        
-    
-    def EventOK( self, event ):
-        
-        if self._type == HC.SYSTEM_PREDICATE_TYPE_AGE: info = ( self._sign.GetStringSelection(), self._years.GetValue(), self._months.GetValue(), self._days.GetValue(), self._hours.GetValue() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_DURATION: info = ( self._sign.GetStringSelection(), self._duration_s.GetValue() * 1000 + self._duration_ms.GetValue() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_HASH:
-            
-            hex_filter = lambda c: c in string.hexdigits
-            
-            hash = filter( hex_filter, self._hash.GetValue().lower() )
-            
-            if len( hash ) == 0: hash == '00'
-            elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte
-            
-            info = hash.decode( 'hex' )
-            
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_HEIGHT: info = ( self._sign.GetStringSelection(), self._height.GetValue() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_LIMIT: info = self._limit.GetValue()
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_MIME: info = self._mime_type.GetClientData( self._mime_type.GetSelection() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS: info = ( self._sign.GetStringSelection(), self._num_tags.GetValue() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: info = ( self._sign.GetStringSelection(), self._num_words.GetValue() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATING:
-            
-            id = event.GetId()
-            
-            if id == HC.LOCAL_RATING_LIKE:
-                
-                service_key = self._service_like.GetClientData( self._service_like.GetSelection() )
-                
-                operator = '='
-                
-                selection = self._value_like.GetSelection()
-                
-                if selection == 0: value = '1'
-                elif selection == 1: value = '0'
-                elif selection == 2: value = 'rated'
-                elif selection == 3: value = 'not rated'
-                
-                info = ( service_key, operator, value )
-                
-            elif id == HC.LOCAL_RATING_NUMERICAL:
-                
-                service_key = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
-                
-                operator = self._sign_numerical.GetStringSelection()
-                
-                if operator in ( '=rated', '=not rated', '=uncertain' ):
-                    
-                    value = operator[1:]
-                    
-                    operator = '='
-                    
-                else:
-                    
-                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-                    
-                    ( lower, upper ) = service.GetLowerUpper()
-                    
-                    value_raw = self._value_numerical.GetValue()
-                    
-                    value = float( value_raw - lower ) / float( upper - lower )
-                    
-                
-                info = ( service_key, operator, value )
-                
-            
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATIO: info = ( self._sign.GetStringSelection(), self._width.GetValue(), self._height.GetValue() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIZE: info = ( self._sign.GetStringSelection(), self._size.GetValue(), HydrusData.ConvertUnitToInteger( self._unit.GetStringSelection() ) )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: info = ( self._sign.GetStringSelection(), self._width.GetValue() )
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
-            
-            hex_filter = lambda c: c in string.hexdigits
-            
-            hash = filter( hex_filter, self._hash.GetValue().lower() )
-            
-            if len( hash ) == 0: hash == '00'
-            elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte
-            
-            info = ( hash.decode( 'hex' ), self._max_hamming.GetValue() )
-            
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: info = ( self._sign.GetClientData( self._sign.GetSelection() ), self._current_pending.GetClientData( self._current_pending.GetSelection() ), self._file_service_key.GetClientData( self._file_service_key.GetSelection() ) )
-        
-        self._predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self._type, info ) )
+        self._predicate = predicate
         
         self.EndModal( wx.ID_OK )
         
     
-    def EventRatingsService( self, event ):
-        
-        try:
-            
-            service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
-            
-            ( lower, upper ) = service.GetLowerUpper()
-            
-            self._value_numerical.SetRange( lower, upper )
-            
-            service = self._service_like.GetClientData( self._service_like.GetSelection() )
-            
-        except: pass
-        
-        try:
-            
-            ( like, dislike ) = service.GetLikeDislike()
-            
-            selection = self._value_like.GetSelection()
-            
-            self._value_like.SetString( 0, like )
-            self._value_like.SetString( 1, dislike )
-            
-            self._value_like.SetSelection( selection )
-            
-        except: pass
-        
-    
     def GetPredicate( self ): return self._predicate
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, predicate_class ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._predicate_panel = predicate_class( self )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+            self._ok.SetDefault()
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._predicate_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.AddF( self._ok, CC.FLAGS_MIXED )
+            
+            self.SetSizer( hbox )
+            
+        
+        def EventOK( self, event ):
+            
+            predicate = self._predicate_panel.GetPredicate()
+            
+            self.GetParent().SubPanelOK( predicate )
+            
+        
     
 class DialogInputLocalBooruShare( Dialog ):
     
@@ -4206,7 +3344,7 @@ class DialogPageChooser( Dialog ):
                             
                             booru = dlg.GetBooru()
                             
-                            HydrusGlobals.pubsub.pub( 'new_page_import_gallery', 'booru', booru )
+                            HydrusGlobals.pubsub.pub( 'new_import_gallery', 'booru', booru )
                             
                         
                     
@@ -4214,7 +3352,7 @@ class DialogPageChooser( Dialog ):
                     
                     ( gallery_name, gallery_type ) = obj
                     
-                    HydrusGlobals.pubsub.pub( 'new_page_import_gallery', gallery_name, gallery_type )
+                    HydrusGlobals.pubsub.pub( 'new_import_gallery', gallery_name, gallery_type )
                     
                 elif entry_type == 'page_import_thread_watcher': HydrusGlobals.pubsub.pub( 'new_page_import_thread_watcher' )
                 elif entry_type == 'page_import_url': HydrusGlobals.pubsub.pub( 'new_page_import_url' )

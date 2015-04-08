@@ -25,16 +25,7 @@
 			<p><a href="file_sync_4.png"><img src="file_sync_4.png" width="960" height="443" /></a></p>
 			<p><a href="file_sync_5.png"><img src="file_sync_5.png" width="960" height="443" /></a></p>
 			<p><a href="file_sync_6.png"><img src="file_sync_6.png" width="960" height="443" /></a></p>
-			<h3>the update request</h3>
-			<p>The main request looks like this:</p>
-			<ul>
-				<li>GET /update?begin=1298778949 HTTP/1.1</li>
-			</ul>
-			<p>Which is a standard http query. 'begin' is a timestamp telling the repository "please give me the update which starts with this timestamp" (begin=0 initialises). The repository answers in YAML, which you can review in include/HydrusConstants.py.</p>
-			<p>The update duration is currently 100,000 seconds.</p>
-			<h3>what about the other requests?</h3>
-			<p>I suggest you review the code for information on the other requests. HydrusServer.py does the parsing, and ProcessRequest in the databases does most of the actual magic. ConnectionToService in ClientConstants.py does the client-side request-bundling and response parsing. If you have detailed questions, you can always email me!</p>
-			<p>YAML is very important in the hydrus network. I love it. Just do some googling if you want to learn more, and play around with yaml.safe_dump and yaml.safe_load in the python console to get some hands-on experience.</p>
+			
 		</div>
 	</body>
 </html>

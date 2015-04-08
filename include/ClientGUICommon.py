@@ -3084,7 +3084,7 @@ class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
 class NoneableSpinCtrl( wx.Panel ):
     
-    def __init__( self, parent, message, none_phrase = 'no limit', max = 1000000, multiplier = 1, num_dimensions = 1 ):
+    def __init__( self, parent, message, none_phrase = 'no limit', min = 0, max = 1000000, multiplier = 1, num_dimensions = 1 ):
         
         wx.Panel.__init__( self, parent )
         
@@ -3094,9 +3094,9 @@ class NoneableSpinCtrl( wx.Panel ):
         self._checkbox = wx.CheckBox( self, label = none_phrase )
         self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
         
-        self._one = wx.SpinCtrl( self, max = max, size = ( 80, -1 ) )
+        self._one = wx.SpinCtrl( self, min = min, max = max, size = ( 80, -1 ) )
         
-        if num_dimensions == 2: self._two = wx.SpinCtrl( self, initial = 0, max = max, size = ( 80, -1 ) )
+        if num_dimensions == 2: self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max, size = ( 80, -1 ) )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
