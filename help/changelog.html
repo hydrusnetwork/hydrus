@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 153</h3></li>
+				<ul>
+					<li>cut out some out of date stuff from help</li>
+					<li>put a nice big red warning at the top of the 'running your own server' page</li>
+					<li>added system:num_pixels for megapixel searching</li>
+					<li>system predicates height, width, ratio, and the new num_pixels are now collapsed to a super-predicate, system:dimensions</li>
+					<li>system:rating will now only show if you have some ratings services</li>
+					<li>the system:rating dialog will now hide like or numerical ratings if you have no services of that kind</li>
+					<li>complete refactorisation of system predicate dialog</li>
+					<li>some misc system predicate bugs and bad panel event precedence fixed</li>
+					<li>shortened all predicate spinctrls</li>
+					<li>improved how system predicates are stored and used for a search</li>
+					<li>moved some view menu items to the download menu and the new search menu</li>
+					<li>all of the download gallery pages are added to the download menu</li>
+					<li>added some explanatory text to the pixiv dialog</li>
+					<li>the tag uploading process will more carefully prepare its subupdates so that mass allocations of the same tag to many files will be split into smaller chunks, avoiding connection timeouts in these cases</li>
+					<li>hover windows will no longer hover over flash files</li>
+					<li>tag hover frame will resize a little based on the canvas width</li>
+					<li>the twenty pixel mouse warping when the mouse starts dragging close to the edge of the media viewer will no longer occur on flash files</li>
+					<li>the canvas buffer for flash files is expanded to five pixels either side</li>
+					<li>the hover tags window will now update itself when the media's tags change</li>
+					<li>new hover window for details and commands, up top of the media viewer</li>
+					<li>moved the old popout windows' buttons to the new hover window</li>
+					<li>added hover window commands for the normal browser</li>
+					<li>cleaned up some general canvas code</li>
+					<li>index string will now display with a slash in all cases (it was a backslash for windows, for accidental reasons)</li>
+					<li>file limit for subscriptions and download pages now has minimum value 1</li>
+					<li>searching for number of tags while tag censorship has some namespaces  will no longer throw an error</li>
+					<li>moved boot and exit code responsibility from the splash frame to the controller</li>
+					<li>improved the boot and exit code generally, including dragging feedback lag and error handling</li>
+					<li>improved some thread error handling</li>
+					<li>fattening service info won't trigger on client shutdown quite so much, which should speed up shutdown a little</li>
+				</ul>
 				<li><h3>version 152</h3></li>
 				<ul>
 					<li>added prototype hover frame for tags in media view</li>

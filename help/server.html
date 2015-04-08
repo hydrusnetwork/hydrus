@@ -6,25 +6,18 @@
 	</head>
 	<body>
 		<div class="content">
+			<p class="warning">At the moment, the server is hacked-together and quite technical. It requires a fair amount of experience with the client and its concepts, and it does not operate on a timescale that works well on a LAN. I suggest you only try running your own server once you have a bit of experience synchronising with mine or someone else's and you think, 'Hey, I know exactly what that does, and I would like one!'</p>
 			<h3>setting up a server</h3>
-			<p>Would you—</p>
-			<ul>
-				<li>like to share your image collection between your computers, creating a simultaneous backup?</li>
-				<li>like to share images amongst friends?</li>
-				<li>like to publish regular manga or comic updates through a system that plugs natively into hydrus?</li>
-				<li>like to tag all these images, possibly with others' help, according to a specific format that you determine?</li>
-				<li>like to be a cool dude in cyberspace, respected by all the other console jockeys?</li>
-			</ul>
-			<p>If so, you may wish to try running your own server. But first:</p>
+			<p>First:</p>
 			<ul>
 				<li>
-					<p>I—the person who writes all the code and administrates the public tag repository—have no way of knowing where other servers or services are being run, nor who runs them, nor what is being stored on them. The servers never phone home. Feel free to check and run from source if you are paranoid.</p>
+					<p>I—<i>the person who writes all the code and administrates the public tag repository</i>—have no way of knowing where other servers or services are being run, nor who runs them, nor what is being stored on them. The servers never phone home.</p>
 					<ul>
-						<li>Corollary: If you have a problem with something on some dude's server, please, <span class="warning">do not come to me</span>, as I can in no way help with your problem. If your ex-gf's nudes have leaked onto the internet, or you find something terribly offensive, or you just plain hate the free flow of information, I cannot help you at all. IT IS THE DAWN OF 20XX. WELCOME TO INTERNET</li>
+						<li>Corollary: If you have a problem with something on some dude's server, please, <span class="warning">do not come to me</span>, as I can in no way help with your problem. If your ex-gf's nudes have leaked onto the internet, or you find something terribly offensive, or you just plain hate the free flow of information, I cannot help you at all.</li>
 					</ul>
 				</li>
 				<li>This is not technically trivial. If you are wholly unfamiliar with browsing around your file system, or opening ports on firewalls, or setting up servers in general, this may be a step too far. If you get stuck, find a nerd to give you a hand.</li>
-				<li>If you want your community to thrive, you shall have to manage it. If you throw out a hundred uploader keys and go on a long vacation, do not expect your long-crafted thirteen-point 'Superman vs Goku ONLY!!!!!' ruleset to be upheld. Your repositories will clog with unrelated rubbish and your bandwidth will disappear.</li>
+				<li>If you want your community to thrive, you have to manage it. If you throw out a hundred uploader keys and go on a long vacation, do not expect your long-crafted thirteen-point 'Superman vs Goku ONLY!!!!!' ruleset to be upheld. Your repositories will clog with unrelated rubbish and your bandwidth will disappear.</li>
 				<li>If you plan to do this on any kind of large scale, familiarise yourself with your legal rights and responsibilities.</li>
 			</ul>
 			<h3>still keen?</h3>
@@ -46,7 +39,7 @@
 			</ul>
 			<p>Let us look at these steps in more detail:</p>
 			<h3>start the server</h3>
-			<p>Since the server and client have so much common code, I have packaged them together. If you have the client, you have the server. To start it, you can hit the shortcut in your start menu or just go straight for server.exe/.pyw in the install directory. It will first try to take port 45870 or its administration interface, so make sure that is free. Open your firewall as appropriate.</p>
+			<p>Since the server and client have so much common code, I package them together. If you have the client, you have the server. To start it, you can hit the shortcut in your start menu or just go straight for server.exe/.pyw in the install directory. It will first try to take port 45870 for its administration interface, so make sure that is free. Open your firewall as appropriate.</p>
 			<h3>set up the client</h3>
 			<p>In the <i>services->manage services</i> dialog, go to the <i>servers admin</i> tab, give your server admin interface a nickname and set the credentials to whatever-hostname:45870. Don't enter any access key. Ok those changes, and go to <i>review services</i>.</p>
 			<p>On the tab+page for your new server, hit the initialise button. If you have everything set right, the server should generate its first, administrator account and return the access key, which the client will automatically set to the account for you.</p>
