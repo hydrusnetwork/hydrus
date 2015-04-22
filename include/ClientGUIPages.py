@@ -4,7 +4,6 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIManagement
 import ClientGUIMedia
-import ClientGUIMessages
 import ClientGUICanvas
 import ClientDownloading
 import HydrusThreading
@@ -102,7 +101,7 @@ class PageBase( object ):
         
         HydrusGlobals.pubsub.pub( 'resume', self._page_key )
         
-    
+    '''
 class PageMessages( PageBase, wx.SplitterWindow ):
     
     def __init__( self, parent, identity, starting_from_session = False ):
@@ -154,7 +153,7 @@ class PageMessages( PageBase, wx.SplitterWindow ):
         
     
     def TestAbleToClose( self ): self._management_panel.TestAbleToClose()
-    
+    '''
 class PageWithMedia( PageBase, wx.SplitterWindow ):
     
     def __init__( self, parent, file_service_key = CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = None, initial_media_results = None, starting_from_session = False ):

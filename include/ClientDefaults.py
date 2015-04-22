@@ -31,19 +31,17 @@ def GetClientDefaultOptions():
     
     system_predicates = {}
     
-    system_predicates[ 'age' ] = ( 0, 0, 0, 7 )
-    system_predicates[ 'duration' ] = ( 3, 0, 0 )
-    system_predicates[ 'height' ] = ( 1, 1080 )
+    system_predicates[ 'age' ] = ( '<', 0, 0, 7, 0 )
+    system_predicates[ 'duration' ] = ( '>', 0 )
+    system_predicates[ 'height' ] = ( '=', 1080 )
     system_predicates[ 'limit' ] = 600
-    system_predicates[ 'mime' ] = ( 0, 0 )
-    system_predicates[ 'num_tags' ] = ( 0, 4 )
-    system_predicates[ 'local_rating_numerical' ] = ( 0, 3 )
-    system_predicates[ 'local_rating_like' ] = 0
-    system_predicates[ 'ratio' ] = ( 0, 16, 9 )
-    system_predicates[ 'size' ] = ( 0, 200, 1 )
-    system_predicates[ 'width' ] = ( 1, 1920 )
-    system_predicates[ 'num_words' ] = ( 0, 30000 )
-    system_predicates[ 'num_pixels' ] = ( 1, 2, 2 )
+    system_predicates[ 'mime' ] = HC.IMAGES
+    system_predicates[ 'num_tags' ] = ( '<', 4 )
+    system_predicates[ 'ratio' ] = ( '=', 16, 9 )
+    system_predicates[ 'size' ] = ( '<', 200, 1024 )
+    system_predicates[ 'width' ] = ( '=', 1920 )
+    system_predicates[ 'num_words' ] = ( '<', 30000 )
+    system_predicates[ 'num_pixels' ] = ( u'\u2248', 2, 2 )
     system_predicates[ 'hamming_distance' ] = 5
     
     options[ 'file_system_predicates' ] = system_predicates

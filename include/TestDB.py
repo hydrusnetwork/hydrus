@@ -20,6 +20,7 @@ import yaml
 import HydrusData
 import ClientSearch
 import HydrusNetworking
+import wx
 
 class TestClientDB( unittest.TestCase ):
     
@@ -276,27 +277,37 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( result, set() )
         
     
-    def test_favourite_custom_filter_actions( self ):
+    def test_shortcuts( self ):
         
-        result = self._read( 'favourite_custom_filter_actions' )
+        result = self._read( 'shortcuts' )
         
-        self.assertEqual( result, dict() )
-        
-        #
-        
-        favourite_custom_filter_actions = { 'a' : 'blah', 'b' : 'bleh' }
-        
-        for ( name, actions ) in favourite_custom_filter_actions.items(): self._write( 'favourite_custom_filter_actions', name, actions )
-        
-        self._write( 'favourite_custom_filter_actions', 'c', 'bluh' )
-        
-        self._write( 'delete_favourite_custom_filter_actions', 'c' )
+        self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'favourite_custom_filter_actions' )
+        shortcuts = ClientData.Shortcuts( 'test' )
         
-        self.assertEqual( result, favourite_custom_filter_actions )
+        shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ( os.urandom( 32 ), 'action_data' ) )
+        shortcuts.SetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END, ( None, 'other_action_data' ) )
+        
+        self._write( 'shortcuts', shortcuts )
+        
+        result = self._read( 'shortcuts' )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        result = self._read( 'shortcuts', 'test' )
+        
+        self.assertEqual( result.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ), shortcuts.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ) )
+        self.assertEqual( result.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ), shortcuts.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ) )
+        
+        #
+        
+        self._write( 'delete_shortcuts', 'test' )
+        
+        result = self._read( 'shortcuts' )
+        
+        self.assertEqual( result, [] )
         
     
     def test_file_query_ids( self ):
@@ -448,19 +459,19 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ), 1 ) )
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( ( '0123456789abcdef' * 4 ).decode( 'hex' ), 5 ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 0, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 0, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 5270, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 0, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInteger( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInteger( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInteger( 'KB' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInteger( 'MB' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInteger( 'GB' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'KB' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'MB' ) ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'GB' ) ), 1 ) )
         
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '<', 201 ), 1 ) )
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '<', 200 ), 0 ) )

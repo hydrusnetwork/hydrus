@@ -3,6 +3,7 @@ import dircache
 import hashlib
 import httplib
 import HydrusConstants as HC
+import HydrusDB
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
@@ -97,7 +98,11 @@ class MessageDB( object ):
         return public_key
         
     
-class ServiceDB( MessageDB ):
+class DB( HydrusDB.HydrusDB ):
+    
+    DB_NAME = 'server'
+    READ_WRITE_ACTIONS = []
+    WRITE_SPECIAL_ACTIONS = []
     
     def _AccountTypeExists( self, service_id, title ): return self._c.execute( 'SELECT 1 FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
     
@@ -432,7 +437,7 @@ class ServiceDB( MessageDB ):
             
             hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) ) ]
             
-            if len( hash_ids ) > 0: self._DeleteLocalFiles( admin_account_id, hash_ids, reason_id )
+            if len( hash_ids ) > 0: self._DeleteFiles( service_id, admin_account_id, hash_ids, reason_id )
             
             mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM mappings WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) ) )
             
@@ -527,6 +532,149 @@ class ServiceDB( MessageDB ):
         now = HydrusData.GetNow()
         
         self._c.execute( 'DELETE FROM bans WHERE expires < ?;', ( now, ) )
+        
+    
+    def _CreateDB( self ):
+        
+        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_UPDATES_DIR, HC.SERVER_MESSAGES_DIR )
+        
+        for dir in dirs:
+            
+            if not os.path.exists( dir ): os.mkdir( dir )
+            
+        
+        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_MESSAGES_DIR )
+        
+        hex_chars = '0123456789abcdef'
+        
+        for dir in dirs:
+            
+            for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                
+                new_dir = dir + os.path.sep + one + two
+                
+                if not os.path.exists( new_dir ): os.mkdir( new_dir )
+                
+            
+        
+        self._c.execute( 'BEGIN IMMEDIATE' )
+        
+        self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
+        self._c.execute( 'PRAGMA journal_mode=WAL;' )
+        
+        now = HydrusData.GetNow()
+        
+        self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, options TEXT_YAML );' )
+        
+        self._c.execute( 'CREATE TABLE accounts( account_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_key BLOB_BYTES, hashed_access_key BLOB_BYTES, account_type_id INTEGER, created INTEGER, expires INTEGER, used_bytes INTEGER, used_requests INTEGER );' )
+        self._c.execute( 'CREATE UNIQUE INDEX accounts_account_key_index ON accounts ( account_key );' )
+        self._c.execute( 'CREATE UNIQUE INDEX accounts_hashed_access_key_index ON accounts ( hashed_access_key );' )
+        self._c.execute( 'CREATE UNIQUE INDEX accounts_service_id_account_id_index ON accounts ( service_id, account_id );' )
+        self._c.execute( 'CREATE INDEX accounts_service_id_account_type_id_index ON accounts ( service_id, account_type_id );' )
+        
+        self._c.execute( 'CREATE TABLE account_scores ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, score_type INTEGER, score INTEGER, PRIMARY KEY( service_id, account_id, score_type ) );' )
+        
+        self._c.execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, title TEXT, account_type TEXT_YAML );' )
+        self._c.execute( 'CREATE UNIQUE INDEX account_types_service_id_account_type_id_index ON account_types ( service_id, account_type_id );' )
+        
+        self._c.execute( 'CREATE TABLE bans ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, admin_account_id INTEGER, reason_id INTEGER, created INTEGER, expires INTEGER, PRIMARY KEY( service_id, account_id ) );' )
+        self._c.execute( 'CREATE INDEX bans_expires ON bans ( expires );' )
+        
+        self._c.execute( 'CREATE TABLE contacts ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, contact_key BLOB, public_key TEXT, PRIMARY KEY( service_id, account_id ) );' )
+        self._c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
+        
+        self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER );' )
+        
+        self._c.execute( 'CREATE TABLE file_map ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, hash_id, account_id ) );' )
+        self._c.execute( 'CREATE INDEX file_map_service_id_account_id_index ON file_map ( service_id, account_id );' )
+        self._c.execute( 'CREATE INDEX file_map_service_id_timestamp_index ON file_map ( service_id, timestamp );' )
+        
+        self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, hash_id, status ) );' )
+        self._c.execute( 'CREATE INDEX file_petitions_service_id_account_id_reason_id_index ON file_petitions ( service_id, account_id, reason_id );' )
+        self._c.execute( 'CREATE INDEX file_petitions_service_id_hash_id_index ON file_petitions ( service_id, hash_id );' )
+        self._c.execute( 'CREATE INDEX file_petitions_service_id_status_index ON file_petitions ( service_id, status );' )
+        self._c.execute( 'CREATE INDEX file_petitions_service_id_timestamp_index ON file_petitions ( service_id, timestamp );' )
+        
+        self._c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
+        self._c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
+        
+        self._c.execute( 'CREATE TABLE ip_addresses ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, ip TEXT, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+        
+        self._c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) );' )
+        self._c.execute( 'CREATE INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
+        self._c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
+        self._c.execute( 'CREATE INDEX mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
+        self._c.execute( 'CREATE INDEX mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
+        
+        self._c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
+        self._c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
+        self._c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
+        
+        self._c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
+        self._c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
+        self._c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
+        
+        self._c.execute( 'CREATE TABLE message_statuses ( status_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, status BLOB_BYTES, timestamp INTEGER );' )
+        self._c.execute( 'CREATE INDEX message_statuses_service_id_account_id_index ON message_statuses ( service_id, account_id );' )
+        self._c.execute( 'CREATE INDEX message_statuses_timestamp_index ON message_statuses ( timestamp );' )
+        
+        self._c.execute( 'CREATE TABLE messaging_sessions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, account_id INTEGER, identifier BLOB_BYTES, name TEXT, expiry INTEGER );' )
+        
+        self._c.execute( 'CREATE TABLE news ( service_id INTEGER REFERENCES services ON DELETE CASCADE, news TEXT, timestamp INTEGER );' )
+        self._c.execute( 'CREATE INDEX news_timestamp_index ON news ( timestamp );' )
+        
+        self._c.execute( 'CREATE TABLE reasons ( reason_id INTEGER PRIMARY KEY, reason TEXT );' )
+        self._c.execute( 'CREATE UNIQUE INDEX reasons_reason_index ON reasons ( reason );' )
+        
+        self._c.execute( 'CREATE TABLE registration_keys ( registration_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, account_key BLOB_BYTES, access_key BLOB_BYTES, expiry INTEGER );' )
+        self._c.execute( 'CREATE UNIQUE INDEX registration_keys_access_key_index ON registration_keys ( access_key );' )
+        
+        self._c.execute( 'CREATE TABLE sessions ( session_key BLOB_BYTES, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, expiry INTEGER );' )
+        
+        self._c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, timestamp INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, new_tag_id, status ) );' )
+        self._c.execute( 'CREATE INDEX tag_parents_service_id_old_tag_id_index ON tag_parents ( service_id, old_tag_id, new_tag_id );' )
+        self._c.execute( 'CREATE INDEX tag_parents_service_id_timestamp_index ON tag_parents ( service_id, timestamp );' )
+        self._c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
+        
+        self._c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, timestamp INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, status ) );' )
+        self._c.execute( 'CREATE INDEX tag_siblings_service_id_old_tag_id_index ON tag_siblings ( service_id, old_tag_id );' )
+        self._c.execute( 'CREATE INDEX tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
+        self._c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
+        
+        self._c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
+        self._c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
+        
+        self._c.execute( 'CREATE TABLE update_cache ( service_id INTEGER REFERENCES services ON DELETE CASCADE, begin INTEGER, end INTEGER, dirty INTEGER_BOOLEAN, PRIMARY KEY( service_id, begin ) );' )
+        self._c.execute( 'CREATE UNIQUE INDEX update_cache_service_id_end_index ON update_cache ( service_id, end );' )
+        self._c.execute( 'CREATE INDEX update_cache_service_id_dirty_index ON update_cache ( service_id, dirty );' )
+        
+        self._c.execute( 'CREATE TABLE version ( version INTEGER, year INTEGER, month INTEGER );' )
+        
+        current_time_struct = time.gmtime()
+        
+        ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
+        
+        self._c.execute( 'INSERT INTO version ( version, year, month ) VALUES ( ?, ?, ? );', ( HC.SOFTWARE_VERSION, current_year, current_month ) )
+        
+        # set up server admin
+        
+        service_key = HC.SERVER_ADMIN_KEY
+        
+        service_type = HC.SERVER_ADMIN
+        
+        options = HC.DEFAULT_OPTIONS[ HC.SERVER_ADMIN ]
+        
+        options[ 'port' ] = HC.DEFAULT_SERVER_ADMIN_PORT
+        
+        self._c.execute( 'INSERT INTO services ( service_key, type, options ) VALUES ( ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, options ) )
+        
+        server_admin_service_id = self._c.lastrowid
+        
+        server_admin_account_type = HydrusData.AccountType( 'server admin', [ HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ], ( None, None ) )
+        
+        self._c.execute( 'INSERT INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( server_admin_service_id, 'server admin', server_admin_account_type ) )
+        
+        self._c.execute( 'COMMIT' )
         
     
     def _CreateUpdate( self, service_key, begin, end ):
@@ -1461,6 +1609,49 @@ class ServiceDB( MessageDB ):
         return access_key
         
     
+    def _InitCaches( self ):
+        
+        self._over_monthly_data = False
+        self._services_over_monthly_data = set()
+        
+    
+    def _MakeBackup( self ):
+        
+        self._c.execute( 'COMMIT' )
+        
+        self._c.execute( 'VACUUM' )
+        
+        self._c.execute( 'ANALYZE' )
+        
+        self._c.close()
+        self._db.close()
+        
+        self._InitDBCursor()
+        
+        self._c.execute( 'BEGIN IMMEDIATE' )
+        
+        shutil.copy( self._db_path, self._db_path + '.backup' )
+        
+        shutil.rmtree( HC.SERVER_FILES_DIR + '_backup', ignore_errors = True )
+        shutil.rmtree( HC.SERVER_THUMBNAILS_DIR + '_backup', ignore_errors = True )
+        shutil.rmtree( HC.SERVER_MESSAGES_DIR + '_backup', ignore_errors = True )
+        shutil.rmtree( HC.SERVER_UPDATES_DIR + '_backup', ignore_errors = True )
+        
+        shutil.copytree( HC.SERVER_FILES_DIR, HC.SERVER_FILES_DIR + '_backup' )
+        shutil.copytree( HC.SERVER_THUMBNAILS_DIR, HC.SERVER_THUMBNAILS_DIR + '_backup' )
+        shutil.copytree( HC.SERVER_MESSAGES_DIR, HC.SERVER_MESSAGES_DIR + '_backup' )
+        shutil.copytree( HC.SERVER_UPDATES_DIR, HC.SERVER_UPDATES_DIR + '_backup' )
+        
+    
+    def _ManageDBError( self, job, e ):
+        
+        ( exception_type, value, tb ) = sys.exc_info()
+        
+        new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
+        
+        job.PutResult( new_e )
+        
+    
     def _ModifyAccount( self, service_key, admin_account_key, action, subject_account_keys, kwargs ):
         
         service_id = self._GetServiceId( service_key )
@@ -1807,6 +1998,33 @@ class ServiceDB( MessageDB ):
             
         
     
+    def _Read( self, action, *args, **kwargs ):
+        
+        if action == 'access_key': result = self._GetAccessKey( *args, **kwargs )
+        elif action == 'account': result = self._GetAccount( *args, **kwargs )
+        elif action == 'account_info': result = self._GetAccountInfo( *args, **kwargs )
+        elif action == 'account_key_from_access_key': result = self._GetAccountKeyFromAccessKey( *args, **kwargs )
+        elif action == 'account_key_from_identifier': result = self._GetAccountKeyFromIdentifier( *args, **kwargs )
+        elif action == 'account_types': result = self._GetAccountTypes( *args, **kwargs )
+        elif action == 'dirty_updates': result = self._GetDirtyUpdates( *args, **kwargs  )
+        elif action == 'init': result = self._InitAdmin( *args, **kwargs  )
+        elif action == 'ip': result = self._GetIPTimestamp( *args, **kwargs )
+        elif action == 'messaging_sessions': result = self._GetMessagingSessions( *args, **kwargs )
+        elif action == 'num_petitions': result = self._GetNumPetitions( *args, **kwargs )
+        elif action == 'petition': result = self._GetPetition( *args, **kwargs )
+        elif action == 'registration_keys': result = self._GenerateRegistrationKeys( *args, **kwargs )
+        elif action == 'service_keys': result = self._GetServiceKeys( *args, **kwargs )
+        elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
+        elif action == 'services_info': result = self._GetServicesInfo( *args, **kwargs )
+        elif action == 'sessions': result = self._GetSessions( *args, **kwargs )
+        elif action == 'stats': result = self._GetStats( *args, **kwargs )
+        elif action == 'update_ends': result = self._GetUpdateEnds( *args, **kwargs )
+        elif action == 'verify_access_key': result = self._VerifyAccessKey( *args, **kwargs )
+        else: raise Exception( 'db received an unknown read command: ' + action )
+        
+        return result
+        
+    
     def _RefreshUpdateCache( self, service_id, affected_timestamps ): self._c.executemany( 'UPDATE update_cache SET dirty = ? WHERE service_id = ? AND ? BETWEEN begin AND end;', [ ( True, service_id, timestamp ) for timestamp in affected_timestamps ] )
     
     def _RewardAccounts( self, service_id, score_type, scores ):
@@ -1865,323 +2083,6 @@ class ServiceDB( MessageDB ):
     def _SetExpires( self, account_ids, expires ): self._c.execute( 'UPDATE accounts SET expires = ? WHERE account_id IN ' + HydrusData.SplayListForDB( account_ids ) + ';', ( expires, ) )
     
     def _UnbanKey( self, service_id, account_id ): self._c.execute( 'DELETE FROM bans WHERE service_id = ? AND account_id = ?;', ( account_id, ) )
-    
-    def _UpdateRatings( self, service_id, account_id, ratings ):
-        
-        hashes = [ rating[0] for rating in ratings ]
-        
-        hashes_to_hash_ids = self._GetHashesToHashIds( hashes )
-        
-        valued_ratings = [ ( hash, rating ) for ( hash, rating ) in ratings if rating is not None ]
-        null_ratings = [ hash for ( hash, rating ) in ratings if rating is None ]
-        
-        self._c.executemany( 'REPLACE INTO ratings ( service_id, account_id, hash_id, rating ) VALUES ( ?, ?, ?, ? );', [ ( service_id, account_id, hashes_to_hash_ids[ hash ], rating ) for ( hash, rating ) in valued_ratings ] )
-        self._c.executemany( 'DELETE FROM ratings WHERE service_id = ? AND account_id = ? AND hash_id = ?;', [ ( service_id, account_id, hashes_to_hash_ids[ hash ] ) for hash in null_ratings ] )
-        
-        hash_ids = set( hashes_to_hash_ids.values() )
-        
-        aggregates = self._c.execute( 'SELECT hash_id, SUM( rating ), COUNT( * ) FROM ratings WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' GROUP BY hash_id;' )
-        
-        missed_aggregate_hash_ids = hash_ids.difference( aggregate[0] for aggregate in aggregates )
-        
-        aggregates.extend( [ ( hash_id, 0.0, 0 ) for hash_id in missed_aggregate_hash_ids ] )        
-        
-        hash_ids_to_new_timestamps = { hash_id : new_timestamp for ( hash_id, new_timestamp ) in self._c.execute( 'SELECT hash_id, new_timestamp FROM aggregate_ratings WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) }
-        
-        now = HydrusData.GetNow()
-        
-        for ( hash_id, total_score, count ) in aggregates:
-            
-            score = float( total_score ) / float( count )
-            
-            if hash_id not in hash_ids_to_new_timestamps or hash_ids_to_new_timestamps[ hash_id ] == 0:
-                
-                new_timestamp = now + ( count * HC.UPDATE_DURATION / 10 )
-                
-            else:
-                
-                new_timestamp = max( now, hash_ids_to_new_timestamps[ hash_id ] - HC.UPDATE_DURATION )
-                
-            
-            if hash_id not in hash_ids_to_new_timestamps: self._c.execute( 'INSERT INTO aggregate_ratings ( service_id, hash_id, score, count, new_timestamp, current_timestamp ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, hash_id, score, new_timestamp, 0 ) )
-            elif new_timestamp != hash_ids_to_new_timestamps[ hash_id ]: self._c.execute( 'UPDATE aggregate_ratings SET new_timestamp = ? WHERE service_id = ? AND hash_id = ?;', ( new_timestamp, service_id, hash_id ) )
-            
-        
-    
-    def _VerifyAccessKey( self, service_key, access_key ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        result = self._c.execute( 'SELECT 1 FROM accounts WHERE service_id = ? AND hashed_access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
-        
-        if result is None:
-            
-            result = self._c.execute( 'SELECT 1 FROM registration_keys WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( access_key ) ) ).fetchone()
-            
-            if result is None: return False
-            
-        
-        return True
-        
-    
-class DB( ServiceDB ):
-    
-    def __init__( self ):
-        
-        self._local_shutdown = False
-        self._loop_finished = False
-        
-        self._db_path = HC.DB_DIR + os.path.sep + 'server.db'
-        
-        self._jobs = Queue.PriorityQueue()
-        self._pubsubs = []
-        
-        self._over_monthly_data = False
-        self._services_over_monthly_data = set()
-        
-        if os.path.exists( self._db_path ):
-            
-            # open and close to clean up in case last session didn't close well
-            
-            db = sqlite3.connect( self._db_path, timeout=600.0, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
-            
-            db.close()
-            
-        
-        self._InitDB()
-        
-        ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
-        
-        if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + HydrusData.ToString( version ) + ' is too old for this version ' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + HydrusData.ToString( version + 45 ) + ' or earlier first.' )
-        
-        while version < HC.SOFTWARE_VERSION:
-            
-            time.sleep( 1 )
-            
-            try: self._c.execute( 'BEGIN IMMEDIATE' )
-            except Exception as e:
-                
-                raise HydrusExceptions.DBAccessException( HydrusData.ToString( e ) )
-                
-            
-            try:
-                
-                self._UpdateDB( version )
-                
-                self._c.execute( 'COMMIT' )
-                
-            except:
-                
-                self._c.execute( 'ROLLBACK' )
-                
-                raise Exception( 'Updating the server db to version ' + HydrusData.ToString( version ) + ' caused this error:' + os.linesep + traceback.format_exc() )
-                
-            
-            ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
-            
-        
-        service_keys = self._GetServiceKeys()
-        
-        self._CloseDBCursor()
-        
-    
-    def _CloseDBCursor( self ):
-        
-        self._c.close()
-        self._db.close()
-        
-        del self._db
-        del self._c
-        
-    
-    def _InitDB( self ):
-        
-        if not os.path.exists( self._db_path ): create_db = True
-        else: create_db = False
-        
-        self._InitDBCursor()
-        
-        if create_db:
-            
-            dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_UPDATES_DIR, HC.SERVER_MESSAGES_DIR )
-            
-            for dir in dirs:
-                
-                if not os.path.exists( dir ): os.mkdir( dir )
-                
-            
-            dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_MESSAGES_DIR )
-            
-            hex_chars = '0123456789abcdef'
-            
-            for dir in dirs:
-                
-                for ( one, two ) in itertools.product( hex_chars, hex_chars ):
-                    
-                    new_dir = dir + os.path.sep + one + two
-                    
-                    if not os.path.exists( new_dir ): os.mkdir( new_dir )
-                    
-                
-            
-            self._c.execute( 'BEGIN IMMEDIATE' )
-            
-            self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-            self._c.execute( 'PRAGMA journal_mode=WAL;' )
-            
-            now = HydrusData.GetNow()
-            
-            self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, options TEXT_YAML );' )
-            
-            self._c.execute( 'CREATE TABLE accounts( account_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_key BLOB_BYTES, hashed_access_key BLOB_BYTES, account_type_id INTEGER, created INTEGER, expires INTEGER, used_bytes INTEGER, used_requests INTEGER );' )
-            self._c.execute( 'CREATE UNIQUE INDEX accounts_account_key_index ON accounts ( account_key );' )
-            self._c.execute( 'CREATE UNIQUE INDEX accounts_hashed_access_key_index ON accounts ( hashed_access_key );' )
-            self._c.execute( 'CREATE UNIQUE INDEX accounts_service_id_account_id_index ON accounts ( service_id, account_id );' )
-            self._c.execute( 'CREATE INDEX accounts_service_id_account_type_id_index ON accounts ( service_id, account_type_id );' )
-            
-            self._c.execute( 'CREATE TABLE account_scores ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, score_type INTEGER, score INTEGER, PRIMARY KEY( service_id, account_id, score_type ) );' )
-            
-            self._c.execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, title TEXT, account_type TEXT_YAML );' )
-            self._c.execute( 'CREATE UNIQUE INDEX account_types_service_id_account_type_id_index ON account_types ( service_id, account_type_id );' )
-            
-            self._c.execute( 'CREATE TABLE bans ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, admin_account_id INTEGER, reason_id INTEGER, created INTEGER, expires INTEGER, PRIMARY KEY( service_id, account_id ) );' )
-            self._c.execute( 'CREATE INDEX bans_expires ON bans ( expires );' )
-            
-            self._c.execute( 'CREATE TABLE contacts ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, contact_key BLOB, public_key TEXT, PRIMARY KEY( service_id, account_id ) );' )
-            self._c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
-            
-            self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER );' )
-            
-            self._c.execute( 'CREATE TABLE file_map ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, hash_id, account_id ) );' )
-            self._c.execute( 'CREATE INDEX file_map_service_id_account_id_index ON file_map ( service_id, account_id );' )
-            self._c.execute( 'CREATE INDEX file_map_service_id_timestamp_index ON file_map ( service_id, timestamp );' )
-            
-            self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, hash_id, status ) );' )
-            self._c.execute( 'CREATE INDEX file_petitions_service_id_account_id_reason_id_index ON file_petitions ( service_id, account_id, reason_id );' )
-            self._c.execute( 'CREATE INDEX file_petitions_service_id_hash_id_index ON file_petitions ( service_id, hash_id );' )
-            self._c.execute( 'CREATE INDEX file_petitions_service_id_status_index ON file_petitions ( service_id, status );' )
-            self._c.execute( 'CREATE INDEX file_petitions_service_id_timestamp_index ON file_petitions ( service_id, timestamp );' )
-            
-            self._c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
-            self._c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
-            
-            self._c.execute( 'CREATE TABLE ip_addresses ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, ip TEXT, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-            
-            self._c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) );' )
-            self._c.execute( 'CREATE INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
-            self._c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
-            self._c.execute( 'CREATE INDEX mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
-            self._c.execute( 'CREATE INDEX mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
-            
-            self._c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
-            self._c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
-            self._c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
-            
-            self._c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
-            self._c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
-            self._c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
-            
-            self._c.execute( 'CREATE TABLE message_statuses ( status_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, status BLOB_BYTES, timestamp INTEGER );' )
-            self._c.execute( 'CREATE INDEX message_statuses_service_id_account_id_index ON message_statuses ( service_id, account_id );' )
-            self._c.execute( 'CREATE INDEX message_statuses_timestamp_index ON message_statuses ( timestamp );' )
-            
-            self._c.execute( 'CREATE TABLE messaging_sessions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, account_id INTEGER, identifier BLOB_BYTES, name TEXT, expiry INTEGER );' )
-            
-            self._c.execute( 'CREATE TABLE news ( service_id INTEGER REFERENCES services ON DELETE CASCADE, news TEXT, timestamp INTEGER );' )
-            self._c.execute( 'CREATE INDEX news_timestamp_index ON news ( timestamp );' )
-            
-            self._c.execute( 'CREATE TABLE reasons ( reason_id INTEGER PRIMARY KEY, reason TEXT );' )
-            self._c.execute( 'CREATE UNIQUE INDEX reasons_reason_index ON reasons ( reason );' )
-            
-            self._c.execute( 'CREATE TABLE registration_keys ( registration_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, account_key BLOB_BYTES, access_key BLOB_BYTES, expiry INTEGER );' )
-            self._c.execute( 'CREATE UNIQUE INDEX registration_keys_access_key_index ON registration_keys ( access_key );' )
-            
-            self._c.execute( 'CREATE TABLE sessions ( session_key BLOB_BYTES, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, expiry INTEGER );' )
-            
-            self._c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, timestamp INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, new_tag_id, status ) );' )
-            self._c.execute( 'CREATE INDEX tag_parents_service_id_old_tag_id_index ON tag_parents ( service_id, old_tag_id, new_tag_id );' )
-            self._c.execute( 'CREATE INDEX tag_parents_service_id_timestamp_index ON tag_parents ( service_id, timestamp );' )
-            self._c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
-            
-            self._c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, timestamp INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, status ) );' )
-            self._c.execute( 'CREATE INDEX tag_siblings_service_id_old_tag_id_index ON tag_siblings ( service_id, old_tag_id );' )
-            self._c.execute( 'CREATE INDEX tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
-            self._c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
-            
-            self._c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
-            self._c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
-            
-            self._c.execute( 'CREATE TABLE update_cache ( service_id INTEGER REFERENCES services ON DELETE CASCADE, begin INTEGER, end INTEGER, dirty INTEGER_BOOLEAN, PRIMARY KEY( service_id, begin ) );' )
-            self._c.execute( 'CREATE UNIQUE INDEX update_cache_service_id_end_index ON update_cache ( service_id, end );' )
-            self._c.execute( 'CREATE INDEX update_cache_service_id_dirty_index ON update_cache ( service_id, dirty );' )
-            
-            self._c.execute( 'CREATE TABLE version ( version INTEGER, year INTEGER, month INTEGER );' )
-            
-            current_time_struct = time.gmtime()
-            
-            ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
-            
-            self._c.execute( 'INSERT INTO version ( version, year, month ) VALUES ( ?, ?, ? );', ( HC.SOFTWARE_VERSION, current_year, current_month ) )
-            
-            # set up server admin
-            
-            service_key = HC.SERVER_ADMIN_KEY
-            
-            service_type = HC.SERVER_ADMIN
-            
-            options = HC.DEFAULT_OPTIONS[ HC.SERVER_ADMIN ]
-            
-            options[ 'port' ] = HC.DEFAULT_SERVER_ADMIN_PORT
-            
-            self._c.execute( 'INSERT INTO services ( service_key, type, options ) VALUES ( ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, options ) )
-            
-            server_admin_service_id = self._c.lastrowid
-            
-            server_admin_account_type = HydrusData.AccountType( 'server admin', [ HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ], ( None, None ) )
-            
-            self._c.execute( 'INSERT INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( server_admin_service_id, 'server admin', server_admin_account_type ) )
-            
-            self._c.execute( 'COMMIT' )
-            
-        
-    
-    def _InitDBCursor( self ):
-        
-        self._db = sqlite3.connect( self._db_path, timeout=600.0, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
-        
-        self._c = self._db.cursor()
-        
-        self._c.execute( 'PRAGMA cache_size = 10000;' )
-        self._c.execute( 'PRAGMA foreign_keys = ON;' )
-        
-    
-    def _MakeBackup( self ):
-        
-        self._c.execute( 'COMMIT' )
-        
-        self._c.execute( 'VACUUM' )
-        
-        self._c.execute( 'ANALYZE' )
-        
-        self._c.close()
-        self._db.close()
-        
-        self._InitDBCursor()
-        
-        self._c.execute( 'BEGIN IMMEDIATE' )
-        
-        shutil.copy( self._db_path, self._db_path + '.backup' )
-        
-        shutil.rmtree( HC.SERVER_FILES_DIR + '_backup', ignore_errors = True )
-        shutil.rmtree( HC.SERVER_THUMBNAILS_DIR + '_backup', ignore_errors = True )
-        shutil.rmtree( HC.SERVER_MESSAGES_DIR + '_backup', ignore_errors = True )
-        shutil.rmtree( HC.SERVER_UPDATES_DIR + '_backup', ignore_errors = True )
-        
-        shutil.copytree( HC.SERVER_FILES_DIR, HC.SERVER_FILES_DIR + '_backup' )
-        shutil.copytree( HC.SERVER_THUMBNAILS_DIR, HC.SERVER_THUMBNAILS_DIR + '_backup' )
-        shutil.copytree( HC.SERVER_MESSAGES_DIR, HC.SERVER_MESSAGES_DIR + '_backup' )
-        shutil.copytree( HC.SERVER_UPDATES_DIR, HC.SERVER_UPDATES_DIR + '_backup' )
-        
     
     def _UpdateDB( self, version ):
         
@@ -2382,177 +2283,84 @@ class DB( ServiceDB ):
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
     
-    def pub_after_commit( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
-    
-    def LoopIsFinished( self ): return self._loop_finished
-    
-    def MainLoop( self ):
+    def _UpdateRatings( self, service_id, account_id, ratings ):
         
-        def ProcessJob( job ):
+        hashes = [ rating[0] for rating in ratings ]
+        
+        hashes_to_hash_ids = self._GetHashesToHashIds( hashes )
+        
+        valued_ratings = [ ( hash, rating ) for ( hash, rating ) in ratings if rating is not None ]
+        null_ratings = [ hash for ( hash, rating ) in ratings if rating is None ]
+        
+        self._c.executemany( 'REPLACE INTO ratings ( service_id, account_id, hash_id, rating ) VALUES ( ?, ?, ?, ? );', [ ( service_id, account_id, hashes_to_hash_ids[ hash ], rating ) for ( hash, rating ) in valued_ratings ] )
+        self._c.executemany( 'DELETE FROM ratings WHERE service_id = ? AND account_id = ? AND hash_id = ?;', [ ( service_id, account_id, hashes_to_hash_ids[ hash ] ) for hash in null_ratings ] )
+        
+        hash_ids = set( hashes_to_hash_ids.values() )
+        
+        aggregates = self._c.execute( 'SELECT hash_id, SUM( rating ), COUNT( * ) FROM ratings WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' GROUP BY hash_id;' )
+        
+        missed_aggregate_hash_ids = hash_ids.difference( aggregate[0] for aggregate in aggregates )
+        
+        aggregates.extend( [ ( hash_id, 0.0, 0 ) for hash_id in missed_aggregate_hash_ids ] )        
+        
+        hash_ids_to_new_timestamps = { hash_id : new_timestamp for ( hash_id, new_timestamp ) in self._c.execute( 'SELECT hash_id, new_timestamp FROM aggregate_ratings WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) }
+        
+        now = HydrusData.GetNow()
+        
+        for ( hash_id, total_score, count ) in aggregates:
             
-            def ProcessRead( action, args, kwargs ):
-                
-                if action == 'access_key': result = self._GetAccessKey( *args, **kwargs )
-                elif action == 'account': result = self._GetAccount( *args, **kwargs )
-                elif action == 'account_info': result = self._GetAccountInfo( *args, **kwargs )
-                elif action == 'account_key_from_access_key': result = self._GetAccountKeyFromAccessKey( *args, **kwargs )
-                elif action == 'account_key_from_identifier': result = self._GetAccountKeyFromIdentifier( *args, **kwargs )
-                elif action == 'account_types': result = self._GetAccountTypes( *args, **kwargs )
-                elif action == 'dirty_updates': result = self._GetDirtyUpdates( *args, **kwargs  )
-                elif action == 'init': result = self._InitAdmin( *args, **kwargs  )
-                elif action == 'ip': result = self._GetIPTimestamp( *args, **kwargs )
-                elif action == 'messaging_sessions': result = self._GetMessagingSessions( *args, **kwargs )
-                elif action == 'num_petitions': result = self._GetNumPetitions( *args, **kwargs )
-                elif action == 'petition': result = self._GetPetition( *args, **kwargs )
-                elif action == 'registration_keys': result = self._GenerateRegistrationKeys( *args, **kwargs )
-                elif action == 'service_keys': result = self._GetServiceKeys( *args, **kwargs )
-                elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
-                elif action == 'services_info': result = self._GetServicesInfo( *args, **kwargs )
-                elif action == 'sessions': result = self._GetSessions( *args, **kwargs )
-                elif action == 'stats': result = self._GetStats( *args, **kwargs )
-                elif action == 'update_ends': result = self._GetUpdateEnds( *args, **kwargs )
-                elif action == 'verify_access_key': result = self._VerifyAccessKey( *args, **kwargs )
-                else: raise Exception( 'db received an unknown read command: ' + action )
-                
-                return result
-                
+            score = float( total_score ) / float( count )
             
-            def ProcessWrite( action, args, kwargs ):
+            if hash_id not in hash_ids_to_new_timestamps or hash_ids_to_new_timestamps[ hash_id ] == 0:
                 
-                if action == 'account': result = self._ModifyAccount( *args, **kwargs )
-                elif action == 'account_types': result = self._ModifyAccountTypes( *args, **kwargs )
-                elif action == 'backup': result = self._MakeBackup( *args, **kwargs )
-                elif action == 'check_data_usage': result = self._CheckDataUsage( *args, **kwargs )
-                elif action == 'check_monthly_data': result = self._CheckMonthlyData( *args, **kwargs )
-                elif action == 'clean_update': result = self._CleanUpdate( *args, **kwargs )
-                elif action == 'clear_bans': result = self._ClearBans( *args, **kwargs )
-                elif action == 'create_update': result = self._CreateUpdate( *args, **kwargs )
-                elif action == 'delete_orphans': result = self._DeleteOrphans( *args, **kwargs )
-                elif action == 'file': result = self._AddFile( *args, **kwargs )
-                elif action == 'flush_requests_made': result = self._FlushRequestsMade( *args, **kwargs )
-                elif action == 'messaging_session': result = self._AddMessagingSession( *args, **kwargs )
-                elif action == 'news': result = self._AddNews( *args, **kwargs )
-                elif action == 'services': result = self._ModifyServices( *args, **kwargs )
-                elif action == 'session': result = self._AddSession( *args, **kwargs )
-                elif action == 'update': result = self._ProcessUpdate( *args, **kwargs )
-                else: raise Exception( 'db received an unknown write command: ' + action )
-                
-                return result
-                
-            
-            job_type = job.GetType()
-            
-            action = job.GetAction()
-            
-            args = job.GetArgs()
-            
-            kwargs = job.GetKWArgs()
-            
-            if job_type in ( 'read', 'read_write' ):
-                
-                if job_type == 'read': self._c.execute( 'BEGIN DEFERRED' )
-                else: self._c.execute( 'BEGIN IMMEDIATE' )
-                
-                try:
-                    
-                    result = ProcessRead( action, args, kwargs )
-                    
-                    self._c.execute( 'COMMIT' )
-                    
-                    for ( topic, args, kwargs ) in self._pubsubs: HydrusGlobals.pubsub.pub( topic, *args, **kwargs )
-                    
-                    job.PutResult( result )
-                    
-                except Exception as e:
-                    
-                    self._c.execute( 'ROLLBACK' )
-                    
-                    ( exception_type, value, tb ) = sys.exc_info()
-                    
-                    new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
-                    
-                    job.PutResult( new_e )
-                    
+                new_timestamp = now + ( count * HC.UPDATE_DURATION / 10 )
                 
             else:
                 
-                if job_type == 'write': self._c.execute( 'BEGIN IMMEDIATE' )
-                
-                try:
-                    
-                    result = ProcessWrite( action, args, kwargs )
-                    
-                    if job_type == 'write': self._c.execute( 'COMMIT' )
-                    
-                    for ( topic, args, kwargs ) in self._pubsubs: HydrusGlobals.pubsub.pub( topic, *args, **kwargs )
-                    
-                    job.PutResult( result )
-                    
-                except Exception as e:
-                    
-                    if job_type == 'write': self._c.execute( 'ROLLBACK' )
-                    
-                    ( exception_type, value, tb ) = sys.exc_info()
-                    
-                    new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
-                    
-                    job.PutResult( new_e )
-                    
+                new_timestamp = max( now, hash_ids_to_new_timestamps[ hash_id ] - HC.UPDATE_DURATION )
                 
             
-        
-        self._InitDBCursor()
-        
-        while not ( ( self._local_shutdown or HydrusGlobals.shutdown ) and self._jobs.empty() ):
-            
-            try:
-                
-                ( priority, job ) = self._jobs.get( timeout = 1 )
-                
-                self._pubsubs = []
-                
-                try:
-                    
-                    ProcessJob( job )
-                    
-                except:
-                    
-                    self._jobs.put( ( priority, job ) ) # couldn't lock db; put job back on queue
-                    
-                    time.sleep( 5 )
-                    
-                
-            except: pass # no jobs this second; let's see if we should shutdown
+            if hash_id not in hash_ids_to_new_timestamps: self._c.execute( 'INSERT INTO aggregate_ratings ( service_id, hash_id, score, count, new_timestamp, current_timestamp ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, hash_id, score, new_timestamp, 0 ) )
+            elif new_timestamp != hash_ids_to_new_timestamps[ hash_id ]: self._c.execute( 'UPDATE aggregate_ratings SET new_timestamp = ? WHERE service_id = ? AND hash_id = ?;', ( new_timestamp, service_id, hash_id ) )
             
         
-        self._CloseDBCursor()
+    
+    def _VerifyAccessKey( self, service_key, access_key ):
         
-        self._loop_finished = True
+        service_id = self._GetServiceId( service_key )
+        
+        result = self._c.execute( 'SELECT 1 FROM accounts WHERE service_id = ? AND hashed_access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
+        
+        if result is None:
+            
+            result = self._c.execute( 'SELECT 1 FROM registration_keys WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( access_key ) ) ).fetchone()
+            
+            if result is None: return False
+            
+        
+        return True
         
     
-    def Read( self, action, priority, *args, **kwargs ):
+    def _Write( self, action, *args, **kwargs ):
         
-        job_type = 'read'
+        if action == 'account': result = self._ModifyAccount( *args, **kwargs )
+        elif action == 'account_types': result = self._ModifyAccountTypes( *args, **kwargs )
+        elif action == 'backup': result = self._MakeBackup( *args, **kwargs )
+        elif action == 'check_data_usage': result = self._CheckDataUsage( *args, **kwargs )
+        elif action == 'check_monthly_data': result = self._CheckMonthlyData( *args, **kwargs )
+        elif action == 'clean_update': result = self._CleanUpdate( *args, **kwargs )
+        elif action == 'clear_bans': result = self._ClearBans( *args, **kwargs )
+        elif action == 'create_update': result = self._CreateUpdate( *args, **kwargs )
+        elif action == 'delete_orphans': result = self._DeleteOrphans( *args, **kwargs )
+        elif action == 'file': result = self._AddFile( *args, **kwargs )
+        elif action == 'flush_requests_made': result = self._FlushRequestsMade( *args, **kwargs )
+        elif action == 'messaging_session': result = self._AddMessagingSession( *args, **kwargs )
+        elif action == 'news': result = self._AddNews( *args, **kwargs )
+        elif action == 'services': result = self._ModifyServices( *args, **kwargs )
+        elif action == 'session': result = self._AddSession( *args, **kwargs )
+        elif action == 'update': result = self._ProcessUpdate( *args, **kwargs )
+        else: raise Exception( 'db received an unknown write command: ' + action )
         
-        synchronous = True
-        
-        job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
-        
-        self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
-        
-        return job.GetResult()
-        
-    
-    def Shutdown( self ): self._local_shutdown = True
-    
-    def Write( self, action, priority, synchronous, *args, **kwargs ):
-        
-        job_type = 'write'
-        
-        job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
-        
-        self._jobs.put( ( priority, job ) )
-        
-        return job.GetResult()
+        return result
         
     

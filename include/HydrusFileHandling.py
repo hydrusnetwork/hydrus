@@ -1,4 +1,3 @@
-#import cv2
 import gc
 import hashlib
 import hsaudiotag
@@ -120,12 +119,6 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
         thumbnail = f.read()
         
         f.close()
-        
-        #numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_RGB2BGR )
-        
-        #( retval, thumbnail ) = cv2.imencode( '.jpg', numpy_image, ( cv2.cv.CV_IMWRITE_JPEG_QUALITY, 92 ) )
-        
-        #if not retval: raise Exception( 'Could not export thumbnail for ' + HC.u( path ) + '!' )
         
     
     return thumbnail

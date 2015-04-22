@@ -153,17 +153,17 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _CustomFilter( self ):
         
-        with ClientGUIDialogs.DialogSetupCustomFilterActions( self ) as dlg:
+        with ClientGUIDialogs.DialogShortcuts( self ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                actions = dlg.GetActions()
+                shortcuts = dlg.GetShortcuts()
                 
                 media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ) )
                 
                 if len( media_results ) > 0:
                     
-                    try: ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results, actions )
+                    try: ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results, shortcuts )
                     except: wx.MessageBox( traceback.format_exc() )
                     
                 
@@ -1843,27 +1843,15 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                if selection_has_local:
+                if selection_has_local and multiple_selected:
                     
-                    if multiple_selected or i_can_post_ratings: 
-                        
-                        filter_menu = wx.Menu()
-                        
-                        if multiple_selected: filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'filter' ), 'archive/delete' )
-                        
-                        if i_can_post_ratings:
-                            
-                            ratings_filter_menu = wx.Menu()
-                            
-                            for service in local_ratings_services: ratings_filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter', service.GetServiceKey() ), service.GetName() )
-                            
-                            filter_menu.AppendMenu( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter' ), 'ratings filter', ratings_filter_menu )
-                            
-                        
-                        if multiple_selected: filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'custom_filter' ), 'custom filter' )
-                        
-                        menu.AppendMenu( CC.ID_NULL, 'filter', filter_menu )
-                        
+                    filter_menu = wx.Menu()
+                    
+                    filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'filter' ), 'archive/delete' )
+                    
+                    filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'custom_filter' ), 'custom filter' )
+                    
+                    menu.AppendMenu( CC.ID_NULL, 'filter', filter_menu )
                     
                 
                 menu.AppendSeparator()

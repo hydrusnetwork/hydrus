@@ -3,6 +3,7 @@ import collections
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetworking
+import HydrusSerialisable
 import threading
 import traceback
 import os
@@ -265,6 +266,11 @@ def ShowExceptionClient( e ):
         job_key.SetVariable( 'popup_message_traceback', trace )
         
     
+    text = job_key.ToString()
+    
+    try: print( text )
+    except: print( repr( text ) )
+    
     HydrusGlobals.pubsub.pub( 'message', job_key )
     
 def ShowTextClient( text ):
@@ -272,6 +278,11 @@ def ShowTextClient( text ):
     job_key = HydrusData.JobKey()
     
     job_key.SetVariable( 'popup_message_text_1', HydrusData.ToString( text ) )
+    
+    text = job_key.ToString()
+    
+    try: print( text )
+    except: print( repr( text ) )
     
     HydrusGlobals.pubsub.pub( 'message', job_key )
     
@@ -1125,6 +1136,167 @@ class ServicesManager( object ):
             services = wx.GetApp().Read( 'services' )
             
             self._keys_to_services = { service.GetServiceKey() : service for service in services }
+            
+        
+    
+class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS
+    VERSION = 1
+    
+    def __init__( self, name ):
+        
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._mouse_actions = {}
+        self._keyboard_actions = {}
+        
+    
+    def _ConvertActionToSerialisableAction( self, action ):
+        
+        ( service_key, data ) = action
+        
+        if service_key is None:
+            
+            return [ service_key, data ]
+            
+        else:
+            
+            serialisable_service_key = service_key.encode( 'hex' )
+            
+            return [ serialisable_service_key, data ]
+            
+        
+    
+    def _ConvertSerialisableActionToAction( self, serialisable_action ):
+        
+        ( serialisable_service_key, data ) = serialisable_action
+        
+        if serialisable_service_key is None:
+            
+            return ( serialisable_service_key, data ) # important to return tuple, as serialisable_action is likely a list
+            
+        else:
+            
+            service_key = serialisable_service_key.decode( 'hex' )
+            
+            return ( service_key, data )
+            
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_mouse_actions = []
+        
+        for ( ( modifier, mouse_button ), action ) in self._mouse_actions.items():
+            
+            serialisable_action = self._ConvertActionToSerialisableAction( action )
+            
+            serialisable_mouse_actions.append( ( modifier, mouse_button, serialisable_action ) )
+            
+        
+        serialisable_keyboard_actions = []
+        
+        for ( ( modifier, key ), action ) in self._keyboard_actions.items():
+            
+            serialisable_action = self._ConvertActionToSerialisableAction( action )
+            
+            serialisable_keyboard_actions.append( ( modifier, key, serialisable_action ) )
+            
+        
+        return ( serialisable_mouse_actions, serialisable_keyboard_actions )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_mouse_actions, serialisable_keyboard_actions ) = serialisable_info
+        
+        self._mouse_actions = {}
+        
+        for ( modifier, mouse_button, serialisable_action ) in serialisable_mouse_actions:
+            
+            action = self._ConvertSerialisableActionToAction( serialisable_action )
+            
+            self._mouse_actions[ ( modifier, mouse_button ) ] = action
+            
+        
+        self._keyboard_actions = {}
+        
+        for ( modifier, key, serialisable_action ) in serialisable_keyboard_actions:
+            
+            action = self._ConvertSerialisableActionToAction( serialisable_action )
+            
+            self._keyboard_actions[ ( modifier, key ) ] = action
+            
+        
+    
+    def ClearActions( self ):
+        
+        self._mouse_actions = {}
+        self._keyboard_actions = {}
+        
+    
+    def DeleteKeyboardAction( self, modifier, key ):
+        
+        if ( modifier, key ) in self._keyboard_actions:
+            
+            del self._keyboard_actions[ ( modifier, key ) ]
+            
+        
+    
+    def DeleteMouseAction( self, modifier, mouse_button ):
+        
+        if ( modifier, mouse_button ) in self._mouse_actions:
+            
+            del self._mouse_actions[ ( modifier, mouse_button ) ]
+            
+        
+    
+    def GetKeyboardAction( self, modifier, key ):
+        
+        if ( modifier, key ) in self._keyboard_actions:
+            
+            return self._keyboard_actions[ ( modifier, key ) ]
+            
+        else:
+            
+            return None
+            
+        
+    
+    def GetMouseAction( self, modifier, mouse_button ):
+        
+        if ( modifier, mouse_button ) in self._mouse_actions:
+            
+            return self._mouse_actions[ ( modifier, mouse_button ) ]
+            
+        else:
+            
+            return None
+            
+        
+    
+    def IterateKeyboardShortcuts( self ):
+        
+        for ( ( modifier, key ), action ) in self._keyboard_actions.items(): yield ( ( modifier, key ), action )
+        
+    
+    def IterateMouseShortcuts( self ):
+        
+        for ( ( modifier, mouse_button ), action ) in self._mouse_actions.items(): yield ( ( modifier, mouse_button ), action )
+        
+    
+    def SetKeyboardAction( self, modifier, key, action ):
+        
+        self._keyboard_actions[ ( modifier, key ) ] = action
+        
+    
+    def SetMouseAction( self, modifier, mouse_button, action ):
+        
+        self._mouse_actions[ ( modifier, mouse_button ) ] = action
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS ] = Shortcuts
 
 class UndoManager( object ):
     

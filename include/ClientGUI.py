@@ -259,7 +259,32 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         else: subprocess.Popen( '"./' + HC.BASE_DIR + os.path.sep + 'server"', shell = True )
                         
                     
-                    time.sleep( 10 ) # give it time to init its db
+                    time_waited = 0
+                    
+                    while True:
+                        
+                        time.sleep( 3 )
+                        
+                        time_waited += 3
+                        
+                        try:
+                            
+                            connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, timeout = 20 )
+                            
+                            connection.connect()
+                            
+                            connection.close()
+                            
+                            break
+                            
+                        except:
+                            
+                            if time_waited > 30:
+                                
+                                raise
+                                
+                            
+                        
                     
                 except:
                     
@@ -866,8 +891,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             links.AppendItem( twitter )
             links.AppendItem( tumblr )
             menu.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
+            
+            db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'db_profile_mode' )
+            
             debug = wx.Menu()
+            debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
+            debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
+            
             menu.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_shortcuts' ), p( '&Shortcuts' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_about' ), p( '&About' ) )
@@ -1817,11 +1848,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'backup_service': self._BackupService( data )
             elif command == 'clear_caches': wx.GetApp().ClearCaches()
             elif command == 'close_page': self._CloseCurrentPage()
+            elif command == 'db_profile_mode':
+                
+                HydrusGlobals.db_profile_mode = True
+                
             elif command == 'debug_garbage':
                 
                 import gc
                 import collections
                 import types
+                
+                HydrusData.ShowText( 'Printing garbage to log' )
                 
                 gc.collect()
                 

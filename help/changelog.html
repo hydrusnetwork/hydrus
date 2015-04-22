@@ -8,6 +8,59 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 154</h3></li>
+				<ul>
+					<li>managed to completely break my linux and os x dev environments trying to update python--their release will come soon, once I've cleaned them up</li>
+					<li>removed some old cv code</li>
+					<li>updated to opencv 2.4.11 on windows</li>
+					<li>fixed a bug in trying to upload a small number of tag petitions</li>
+					<li>hover command buttons are now shrunk to exact fit size</li>
+					<li>added zoom buttons to command button hover window</li>
+					<li>added navigation buttons to command button hover window</li>
+					<li>added fullscreen switch button to command button hover window</li>
+					<li>added archive/inbox button to command button hover window</li>
+					<li>added delete button to command button hover window</li>
+					<li>added generic close window button to command button hover window</li>
+					<li>added tooltips to all the command buttons</li>
+					<li>cleaned some misc canvas code</li>
+					<li>hover windows now fit better, without overlap</li>
+					<li>moved media info strings to top of media canvas, so they hide behind hover header</li>
+					<li>hover windows will now not cover webms or gifs when the mouse is over the media container</li>
+					<li>hover command buttons now work for inbox filter, including back/skip buttons</li>
+					<li>inbox/archive button feels and works correctly for the inbox filter</li>
+					<li>updated manage options dialog's 'default file system predicates' mess to use the new cleaner predicate panels</li>
+					<li>all file system predicate defaults have been reset to default</li>
+					<li>added system:num_pixels to file system predicates default panel</li>
+					<li>fixed the system:num_pixels predicate being broken on options save</li>
+					<li>removed the ratings system predicates from file system predicates default panel</li>
+					<li>fixed misc system predicate bugs</li>
+					<li>moved yaml->json conversion forward:</li>
+					<li>settled on object code</li>
+					<li>added built-in compression to serialisation</li>
+					<li>added db tables and access code to support it</li>
+					<li>fixed a little layout mess in the edit custom filter action dialog</li>
+					<li>created a rich 'shortcuts' class for storing shortcut->action information that can be easily expanded to handle mouse events as well</li>
+					<li>new shortcuts class works on new json storage rather than yaml</li>
+					<li>moved custom filter shortcut action storage and general handling to new shortcuts object</li>
+					<li>moved old favourite_shortcuts tests to new code</li>
+					<li>cleaned a lot of the custom filter dialog code</li>
+					<li>rewrote the custom filter setup dialog to work more like other dialogs--now all changes are saved on ok, and save/save as/delete is replaced with add/delete</li>
+					<li>auto-creation of 'previous' shortcuts is removed, as all changes are saved to shortcut sets anyway</li>
+					<li>removed the ratings filters--the numerical filter may make a return in another form, your thoughts would be appreciated</li>
+					<li>fixed a cache counting bug when archiving redundant files during import</li>
+					<li>sped up file deletion a little bit</li>
+					<li>added an inbox cache to reduce laggy inbox checking, particularly search result fetching on dbs with large inboxes</li>
+					<li>fixed subscriptions that have no initial file limit, please reset your sub url caches to fix in these cases</li>
+					<li>did a lot of server/client database merging and refactoring</li>
+					<li>improved some database error handling</li>
+					<li>fixed an error in file repository superbans</li>
+					<li>optimised some critical db code</li>
+					<li>sped up tag censorship filtering</li>
+					<li>added a db profiling mode, accessed from the help menu, that will dump copious db profiling info to the log</li>
+					<li>misc code cleaning</li>
+					<li>improved some popup mesage print sync timing</li>
+					<li>rewrote some server auto-setup code to deal with slowly-starting server</li>
+				</ul>
 				<li><h3>version 153</h3></li>
 				<ul>
 					<li>cut out some out of date stuff from help</li>

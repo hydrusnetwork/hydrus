@@ -1,7 +1,6 @@
 import ClientFiles
 import cStringIO
 import numpy.core.multiarray # important this comes before cv!
-import cv
 import cv2
 import HydrusConstants as HC
 import HydrusExceptions
@@ -252,96 +251,6 @@ def GeneratePerceptualHash( path ):
             byte <<= 1 # shift byte one left
             
             value = dct_88[i,j]
-            
-            if value > average: byte |= 1
-            
-        
-        bytes.append( byte )
-        
-    
-    answer = str( bytearray( bytes ) )
-    
-    # we good
-    
-    return answer
-    
-def old_GeneratePerceptualHash( path ):
-    
-    # I think what I should be doing here is going cv2.imread( path, flags = cv2.CV_LOAD_IMAGE_GRAYSCALE )
-    # then efficiently resize
-    
-    thumbnail = GeneratePILImage( path )
-    
-    # convert to 32 x 32 greyscale
-    
-    if thumbnail.mode == 'P':
-        
-        thumbnail = thumbnail.convert( 'RGBA' ) # problem with some P images converting to L without RGBA step in between
-        
-    
-    if thumbnail.mode == 'RGBA':
-        
-        # this is some code i picked up somewhere
-        # another great example of PIL failing; it turns all alpha to pure black on a RGBA->RGB
-        
-        thumbnail.load()
-        
-        canvas = PILImage.new( 'RGB', thumbnail.size, ( 255, 255, 255 ) )
-        
-        canvas.paste( thumbnail, mask = thumbnail.split()[3] )
-        
-        thumbnail = canvas
-        
-    
-    thumbnail = thumbnail.convert( 'L' )
-    
-    thumbnail = thumbnail.resize( ( 32, 32 ), PILImage.ANTIALIAS )
-    
-    # convert to mat
-    
-    numpy_thumbnail_8 = cv.CreateMatHeader( 32, 32, cv.CV_8UC1 )
-    
-    cv.SetData( numpy_thumbnail_8, thumbnail.tostring() )
-    
-    numpy_thumbnail_32 = cv.CreateMat( 32, 32, cv.CV_32FC1 )
-    
-    cv.Convert( numpy_thumbnail_8, numpy_thumbnail_32 )
-    
-    # compute dct
-    
-    dct = cv.CreateMat( 32, 32, cv.CV_32FC1 )
-    
-    cv.DCT( numpy_thumbnail_32, dct, cv.CV_DXT_FORWARD )
-    
-    # take top left 8x8 of dct
-    
-    dct = cv.GetSubRect( dct, ( 0, 0, 8, 8 ) )
-    
-    # get mean of dct, excluding [0,0]
-    
-    mask = cv.CreateMat( 8, 8, cv.CV_8U )
-    
-    cv.Set( mask, 1 )
-    
-    mask[0,0] = 0
-    
-    channel_averages = cv.Avg( dct, mask )
-    
-    average = channel_averages[0]
-    
-    # make a monochromatic, 64-bit hash of whether the entry is above or below the mean
-    
-    bytes = []
-    
-    for i in range( 8 ):
-        
-        byte = 0
-        
-        for j in range( 8 ):
-            
-            byte <<= 1 # shift byte one left
-            
-            value = dct[i,j]
             
             if value > average: byte |= 1
             

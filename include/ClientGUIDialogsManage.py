@@ -10,6 +10,7 @@ import ClientData
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIPredicates
 import ClientMedia
 import collections
 import HydrusNATPunch
@@ -2882,62 +2883,29 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._file_system_predicates_page = wx.Panel( self._listbook )
             self._file_system_predicates_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._file_system_predicate_age_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '>' ] )
+            self._file_system_predicate_age = ClientGUIPredicates.PanelPredicateSystemAge( self._file_system_predicates_page )
             
-            self._file_system_predicate_age_years = wx.SpinCtrl( self._file_system_predicates_page, max = 30 )
+            self._file_system_predicate_duration = ClientGUIPredicates.PanelPredicateSystemDuration( self._file_system_predicates_page )
             
-            self._file_system_predicate_age_months = wx.SpinCtrl( self._file_system_predicates_page, max = 60 )
+            self._file_system_predicate_height = ClientGUIPredicates.PanelPredicateSystemHeight( self._file_system_predicates_page )
             
-            self._file_system_predicate_age_days = wx.SpinCtrl( self._file_system_predicates_page, max = 90 )
+            self._file_system_predicate_limit = ClientGUIPredicates.PanelPredicateSystemLimit( self._file_system_predicates_page )
             
-            self._file_system_predicate_duration_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
+            self._file_system_predicate_mime = ClientGUIPredicates.PanelPredicateSystemMime( self._file_system_predicates_page )
             
-            self._file_system_predicate_duration_s = wx.SpinCtrl( self._file_system_predicates_page, max = 3599 )
+            self._file_system_predicate_num_pixels = ClientGUIPredicates.PanelPredicateSystemNumPixels( self._file_system_predicates_page )
             
-            self._file_system_predicate_duration_ms = wx.SpinCtrl( self._file_system_predicates_page, max = 999 )
+            self._file_system_predicate_num_tags = ClientGUIPredicates.PanelPredicateSystemNumTags( self._file_system_predicates_page )
             
-            self._file_system_predicate_height_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
+            self._file_system_predicate_num_words = ClientGUIPredicates.PanelPredicateSystemNumWords( self._file_system_predicates_page )
             
-            self._file_system_predicate_height = wx.SpinCtrl( self._file_system_predicates_page, max = 200000 )
+            self._file_system_predicate_ratio = ClientGUIPredicates.PanelPredicateSystemRatio( self._file_system_predicates_page )
             
-            self._file_system_predicate_limit = wx.SpinCtrl( self._file_system_predicates_page, max = 1000000 )
+            self._file_system_predicate_similar_to = ClientGUIPredicates.PanelPredicateSystemSimilarTo( self._file_system_predicates_page )
             
-            self._file_system_predicate_mime_media = wx.Choice( self._file_system_predicates_page, choices=[ 'image', 'application' ] )
-            self._file_system_predicate_mime_media.Bind( wx.EVT_CHOICE, self.EventFileSystemPredicateMime )
+            self._file_system_predicate_size = ClientGUIPredicates.PanelPredicateSystemSize( self._file_system_predicates_page )
             
-            self._file_system_predicate_mime_type = wx.Choice( self._file_system_predicates_page, choices=[], size = ( 120, -1 ) )
-            
-            self._file_system_predicate_num_tags_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', '=', '>' ] )
-            
-            self._file_system_predicate_num_tags = wx.SpinCtrl( self._file_system_predicates_page, max = 2000 )
-            
-            self._file_system_predicate_local_rating_numerical_sign = wx.Choice( self._file_system_predicates_page, choices=[ '>', '<', '=', u'\u2248', '=rated', '=not rated', '=uncertain' ] )
-            
-            self._file_system_predicate_local_rating_numerical_value = wx.SpinCtrl( self._file_system_predicates_page, min = 0, max = 50000 )
-            
-            self._file_system_predicate_local_rating_like_value = wx.Choice( self._file_system_predicates_page, choices=[ 'like', 'dislike', 'rated', 'not rated' ] )
-            
-            self._file_system_predicate_ratio_sign = wx.Choice( self._file_system_predicates_page, choices=[ '=', u'\u2248' ] )
-            
-            self._file_system_predicate_ratio_width = wx.SpinCtrl( self._file_system_predicates_page, max = 50000 )
-            
-            self._file_system_predicate_ratio_height = wx.SpinCtrl( self._file_system_predicates_page, max = 50000 )
-            
-            self._file_system_predicate_size_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
-            
-            self._file_system_predicate_size = wx.SpinCtrl( self._file_system_predicates_page, max = 1048576 )
-            
-            self._file_system_predicate_size_unit = wx.Choice( self._file_system_predicates_page, choices=[ 'B', 'KB', 'MB', 'GB' ] )
-            
-            self._file_system_predicate_width_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
-            
-            self._file_system_predicate_width = wx.SpinCtrl( self._file_system_predicates_page, max = 200000 )
-            
-            self._file_system_predicate_num_words_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
-            
-            self._file_system_predicate_num_words = wx.SpinCtrl( self._file_system_predicates_page, max = 1000000 )
-            
-            self._file_system_predicate_hamming_distance = wx.SpinCtrl( self._file_system_predicates_page, max = 64 )
+            self._file_system_predicate_width = ClientGUIPredicates.PanelPredicateSystemWidth( self._file_system_predicates_page )
             
             self._listbook.AddPage( self._file_system_predicates_page, 'default file system predicates' )
             
@@ -3136,80 +3104,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            system_predicates = HC.options[ 'file_system_predicates' ]
-            
-            ( sign, years, months, days ) = system_predicates[ 'age' ]
-            
-            self._file_system_predicate_age_sign.SetSelection( sign )
-            self._file_system_predicate_age_years.SetValue( years )
-            self._file_system_predicate_age_months.SetValue( months )
-            self._file_system_predicate_age_days.SetValue( days )
-            
-            ( sign, s, ms ) = system_predicates[ 'duration' ]
-            
-            self._file_system_predicate_duration_sign.SetSelection( sign )
-            self._file_system_predicate_duration_s.SetValue( s )
-            self._file_system_predicate_duration_ms.SetValue( ms )
-            
-            ( sign, height ) = system_predicates[ 'height' ]
-            
-            self._file_system_predicate_height_sign.SetSelection( sign )
-            self._file_system_predicate_height.SetValue( height )
-            
-            limit = system_predicates[ 'limit' ]
-            
-            self._file_system_predicate_limit.SetValue( limit )
-            
-            ( media, media_type ) = system_predicates[ 'mime' ]
-            
-            self._file_system_predicate_mime_media.SetSelection( media )
-            
-            self.EventFileSystemPredicateMime( None )
-            
-            self._file_system_predicate_mime_type.SetSelection( media_type )
-            
-            ( sign, num_tags ) = system_predicates[ 'num_tags' ]
-            
-            self._file_system_predicate_num_tags_sign.SetSelection( sign )
-            self._file_system_predicate_num_tags.SetValue( num_tags )
-            
-            ( sign, value ) = system_predicates[ 'local_rating_numerical' ]
-            
-            self._file_system_predicate_local_rating_numerical_sign.SetSelection( sign )
-            self._file_system_predicate_local_rating_numerical_value.SetValue( value )
-            
-            value = system_predicates[ 'local_rating_like' ]
-            
-            self._file_system_predicate_local_rating_like_value.SetSelection( value )
-            
-            ( sign, width, height ) = system_predicates[ 'ratio' ]
-            
-            self._file_system_predicate_ratio_sign.SetSelection( sign )
-            self._file_system_predicate_ratio_width.SetValue( width )
-            self._file_system_predicate_ratio_height.SetValue( height )
-            
-            ( sign, size, unit ) = system_predicates[ 'size' ]
-            
-            self._file_system_predicate_size_sign.SetSelection( sign )
-            self._file_system_predicate_size.SetValue( size )
-            self._file_system_predicate_size_unit.SetSelection( unit )
-            
-            ( sign, width ) = system_predicates[ 'width' ]
-            
-            self._file_system_predicate_width_sign.SetSelection( sign )
-            self._file_system_predicate_width.SetValue( width )
-            
-            ( sign, num_words ) = system_predicates[ 'num_words' ]
-            
-            self._file_system_predicate_num_words_sign.SetSelection( sign )
-            self._file_system_predicate_num_words.SetValue( num_words )
-            
-            hamming_distance = system_predicates[ 'hamming_distance' ]
-            
-            self._file_system_predicate_hamming_distance.SetValue( hamming_distance )
-            
-            #
-            
             for ( name, rgb ) in HC.options[ 'gui_colours' ].items(): self._gui_colours[ name ].SetColour( wx.Colour( *rgb ) )
             
             #
@@ -3242,7 +3136,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
                 for ( key, action ) in key_dict.items():
                     
-                    ( pretty_modifier, pretty_key, pretty_action ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key, action )
+                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                    
+                    pretty_action = action
                     
                     self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
                     
@@ -3373,118 +3269,18 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:age' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_age_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_age_years, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'years' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_age_months, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'months' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_age_days, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'days' ), CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:duration' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_duration_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_duration_s, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 's' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_duration_ms, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'ms' ), CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:height' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_height_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_height, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:limit=' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_limit, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:mime' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_mime_media, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = '/' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_mime_type, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:num_tags' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_num_tags_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_num_tags, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:local_rating_like' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_local_rating_like_value, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:local_rating_numerical' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_local_rating_numerical_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_local_rating_numerical_value, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:ratio' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_ratio_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_ratio_width, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = ':' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_ratio_height, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:size' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_size_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_size, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_size_unit, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:width' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_width_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_width, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:num_words' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_num_words_sign, CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_num_words, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:similar_to [hash] ' + u'\u2248' + ' ' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._file_system_predicate_hamming_distance, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_height, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_mime, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_num_pixels, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_num_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_num_words, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_ratio, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_similar_to, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_width, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._file_system_predicates_page.SetSizer( vbox )
             
@@ -3779,46 +3575,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventFileSystemPredicateMime( self, event ):
-        
-        media = self._file_system_predicate_mime_media.GetStringSelection()
-        
-        self._file_system_predicate_mime_type.Clear()
-        
-        if media == 'image':
-            
-            self._file_system_predicate_mime_type.Append( 'any', HC.IMAGES )
-            self._file_system_predicate_mime_type.Append( 'gif', HC.IMAGE_GIF )
-            self._file_system_predicate_mime_type.Append( 'jpeg', HC.IMAGE_JPEG )
-            self._file_system_predicate_mime_type.Append( 'png', HC.IMAGE_PNG )
-            
-        elif media == 'application':
-            
-            self._file_system_predicate_mime_type.Append( 'any', HC.APPLICATIONS )
-            self._file_system_predicate_mime_type.Append( 'pdf', HC.APPLICATION_PDF )
-            self._file_system_predicate_mime_type.Append( 'x-shockwave-flash', HC.APPLICATION_FLASH )
-            
-        elif media == 'audio':
-            
-            self._file_system_predicate_mime_type.Append( 'any', HC.AUDIO )
-            self._file_system_predicate_mime_type.Append( 'flac', HC.AUDIO_FLAC )
-            self._file_system_predicate_mime_type.Append( 'mp3', HC.AUDIO_MP3 )
-            self._file_system_predicate_mime_type.Append( 'ogg', HC.AUDIO_OGG )
-            self._file_system_predicate_mime_type.Append( 'x-ms-wma', HC.AUDIO_WMA )
-            
-        elif media == 'video':
-            
-            self._file_system_predicate_mime_type.Append( 'any', HC.VIDEO )
-            self._file_system_predicate_mime_type.Append( 'mp4', HC.VIDEO_MP4 )
-            self._file_system_predicate_mime_type.Append( 'webm', HC.VIDEO_WEBM )
-            self._file_system_predicate_mime_type.Append( 'x-matroska', HC.VIDEO_MKV )
-            self._file_system_predicate_mime_type.Append( 'x-ms-wmv', HC.VIDEO_WMV )
-            self._file_system_predicate_mime_type.Append( 'x-flv', HC.VIDEO_FLV )
-            
-        
-        self._file_system_predicate_mime_type.SetSelection( 0 )
-        
-    
     def EventFullscreensUpdate( self, event ):
         
         ( width, height ) = wx.GetDisplaySize()
@@ -3934,21 +3690,20 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         HC.options[ 'sort_by' ] = sort_by_choices
         
-        system_predicates = {}
+        system_predicates = HC.options[ 'file_system_predicates' ]
         
-        system_predicates[ 'age' ] = ( self._file_system_predicate_age_sign.GetSelection(), self._file_system_predicate_age_years.GetValue(), self._file_system_predicate_age_months.GetValue(), self._file_system_predicate_age_days.GetValue() )
-        system_predicates[ 'duration' ] = ( self._file_system_predicate_duration_sign.GetSelection(), self._file_system_predicate_duration_s.GetValue(), self._file_system_predicate_duration_ms.GetValue() )
-        system_predicates[ 'height' ] = ( self._file_system_predicate_height_sign.GetSelection(), self._file_system_predicate_height.GetValue() )
-        system_predicates[ 'limit' ] = self._file_system_predicate_limit.GetValue()
-        system_predicates[ 'mime' ] = ( self._file_system_predicate_mime_media.GetSelection(), self._file_system_predicate_mime_type.GetSelection() )
-        system_predicates[ 'num_tags' ] = ( self._file_system_predicate_num_tags_sign.GetSelection(), self._file_system_predicate_num_tags.GetValue() )
-        system_predicates[ 'local_rating_like' ] = self._file_system_predicate_local_rating_like_value.GetSelection()
-        system_predicates[ 'local_rating_numerical' ] = ( self._file_system_predicate_local_rating_numerical_sign.GetSelection(), self._file_system_predicate_local_rating_numerical_value.GetValue() )
-        system_predicates[ 'ratio' ] = ( self._file_system_predicate_ratio_sign.GetSelection(), self._file_system_predicate_ratio_width.GetValue(), self._file_system_predicate_ratio_height.GetValue() )
-        system_predicates[ 'size' ] = ( self._file_system_predicate_size_sign.GetSelection(), self._file_system_predicate_size.GetValue(), self._file_system_predicate_size_unit.GetSelection() )
-        system_predicates[ 'width' ] = ( self._file_system_predicate_width_sign.GetSelection(), self._file_system_predicate_width.GetValue() )
-        system_predicates[ 'num_words' ] = ( self._file_system_predicate_num_words_sign.GetSelection(), self._file_system_predicate_num_words.GetValue() )
-        system_predicates[ 'hamming_distance' ] = self._file_system_predicate_hamming_distance.GetValue()
+        system_predicates[ 'age' ] = self._file_system_predicate_age.GetInfo()
+        system_predicates[ 'duration' ] = self._file_system_predicate_duration.GetInfo()
+        system_predicates[ 'hamming_distance' ] = self._file_system_predicate_similar_to.GetInfo()[1]
+        system_predicates[ 'height' ] = self._file_system_predicate_height.GetInfo()
+        system_predicates[ 'limit' ] = self._file_system_predicate_limit.GetInfo()
+        system_predicates[ 'mime' ] = self._file_system_predicate_mime.GetInfo()
+        system_predicates[ 'num_pixels' ] = self._file_system_predicate_num_pixels.GetInfo()
+        system_predicates[ 'num_tags' ] = self._file_system_predicate_num_tags.GetInfo()
+        system_predicates[ 'num_words' ] = self._file_system_predicate_num_words.GetInfo()
+        system_predicates[ 'ratio' ] = self._file_system_predicate_ratio.GetInfo()
+        system_predicates[ 'size' ] = self._file_system_predicate_size.GetInfo()
+        system_predicates[ 'width' ] = self._file_system_predicate_width.GetInfo()
         
         HC.options[ 'file_system_predicates' ] = system_predicates
         
@@ -4011,7 +3766,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
                 ( modifier, key, action ) = dlg.GetInfo()
                 
-                ( pretty_modifier, pretty_key, pretty_action ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key, action )
+                ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                
+                pretty_action = action
                 
                 self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
                 
@@ -4036,7 +3793,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                     
                     ( modifier, key, action ) = dlg.GetInfo()
                     
-                    ( pretty_modifier, pretty_key, pretty_action ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key, action )
+                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                    
+                    pretty_action = action
                     
                     self._shortcuts.UpdateRow( index, ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
                     

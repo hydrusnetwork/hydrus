@@ -978,7 +978,7 @@ class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
         
         kwargs = request.hydrus_args # for things like expires, title, and so on
         
-        wx.GetApp().Write( 'account', self._service_key, admin_account_key, action, subject_account_keys, kwargs )
+        wx.GetApp().WriteSynchronous( 'account', self._service_key, admin_account_key, action, subject_account_keys, kwargs )
         
         session_manager = wx.GetApp().GetManager( 'restricted_services_sessions' )
         
@@ -1028,7 +1028,7 @@ class HydrusResourceCommandRestrictedAccountTypes( HydrusResourceCommandRestrict
         
         edit_log = request.hydrus_args[ 'edit_log' ]
         
-        wx.GetApp().Write( 'account_types', self._service_key, edit_log )
+        wx.GetApp().WriteSynchronous( 'account_types', self._service_key, edit_log )
         
         response_context = ResponseContext( 200 )
         
@@ -1043,7 +1043,7 @@ class HydrusResourceCommandRestrictedBackup( HydrusResourceCommandRestricted ):
         
         #threading.Thread( target = HC.app.Write, args = ( 'backup', ), name = 'Backup Thread' ).start()
         
-        wx.GetApp().Write( 'backup' )
+        wx.GetApp().WriteSynchronous( 'backup' )
         
         response_context = ResponseContext( 200 )
         
@@ -1075,7 +1075,7 @@ class HydrusResourceCommandRestrictedNews( HydrusResourceCommandRestricted ):
         
         news = request.hydrus_args[ 'news' ]
         
-        wx.GetApp().Write( 'news', self._service_key, news )
+        wx.GetApp().WriteSynchronous( 'news', self._service_key, news )
         
         response_context = ResponseContext( 200 )
         
@@ -1163,7 +1163,7 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
         
         file_dict[ 'ip' ] = request.getClientIP()
         
-        wx.GetApp().Write( 'file', self._service_key, account_key, file_dict )
+        wx.GetApp().WriteSynchronous( 'file', self._service_key, account_key, file_dict )
         
         response_context = ResponseContext( 200 )
         
@@ -1201,7 +1201,7 @@ class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted )
         
         edit_log = request.hydrus_args[ 'edit_log' ]
         
-        service_keys_to_access_keys = wx.GetApp().Write( 'services', account_key, edit_log )
+        service_keys_to_access_keys = wx.GetApp().WriteSynchronous( 'services', account_key, edit_log )
         
         body = yaml.safe_dump( { 'service_keys_to_access_keys' : service_keys_to_access_keys } )
         
@@ -1267,7 +1267,7 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         
         update = request.hydrus_args[ 'update' ]
         
-        wx.GetApp().Write( 'update', self._service_key, account_key, update )
+        wx.GetApp().WriteSynchronous( 'update', self._service_key, account_key, update )
         
         response_context = ResponseContext( 200 )
         

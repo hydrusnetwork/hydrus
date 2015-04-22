@@ -3686,14 +3686,6 @@ class PopupMessageManager( wx.Frame ):
         self._SizeAndPositionAndShow()
         
     
-    def _PrintMessage( self, job_key ):
-        
-        text = job_key.ToString()
-        
-        try: print( text )
-        except: print( repr( text ) )
-        
-    
     def _SizeAndPositionAndShow( self ):
         
         try:
@@ -3741,8 +3733,6 @@ class PopupMessageManager( wx.Frame ):
     def AddMessage( self, job_key ):
         
         try:
-            
-            self._PrintMessage( job_key )
             
             self._pending_job_keys.append( job_key )
             

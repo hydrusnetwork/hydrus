@@ -2,6 +2,7 @@ import collections
 import gc
 import HydrusConstants as HC
 import HydrusData
+import HydrusDB
 import HydrusExceptions
 import HydrusGlobals
 import HydrusPubSub
@@ -17,7 +18,7 @@ MAINTENANCE_PERIOD = 5 * 60
 
 class HydrusController( wx.App ):
     
-    db_class = None
+    db_class = HydrusDB.HydrusDB
     
     def _CheckIfJustWokeFromSleep( self ):
         

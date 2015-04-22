@@ -501,18 +501,9 @@ class Controller( HydrusController.HydrusController ):
         
         media_results = []
         
-        i = 0
-        
-        base = 256
-        
-        while i < len( query_hash_ids ):
+        for sub_query_hash_ids in HydrusData.SplitListIntoChunks( query_hash_ids, 256 ):
             
             if query_key.IsCancelled(): return
-            
-            if i == 0: ( last_i, i ) = ( 0, base )
-            else: ( last_i, i ) = ( i, i + base )
-            
-            sub_query_hash_ids = query_hash_ids[ last_i : i ]
             
             more_media_results = self.Read( 'media_results_from_ids', service_key, sub_query_hash_ids )
             
@@ -548,6 +539,8 @@ class Controller( HydrusController.HydrusController ):
         except HydrusExceptions.PermissionException as e: pass
         except:
             
+            traceback.print_exc()
+            
             text = 'A serious error occured while trying to start the program. Its traceback has been written to client.log.'
             
             print( text )
@@ -581,6 +574,8 @@ class Controller( HydrusController.HydrusController ):
             
         except HydrusExceptions.PermissionException as e: pass
         except:
+            
+            traceback.print_exc()
             
             text = 'A serious error occured while trying to exit the program. Its traceback has been written to client.log. You may need to quit the program from task manager.'
             

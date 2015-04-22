@@ -544,14 +544,14 @@ class TagCensorshipManager( object ):
                     
                     combined_predicate = self._service_keys_to_predicates[ service_key_lookup ]
                     
-                    tuples = statuses_to_tags.items()
+                    new_statuses_to_tags = HydrusData.default_dict_set()
                     
-                    for ( status, tags ) in tuples:
+                    for ( status, tags ) in statuses_to_tags.items():
                         
-                        tags = { tag for tag in tags if combined_predicate( tag ) }
+                        new_statuses_to_tags[ status ] = { tag for tag in tags if combined_predicate( tag ) }
                         
-                        statuses_to_tags[ status ] = tags
-                        
+                    
+                    statuses_to_tags = new_statuses_to_tags
                     
                 
             

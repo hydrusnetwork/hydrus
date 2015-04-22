@@ -1147,13 +1147,13 @@ def DAEMONSynchroniseSubscriptions():
                                 
                             
                         
-                        if last_checked == 0 and len( all_url_args ) > initial_limit: break
+                        if last_checked == 0 and initial_limit is not None and len( all_url_args ) > initial_limit: break
                         
                         downloaders_to_remove = []
                         
                         for downloader in downloaders:
                             
-                            if last_checked == 0 and len( all_url_args ) > initial_limit: break
+                            if last_checked == 0 and initial_limit is not None and len( all_url_args ) > initial_limit: break
                             
                             page_of_url_args = downloader.GetAnotherPage()
                             

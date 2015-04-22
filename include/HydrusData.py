@@ -79,6 +79,13 @@ def ConvertIntToPixels( i ):
     
 def ConvertIntToPrettyString( num ): return ToString( locale.format( "%d", num, grouping = True ) )
 
+def ConvertIntToUnit( unit ):
+    
+    if unit == 1: return 'B'
+    elif unit == 1024: return 'KB'
+    elif unit == 1048576: return 'MB'
+    elif unit == 1073741824: return 'GB'
+    
 def ConvertMillisecondsToPrettyTime( ms ):
     
     hours = ms / 3600000
@@ -132,7 +139,7 @@ def ConvertNumericalRatingToPrettyString( lower, upper, rating, rounded_result =
     
     return s
     
-def ConvertPixelsToInteger( unit ):
+def ConvertPixelsToInt( unit ):
     
     if unit == 'pixels': return 1
     elif unit == 'kilopixels': return 1000
@@ -189,7 +196,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
     
     return s
     
-def ConvertShortcutToPrettyShortcut( modifier, key, action ):
+def ConvertShortcutToPrettyShortcut( modifier, key ):
     
     if modifier == wx.ACCEL_NORMAL: modifier = ''
     elif modifier == wx.ACCEL_ALT: modifier = 'alt'
@@ -200,7 +207,7 @@ def ConvertShortcutToPrettyShortcut( modifier, key, action ):
     elif key in range( 97, 123 ): key = chr( key )
     else: key = HC.wxk_code_string_lookup[ key ]
     
-    return ( modifier, key, action )
+    return ( modifier, key )
     
 def ConvertStatusToPrefix( status ):
     
@@ -460,19 +467,12 @@ def ConvertUglyNamespacesToPrettyStrings( namespaces ):
     
     return result
     
-def ConvertUnitToInteger( unit ):
+def ConvertUnitToInt( unit ):
     
     if unit == 'B': return 1
     elif unit == 'KB': return 1024
     elif unit == 'MB': return 1048576
     elif unit == 'GB': return 1073741824
-    
-def ConvertUnitToString( unit ):
-    
-    if unit == 8: return 'B'
-    elif unit == 1024: return 'KB'
-    elif unit == 1048576: return 'MB'
-    elif unit == 1073741824: return 'GB'
     
 def ConvertZoomToPercentage( zoom ):
     
@@ -580,9 +580,7 @@ def ShowTextDefault( text ):
     
 ShowText = ShowTextDefault
 
-def SplayListForDB( xs ): return '(' + ','.join( ( '"' + ToString( x ) + '"' for x in xs ) ) + ')'
-
-def SplayTupleListForDB( first_column_name, second_column_name, xys ): return ' OR '.join( [ '( ' + first_column_name + '=' + ToString( x ) + ' AND ' + second_column_name + ' IN ' + SplayListForDB( ys ) + ' )' for ( x, ys ) in xys ] )
+def SplayListForDB( xs ): return '("' + '","'.join( ( ToString( x ) for x in xs ) ) + '")'
 
 def SplitListIntoChunks( xs, n ):
     
@@ -1294,18 +1292,6 @@ class JobKey( object ):
             
         
     
-class SerialisableBase( object ):
-    
-    def __init__( self, name, info ):
-        
-        self._name = name
-        self._info = info
-        
-    
-    def GetInfo( self ): return self._info
-    
-    def GetName( self ): return self._name
-    
 class ServerToClientPetition( HydrusYAMLBase ):
     
     yaml_tag = u'!ServerToClientPetition'
@@ -1662,7 +1648,7 @@ class Predicate( HydrusYAMLBase ):
                     
                     ( operator, size, unit ) = info
                     
-                    base += u' ' + operator + u' ' + ToString( size ) + ConvertUnitToString( unit )
+                    base += u' ' + operator + u' ' + ToString( size ) + ConvertIntToUnit( unit )
                     
                 
             elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_LIMIT:

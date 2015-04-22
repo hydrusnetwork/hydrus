@@ -9,3 +9,5 @@ is_db_updated = False
 
 repos_changed = False
 subs_changed = False
+
+db_profile_mode = False

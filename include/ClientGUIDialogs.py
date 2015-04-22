@@ -987,7 +987,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
             
-            self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last', 'open_externally' ] )
+            self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', '', 'next', 'first', 'last', 'open_externally' ] )
             
             self._ok_none = wx.Button( self._none_panel, label = 'ok' )
             self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
@@ -1105,7 +1105,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             tag_sub_vbox = wx.BoxSizer( wx.VERTICAL )
             
-            tag_sub_vbox.AddF( self._tag_value, CC.FLAGS_EXPAND_BOTH_WAYS )
+            tag_sub_vbox.AddF( self._tag_value, CC.FLAGS_EXPAND_PERPENDICULAR )
             tag_sub_vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             tag_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -1315,8 +1315,7 @@ class DialogInputCustomFilterAction( Dialog ):
         if self._service_key is None: pretty_service_key = ''
         else: pretty_service_key = wx.GetApp().GetManager( 'services' ).GetService( self._service_key ).GetName()
         
-        # ignore this pretty_action
-        ( pretty_modifier, pretty_key, pretty_action ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key, self._action )
+        ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
         
         return ( ( pretty_modifier, pretty_key, pretty_service_key, self._pretty_action ), ( modifier, key, self._service_key, self._action ) )
         
@@ -4399,38 +4398,20 @@ class DialogSelectYoutubeURL( Dialog ):
         self.EndModal( wx.ID_OK )
         
     
-class DialogSetupCustomFilterActions( Dialog ):
+class DialogShortcuts( Dialog ):
     
     def __init__( self, parent ):
         
         def InitialiseControls():
             
-            self._actions = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ], delete_key_callback = self.RemoveActions )
-            
-            self._favourites = wx.ListBox( self )
-            self._favourites.Bind( wx.EVT_LISTBOX, self.EventSelectFavourite )
-            
-            self._save_favourite = wx.Button( self, label = 'save' )
-            self._save_favourite.Bind( wx.EVT_BUTTON, self.EventSaveFavourite )
-            
-            self._save_new_favourite = wx.Button( self, label = 'save as' )
-            self._save_new_favourite.Bind( wx.EVT_BUTTON, self.EventSaveNewFavourite )
-            
-            self._delete_favourite = wx.Button( self, label = 'delete' )
-            self._delete_favourite.Bind( wx.EVT_BUTTON, self.EventDeleteFavourite )
-            
-            self._current_actions_selection = wx.NOT_FOUND
+            self._shortcuts = ClientGUICommon.ListBook( self )
+            self._shortcuts.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventSelect )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            self._add.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._edit = wx.Button( self, label = 'edit' )
-            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-            
-            self._remove = wx.Button( self, label = 'remove' )
-            self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-            self._remove.SetForegroundColour( ( 128, 0, 0 ) )
+            self._delete = wx.Button( self, label = 'delete' )
+            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -4442,32 +4423,30 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         def PopulateControls():
             
-            default_actions = self._GetDefaultActions()
+            default_shortcuts = self._GetDefaultShortcuts()
             
-            self._favourites.Append( 'default', default_actions )
+            page = self._Panel( self._shortcuts, default_shortcuts )
             
-            favourites = wx.GetApp().Read( 'favourite_custom_filter_actions' )
+            self._shortcuts.AddPage( page, 'default' )
             
-            self._initial_favourite_names = favourites.keys()
+            all_shortcuts = wx.GetApp().Read( 'shortcuts' )
             
-            if 'previous' in favourites: self._favourites.Append( 'previous', favourites[ 'previous' ] )
-            else: self._favourites.Append( 'previous', default_actions )
+            names_to_shortcuts = { shortcuts.GetName() : shortcuts for shortcuts in all_shortcuts }
             
-            for ( name, actions ) in favourites.items():
+            for ( name, shortcuts ) in names_to_shortcuts.items():
                 
-                if name != 'previous': self._favourites.Append( name, actions )
+                page_info = ( self._Panel, ( self._shortcuts, shortcuts ), {} )
                 
-            
-            self._favourites.Select( 1 ) # previous
+                self._shortcuts.AddPage( page_info, name )
+                
             
         
         def ArrangeControls():
             
-            action_buttons = wx.BoxSizer( wx.HORIZONTAL )
+            button_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            action_buttons.AddF( self._add, CC.FLAGS_MIXED )
-            action_buttons.AddF( self._edit, CC.FLAGS_MIXED )
-            action_buttons.AddF( self._remove, CC.FLAGS_MIXED )
+            button_hbox.AddF( self._add, CC.FLAGS_MIXED )
+            button_hbox.AddF( self._delete, CC.FLAGS_MIXED )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4476,27 +4455,11 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._actions, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( action_buttons, CC.FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( button_hbox, CC.FLAGS_MIXED )
             vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
             
-            button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            button_hbox.AddF( self._save_favourite, CC.FLAGS_MIXED )
-            button_hbox.AddF( self._save_new_favourite, CC.FLAGS_MIXED )
-            button_hbox.AddF( self._delete_favourite, CC.FLAGS_MIXED )
-            
-            f_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            f_vbox.AddF( self._favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
-            f_vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( f_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            self.SetSizer( hbox )
+            self.SetSizer( vbox )
             
             ( x, y ) = self.GetEffectiveMinSize()
             
@@ -4506,7 +4469,9 @@ class DialogSetupCustomFilterActions( Dialog ):
             self.SetInitialSize( ( x, y ) )
             
         
-        Dialog.__init__( self, parent, 'setup custom filter' )
+        Dialog.__init__( self, parent, 'setup shortcuts' )
+        
+        self._edit_log = []
         
         InitialiseControls()
         
@@ -4514,14 +4479,14 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         ArrangeControls()
         
-        wx.CallAfter( self.EventSelectFavourite, None )
+        wx.CallAfter( self.EventSelect, None )
         
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def _GetDefaultActions( self ):
+    def _GetDefaultShortcuts( self ):
         
-        default_actions = []
+        default_shortcuts = ClientData.Shortcuts( 'default' )
         
         for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items():
             
@@ -4531,124 +4496,69 @@ class DialogSetupCustomFilterActions( Dialog ):
                     
                     service_key = None
                     
-                    default_actions.append( ( modifier, key, service_key, action ) )
+                    default_shortcuts.SetKeyboardAction( modifier, key, ( service_key, action ) )
                     
                 
             
         
-        ( modifier, key, service_key, action ) = ( wx.ACCEL_NORMAL, wx.WXK_DELETE, None, 'delete' )
+        default_shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_DELETE, ( None, 'delete' ) )
         
-        default_actions.append( ( modifier, key, service_key, action ) )
-        
-        return default_actions
+        return default_shortcuts
         
     
-    def _IsUntouchableFavouriteSelection( self, selection ):
+    def _CurrentPageIsUntouchable( self ):
         
-        name = self._favourites.GetString( selection )
+        name = self._shortcuts.GetCurrentName()
         
-        if name in ( 'previous', 'default' ): return True
+        if name == 'default': return True
         else: return False
         
     
-    def _SortListCtrl( self ): self._actions.SortListItems( 3 )
-    
-    def EventAdd( self, event ):
+    def EventDelete( self, event ):
         
-        with DialogInputCustomFilterAction( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                ( pretty_tuple, data_tuple ) = dlg.GetInfo()
-                
-                self._actions.Append( pretty_tuple, data_tuple )
-                
-                self._SortListCtrl()
-                
-            
+        page = self._shortcuts.GetCurrentPage()
         
-    
-    def EventDeleteFavourite( self, event ):
-        
-        selection = self._favourites.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
+        if page is not None:
             
-            if not self._IsUntouchableFavouriteSelection( selection ):
+            if not self._CurrentPageIsUntouchable():
                 
-                self._favourites.Delete( selection )
+                name = self._shortcuts.GetCurrentName()
                 
-            
-        
-    
-    def EventEdit( self, event ):
-        
-        for index in self._actions.GetAllSelected():
-            
-            ( modifier, key, service_key, action ) = self._actions.GetClientData( index )
-            
-            with DialogInputCustomFilterAction( self, modifier = modifier, key = key, service_key = service_key, action = action ) as dlg:
+                self._edit_log.append( HydrusData.EditLogActionDelete( name ) )
                 
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( pretty_tuple, data_tuple ) = dlg.GetInfo()
-                    
-                    self._actions.UpdateRow( index, pretty_tuple, data_tuple )
-                    
-                    self._SortListCtrl()
-                    
+                self._shortcuts.DeleteCurrentPage()
                 
             
         
     
     def EventOK( self, event ):
         
-        favourites = {}
-        
-        for i in range( self._favourites.GetCount() ):
+        for entry in self._edit_log:
             
-            name = self._favourites.GetString( i )
-            
-            if name == 'default': continue
-            
-            actions = self._favourites.GetClientData( i )
-            
-            favourites[ name ] = actions
+            if entry.GetAction() == HC.DELETE:
+                
+                name = entry.GetIdentifier()
+                
+                wx.GetApp().Write( 'delete_shortcuts', name )
+                
             
         
-        favourites[ 'previous' ] = self._actions.GetClientData() # overwrite
-        
-        deletees = set( self._initial_favourite_names ) - set( favourites.keys() )
-        
-        for deletee in deletees: wx.GetApp().Write( 'delete_favourite_custom_filter_actions', deletee )
-        
-        for ( name, actions ) in favourites.items(): wx.GetApp().Write( 'favourite_custom_filter_actions', name, actions )
+        for ( name, page ) in self._shortcuts.GetNameToPageDict().items():
+            
+            if name != 'default':
+                
+                shortcuts = page.GetShortcuts()
+                
+                wx.GetApp().Write( 'shortcuts', shortcuts )
+                
+            
         
         self.EndModal( wx.ID_OK )
         
     
-    def EventRemove( self, event ): self.RemoveActions()
-    
-    def EventSaveFavourite( self, event ):
+    def EventAdd( self, event ):
         
-        selection = self._favourites.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            if not self._IsUntouchableFavouriteSelection( selection ):
-                
-                actions = self._actions.GetClientData()
-                
-                self._favourites.SetClientData( selection, actions )
-                
-            
-        
-    
-    def EventSaveNewFavourite( self, event ):
-        
-        existing_names = { self._favourites.GetString( i ) for i in range( self._favourites.GetCount() ) }
-        
-        with DialogTextEntry( self, 'Enter name for these favourite actions.' ) as dlg:
+        with DialogTextEntry( self, 'Enter name for these shortcuts.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -4656,74 +4566,200 @@ class DialogSetupCustomFilterActions( Dialog ):
                 
                 if name == '': return
                 
-                while name in existing_names: name += HydrusData.ToString( random.randint( 0, 9 ) )
+                while self._shortcuts.NameExists( name ): name += HydrusData.ToString( random.randint( 0, 9 ) )
                 
-                actions = self._actions.GetClientData()
+                shortcuts = ClientData.Shortcuts( name )
                 
-                self._favourites.Append( name, actions )
+                page = self._shortcuts.GetCurrentPage()
+                
+                if page is not None:
+                    
+                    existing_shortcuts = page.GetShortcuts()
+                    
+                    for ( ( modifier, key ), action ) in existing_shortcuts.IterateKeyboardShortcuts():
+                        
+                        shortcuts.SetKeyboardAction( modifier, key, action )
+                        
+                    
+                    for ( ( modifier, mouse_button ), action ) in existing_shortcuts.IterateMouseShortcuts():
+                        
+                        shortcuts.SetKeyboardAction( modifier, mouse_button, action )
+                        
+                    
+                
+                page = self._Panel( self._shortcuts, shortcuts )
+                
+                self._shortcuts.AddPage( page, name )
                 
             
         
     
-    def EventSelectFavourite( self, event ):
+    def EventSelect( self, event ):
         
-        selection = self._favourites.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
+        if self._CurrentPageIsUntouchable():
             
-            if selection != self._current_actions_selection:
+            self._delete.Disable()
+            
+        else:
+            
+            self._delete.Enable()
+            
+        
+    
+    def GetShortcuts( self ):
+        
+        page = self._shortcuts.GetCurrentPage()
+        
+        shortcuts = page.GetShortcuts()
+        
+        return shortcuts
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, shortcuts ):
+            
+            def InitialiseControls():
                 
-                self._actions.DeleteAllItems()
+                self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ], delete_key_callback = self.RemoveShortcuts )
                 
-                name = self._favourites.GetString( selection )
+                self._add = wx.Button( self, label = 'add' )
+                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+                self._add.SetForegroundColour( ( 0, 128, 0 ) )
                 
-                if name in ( 'default', 'previous' ):
-                    
-                    self._save_favourite.Disable()
-                    self._delete_favourite.Disable()
-                    
-                else:
-                    
-                    self._save_favourite.Enable()
-                    self._delete_favourite.Enable()
-                    
+                self._edit = wx.Button( self, label = 'edit' )
+                self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
                 
-                actions = self._favourites.GetClientData( selection )
+                self._remove = wx.Button( self, label = 'remove' )
+                self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+                self._remove.SetForegroundColour( ( 128, 0, 0 ) )
                 
-                for ( modifier, key, service_key, action ) in actions:
+            
+            def PopulateControls():
+                
+                for ( ( modifier, key ), action ) in self._original_shortcuts.IterateKeyboardShortcuts():
                     
-                    ( pretty_modifier, pretty_key, pretty_action ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key, action )
+                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
                     
-                    if service_key is None: pretty_service_key = ''
+                    ( service_key, data ) = action
+                    
+                    if service_key is None:
+                        
+                        pretty_service_key = ''
+                        
                     else:
                         
                         if type( service_key ) == ClientData.ClientServiceIdentifier: service_key = service_key.GetServiceKey()
                         
-                        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-                        
-                        pretty_service_key = service.GetName()
+                        try:
+                            
+                            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                            
+                            pretty_service_key = service.GetName()
+                            
+                        except KeyError:
+                            
+                            pretty_service_key = 'service not found'
+                            
                         
                     
-                    self._actions.Append( ( pretty_modifier, pretty_key, pretty_service_key, pretty_action ), ( modifier, key, service_key, action ) )
+                    pretty_data = data
+                    
+                    self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_service_key, pretty_data ), ( modifier, key, service_key, data ) )
                     
                 
                 self._SortListCtrl()
                 
             
+            def ArrangeControls():
+                
+                action_buttons = wx.BoxSizer( wx.HORIZONTAL )
+                
+                action_buttons.AddF( self._add, CC.FLAGS_MIXED )
+                action_buttons.AddF( self._edit, CC.FLAGS_MIXED )
+                action_buttons.AddF( self._remove, CC.FLAGS_MIXED )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( action_buttons, CC.FLAGS_BUTTON_SIZER )
+                
+                self.SetSizer( vbox )
+                
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._original_shortcuts = shortcuts
+            
+            InitialiseControls()
+            
+            PopulateControls()
+            
+            ArrangeControls()
+            
         
-    
-    def GetActions( self ):
+        def _SortListCtrl( self ): self._shortcuts.SortListItems( 3 )
         
-        raw_data = self._actions.GetClientData()
+        def EventAdd( self, event ):
+            
+            with DialogInputCustomFilterAction( self ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( pretty_tuple, data_tuple ) = dlg.GetInfo()
+                    
+                    self._shortcuts.Append( pretty_tuple, data_tuple )
+                    
+                    self._SortListCtrl()
+                    
+                
+            
         
-        actions = collections.defaultdict( dict )
+        def EventEdit( self, event ):
+            
+            for index in self._shortcuts.GetAllSelected():
+                
+                ( modifier, key, service_key, action ) = self._shortcuts.GetClientData( index )
+                
+                with DialogInputCustomFilterAction( self, modifier = modifier, key = key, service_key = service_key, action = action ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        ( pretty_tuple, data_tuple ) = dlg.GetInfo()
+                        
+                        self._shortcuts.UpdateRow( index, pretty_tuple, data_tuple )
+                        
+                        self._SortListCtrl()
+                        
+                    
+                
+            
         
-        for ( modifier, key, service_key, action ) in raw_data: actions[ modifier ][ key ] = ( service_key, action )
+        def EventRemove( self, event ): self.RemoveShortcuts()
         
-        return actions
+        def GetShortcuts( self ):
+            
+            name = self._original_shortcuts.GetName()
+            
+            shortcuts = ClientData.Shortcuts( name )
+            
+            rows = self._shortcuts.GetClientData()
+            
+            for ( modifier, key, service_key, data ) in rows:
+                
+                action = ( service_key, data )
+                
+                shortcuts.SetKeyboardAction( modifier, key, action )
+                
+            
+            return shortcuts
+            
         
-    
-    def RemoveActions( self ): self._actions.RemoveAllSelected()
+        def RemoveShortcuts( self ):
+            
+            self._shortcuts.RemoveAllSelected()
+            
+        
     
 class DialogSetupExport( Dialog ):
     

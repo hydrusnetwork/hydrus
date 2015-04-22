@@ -39,14 +39,14 @@ class PanelPredicateSystemAge( PanelPredicateSystem ):
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
-        ( sign, years, months, days ) = system_predicates[ 'age' ]
+        ( sign, years, months, days, hours ) = system_predicates[ 'age' ]
         
-        self._sign.SetSelection( sign )
+        self._sign.SetStringSelection( sign )
         
         self._years.SetValue( years )
         self._months.SetValue( months )
         self._days.SetValue( days )
-        self._hours.SetValue( 0 )
+        self._hours.SetValue( hours )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -88,9 +88,13 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
-        ( sign, s, ms ) = system_predicates[ 'duration' ]
+        ( sign, ms ) = system_predicates[ 'duration' ]
         
-        self._sign.SetSelection( sign )
+        s = ms / 1000
+        
+        ms = ms % 1000
+        
+        self._sign.SetStringSelection( sign )
         
         self._duration_s.SetValue( s )
         self._duration_ms.SetValue( ms )
@@ -211,7 +215,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         
         ( sign, height ) = system_predicates[ 'height' ]
         
-        self._sign.SetSelection( sign )
+        self._sign.SetStringSelection( sign )
         
         self._height.SetValue( height )
         
@@ -281,13 +285,9 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
-        ( media, media_type ) = system_predicates[ 'mime' ]
+        mime = system_predicates[ 'mime' ]
         
-        self._mime_media.SetSelection( media )
-        
-        self.EventMime( None )
-        
-        self._mime_type.SetSelection( media_type )
+        self.SetMime( mime )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -348,6 +348,40 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         return info
         
     
+    def SetMime( self, mime ):
+        
+        if mime == HC.IMAGES or mime in HC.IMAGES:
+            
+            self._mime_media.SetSelection( 0 )
+            
+        elif mime == HC.APPLICATIONS or mime in HC.APPLICATIONS:
+            
+            self._mime_media.SetSelection( 1 )
+            
+        elif mime == HC.AUDIO or mime in HC.AUDIO:
+            
+            self._mime_media.SetSelection( 2 )
+            
+        elif mime == HC.VIDEO or mime in HC.VIDEO:
+            
+            self._mime_media.SetSelection( 3 )
+            
+        
+        self.EventMime( None )
+        
+        for i in range( self._mime_type.GetCount() ):
+            
+            client_data = self._mime_type.GetClientData( i )
+            
+            if client_data == mime:
+                
+                self._mime_type.SetSelection( i )
+                
+                break
+                
+            
+        
+    
 class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     
     SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_NUM_PIXELS
@@ -366,11 +400,11 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         
         ( sign, num_pixels, unit ) = system_predicates[ 'num_pixels' ]
         
-        self._sign.SetSelection( sign )
+        self._sign.SetStringSelection( sign )
         
         self._num_pixels.SetValue( num_pixels )
         
-        self._unit.SetSelection( unit )
+        self._unit.SetStringSelection( HydrusData.ConvertIntToPixels( unit ) )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -386,7 +420,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._num_pixels.GetValue(), HydrusData.ConvertPixelsToInteger( self._unit.GetStringSelection() ) )
+        info = ( self._sign.GetStringSelection(), self._num_pixels.GetValue(), HydrusData.ConvertPixelsToInt( self._unit.GetStringSelection() ) )
         
         return info
         
@@ -407,7 +441,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         
         ( sign, num_tags ) = system_predicates[ 'num_tags' ]
         
-        self._sign.SetSelection( sign )
+        self._sign.SetStringSelection( sign )
         
         self._num_tags.SetValue( num_tags )
         
@@ -445,7 +479,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         
         ( sign, num_words ) = system_predicates[ 'num_words' ]
         
-        self._sign.SetSelection( sign )
+        self._sign.SetStringSelection( sign )
         
         self._num_words.SetValue( num_words )
         
@@ -480,15 +514,11 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
         
         self._value_like = wx.Choice( self, choices=[ 'like', 'dislike', 'rated', 'not rated' ] ) # set words based on current service
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
-        
         self._local_likes = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
         for service in self._local_likes: self._service_like.Append( service.GetName(), service.GetServiceKey() )
         
-        value = system_predicates[ 'local_rating_like' ]
-        
-        self._value_like.SetSelection( value )
+        self._value_like.SetSelection( 0 )
         
         if len( self._local_likes ) > 0: self._service_like.SetSelection( 0 )
         
@@ -557,17 +587,13 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
         
         self._value_numerical = wx.SpinCtrl( self, min = 0, max = 50000, size = ( 60, -1 ) ) # set bounds based on current service
         
-        system_predicates = HC.options[ 'file_system_predicates' ]
-        
         self._local_numericals = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
         for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service.GetServiceKey() )
         
-        ( sign, value ) = system_predicates[ 'local_rating_numerical' ]
+        self._sign_numerical.SetSelection( 0 )
         
-        self._sign_numerical.SetSelection( sign )
-        
-        self._value_numerical.SetValue( value )
+        self._value_numerical.SetValue( 0 )
         
         if len( self._local_numericals ) > 0: self._service_numerical.SetSelection( 0 )
         
@@ -644,7 +670,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         
         ( sign, width, height ) = system_predicates[ 'ratio' ]
         
-        self._sign.SetSelection( sign )
+        self._sign.SetStringSelection( sign )
         
         self._width.SetValue( width )
         
@@ -734,11 +760,11 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         ( sign, size, unit ) = system_predicates[ 'size' ]
         
-        self._sign.SetSelection( sign )
+        self._sign.SetStringSelection( sign )
         
         self._size.SetValue( size )
         
-        self._unit.SetSelection( unit )
+        self._unit.SetStringSelection( HydrusData.ConvertIntToUnit( unit ) )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -754,7 +780,7 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._size.GetValue(), HydrusData.ConvertUnitToInteger( self._unit.GetStringSelection() ) )
+        info = ( self._sign.GetStringSelection(), self._size.GetValue(), HydrusData.ConvertUnitToInt( self._unit.GetStringSelection() ) )
         
         return info
         
@@ -775,7 +801,7 @@ class PanelPredicateSystemWidth( PanelPredicateSystem ):
         
         ( sign, width ) = system_predicates[ 'width' ]
         
-        self._sign.SetSelection( sign )
+        self._sign.SetStringSelection( sign )
         
         self._width.SetValue( width )
         
