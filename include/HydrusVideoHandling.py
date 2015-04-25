@@ -100,6 +100,8 @@ def GetVideoFrameDuration( path ):
     
     fps = cv_video.get( cv2.cv.CV_CAP_PROP_FPS )
     
+    if fps == 0: fps = 15
+    
     return 1000.0 / fps
     
 def GetMatroskaOrWebm( path ):

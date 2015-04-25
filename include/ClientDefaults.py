@@ -41,7 +41,7 @@ def GetClientDefaultOptions():
     system_predicates[ 'size' ] = ( '<', 200, 1024 )
     system_predicates[ 'width' ] = ( '=', 1920 )
     system_predicates[ 'num_words' ] = ( '<', 30000 )
-    system_predicates[ 'num_pixels' ] = ( u'\u2248', 2, 2 )
+    system_predicates[ 'num_pixels' ] = ( u'\u2248', 2, 1000000 )
     system_predicates[ 'hamming_distance' ] = 5
     
     options[ 'file_system_predicates' ] = system_predicates

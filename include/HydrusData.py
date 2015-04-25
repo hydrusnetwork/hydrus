@@ -76,6 +76,7 @@ def ConvertIntToPixels( i ):
     if i == 1: return 'pixels'
     elif i == 1000: return 'kilopixels'
     elif i == 1000000: return 'megapixels'
+    else: return 'megapixels'
     
 def ConvertIntToPrettyString( num ): return ToString( locale.format( "%d", num, grouping = True ) )
 

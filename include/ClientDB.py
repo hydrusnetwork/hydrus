@@ -5400,7 +5400,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( dump_type, dump_version ) = obj.GetTypeAndVersion()
                 
-                name = obj.GetName()
+                dump_name = obj.GetName()
                 
                 dump = obj.GetSerialisedInfo()
                 
