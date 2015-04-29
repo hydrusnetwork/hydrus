@@ -1,35 +1,22 @@
-import BaseHTTPServer
 import ClientConstants as CC
 import ClientFiles
 import Cookie
-import hashlib
-import httplib
-import HydrusAudioHandling
 import HydrusConstants as HC
-import HydrusDocumentHandling
 import HydrusExceptions
 import HydrusFileHandling
-import HydrusFlashHandling
-import HydrusNATPunch
 import HydrusImageHandling
 import os
-import random
 import ServerFiles
-import SocketServer
-import threading
 import time
 import traceback
-import urllib
 import wx
 import yaml
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
-from twisted.web.server import Request, Site, NOT_DONE_YET
+from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import Resource
 from twisted.web.static import File as FileResource, NoRangeStaticProducer
-from twisted.python import log
 import HydrusData
-import HydrusNetworking
 import HydrusGlobals
 
 CLIENT_ROOT_MESSAGE = '''<html>

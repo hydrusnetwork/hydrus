@@ -6,7 +6,6 @@ import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusServer
-import HydrusServerAMP
 import HydrusServerResources
 import itertools
 import os

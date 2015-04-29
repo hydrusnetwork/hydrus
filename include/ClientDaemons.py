@@ -11,14 +11,12 @@ import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
-import HydrusMessageHandling
 import HydrusNATPunch
 import HydrusServer
 import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
-import ClientConstantsMessages
 import os
 import Queue
 import random
@@ -404,7 +402,7 @@ def DAEMONSynchroniseAccounts():
         
     
     if do_notify: HydrusGlobals.pubsub.pub( 'notify_new_permissions' )
-    
+    '''
 def DAEMONSynchroniseMessages():
     
     services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.MESSAGE_DEPOT, ) )
@@ -577,7 +575,7 @@ def DAEMONSynchroniseMessages():
         
     
     wx.GetApp().Read( 'status_num_inbox' )
-    
+    '''
 def DAEMONSynchroniseRepositories():
     
     HydrusGlobals.repos_changed = False

@@ -8,6 +8,20 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 155</h3></li>
+				<ul>
+					<li>fixed a frame seek error when looping long and/or large gifs with unusual palettes</li>
+					<li>improved recovery when fps reads as 0 on videos</li>
+					<li>added error detection and graceful recovery and reporting for missing ActiveX flash control</li>
+					<li>removed a lot of old imported messaging code that was slowing down boot</li>
+					<li>removed some other old library imports that are no longer needed</li>
+					<li>gracefully silenced 'application shutdown' daemon errors (they were previously spamming to console)</li>
+					<li>fixed a hover window display check that was sometimes spamming linux with edge-case errors</li>
+					<li>slideshows will now pause while the right-click menu is open, stopping bizarre full program crashes occuring on many menu items while slideshow was in progress</li>
+					<li>fixed a thread_id-sqlite-cache_initialisation problem that was breaking tag archive sync</li>
+					<li>harmonised copy/paste tag protocol in manage tags dialog with 'copy all tags' of the tags list</li>
+					<li>removed some old messaging code in client db creation</li>
+				</ul>
 				<li><h3>version 154a</h3></li>
 				<ul>
 					<li>fixed a bug in v154 update code when there was more than one set of shortcuts to convert</li>

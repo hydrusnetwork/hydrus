@@ -68,8 +68,6 @@ class HydrusDB( object ):
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
             
         
-        self._InitCaches()
-        
         self._CloseDBCursor()
         
     
@@ -213,6 +211,8 @@ class HydrusDB( object ):
         
         self._InitDBCursor() # have to reinitialise because the thread id has changed
         
+        self._InitCaches()
+        
         error_count = 0
         
         while not ( ( self._local_shutdown or HydrusGlobals.shutdown ) and self._jobs.empty() ):
@@ -274,7 +274,7 @@ class HydrusDB( object ):
         
         job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
-        if HydrusGlobals.shutdown: raise Exception( 'Application has shutdown!' )
+        if HydrusGlobals.shutdown: raise HydrusExceptions.ShutdownException( 'Application has shutdown!' )
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
@@ -290,7 +290,7 @@ class HydrusDB( object ):
         
         job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
-        if HydrusGlobals.shutdown: raise Exception( 'Application has shutdown!' )
+        if HydrusGlobals.shutdown: raise HydrusExceptions.ShutdownException( 'Application has shutdown!' )
         
         self._jobs.put( ( priority, job ) )
         

@@ -451,7 +451,22 @@ class AnimationBar( wx.Window ):
             
             if self._media.GetMime() == HC.APPLICATION_FLASH:
                 
-                frame_index = self._media_window.CurrentFrame()
+                try:
+                    
+                    frame_index = self._media_window.CurrentFrame()
+                    
+                except AttributeError:
+                    
+                    text = 'The flash window produced an unusual error that probably means it never initialised properly. This is usually because Flash has not been installed for Internet Explorer. '
+                    text += os.linesep * 2
+                    text += 'Please close the client, open Internet Explorer, and install flash from Adobe\'s site and then try again. If that does not work, please tell the hydrus developer.'
+                    
+                    HydrusData.ShowText( text )
+                    
+                    self._timer_update.Stop()
+                    
+                    raise
+                    
                 
                 if frame_index != self._current_frame_index:
                     
@@ -1849,7 +1864,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
             
             if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self._Delete()
-            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): self._PausePlaySlideshow()
+            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): wx.CallAfter( self._PausePlaySlideshow )
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
             elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
@@ -1911,8 +1926,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                     elif command == 'pan_right': self._DoManualPan( distance, 0 )
                     
                 elif command == 'remove': self._Remove()
-                elif command == 'slideshow': self._StartSlideshow( data )
-                elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
+                elif command == 'slideshow': wx.CallAfter( self._StartSlideshow, data )
+                elif command == 'slideshow_pause_play': wx.CallAfter( self._PausePlaySlideshow )
                 elif command == 'zoom_in': self._ZoomIn()
                 elif command == 'zoom_out': self._ZoomOut()
                 elif command == 'zoom_switch': self._ZoomSwitch()
@@ -2003,10 +2018,10 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         copy_menu = wx.Menu()
         
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ) , 'file' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ), 'hash' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
         
         share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
@@ -2025,6 +2040,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow' ), 'custom interval' )
         
         menu.AppendMenu( CC.ID_NULL, 'start slideshow', slideshow )
+        
         if self._timer_slideshow.IsRunning(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow_pause_play' ), 'stop slideshow' )
         
         menu.AppendSeparator()
@@ -2034,7 +2050,18 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         self._menu_open = True
         
-        self.PopupMenu( menu )
+        if self._timer_slideshow.IsRunning():
+            
+            self._timer_slideshow.Stop()
+            
+            self.PopupMenu( menu )
+            
+            self._timer_slideshow.Start()
+            
+        else:
+            
+            self.PopupMenu( menu )
+            
         
         self._menu_open = False
         
@@ -2279,8 +2306,6 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
                 elif command == 'open_externally': self._OpenExternally()
                 elif command == 'remove': self._Remove()
-                elif command == 'slideshow': self._StartSlideshow( data )
-                elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
                 elif command == 'zoom_in': self._ZoomIn()
                 elif command == 'zoom_out': self._ZoomOut()
                 elif command == 'zoom_switch': self._ZoomSwitch()
@@ -2454,32 +2479,39 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def TIMEREventCheckIfShouldShow( self, event ):
         
-        ( mouse_x, mouse_y ) = wx.GetMousePosition()
-        
-        ( my_x, my_y ) = self.GetPosition()
-        
-        ( my_width, my_height ) = self.GetSize()
-        
-        in_x = my_x <= mouse_x and mouse_x <= my_x + my_width
-        in_y = my_y <= mouse_y and mouse_y <= my_y + my_height
-        
-        a_dialog_is_open = False
-        
-        tlps = wx.GetTopLevelWindows()
-        
-        for tlp in tlps:
+        if self._current_media is None:
             
-            if isinstance( tlp, wx.Dialog ): a_dialog_is_open = True
+            self.Hide()
             
-        
-        mime = self._current_media.GetMime()
-        
-        in_position = in_x and in_y
-        
-        mouse_over_important_media = ( ShouldHaveAnimationBar( self._current_media ) or mime in HC.VIDEO or mime == HC.APPLICATION_FLASH ) and self.GetParent().MouseIsOverMedia()
-        
-        if in_position and not mouse_over_important_media and not a_dialog_is_open: self.Show()
-        else: self.Hide()
+        else:
+            
+            ( mouse_x, mouse_y ) = wx.GetMousePosition()
+            
+            ( my_x, my_y ) = self.GetPosition()
+            
+            ( my_width, my_height ) = self.GetSize()
+            
+            in_x = my_x <= mouse_x and mouse_x <= my_x + my_width
+            in_y = my_y <= mouse_y and mouse_y <= my_y + my_height
+            
+            a_dialog_is_open = False
+            
+            tlps = wx.GetTopLevelWindows()
+            
+            for tlp in tlps:
+                
+                if isinstance( tlp, wx.Dialog ): a_dialog_is_open = True
+                
+            
+            mime = self._current_media.GetMime()
+            
+            in_position = in_x and in_y
+            
+            mouse_over_important_media = ( ShouldHaveAnimationBar( self._current_media ) or mime in HC.VIDEO or mime == HC.APPLICATION_FLASH ) and self.GetParent().MouseIsOverMedia()
+            
+            if in_position and not mouse_over_important_media and not a_dialog_is_open: self.Show()
+            else: self.Hide()
+            
         
     
 class FullscreenHoverFrameCommands( FullscreenHoverFrame ):

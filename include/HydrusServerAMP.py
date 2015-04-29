@@ -1,4 +1,3 @@
-import BaseHTTPServer
 import collections
 import Cookie
 import hashlib

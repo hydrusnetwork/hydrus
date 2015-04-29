@@ -1,13 +1,11 @@
 import HydrusConstants as HC
 import ClientConstants as CC
 import ClientCaches
-import ClientConstantsMessages
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMedia
 import cStringIO
 import hashlib
-import HydrusMessageHandling
 import os
 import random
 import threading
@@ -22,7 +20,7 @@ from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
 import HydrusData
 import HydrusGlobals
-
+'''
 class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
     def __init__( self, parent, page_key, identity, conversations ):
@@ -1466,4 +1464,4 @@ class IMFrame( ClientGUICommon.Frame ):
         
         # send it to the context, which will report it
         
-    
+    '''

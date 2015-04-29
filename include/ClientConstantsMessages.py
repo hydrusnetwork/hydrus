@@ -6,7 +6,6 @@ import ClientConstants as CC
 import HydrusConstants as HC
 import HydrusImageHandling
 import HydrusMessageHandling
-import multipart
 import os
 import random
 import sqlite3

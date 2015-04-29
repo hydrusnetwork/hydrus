@@ -5,7 +5,6 @@ import HydrusExceptions
 import HydrusTags
 import ClientCaches
 import ClientConstants as CC
-import ClientConstantsMessages
 import ClientData
 import ClientGUICollapsible
 import ClientGUICommon
@@ -873,7 +872,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             for ( tag_classname, namespace ) in tag_classnames_to_namespaces.items(): self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
             
         
-    
+    '''
 class DialogManageContacts( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -1410,7 +1409,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             self._public_key.SetValue( public_key )
             
         
-    
+    '''
 class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -7943,7 +7942,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
             
-            text = yaml.safe_dump( tags )
+            text = os.linesep.join( tags )
             
             HydrusGlobals.pubsub.pub( 'clipboard', 'text', text )
             
@@ -7974,7 +7973,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 try:
                     
-                    tags = yaml.safe_load( text )
+                    tags = text.split( os.linesep )
                     
                     for tag in tags: self._AddTag( tag, only_add = True )
                     

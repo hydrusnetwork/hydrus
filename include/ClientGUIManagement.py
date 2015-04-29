@@ -7,7 +7,6 @@ import HydrusImageHandling
 import HydrusNetworking
 import HydrusThreading
 import ClientConstants as CC
-import ClientConstantsMessages
 import ClientData
 import ClientCaches
 import ClientFiles
@@ -2330,7 +2329,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         except: wx.MessageBox( traceback.format_exc() )
         
-    
+    '''
 class ManagementPanelMessages( wx.ScrolledWindow ):
     
     def __init__( self, parent, page_key, identity, starting_from_session = False ):
@@ -2506,4 +2505,4 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         
         # if have a open draft, save it!
         
-    
+    '''

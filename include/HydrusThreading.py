@@ -1,7 +1,4 @@
-import collections
-import HydrusConstants as HC
-import itertools
-import os
+import HydrusExceptions
 import Queue
 import random
 import threading
@@ -74,6 +71,10 @@ class DAEMONQueue( DAEMON ):
                 
                 self._callable( items )
                 
+            except HydrusExceptions.ShutdownException:
+                
+                return
+                
             except Exception as e:
                 
                 HydrusData.ShowException( e )
@@ -117,7 +118,14 @@ class DAEMONWorker( DAEMON ):
                 time.sleep( 10 )
                 
             
-            try: self._callable()
+            try:
+                
+                self._callable()
+                
+            except HydrusExceptions.ShutdownException:
+                
+                return
+                
             except Exception as e:
                 
                 HydrusData.ShowText( 'Daemon ' + self._name + ' encountered an exception:' )
@@ -173,6 +181,10 @@ class DAEMONCallToThread( DAEMON ):
                 callable( *args, **kwargs )
                 
                 del callable
+                
+            except HydrusExceptions.ShutdownException:
+                
+                return
                 
             except Exception as e:
                 

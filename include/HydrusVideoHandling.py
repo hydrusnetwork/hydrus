@@ -100,7 +100,7 @@ def GetVideoFrameDuration( path ):
     
     fps = cv_video.get( cv2.cv.CV_CAP_PROP_FPS )
     
-    if fps == 0: fps = 15
+    if fps == 0: raise HydrusExceptions.CantRenderWithCVException()
     
     return 1000.0 / fps
     
@@ -300,7 +300,14 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
             
         else:
             
-            self._frame_duration = GetVideoFrameDuration( self._path )
+            try:
+                
+                self._frame_duration = GetVideoFrameDuration( self._path )
+                
+            except HydrusExceptions.CantRenderWithCVException:
+                
+                self._frame_duration = float( duration ) / num_frames
+                
             
             self._renderer = VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
             
@@ -750,8 +757,6 @@ class GIFRenderer( object ):
                 
                 numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
                 
-                self._last_frame = numpy_image
-                
             except HydrusExceptions.CantRenderWithCVException:
                 
                 if self._last_frame is None:
@@ -760,7 +765,7 @@ class GIFRenderer( object ):
                     
                     self._InitialisePIL()
                     
-                    return self._RenderCurrentFrame()
+                    numpy_image = self._RenderCurrentFrame()
                     
                 else: numpy_image = self._last_frame
                 
@@ -771,8 +776,8 @@ class GIFRenderer( object ):
             
             numpy_image = HydrusImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
             
-            self._last_frame = numpy_image
-            
+        
+        self._last_frame = numpy_image
         
         return numpy_image
         
@@ -784,14 +789,14 @@ class GIFRenderer( object ):
             self._cv_video.release()
             self._cv_video.open( self._path )
             
-            self._next_render_index = 0
-            
             #self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, 0.0 )
             
         else:
             
             self._pil_image.seek( 0 )
             
+        
+        self._next_render_index = 0
         
     
     def read_frame( self ): return self._RenderCurrentFrame()

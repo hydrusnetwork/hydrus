@@ -4,7 +4,6 @@ import hashlib
 import HydrusConstants as HC
 import HydrusEncryption
 import HydrusServer
-import HydrusServerAMP
 import os
 import potr
 import time

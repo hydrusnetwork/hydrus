@@ -15,7 +15,6 @@ import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
-import HydrusMessageHandling
 import HydrusNATPunch
 import HydrusSerialisable
 import HydrusServer
@@ -23,7 +22,6 @@ import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
-import ClientConstantsMessages
 import ClientDaemons
 import os
 import Queue
@@ -51,7 +49,7 @@ YAML_DUMP_ID_IMPORT_FOLDER = 5
 YAML_DUMP_ID_EXPORT_FOLDER = 6
 YAML_DUMP_ID_SUBSCRIPTION = 7
 YAML_DUMP_ID_LOCAL_BOORU = 8
-
+'''
 class MessageDB( object ):
     
     def _AddContact( self, contact ):
@@ -986,7 +984,7 @@ class MessageDB( object ):
         self.pub_after_commit( 'message_statuses_gui', message_key, status_updates )
         self.pub_after_commit( 'notify_check_messages' )
         
-    
+    '''
 class DB( HydrusDB.HydrusDB ):
     
     DB_NAME = 'client'
@@ -1481,16 +1479,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in ClientDefaults.GetDefaultImageboards() ) )
         
         self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
-        
-        self._c.execute( 'INSERT INTO contacts ( contact_id, contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ?, ? );', ( 1, None, None, 'Anonymous', 'internet', 0 ) )
-        
-        with open( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
-        
-        ( public_key, name, host, port ) = hydrus_admin.GetInfo()
-        
-        contact_key = hydrus_admin.GetContactKey()
-        
-        self._c.execute( 'INSERT OR IGNORE INTO contacts ( contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ? );', ( sqlite3.Binary( contact_key ), public_key, name, host, port ) )
         
         self._c.execute( 'INSERT INTO version ( version ) VALUES ( ? );', ( HC.SOFTWARE_VERSION, ) )
         
@@ -3948,8 +3936,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._InitArchives()
         
-        HC.options = self._GetOptions()
-        
     
     def _ManageDBError( self, job, e ):
         
@@ -4599,6 +4585,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
         elif action == 'news': result = self._GetNews( *args, **kwargs )
         elif action == 'nums_pending': result = self._GetNumsPending( *args, **kwargs )
+        elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
         elif action == 'pixiv_account': result = self._GetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account' )
         elif action == 'ratings_filter': result = self._GetRatingsFilter( *args, **kwargs )
@@ -4891,30 +4878,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
-        
-        if version == 105:
-            
-            if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
-            
-            result = self._c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HydrusData.SplayListForDB( HC.REPOSITORIES ) + ';' ).fetchall()
-            
-            for ( service_id, info ) in result:
-                
-                first_begin = info[ 'first_begin' ]
-                if first_begin == 0: first_begin = None
-                
-                next_begin = info[ 'next_begin' ]
-                
-                info[ 'first_timestamp' ] = first_begin
-                info[ 'next_download_timestamp' ] = 0
-                info[ 'next_processing_timestamp' ] = next_begin
-                
-                del info[ 'first_begin' ]
-                del info[ 'next_begin' ]
-                
-                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                
-            
         
         if version == 106:
             

@@ -1,12 +1,6 @@
-import collections
 import HydrusConstants as HC
-import HydrusServerAMP
 import HydrusServerResources
-import os
-import random
 import traceback
-from twisted.internet.protocol import ServerFactory
-from twisted.protocols import amp
 from twisted.web.server import Request, Site
 from twisted.web.resource import Resource
 import HydrusData
@@ -340,7 +334,7 @@ class HydrusServiceRepositoryFile( HydrusServiceRepository ):
         
     
 class HydrusServiceRepositoryTag( HydrusServiceRepository ): pass
-
+'''
 class MessagingServiceFactory( ServerFactory ):
     
     protocol = HydrusServerAMP.MessagingServiceProtocol
@@ -376,3 +370,4 @@ class MessagingServiceFactory( ServerFactory ):
         if name in self._temporary_connections[ identifier ]: del self._temporary_connections[ identifier ][ name ]
         elif name in self._persistent_connections[ identifier ]: del self._persistent_connections[ identifier ][ name ]
         
+'''

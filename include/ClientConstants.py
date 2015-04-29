@@ -1,7 +1,6 @@
 import collections
 import HydrusConstants as HC
 import HydrusExceptions
-import multipart
 import os
 import sys
 import threading

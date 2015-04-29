@@ -8,8 +8,6 @@ methods field and file.  When you are done, get the content via the get method.
 @author: Stacy Prowell (http://stacyprowell.com)
 '''
  
-import mimetypes
- 
 class Part(object):
     '''
     Class holding a single part of the form.  You should never need to use
@@ -56,9 +54,6 @@ class Part(object):
             self._headers[Part.CONTENT_DISPOSITION] = \
                 ('form-data; name="%s"; filename="%s"' %
                  (self._name, self._filename))
-            self._headers.setdefault(Part.CONTENT_TYPE,
-                                     mimetypes.guess_type(filename)[0]
-                                     or Part.DEFAULT_CONTENT_TYPE)
         return
  
     def get(self):

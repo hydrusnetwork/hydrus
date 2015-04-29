@@ -204,7 +204,10 @@ class HydrusTagArchive( object ):
                 
                 return self.GetHashType()
                 
-            except: raise Exception( 'This archive has no hash type set, and as it has no files, no hash type guess can be made.' )
+            except TypeError:
+                
+                raise Exception( 'This archive has no hash type set, and as it has no files, no hash type guess can be made.' )
+                
             
         
         return hash_type
