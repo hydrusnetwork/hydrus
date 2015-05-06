@@ -51,7 +51,7 @@ class HydrusMessagingSessionManagerServer( object ):
                     
                     del self._service_keys_to_sessions[ service_key ][ session_key ]
                     
-                    raise HydrusExceptions.SessionException( 'Session expired!' )
+                    raise HydrusExceptions.SessionException( 'Session expired! Try again!' )
                     
                 
                 return ( account.GetAccountKey(), name )
@@ -190,7 +190,7 @@ class HydrusSessionManagerServer( object ):
                 else: return account
                 
             
-            raise HydrusExceptions.SessionException()
+            raise HydrusExceptions.SessionException( 'Did not find that session! Try again!' )
             
         
     

@@ -541,6 +541,7 @@ class HTTPConnection( object ):
             if response.status == 401: raise HydrusExceptions.PermissionException( parsed_response )
             elif response.status == 403: raise HydrusExceptions.ForbiddenException( parsed_response )
             elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
+            elif response.status == 419: raise HydrusExceptions.SessionException( parsed_response )
             elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
             elif response.status in ( 500, 501, 502, 503 ): raise Exception( parsed_response )
             else: raise Exception( parsed_response )

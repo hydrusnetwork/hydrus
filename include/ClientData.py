@@ -120,6 +120,23 @@ def GenerateExportFilename( media, terms ):
     
     return filename
     
+def GetExportPath():
+    
+    path = HC.options[ 'export_path' ]
+    
+    if path is None:
+        
+        path = os.path.expanduser( '~' ) + os.path.sep + 'hydrus_export'
+        
+        if not os.path.exists( path ): os.mkdir( path )
+        
+    
+    path = os.path.normpath( path ) # converts slashes to backslashes for windows
+    
+    path = HydrusData.ConvertPortablePathToAbsPath( path )
+    
+    return path
+    
 def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
     
     tags_managers = []
@@ -1062,14 +1079,11 @@ class Service( HydrusData.HydrusYAMLBase ):
             
         except Exception as e:
             
-            if isinstance( e, HydrusExceptions.ForbiddenException ):
+            if isinstance( e, HydrusExceptions.SessionException ):
                 
-                if HydrusData.ToString( e ) == 'Session not found!':
-                    
-                    session_manager = wx.GetApp().GetManager( 'hydrus_sessions' )
-                    
-                    session_manager.DeleteSessionKey( self._service_key )
-                    
+                session_manager = wx.GetApp().GetManager( 'hydrus_sessions' )
+                
+                session_manager.DeleteSessionKey( self._service_key )
                 
             
             wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HydrusData.ToString( e ) ) ] } )

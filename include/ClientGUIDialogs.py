@@ -4825,12 +4825,9 @@ class DialogSetupExport( Dialog ):
                 self._paths.Append( pretty_tuple, data_tuple )
                 
             
-            if HC.options[ 'export_path' ] is not None:
-                
-                abs_path = HydrusData.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
-                
-                if abs_path is not None: self._directory_picker.SetPath( abs_path )
-                
+            export_path = ClientData.GetExportPath()
+            
+            self._directory_picker.SetPath( export_path )
             
             self._zip_name.SetValue( 'archive name.zip' )
             
@@ -4999,8 +4996,6 @@ class DialogSetupExport( Dialog ):
                     hash = media.GetHash()
                     
                     source_path = ClientFiles.GetFilePath( hash, mime )
-                    
-                    if os.path.exists( path ): os.chmod( path, stat.S_IWRITE )
                     
                     shutil.copy( source_path, path )
                     

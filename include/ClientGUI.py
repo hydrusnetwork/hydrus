@@ -1064,11 +1064,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManageBoorus( self ) as dlg: dlg.ShowModal()
         
     
-    def _ManageContacts( self ):
-        
-        with ClientGUIDialogsManage.DialogManageContacts( self ) as dlg: dlg.ShowModal()
-        
-    
     def _ManageExportFolders( self ):
         
         with ClientGUIDialogsManage.DialogManageExportFolders( self ) as dlg: dlg.ShowModal()
@@ -1258,15 +1253,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _OpenExportFolder( self ):
         
-        export_path = HydrusData.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
+        export_path = ClientData.GetExportPath()
         
-        if export_path is None: wx.MessageBox( 'Export folder is missing or not set.' )
-        else:
-            
-            export_path = os.path.normpath( export_path ) # windows complains about those forward slashes when launching from the command line
-            
-            HydrusFileHandling.LaunchDirectory( export_path )
-            
+        HydrusFileHandling.LaunchDirectory( export_path )
         
     
     def _PauseSync( self, sync_type ):
@@ -1912,7 +1901,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_4chan_pass': self._Manage4chanPass()
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
             elif command == 'manage_boorus': self._ManageBoorus()
-            elif command == 'manage_contacts': self._ManageContacts()
             elif command == 'manage_export_folders': self._ManageExportFolders()
             elif command == 'manage_imageboards': self._ManageImageboards()
             elif command == 'manage_import_folders': self._ManageImportFolders()
@@ -2193,12 +2181,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def Shutdown( self ):
         
-        self._message_manager.Hide()
+        try:
+            
+            self._message_manager.Hide()
+            
+            self._message_manager.CleanBeforeDestroy()
+            
+        except: pass
         
         self.Hide()
-        
-        try: self._message_manager.CleanBeforeDestroy()
-        except: pass
         
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
         

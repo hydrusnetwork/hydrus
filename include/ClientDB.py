@@ -4879,28 +4879,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
-        if version == 106:
-            
-            self._c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
-            
-            result = self._c.execute( 'SELECT service_id, blacklist, namespaces FROM namespace_blacklists;' ).fetchall()
-            
-            for ( service_id, blacklist, namespaces ) in result:
-                
-                tags = [ namespace + ':' for namespace in namespaces ]
-                
-                if ':' in tags: # don't want to change ''!
-                    
-                    tags.remove( ':' )
-                    tags.append( '' )
-                    
-                
-                self._c.execute( 'INSERT INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
-                
-            
-            self._c.execute( 'DROP TABLE namespace_blacklists;' )
-            
-        
         if version == 108:
             
             self._c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )

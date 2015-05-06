@@ -387,19 +387,26 @@ class ThumbnailCache( object ):
         
         names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video' ]
         
-        for name in names:
+        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        
+        try:
             
-            path = HC.STATIC_DIR + os.path.sep + name + '.png'
+            for name in names:
+                
+                path = HC.STATIC_DIR + os.path.sep + name + '.png'
+                
+                thumbnail = HydrusFileHandling.GenerateThumbnail( path, HC.options[ 'thumbnail_dimensions' ] )
+                
+                with open( temp_path, 'wb' ) as f: f.write( thumbnail )
+                
+                hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
+                
+                self._special_thumbs[ name ] = hydrus_bitmap
+                
             
-            thumbnail = HydrusFileHandling.GenerateThumbnail( path, HC.options[ 'thumbnail_dimensions' ] )
+        finally:
             
-            resized_path = HC.STATIC_DIR + os.path.sep + name + '_resized.png'
-            
-            with open( resized_path, 'wb' ) as f: f.write( thumbnail )
-            
-            hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( resized_path )
-            
-            self._special_thumbs[ name ] = hydrus_bitmap
+            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
             
         
     

@@ -3156,6 +3156,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         def ArrangeControls():
             
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
@@ -3172,7 +3174,12 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail height: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._thumbnail_height, CC.FLAGS_MIXED )
             
-            self._file_page.SetSizer( gridbox )
+            text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
+            
+            vbox.AddF( wx.StaticText( self._file_page, label = text ), CC.FLAGS_CENTER )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            self._file_page.SetSizer( vbox )
             
             #
             
@@ -7710,11 +7717,14 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def EventNext( self, event ):
         
-        self._CommitCurrentChanges()
-        
-        self._ClearPanels()
-        
-        HydrusGlobals.pubsub.pub( 'canvas_show_next', self._canvas_key )
+        if self._canvas_key is not None:
+            
+            self._CommitCurrentChanges()
+            
+            self._ClearPanels()
+            
+            HydrusGlobals.pubsub.pub( 'canvas_show_next', self._canvas_key )
+            
         
     
     def EventOK( self, event ):
@@ -7725,11 +7735,14 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def EventPrevious( self, event ):
         
-        self._CommitCurrentChanges()
-        
-        self._ClearPanels()
-        
-        HydrusGlobals.pubsub.pub( 'canvas_show_previous', self._canvas_key )
+        if self._canvas_key is not None:
+            
+            self._CommitCurrentChanges()
+            
+            self._ClearPanels()
+            
+            HydrusGlobals.pubsub.pub( 'canvas_show_previous', self._canvas_key )
+            
         
     
     def EventServiceChanged( self, event ):
@@ -7754,63 +7767,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def __init__( self, parent, file_service_key, tag_service_key, media ):
             
-            def InitialiseControls():
-                
-                self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
-                
-                self._tags_box = ClientGUICommon.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTag )
-                
-                self._tags_box_sorter.SetTagsBox( self._tags_box )
-                
-                self._show_deleted_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'show deleted' )
-                self._show_deleted_checkbox.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
-                
-                self._tags_box_sorter.AddF( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
-                
-                self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_key, self._tag_service_key )
-                
-                self._modify_mappers = wx.Button( self, label = 'Modify mappers' )
-                self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
-                
-                self._copy_tags = wx.Button( self, label = 'copy tags' )
-                self._copy_tags.Bind( wx.EVT_BUTTON, self.EventCopyTags )
-                
-                self._paste_tags = wx.Button( self, label = 'paste tags' )
-                self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
-                
-            
-            def PopulateControls():
-                
-                self._tags_box.ChangeTagRepository( self._tag_service_key )
-                
-                self.SetMedia( media )
-                
-            
-            def ArrangeControls():
-                
-                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-                
-                if self._i_am_local_tag_service: self._modify_mappers.Hide()
-                else:
-                    
-                    if not self._account.HasPermission( HC.MANAGE_USERS ): self._modify_mappers.Hide()
-                    
-                
-                copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                copy_paste_hbox.AddF( self._copy_tags, CC.FLAGS_MIXED )
-                copy_paste_hbox.AddF( self._paste_tags, CC.FLAGS_MIXED )
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( self._add_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( copy_paste_hbox, CC.FLAGS_BUTTON_SIZER )
-                vbox.AddF( self._modify_mappers, CC.FLAGS_BUTTON_SIZER )
-                
-                self.SetSizer( vbox )
-                
-            
             wx.Panel.__init__( self, parent )
             
             self._file_service_key = file_service_key
@@ -7826,11 +7782,53 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 except: self._account = HydrusData.GetUnknownAccount()
                 
             
-            InitialiseControls()
+            self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
             
-            PopulateControls()
+            self._tags_box = ClientGUICommon.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTag )
             
-            ArrangeControls()
+            self._tags_box_sorter.SetTagsBox( self._tags_box )
+            
+            self._show_deleted_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'show deleted' )
+            self._show_deleted_checkbox.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
+            
+            self._tags_box_sorter.AddF( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
+            
+            self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_key, self._tag_service_key )
+            
+            self._modify_mappers = wx.Button( self, label = 'Modify mappers' )
+            self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
+            
+            self._copy_tags = wx.Button( self, label = 'copy tags' )
+            self._copy_tags.Bind( wx.EVT_BUTTON, self.EventCopyTags )
+            
+            self._paste_tags = wx.Button( self, label = 'paste tags' )
+            self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
+            
+            self._tags_box.ChangeTagRepository( self._tag_service_key )
+            
+            self.SetMedia( media )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            if self._i_am_local_tag_service: self._modify_mappers.Hide()
+            else:
+                
+                if not self._account.HasPermission( HC.MANAGE_USERS ): self._modify_mappers.Hide()
+                
+            
+            copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            copy_paste_hbox.AddF( self._copy_tags, CC.FLAGS_MIXED )
+            copy_paste_hbox.AddF( self._paste_tags, CC.FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._add_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( copy_paste_hbox, CC.FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._modify_mappers, CC.FLAGS_BUTTON_SIZER )
+            
+            self.SetSizer( vbox )
             
         
         def _AddTag( self, tag, only_add = False ):
@@ -7919,23 +7917,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
             
         
-        def SetMedia( self, media ):
-            
-            self._content_updates = []
-            
-            if media is None: media = []
-            
-            self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
-            
-            if len( self._hashes ) > 0: media_results = wx.GetApp().Read( 'media_results', self._file_service_key, self._hashes )
-            else: media_results = []
-            
-            # this should now be a nice clean copy of the original media
-            self._media = [ ClientMedia.MediaSingleton( media_result ) for media_result in media_results ]
-            
-            self._tags_box.SetTagsByMedia( self._media )
-            
-        
         def EventCopyTags( self, event ):
         
             ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, self._tag_service_key )
@@ -7973,7 +7954,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 try:
                     
-                    tags = text.split( os.linesep )
+                    tags = HydrusData.DeserialisePrettyTags( text )
+                    
+                    tags = HydrusTags.CleanTags( tags )
                     
                     for tag in tags: self._AddTag( tag, only_add = True )
                     
@@ -7992,6 +7975,23 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         def GetServiceKey( self ): return self._tag_service_key
         
         def HasChanges( self ): return len( self._content_updates ) > 0
+        
+        def SetMedia( self, media ):
+            
+            self._content_updates = []
+            
+            if media is None: media = []
+            
+            self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
+            
+            if len( self._hashes ) > 0: media_results = wx.GetApp().Read( 'media_results', self._file_service_key, self._hashes )
+            else: media_results = []
+            
+            # this should now be a nice clean copy of the original media
+            self._media = [ ClientMedia.MediaSingleton( media_result ) for media_result in media_results ]
+            
+            self._tags_box.SetTagsByMedia( self._media )
+            
         
         def SetTagBoxFocus( self ):
             

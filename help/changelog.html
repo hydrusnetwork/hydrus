@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 156</h3></li>
+				<ul>
+					<li>improved my build workflow in several ways, which should result in fewer orphan files and other build weirdnesses</li>
+					<li>some bad path usage in initialisation icon resizing has been moved to better temp paths</li>
+					<li>hitting page up or down on a manage tags dialog launched from the thumbnail grid no longer clears the current media</li>
+					<li>improved file permissions code across the program</li>
+					<li>fixed import folders daemon's test code for non-windows</li>
+					<li>fixed up some temporary file code that wasn't cleaning up those files when the application was about to close</li>
+					<li>fixed a newline parsing problem in copy/paste tags in the manage tags dialog</li>
+					<li>added tag cleaning to pasting in the manage tags dialog</li>
+					<li>added newline removal into standard tag cleaning process</li>
+					<li>fixed a server db bug that was stopping some accounts from being created</li>
+					<li>fixed some network session exception creation and catching</li>
+					<li>new popup messages should no longer steal focus in most circumstances</li>
+					<li>client should recover from serious popup message manager errors better</li>
+					<li>hover windows will now only pop up if their media viewer is the currently focused frame</li>
+					<li>hover windows will not hide until the mouse moves off them when flash or webm are underneath them</li>
+					<li>os x will no longer vanish media in the media viewer on an action like archive or inbox</li>
+					<li>fixed juddery media mouse dragging in linux</li>
+					<li>improved the way listbooks work to avoid a problem with clientdata in wx linux</li>
+					<li>export folder is gone as the default export location--now it is 'hydrus_export' under the current user's home dir</li>
+					<li>updated windows ffmpeg to latest version</li>
+					<li>fixed an important opencv dll conflict that was causing some gifs to render wrong in windows</li>
+					<li>shift focus media logic improved--shift initial thumbnail is now last image selected</li>
+					<li>shift selection will no longer deselect anything</li>
+				</ul>
 				<li><h3>version 155</h3></li>
 				<ul>
 					<li>fixed a frame seek error when looping long and/or large gifs with unusual palettes</li>

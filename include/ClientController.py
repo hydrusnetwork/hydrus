@@ -525,8 +525,6 @@ class Controller( HydrusController.HydrusController ):
             
             self.InitDB() # can't run on wx thread because we need event queue free to update splash text
             
-            # can't use HC.options, because it might not have initialised yet!
-            
             HC.options = wx.GetApp().Read( 'options' )
             
             if HC.options[ 'password' ] is not None:

@@ -163,11 +163,12 @@ def DAEMONCheckImportFolders():
                             
                             try:
                                 
-                                # make read only perms to make sure it isn't being written/downloaded right now
+                                # try to get a write lock just to check it isn't being written to right now
                                 
-                                os.chmod( path, stat.S_IREAD )
-                                
-                                os.chmod( path, stat.S_IWRITE )
+                                with open( path, 'ab' ) as f:
+                                    
+                                    pass
+                                    
                                 
                                 with open( path, 'rb' ) as f_source:
                                     

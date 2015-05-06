@@ -2280,6 +2280,20 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 155:
+            
+            results = self._c.execute( 'SELECT service_id, account_type_id, account_type FROM account_types;' ).fetchall()
+            
+            for ( service_id, account_type_id, account_type ) in results:
+                
+                title = account_type.GetTitle()
+                
+                self._c.execute( 'UPDATE account_types SET title = ? WHERE service_id = ? AND account_type_id = ?;', ( title, service_id, account_type_id ) )
+                
+            
+        
+        print( 'The server has updated to version ' + str( version + 1 ) )
+        
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
     

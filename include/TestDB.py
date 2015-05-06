@@ -49,8 +49,6 @@ class TestClientDB( unittest.TestCase ):
         HC.CLIENT_FILES_DIR = HC.DB_DIR + os.path.sep + 'client_files'
         HC.CLIENT_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'client_thumbnails'
         
-        if not os.path.exists( HC.DB_DIR ): os.mkdir( HC.DB_DIR )
-        
         self._db = ClientDB.DB()
         
         threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
@@ -71,7 +69,7 @@ class TestClientDB( unittest.TestCase ):
             except: pass
             
         
-        if os.path.exists( HC.DB_DIR ): shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
+        shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
         
         HC.DB_DIR = self._old_db_dir
         HC.CLIENT_FILES_DIR = self._old_client_files_dir
@@ -1152,8 +1150,6 @@ class TestServerDB( unittest.TestCase ):
         HC.SERVER_FILES_DIR = HC.DB_DIR + os.path.sep + 'server_files'
         HC.SERVER_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'server_thumbnails'
         
-        if not os.path.exists( HC.DB_DIR ): os.mkdir( HC.DB_DIR )
-        
         self._db = ServerDB.DB()
         
         threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
@@ -1174,7 +1170,7 @@ class TestServerDB( unittest.TestCase ):
             except: pass
             
         
-        if os.path.exists( HC.DB_DIR ): shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
+        shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
         
         HC.DB_DIR = self._old_db_dir
         HC.SERVER_FILES_DIR = self._old_server_files_dir

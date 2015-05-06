@@ -48,21 +48,16 @@ def ConvertAbsPathToPortablePath( abs_path ):
 
 def CleanUpTempPath( os_file_handle, temp_path ):
     
-    def clean():
+    os.close( os_file_handle )
+    
+    try: os.remove( temp_path )
+    except OSError:
         
-        os.close( os_file_handle )
+        gc.collect()
         
         try: os.remove( temp_path )
-        except OSError:
-            
-            gc.collect()
-            
-            try: os.remove( temp_path )
-            except OSError: print( 'The client could not delete the temporary file ' + temp_path )
-            
+        except OSError: print( 'The client could not delete the temporary file ' + temp_path )
         
-    
-    wx.CallAfter( clean )
     
 def CopyFileLikeToFileLike( f_source, f_dest ):
     

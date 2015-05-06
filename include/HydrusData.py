@@ -490,6 +490,14 @@ def DebugPrint( debug_info ):
     sys.stdout.flush()
     sys.stderr.flush()
     
+def DeserialisePrettyTags( text ):
+    
+    text = text.replace( '\r', '' )
+    
+    tags = text.split( '\n' )
+    
+    return tags
+    
 def GetEmptyDataDict():
     
     data = collections.defaultdict( default_dict_list )

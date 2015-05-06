@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientData
 import HydrusConstants as HC
+import os
 import wx
 
 def GetClientDefaultOptions():
@@ -10,7 +11,7 @@ def GetClientDefaultOptions():
     options[ 'play_dumper_noises' ] = True
     options[ 'default_sort' ] = 0
     options[ 'default_collect' ] = None
-    options[ 'export_path' ] = 'export'
+    options[ 'export_path' ] = None
     options[ 'hpos' ] = 400
     options[ 'vpos' ] = 700
     options[ 'exclude_deleted_files' ] = False

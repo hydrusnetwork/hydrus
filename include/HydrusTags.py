@@ -916,6 +916,9 @@ def CleanTag( tag ):
     
     tag = HydrusData.ToString( tag )
     
+    tag.replace( '\r', '' )
+    tag.replace( '\n', '' )
+    
     tag = re.sub( '[\\s]+', ' ', tag, flags = re.UNICODE ) # turns multiple spaces into single spaces
     
     tag = re.sub( '\\s\\Z', '', tag, flags = re.UNICODE ) # removes space at the end
@@ -942,9 +945,4 @@ def CleanTags( tags ):
         
     
     return clean_tags
-    
-    
-    
-            
-        
     

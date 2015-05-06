@@ -1454,6 +1454,8 @@ class ListBook( wx.Panel ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
+        self._names_to_pages = {}
+        
         self._list_box = self.LB( self, style = wx.LB_SINGLE | wx.LB_SORT )
         
         self._empty_panel = wx.Panel( self )
@@ -1511,7 +1513,7 @@ class ListBook( wx.Panel ):
         if selection == wx.NOT_FOUND: self._current_panel = self._empty_panel
         else:
             
-            panel_info = self._list_box.GetClientData( selection )
+            panel_info = self._names_to_pages[ self._current_name ]
             
             if type( panel_info ) == tuple:
                 
@@ -1523,12 +1525,12 @@ class ListBook( wx.Panel ):
                 
                 self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
-                self._list_box.SetClientData( selection, page )
+                self._names_to_pages[ self._current_name ] = page
                 
                 self._RecalcListBoxWidth()
                 
             
-            self._current_panel = self._list_box.GetClientData( selection )
+            self._current_panel = self._names_to_pages[ self._current_name ]
             
         
         self._current_panel.Show()
@@ -1551,7 +1553,9 @@ class ListBook( wx.Panel ):
             self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
-        self._list_box.Append( name, page )
+        self._list_box.Append( name )
+        
+        self._names_to_pages[ name ] = page
         
         self._RecalcListBoxWidth()
         
@@ -1570,6 +1574,8 @@ class ListBook( wx.Panel ):
         self._current_name = None
         
         self._current_panel = self._empty_panel
+        
+        self._names_to_pages = {}
         
         self._list_box.Clear()
         
@@ -1609,7 +1615,10 @@ class ListBook( wx.Panel ):
         else: return self._current_panel
         
     
-    def GetNameToPageDict( self ): return { self._list_box.GetString( i ) : self._list_box.GetClientData( i ) for i in range( self._list_box.GetCount() ) if type( self._list_box.GetClientData( i ) ) != tuple }
+    def GetNameToPageDict( self ):
+        
+        return self._names_to_pages
+        
     
     def NameExists( self, name, panel = None ): return self._list_box.FindString( name ) != wx.NOT_FOUND
     
@@ -1626,7 +1635,7 @@ class ListBook( wx.Panel ):
             elif previous_selection >= 0: self._Select( previous_selection )
             else: self._Select( wx.NOT_FOUND )
             
-            panel_info = self._list_box.GetClientData( selection )
+            panel_info = self._names_to_pages[ self._current_name ]
             
             if type( panel_info ) != tuple:
                 
@@ -1634,6 +1643,8 @@ class ListBook( wx.Panel ):
                 
                 wx.CallAfter( panel_info.Destroy )
                 
+            
+            del self._names_to_pages[ self._current_name ]
             
             self._list_box.Delete( selection )
             
@@ -1646,6 +1657,12 @@ class ListBook( wx.Panel ):
         if self._list_box.FindString( new_name ) != wx.NOT_FOUND: raise Exception( 'That name is already in use!' )
         
         if self._current_name == name: self._current_name = new_name
+        
+        page = self._names_to_pages[ name ]
+        
+        del self._names_to_pages[ name ]
+        
+        self._names_to_pages[ new_name ] = page
         
         self._list_box.SetString( self._list_box.FindString( name ), new_name )
         
@@ -1681,13 +1698,13 @@ class ListBook( wx.Panel ):
             
         
     
-    def SelectPage( self, page ):
+    def SelectPage( self, page_to_select ):
         
-        for i in range( self._list_box.GetCount() ):
+        for ( name, page ) in self._names_to_pages.items():
             
-            if self._list_box.GetClientData( i ) == page:
+            if page == page_to_select:
                 
-                self._Select( i )
+                self._Select( self._list_box.FindString( name ) )
                 
                 return
                 
@@ -3640,8 +3657,6 @@ class PopupMessageManager( wx.Frame ):
         parent.Bind( wx.EVT_SIZE, self.EventMove )
         parent.Bind( wx.EVT_MOVE, self.EventMove )
         
-        self._SizeAndPositionAndShow()
-        
         HydrusGlobals.pubsub.sub( self, 'AddMessage', 'message' )
         
         self._old_excepthook = sys.excepthook
@@ -3705,7 +3720,21 @@ class PopupMessageManager( wx.Frame ):
             
             num_messages_displayed = self._message_vbox.GetItemCount()
             
-            if num_messages_displayed > 0: self.Show()
+            if num_messages_displayed > 0:
+                
+                current_focus = wx.Window.FindFocus()
+                
+                tlp = wx.GetTopLevelParent( current_focus )
+                
+                show_happened = self.Show()
+                
+                if show_happened and tlp is not None:
+                    
+                    self.Raise()
+                    
+                    tlp.Raise()
+                    
+                
             else: self.Hide()
             
         except:
@@ -3802,7 +3831,7 @@ class PopupMessageManager( wx.Frame ):
             message_window.Update()
             
         
-        self.MakeSureEverythingFits()
+        self._SizeAndPositionAndShow()
         
     
 class RegexButton( wx.Button ):

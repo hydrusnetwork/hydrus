@@ -423,7 +423,7 @@ class HydrusResourceCommand( Resource ):
         elif failure.type == HydrusExceptions.ForbiddenException: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.NotFoundException: response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.NetworkVersionException: response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.SessionException: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.SessionException: response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
         else:
             
             print( failure.getTraceback() )

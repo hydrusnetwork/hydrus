@@ -344,29 +344,31 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                     if self._focussed_media == media: self._SetFocussedMedia( None )
                     
+                    self._shift_focussed_media = None
+                    
                 else:
                     
                     self._DeselectSelect( (), ( media, ) )
                     
                     if self._focussed_media is None: self._SetFocussedMedia( media )
                     
+                    self._shift_focussed_media = media
+                    
                 
-                self._shift_focussed_media = None
-                
-            elif shift and self._focussed_media is not None:
-                
-                if self._shift_focussed_media is None: self._shift_focussed_media = self._focussed_media
+            elif shift and self._shift_focussed_media is not None:
                 
                 start_index = self._sorted_media.index( self._shift_focussed_media )
                 
                 end_index = self._sorted_media.index( media )
                 
-                if start_index < end_index: media_i_want_selected_at_the_end = set( self._sorted_media[ start_index : end_index + 1 ] )
-                else: media_i_want_selected_at_the_end = set( self._sorted_media[ end_index : start_index + 1 ] )
+                if start_index < end_index: media_to_select = set( self._sorted_media[ start_index : end_index + 1 ] )
+                else: media_to_select = set( self._sorted_media[ end_index : start_index + 1 ] )
                 
-                self._DeselectSelect( self._selected_media - media_i_want_selected_at_the_end, media_i_want_selected_at_the_end - self._selected_media )
+                self._DeselectSelect( (), media_to_select )
                 
                 self._SetFocussedMedia( media )
+                
+                self._shift_focussed_media = media
                 
             else:
                 
@@ -374,7 +376,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 else: self._PublishSelectionChange()
                 
                 self._SetFocussedMedia( media )
-                self._shift_focussed_media = None
+                self._shift_focussed_media = media
                 
             
         

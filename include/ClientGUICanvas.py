@@ -641,6 +641,9 @@ class Canvas( object ):
         ( new_size, new_position ) = self._GetMediaContainerSizeAndPosition()
         
         if new_size != self._media_container.GetSize(): self._media_container.SetSize( new_size )
+        
+        if HC.PLATFORM_OSX and new_position == self._media_container.GetPosition(): self._media_container.Refresh()
+        
         if new_position != self._media_container.GetPosition(): self._media_container.SetPosition( new_position )
         
     
@@ -1303,13 +1306,8 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
             
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
             
-            try:
-                
-                if HC.PLATFORM_OSX: raise Exception() # can't warppointer in os x
-                
-                self.WarpPointer( old_x, old_y )
-                
-            except: self._last_drag_coordinates = ( x, y )
+            if HC.PLATFORM_WINDOWS: self.WarpPointer( old_x, old_y )
+            else: self._last_drag_coordinates = ( x, y )
             
             ( old_delta_x, old_delta_y ) = self._total_drag_delta
             
@@ -1342,7 +1340,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
                 if x > client_x - 20: better_x = client_x - 20
                 if y > client_y - 20: better_y = client_y - 20
                 
-                if not HC.PLATFORM_OSX: # can't warppointer in os x
+                if HC.PLATFORM_WINDOWS:
                     
                     self.WarpPointer( better_x, better_y )
                     
@@ -2494,13 +2492,13 @@ class FullscreenHoverFrame( wx.Frame ):
             in_x = my_x <= mouse_x and mouse_x <= my_x + my_width
             in_y = my_y <= mouse_y and mouse_y <= my_y + my_height
             
-            a_dialog_is_open = False
+            no_dialogs_open = True
             
             tlps = wx.GetTopLevelWindows()
             
             for tlp in tlps:
                 
-                if isinstance( tlp, wx.Dialog ): a_dialog_is_open = True
+                if isinstance( tlp, wx.Dialog ): no_dialogs_open = False
                 
             
             mime = self._current_media.GetMime()
@@ -2509,8 +2507,24 @@ class FullscreenHoverFrame( wx.Frame ):
             
             mouse_over_important_media = ( ShouldHaveAnimationBar( self._current_media ) or mime in HC.VIDEO or mime == HC.APPLICATION_FLASH ) and self.GetParent().MouseIsOverMedia()
             
-            if in_position and not mouse_over_important_media and not a_dialog_is_open: self.Show()
-            else: self.Hide()
+            current_focus = wx.Window.FindFocus()
+            
+            tlp = wx.GetTopLevelParent( current_focus )
+            
+            my_parent_in_focus_tree = False
+            
+            while tlp is not None:
+                
+                if tlp == self.GetParent(): my_parent_in_focus_tree = True
+                
+                tlp = tlp.GetParent()
+                
+            
+            ready_to_show = in_position and not mouse_over_important_media and no_dialogs_open and my_parent_in_focus_tree
+            ready_to_hide = not in_position or not no_dialogs_open or not my_parent_in_focus_tree
+            
+            if ready_to_show: self.Show()
+            elif ready_to_hide: self.Hide()
             
         
     
@@ -4058,13 +4072,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
                 ( delta_x, delta_y ) = ( x - old_x, y - old_y )
                 
-                try:
-                    
-                    if HC.PLATFORM_OSX: raise Exception() # can't warppointer in os x
-                    
-                    self.WarpPointer( old_x, old_y )
-                    
-                except: self._last_drag_coordinates = ( x, y )
+                if HC.PLATFORM_WINDOWS: self.WarpPointer( old_x, old_y )
+                else: self._last_drag_coordinates = ( x, y )
                 
                 ( old_delta_x, old_delta_y ) = self._total_drag_delta
                 
@@ -4099,7 +4108,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                         if x > client_x - 20: better_x = client_x - 20
                         if y > client_y - 20: better_y = client_y - 20
                         
-                        if not HC.PLATFORM_OSX: # can't warppointer in os x
+                        if HC.PLATFORM_WINDOWS:
                             
                             self.WarpPointer( better_x, better_y )
                             
