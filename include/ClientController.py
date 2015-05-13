@@ -149,9 +149,9 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyIdle( self ):
         
-        if HC.options[ 'idle_period' ] == 0: return False
+        if self._options[ 'idle_period' ] == 0: return False
         
-        return HydrusData.GetNow() - self._timestamps[ 'last_user_action' ] > HC.options[ 'idle_period' ]
+        return HydrusData.GetNow() - self._timestamps[ 'last_user_action' ] > self._options[ 'idle_period' ]
         
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
@@ -159,6 +159,11 @@ class Controller( HydrusController.HydrusController ):
     def GetGUI( self ): return self._gui
     
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
+    
+    def GetOptions( self ):
+        
+        return self._options
+        
     
     def InitCheckPassword( self ):
         
@@ -168,7 +173,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    if hashlib.sha256( dlg.GetValue() ).digest() == HC.options[ 'password' ]: break
+                    if hashlib.sha256( dlg.GetValue() ).digest() == self._options[ 'password' ]: break
                     
                 else: raise HydrusExceptions.PermissionException()
                 
@@ -254,14 +259,14 @@ class Controller( HydrusController.HydrusController ):
         
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
         
-        if HC.options[ 'maintenance_vacuum_period' ] != 0:
+        if self._options[ 'maintenance_vacuum_period' ] != 0:
             
-            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > HC.options[ 'maintenance_vacuum_period' ]: self.Write( 'vacuum' )
+            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > self._options[ 'maintenance_vacuum_period' ]: self.Write( 'vacuum' )
             
         
-        if HC.options[ 'maintenance_delete_orphans_period' ] != 0:
+        if self._options[ 'maintenance_delete_orphans_period' ] != 0:
             
-            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > HC.options[ 'maintenance_delete_orphans_period' ]: self.Write( 'delete_orphans' )
+            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > self._options[ 'maintenance_delete_orphans_period' ]: self.Write( 'delete_orphans' )
             
         
         if self._timestamps[ 'last_service_info_cache_fatten' ] != 0 and now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
@@ -316,7 +321,7 @@ class Controller( HydrusController.HydrusController ):
     
     def PrepStringForDisplay( self, text ):
         
-        if HC.options[ 'gui_capitalisation' ]: return text
+        if self._options[ 'gui_capitalisation' ]: return text
         else: return text.lower()
         
     
@@ -387,7 +392,7 @@ class Controller( HydrusController.HydrusController ):
     
     def RestartServer( self ):
         
-        port = HC.options[ 'local_port' ]
+        port = self._options[ 'local_port' ]
         
         def TWISTEDRestartServer():
             
@@ -525,9 +530,11 @@ class Controller( HydrusController.HydrusController ):
             
             self.InitDB() # can't run on wx thread because we need event queue free to update splash text
             
-            HC.options = wx.GetApp().Read( 'options' )
+            self._options = wx.GetApp().Read( 'options' )
             
-            if HC.options[ 'password' ] is not None:
+            HC.options = self._options
+            
+            if self._options[ 'password' ] is not None:
                 
                 HydrusGlobals.pubsub.pub( 'splash_set_text', 'waiting for password' )
                 

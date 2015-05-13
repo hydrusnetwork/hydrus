@@ -7,6 +7,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientMedia
+import ClientRatings
 import collections
 import gc
 import HydrusImageHandling
@@ -586,9 +587,7 @@ class Canvas( object ):
         
         if self._current_media is not None:
             
-            try:
-                with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg: dlg.ShowModal()
-            except: wx.MessageBox( 'Had a problem displaying the manage ratings dialog from fullscreen.' )
+            with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg: dlg.ShowModal()
             
         
     
@@ -900,6 +899,10 @@ class CanvasWithDetails( Canvas ):
         self._hover_commands = FullscreenHoverFrameCommands( self, self._canvas_key )
         self._hover_tags = FullscreenHoverFrameTags( self, self._canvas_key )
         
+        ratings_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.RATINGS_SERVICES ) )
+        
+        if len( ratings_services ) > 0: self._hover_ratings = FullscreenHoverFrameRatings( self, self._canvas_key )
+        
     
     def _DrawBackgroundDetails( self, dc ):
         
@@ -951,6 +954,10 @@ class CanvasWithDetails( Canvas ):
             
             dc.SetTextForeground( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_text' ] ) )
             
+            # top right
+            
+            current_y = 2
+            
             # icons
             
             icons_to_show = []
@@ -978,11 +985,36 @@ class CanvasWithDetails( Canvas ):
                 current_x -= 20
                 
             
-            # top right
+            if len( icons_to_show ) > 0: current_y += 18
+            
+            # ratings
             
             top_right_strings = []
             
             ( local_ratings, remote_ratings ) = self._current_display_media.GetRatings()
+            
+            services_manager = wx.GetApp().GetManager( 'services' )
+            
+            like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+            
+            like_services.reverse()
+            
+            like_rating_current_x = client_width - 16
+            
+            for like_service in like_services:
+                
+                service_key = like_service.GetServiceKey()
+                
+                rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_display_media, ), service_key )
+                
+                ( pen_colour, brush_colour ) = ClientRatings.GetPenAndBrushColours( service_key, rating_state )
+                
+                ClientRatings.DrawLike( dc, like_rating_current_x, current_y, pen_colour, brush_colour )
+                
+                like_rating_current_x -= 16
+                
+            
+            if len( like_services ) > 0: current_y += 16
             
             service_keys_to_ratings = local_ratings.GetServiceKeysToRatings()
             
@@ -1001,28 +1033,17 @@ class CanvasWithDetails( Canvas ):
                 
                 service_type = service.GetServiceType()
                 
-                if service_type == HC.LOCAL_RATING_LIKE:
-                    
-                    ( like, dislike ) = service.GetLikeDislike()
-                    
-                    if rating == 1: s = like
-                    elif rating == 0: s = dislike
-                    
-                elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                if service_type == HC.LOCAL_RATING_NUMERICAL:
                     
                     ( lower, upper ) = service.GetLowerUpper()
                     
                     s = HydrusData.ConvertNumericalRatingToPrettyString( lower, upper, rating )
                     
-                
-                top_right_strings.append( s )
+                    top_right_strings.append( s )
+                    
                 
             
             if len( top_right_strings ) > 0:
-                
-                current_y = 3
-                
-                if len( icons_to_show ) > 0: current_y += 16
                 
                 for s in top_right_strings:
                     
@@ -1033,6 +1054,8 @@ class CanvasWithDetails( Canvas ):
                     current_y += y
                     
                 
+            
+            # middle
             
             current_y = 3
             
@@ -2674,7 +2697,7 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        my_ideal_width = parent_width * 0.6
+        my_ideal_width = int( parent_width * 0.6 )
         
         if my_height != parent_height or my_ideal_width != my_width:
             
@@ -2683,9 +2706,7 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             self.SetSize( ( my_ideal_width, -1 ) )
             
         
-        x = ( parent_width - my_ideal_width ) / 2
-        
-        self.SetPosition( parent.ClientToScreenXY( x, 0 ) )
+        self.SetPosition( parent.ClientToScreenXY( int( parent_width * 0.2 ), 0 ) )
         
     
     def AddCommand( self, label, callback ):
@@ -2798,6 +2819,129 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             
         
     
+class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._icon_panel = wx.Panel( self )
+        
+        self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.inbox_bmp )
+        
+        icon_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        icon_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        icon_hbox.AddF( self._inbox_icon, CC.FLAGS_MIXED )
+        
+        self._icon_panel.SetSizer( icon_hbox )
+        
+        like_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        like_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        like_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        
+        for service in like_services:
+            
+            service_key = service.GetServiceKey()
+            
+            control = ClientGUICommon.RatingLikeCanvas( self, service_key, canvas_key )
+            
+            like_hbox.AddF( control, CC.FLAGS_NONE )
+            
+        
+        # each numerical one in turn
+        
+        vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( ( 1, 2 ), CC.FLAGS_NONE )
+        vbox.AddF( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self._ShowHideIcons()
+        
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        
+    
+    def _ShowHideIcons( self ):
+        
+        if self._current_media is not None:
+            
+            if self._current_media.HasInbox():
+                
+                self._icon_panel.Show()
+                
+            else:
+                
+                self._icon_panel.Hide()
+                
+            
+            self.Fit()
+            
+        
+        self._SizeAndPosition()
+        
+    
+    def _SizeAndPosition( self ):
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        my_ideal_width = int( parent_width * 0.2 )
+        
+        my_ideal_height = my_height
+        
+        if my_ideal_width != my_width or my_ideal_height != my_height:
+            
+            self.Fit()
+            
+            self.SetSize( ( my_ideal_width, -1 ) )
+            
+        
+        self.SetPosition( parent.ClientToScreenXY( int( parent_width * 0.8 ), 0 ) )
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            my_hash = self._current_media.GetHash()
+            
+            do_redraw = False
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
+                    
+                    do_redraw = True
+                    
+                    break
+                    
+                
+            
+            if do_redraw:
+                
+                self._ShowHideIcons()
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            
+            self._ShowHideIcons()
+            
+        
+    
 class FullscreenHoverFrameTags( FullscreenHoverFrame ):
     
     def __init__( self, parent, canvas_key ):
@@ -2812,7 +2956,6 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         self.SetSizer( vbox )
         
-        HydrusGlobals.pubsub.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
     
@@ -2844,7 +2987,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        my_ideal_width = parent_width / 5
+        my_ideal_width = int( parent_width * 0.2 )
         
         my_ideal_height = parent_height
         
@@ -3166,7 +3309,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             HC.options[ 'ratings_filter_accuracy' ] = 1
             
-            wx.GetApp().Write( 'save_options' )
+            wx.GetApp().Write( 'save_options', HC.options )
             
         
         value = HC.options[ 'ratings_filter_accuracy' ]
@@ -3186,7 +3329,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             HC.options[ 'ratings_filter_compare_same' ] = False
             
-            wx.GetApp().Write( 'save_options' )
+            wx.GetApp().Write( 'save_options', HC.options )
             
         
         compare_same = HC.options[ 'ratings_filter_compare_same' ]
@@ -3205,7 +3348,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             HC.options[ 'ratings_filter_left_right' ] = 'left'
             
-            wx.GetApp().Write( 'save_options' )
+            wx.GetApp().Write( 'save_options', HC.options )
             
         
         left_right = HC.options[ 'ratings_filter_left_right' ]
@@ -4013,14 +4156,14 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         HC.options[ 'ratings_filter_accuracy' ] = accuracy
         
-        wx.GetApp().Write( 'save_options' )
+        wx.GetApp().Write( 'save_options', HC.options )
         
     
     def SetCompareSame( self, compare_same ):
         
         HC.options[ 'ratings_filter_compare_same' ] = compare_same
         
-        wx.GetApp().Write( 'save_options' )
+        wx.GetApp().Write( 'save_options', HC.options )
         
         self._compare_same = compare_same
         
@@ -4029,7 +4172,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         HC.options[ 'ratings_filter_left_right' ] = left_right
         
-        wx.GetApp().Write( 'save_options' )
+        wx.GetApp().Write( 'save_options', HC.options )
         
         self._left_right = left_right
         

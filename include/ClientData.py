@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import collections
+import datetime
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetworking
@@ -9,6 +10,7 @@ import traceback
 import os
 import sqlite3
 import sys
+import time
 import wx
 import yaml
 import HydrusData
@@ -122,7 +124,9 @@ def GenerateExportFilename( media, terms ):
     
 def GetExportPath():
     
-    path = HC.options[ 'export_path' ]
+    options = wx.GetApp().GetOptions()
+    
+    path = options[ 'export_path' ]
     
     if path is None:
         
@@ -788,6 +792,39 @@ class FileSystemPredicates( object ):
     
     def MustNotBeLocal( self ): return self._not_local
     
+class GalleryQuery( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_QUERY
+    VERSION = 1
+    
+    def __init__( self, name ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._site_type = None
+        self._query_type = None
+        self._query = None
+        # add 'check tags if redundant' here
+        self._import_file_options = None
+        self._import_tag_options = None
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._site_type, self._query_type, self._query, self._import_file_options.GetEasySerialisedInfo(), self._import_tag_options.GetEasySerialisedInfo() )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._site_type, self._query_type, self._query, easy_serialised_import_file_options, easy_serialised_import_tag_options ) = serialisable_info
+        
+        self._import_file_options = HydrusSerialisable.CreateFromEasy( easy_serialised_import_file_options )
+        
+        self._import_tag_options = HydrusSerialisable.CreateFromEasy( easy_serialised_import_tag_options )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_QUERY ] = GalleryQuery
+
 class Imageboard( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Imageboard'
@@ -831,6 +868,246 @@ class Imageboard( HydrusData.HydrusYAMLBase ):
     def GetName( self ): return self._name
     
 sqlite3.register_adapter( Imageboard, yaml.safe_dump )
+
+class ImportFileOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FILE_OPTIONS
+    VERSION = 1
+    
+    def __init__( self, name ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        options = wx.GetApp().GetOptions()
+        
+        self._automatic_archive = False
+        self._exclude_deleted = options[ 'exclude_deleted_files' ]
+        self._min_size = None
+        self._min_resolution = None
+        self._file_limit = None
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution, self._file_limit )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution, self._file_limit ) = serialisable_info
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution, self._file_limit )
+        
+    
+    def SetTuple( self, automatic_archive, exclude_deleted, min_size, min_resolution, file_limit ):
+        
+        self._automatic_archive = automatic_archive
+        self._exclude_deleted = exclude_deleted
+        self._min_size = min_size
+        self._min_resolution = min_resolution
+        file_limit = file_limit
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FILE_OPTIONS ] = ImportFileOptions
+
+class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS
+    VERSION = 1
+    
+    def __init__( self, name ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._get_tags_on_redundant = False
+        self._service_keys_to_namespaces = {}
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() }
+        
+        return ( self._get_tags_on_redundant, safe_service_keys_to_namespaces )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._get_tags_on_redundant, safe_service_keys_to_namespaces ) = serialisable_info
+        
+        self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() }
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS ] = ImportTagOptions
+
+class Periodic( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PERIODIC
+    VERSION = 1
+    
+    def __init__( self, name ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._wavelength = CC.DAY
+        self._multiplier = 1
+        self._phase = 0
+        self._last_run = 0
+        self._failure_delay_timestamp = None
+        self._paused = False
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._wavelength, self._multiplier, self._phase, self._last_run, self._failure_delay_timestamp, self._paused )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._wavelength, self._multiplier, self._phase, self._last_run, self._failure_delay_timestamp, self._paused ) = serialisable_info
+        
+    
+    def GetDue( self ):
+        
+        day_phase = self._phase / ( 24 * 3600 )
+        hour_phase = ( self._phase % ( 24 * 3600 ) ) / 3600
+        minute_phase = ( self._phase % 3600 ) / 60
+        
+        last_run_datetime = datetime.datetime.fromtimestamp( self._last_run )
+        
+        due_datetime = last_run_datetime.replace( hour = hour_phase, minute = minute_phase, second = 0, microsecond = 0 )
+        
+        one_day = datetime.timedelta( days = 1 )
+        
+        if self._wavelength == CC.DAY:
+            
+            due_datetime += one_day * self._multiplier
+            
+        elif self._wavelength == CC.WEEK:
+            
+            times_passed = 0
+            
+            while times_passed < self._multiplier:
+                
+                due_datetime += one_day
+                
+                if due_datetime.weekday() == day_phase:
+                    
+                    times_passed += 1
+                    
+                
+            
+        elif self._wavelength == CC.MONTH:
+            
+            times_passed = 0
+            
+            while times_passed < self._multiplier:
+                
+                due_datetime += one_day
+                
+                if due_datetime.day == day_phase + 1:
+                    
+                    times_passed += 1
+                    
+                
+            
+        
+        due_timestamp = time.mktime( due_datetime.timetuple() )
+        
+        return due_timestamp
+        
+    
+    def GetString( self ):
+        
+        s = 'last run was '
+        s += HydrusData.ConvertTimestampToPrettyAgo( self._last_run )
+        s += ', will next run in '
+        
+        if self.IsFailureDelaying():
+            
+            s += HydrusData.ConvertTimestampToPrettyPending( max( self.GetDue(), self._failure_delay_timestamp ) )
+            s += ', which may be slightly delayed because of an error'
+            
+        else:
+            
+            s += HydrusData.ConvertTimestampToPrettyPending( self.GetDue() )
+            
+        
+        return s
+        
+    
+    def GetPeriodics( self ):
+        
+        return ( self._wavelength, self._multiplier, self._phase )
+        
+    
+    def IsDue( self ):
+        
+        return HydrusData.GetNow() > self.GetDue()
+        
+    
+    def IsFailureDelaying( self ):
+        
+        if self._failure_delay_timestamp is None:
+            
+            return False
+            
+        else:
+            
+            return HydrusData.GetNow() > self._failure_delay_timestamp
+            
+        
+    
+    def IsPaused( self ): return self._paused
+    
+    def IsReadyToRun( self ):
+        
+        if self.IsPaused(): return False
+        
+        if not self.IsDue(): return False
+        
+        if self.IsFailureDelaying(): return False
+        
+        return True
+        
+    
+    def Pause( self ):
+        
+        self._paused = True
+        
+    
+    def ReportError( self, delay ):
+        
+        self._failure_delay_timestamp = HydrusData.GetNow() + delay
+        
+    
+    def ReportRun( self ):
+        
+        self._last_run = HydrusData.GetNow()
+        
+    
+    def Reset( self ):
+        
+        self._last_run = 0
+        self._failure_delay_timestamp = None
+        self._paused = False
+        
+    
+    def Resume( self ):
+        
+        self.paused = False
+        
+    
+    def SetPeriodics( self, wavelength, multiplier, phase ):
+        
+        self._wavelength = wavelength
+        self._multiplier = multiplier
+        self._phase = phase
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PERIODIC ] = Periodic
 
 class Service( HydrusData.HydrusYAMLBase ):
     
@@ -1123,6 +1400,7 @@ class ServicesManager( object ):
         
         self._lock = threading.Lock()
         self._keys_to_services = {}
+        self._services_sorted = []
         
         self.RefreshServices()
         
@@ -1140,7 +1418,7 @@ class ServicesManager( object ):
     
     def GetServices( self, types = HC.ALL_SERVICES ):
         
-        with self._lock: return [ service for service in self._keys_to_services.values() if service.GetServiceType() in types ]
+        with self._lock: return [ service for service in self._services_sorted if service.GetServiceType() in types ]
         
     
     def RefreshServices( self ):
@@ -1150,6 +1428,11 @@ class ServicesManager( object ):
             services = wx.GetApp().Read( 'services' )
             
             self._keys_to_services = { service.GetServiceKey() : service for service in services }
+            
+            compare_function = lambda a, b: cmp( a.GetName(), b.GetName() )
+            
+            self._services_sorted = list( services )
+            self._services_sorted.sort( cmp = compare_function )
             
         
     
@@ -1311,6 +1594,32 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS ] = Shortcuts
+
+class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION
+    VERSION = 1
+    
+    def __init__( self, name ):
+        
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._gallery_query = None
+        self._periodic_info = None # include last checked and paused
+        self._url_cache = []
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( serialisable_mouse_actions, serialisable_keyboard_actions )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_mouse_actions, serialisable_keyboard_actions ) = serialisable_info
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ] = Subscription
 
 class UndoManager( object ):
     
@@ -1520,7 +1829,9 @@ def GetDefaultAdvancedTagOptions( lookup ):
         if site_type == HC.SITE_TYPE_BOORU: backup_lookup = HC.SITE_TYPE_BOORU
         
     
-    ato_options = HC.options[ 'default_advanced_tag_options' ]
+    options = wx.GetApp().GetOptions()
+    
+    ato_options = options[ 'default_advanced_tag_options' ]
     
     if lookup in ato_options: ato = ato_options[ lookup ]
     elif backup_lookup is not None and backup_lookup in ato_options: ato = ato_options[ backup_lookup ]

@@ -23,6 +23,7 @@ import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
 import ClientDaemons
+import lz4
 import os
 import Queue
 import random
@@ -1116,13 +1117,15 @@ class DB( HydrusDB.HydrusDB ):
     
     def _AddThumbnails( self, thumbnails ):
         
+        options = wx.GetApp().GetOptions()
+        
         for ( hash, thumbnail ) in thumbnails:
             
             thumbnail_path = ClientFiles.GetExpectedThumbnailPath( hash, True )
             
             with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, options[ 'thumbnail_dimensions' ] )
             
             thumbnail_resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
             
@@ -2298,7 +2301,9 @@ class DB( HydrusDB.HydrusDB ):
         
         for wildcard in wildcards_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) )
         
-        if file_service_type == HC.FILE_REPOSITORY and HC.options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
+        options = wx.GetApp().GetOptions()
+        
+        if file_service_type == HC.FILE_REPOSITORY and options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
         
         query_hash_ids.difference_update( exclude_query_hash_ids )
         
@@ -2431,7 +2436,9 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                if HC.options[ 'exclude_deleted_files' ]:
+                options = wx.GetApp().GetOptions()
+                
+                if options[ 'exclude_deleted_files' ]:
                     
                     ( num_everything_deleted, ) = self._c.execute( 'SELECT COUNT( * ) FROM files_info, deleted_files USING ( hash_id ) WHERE files_info.service_id = ? AND deleted_files.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
                     
@@ -2804,7 +2811,9 @@ class DB( HydrusDB.HydrusDB ):
             
             ( hash_id, ) = result
             
-            if HC.options[ 'exclude_deleted_files' ]:
+            options = wx.GetApp().GetOptions()
+            
+            if options[ 'exclude_deleted_files' ]:
                 
                 result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
@@ -3645,7 +3654,9 @@ class DB( HydrusDB.HydrusDB ):
             
             ( hash_id, ) = result
             
-            if HC.options[ 'exclude_deleted_files' ]:
+            options = wx.GetApp().GetOptions()
+            
+            if options[ 'exclude_deleted_files' ]:
                 
                 result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
@@ -4653,15 +4664,15 @@ class DB( HydrusDB.HydrusDB ):
         HydrusData.ShowText( 'Service ' + name + ' was reset successfully!' )
         
     
-    def _SaveOptions( self ):
+    def _SaveOptions( self, options ):
         
         ( old_options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
         
         ( old_width, old_height ) = old_options[ 'thumbnail_dimensions' ]
         
-        ( new_width, new_height ) = HC.options[ 'thumbnail_dimensions' ]
+        ( new_width, new_height ) = options[ 'thumbnail_dimensions' ]
         
-        self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+        self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
         
         resize_thumbs = new_width != old_width or new_height != old_height
         
@@ -4718,9 +4729,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if password is not None: password = hashlib.sha256( password ).digest()
         
-        HC.options[ 'password' ] = password
+        options = wx.GetApp().GetOptions()
         
-        self._SaveOptions()
+        options[ 'password' ] = password
+        
+        self._SaveOptions( options )
         
     
     def _SetTagCensorship( self, info ):
@@ -5086,11 +5099,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 125:
             
-            HC.options = self._GetOptions()
+            options = self._GetOptions()
             
-            HC.options[ 'default_tag_repository' ] = HC.options[ 'default_tag_repository' ].GetServiceKey()
+            options[ 'default_tag_repository' ] = options[ 'default_tag_repository' ].GetServiceKey()
             
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
             
             #
             
@@ -5154,17 +5167,17 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            HC.options = self._GetOptions()
+            options = self._GetOptions()
             
-            client_size = HC.options[ 'client_size' ]
+            client_size = options[ 'client_size' ]
             
             client_size[ 'fs_fullscreen' ] = True
             
             client_size[ 'gui_fullscreen' ] = False
             
-            del HC.options[ 'fullscreen_borderless' ]
+            del options[ 'fullscreen_borderless' ]
             
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
             
         
         if version == 135:
@@ -5254,29 +5267,29 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 143:
             
-            HC.options = self._GetOptions()
+            options = self._GetOptions()
             
-            HC.options[ 'shortcuts' ][ wx.ACCEL_CTRL ][ ord( 'E' ) ] = 'open_externally'
+            options[ 'shortcuts' ][ wx.ACCEL_CTRL ][ ord( 'E' ) ] = 'open_externally'
             
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
             
         
         if version == 145:
             
-            HC.options = self._GetOptions()
+            options = self._GetOptions()
             
-            HC.options[ 'gui_colours' ][ 'tags_box' ] = ( 255, 255, 255 )
+            options[ 'gui_colours' ][ 'tags_box' ] = ( 255, 255, 255 )
             
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
             
         
         if version == 150:
             
-            HC.options = self._GetOptions()
+            options = self._GetOptions()
             
-            HC.options[ 'file_system_predicates' ][ 'hamming_distance' ] = 5
+            options[ 'file_system_predicates' ][ 'hamming_distance' ] = 5
             
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
             
         
         if version == 151:
@@ -5293,20 +5306,20 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 152:
             
-            HC.options = self._GetOptions()
+            options = self._GetOptions()
             
-            HC.options[ 'file_system_predicates' ][ 'num_pixels' ] = ( 1, 2, 2 )
+            options[ 'file_system_predicates' ][ 'num_pixels' ] = ( 1, 2, 2 )
             
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
             
         
         if version == 153:
             
-            HC.options = self._GetOptions()
+            options = self._GetOptions()
             
-            HC.options[ 'file_system_predicates' ] = ClientDefaults.GetClientDefaultOptions()[ 'file_system_predicates' ]
+            options[ 'file_system_predicates' ] = ClientDefaults.GetClientDefaultOptions()[ 'file_system_predicates' ]
             
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
             
             #
             
@@ -5349,6 +5362,18 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, ) )
+            
+        
+        if version == 156:
+            
+            results = self._c.execute( 'SELECT dump_type, dump_name, dump FROM json_dumps_named;' ).fetchall()
+            
+            for ( dump_type, dump_name, dump ) in results:
+                
+                dump = lz4.loads( dump )
+                
+                self._c.execute( 'UPDATE json_dumps_named SET dump = ? WHERE dump_type = ? AND dump_name = ?;', ( sqlite3.Binary( dump ), dump_type, dump_name ) )
+                
             
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

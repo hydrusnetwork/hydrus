@@ -49,7 +49,9 @@ class DataCache( object ):
             
             if key not in self._keys_to_data:
                 
-                while self._total_estimated_memory_footprint > HC.options[ self._cache_size_key ]:
+                options = wx.GetApp().GetOptions()
+                
+                while self._total_estimated_memory_footprint > options[ self._cache_size_key ]:
                     
                     ( deletee_key, last_access_time ) = self._keys_fifo.pop( 0 )
                     
@@ -395,7 +397,9 @@ class ThumbnailCache( object ):
                 
                 path = HC.STATIC_DIR + os.path.sep + name + '.png'
                 
-                thumbnail = HydrusFileHandling.GenerateThumbnail( path, HC.options[ 'thumbnail_dimensions' ] )
+                options = wx.GetApp().GetOptions()
+                
+                thumbnail = HydrusFileHandling.GenerateThumbnail( path, options[ 'thumbnail_dimensions' ] )
                 
                 with open( temp_path, 'wb' ) as f: f.write( thumbnail )
                 

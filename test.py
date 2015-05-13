@@ -122,6 +122,11 @@ class App( wx.App ):
     
     def GetHTTP( self ): return self._http
     
+    def GetOptions( self ):
+        
+        return HC.options
+        
+    
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
     def GetWrite( self, name ):

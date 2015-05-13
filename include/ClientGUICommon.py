@@ -3,6 +3,7 @@ import HydrusConstants as HC
 import ClientCaches
 import ClientData
 import ClientConstants as CC
+import ClientRatings
 import itertools
 import os
 import random
@@ -949,7 +950,6 @@ class BufferedWindow( wx.Window ):
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
-        
     
     def GetDC( self ): return wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
     
@@ -964,6 +964,25 @@ class BufferedWindow( wx.Window ):
         ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
         
         if my_width != current_bmp_width or my_height != current_bmp_height: self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+        
+    
+class BufferedWindowIcon( BufferedWindow ):
+    
+    def __init__( self, parent, bmp ):
+        
+        BufferedWindow.__init__( self, parent, size = bmp.GetSize() )
+        
+        self._bmp = bmp
+        
+        dc = self.GetDC()
+        
+        background_colour = self.GetParent().GetBackgroundColour()
+        
+        dc.SetBackground( wx.Brush( background_colour ) )
+        
+        dc.Clear()
+        
+        dc.DrawBitmap( bmp, 0, 0 )
         
     
 class BetterChoice( wx.Choice ):
@@ -1617,7 +1636,9 @@ class ListBook( wx.Panel ):
     
     def GetNameToPageDict( self ):
         
-        return self._names_to_pages
+        result = { name : page_info for ( name, page_info ) in self._names_to_pages.items() if type( page_info ) != tuple }
+        
+        return result
         
     
     def NameExists( self, name, panel = None ): return self._list_box.FindString( name ) != wx.NOT_FOUND
@@ -3832,6 +3853,218 @@ class PopupMessageManager( wx.Frame ):
             
         
         self._SizeAndPositionAndShow()
+        
+    
+class RatingLike( wx.Window ):
+    
+    def __init__( self, parent, service_key ):
+        
+        wx.Window.__init__( self, parent )
+        
+        self._service_key = service_key
+        
+        self._canvas_bmp = wx.EmptyBitmap( 16, 16, 24 )
+        
+        self.Bind( wx.EVT_PAINT, self.EventPaint )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
+        self.Bind( wx.EVT_LEFT_DCLICK, self.EventLeftDown )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventRightDown )
+        self.Bind( wx.EVT_RIGHT_DCLICK, self.EventRightDown )
+        
+        self.SetMinSize( ( 16, 16 ) )
+        
+        self._dirty = True
+        
+    
+    def _Draw( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def GetDC( self ): return wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+    
+    def EventEraseBackground( self, event ): pass
+    
+    def EventLeftDown( self, event ):
+        
+        raise NotImplementedError()
+        
+    
+    def EventPaint( self, event ):
+        
+        if self._dirty:
+            
+            self._Draw()
+            
+        
+        wx.BufferedPaintDC( self, self._canvas_bmp )
+        
+    
+    def EventRightDown( self, event ):
+        
+        raise NotImplementedError()
+        
+    
+class RatingLikeDialog( RatingLike ):
+    
+    def __init__( self, parent, service_key ):
+        
+        RatingLike.__init__( self, parent, service_key )
+        
+        self._rating_state = ClientRatings.ALL_NULL
+        
+    
+    def _Draw( self ):
+        
+        dc = self.GetDC()
+        
+        dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
+        
+        dc.Clear()
+        
+        ( pen_colour, brush_colour ) = ClientRatings.GetPenAndBrushColours( self._service_key, self._rating_state )
+        
+        ClientRatings.DrawLike( dc, 0, 0, pen_colour, brush_colour )
+        
+        self._dirty = False
+        
+    
+    def EventLeftDown( self, event ):
+        
+        if self._rating_state == ClientRatings.ALL_ON: self._rating_state = ClientRatings.ALL_NULL
+        else: self._rating_state = ClientRatings.ALL_ON
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
+    def EventRightDown( self, event ):
+        
+        if self._rating_state == ClientRatings.ALL_OFF: self._rating_state = ClientRatings.ALL_NULL
+        else: self._rating_state = ClientRatings.ALL_OFF
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
+    def GetRatingState( self ):
+        
+        return self._rating_state
+        
+    
+    def SetRatingState( self, rating_state ):
+        
+        self._rating_state = rating_state
+        
+    
+class RatingLikeCanvas( RatingLike ):
+
+    def __init__( self, parent, service_key, canvas_key ):
+        
+        RatingLike.__init__( self, parent, service_key )
+        
+        self._canvas_key = canvas_key
+        self._current_media = None
+        self._rating_state = None
+        
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        
+        name = service.GetName()
+        
+        self.SetToolTipString( name )
+        
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.pubsub.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        
+    
+    def _Draw( self ):
+        
+        dc = self.GetDC()
+        
+        dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
+        
+        dc.Clear()
+        
+        if self._current_media is not None:
+            
+            self._rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
+            
+            ( pen_colour, brush_colour ) = ClientRatings.GetPenAndBrushColours( self._service_key, self._rating_state )
+            
+            ClientRatings.DrawLike( dc, 0, 0, pen_colour, brush_colour )
+            
+        
+        self._dirty = False
+        
+    
+    def EventLeftDown( self, event ):
+        
+        if self._current_media is not None:
+            
+            if self._rating_state == ClientRatings.ALL_ON: rating = None
+            else: rating = 1
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            wx.GetApp().Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
+        
+    
+    def EventRightDown( self, event ):
+        
+        if self._current_media is not None:
+            
+            if self._rating_state == ClientRatings.ALL_OFF: rating = None
+            else: rating = 0
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            wx.GetApp().Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                for content_update in content_updates:
+                    
+                    ( data_type, action, row ) = content_update.ToTuple()
+                    
+                    if data_type == HC.CONTENT_DATA_TYPE_RATINGS:
+                        
+                        hashes = content_update.GetHashes()
+                        
+                        if len( self._hashes.intersection( hashes ) ) > 0:
+                            
+                            self._dirty = True
+                            
+                            self.Refresh()
+                            
+                            return
+                            
+                        
+                    
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = media
+            
+            self._hashes = self._current_media.GetHashes()
+            
+            self._dirty = True
+            
         
     
 class RegexButton( wx.Button ):

@@ -696,13 +696,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_database' ), p( 'Create Database Backup' ), p( 'Back the database up to an external location.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_service_info' ), p( '&Clear Service Info Cache' ), p( 'Delete all cache service info, in case it has become desynchronised.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
-            menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ), p( 'Fully clear the fullscreen, preview and thumbnail caches.' ) )
+            
+            submenu = wx.Menu()
+            
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_service_info' ), p( '&Clear Service Info Cache' ), p( 'Delete all cache service info, in case it has become desynchronised.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
+            
+            menu.AppendMenu( CC.ID_NULL, p( '&Maintenance' ), submenu )
             
             return ( menu, p( '&Database' ), True )
             
@@ -898,6 +901,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ) )
+            
             
             menu.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_shortcuts' ), p( '&Shortcuts' ) )
@@ -1285,7 +1290,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             HydrusGlobals.pubsub.pub( 'notify_restart_import_folders_daemon' )
             
         
-        try: wx.GetApp().Write( 'save_options' )
+        try: wx.GetApp().Write( 'save_options', HC.options )
         except: wx.MessageBox( traceback.format_exc() )
         
     
@@ -2200,7 +2205,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
             
         
-        wx.GetApp().Write( 'save_options' )
+        wx.GetApp().Write( 'save_options', HC.options )
         
         self._SaveGUISession( 'last session' )
         

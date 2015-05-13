@@ -8,6 +8,29 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 157</h3></li>
+				<ul>
+					<li>fixed a bug in listbook page initialisation and retrieval that was affecting many dialogs on OK</li>
+					<li>some general dialog OK code cleanup</li>
+					<li>fixed a media-navigation bug in managetags dialog</li>
+					<li>fixed a serious OK bug in imageboards dialog</li>
+					<li>created a new 'periodic' object to manage future subscriptions timing improvements</li>
+					<li>started subscription YAML->JSON conversion</li>
+					<li>stopped compressing json in the client db so it is human readable and thus easily editable</li>
+					<li>subscriptions are no longer renamable, as this code was super buggy and could delete other subs</li>
+					<li>tidied up the database menu</li>
+					<li>a bit of misc cleanup</li>
+					<li>in many cases where it was once pseudorandom, services are now reported in alphabetical order</li>
+					<li>prototyped 'like' ratings control</li>
+					<li>added new like ratings control to the background bmp of the media viewer</li>
+					<li>added new like ratings control to the manage ratings dialog</li>
+					<li>added new like ratings control to a new hover window in the top-right</li>
+					<li>added basic additional icon support to new hover window</li>
+					<li>fixed some misc new alignment bugs related to new ratings stuff</li>
+					<li>like ratings controls on the hover window have tooltips</li>
+					<li>fixed up some icon/rating display logic in the background bmp of the media viewer</li>
+					<li>updated ratings dialog error handling</li>
+				</ul>
 				<li><h3>version 156</h3></li>
 				<ul>
 					<li>improved my build workflow in several ways, which should result in fewer orphan files and other build weirdnesses</li>

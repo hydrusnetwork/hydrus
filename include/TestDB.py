@@ -275,39 +275,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( result, set() )
         
     
-    def test_shortcuts( self ):
-        
-        result = self._read( 'shortcuts' )
-        
-        self.assertEqual( result, [] )
-        
-        #
-        
-        shortcuts = ClientData.Shortcuts( 'test' )
-        
-        shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ( os.urandom( 32 ), 'action_data' ) )
-        shortcuts.SetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END, ( None, 'other_action_data' ) )
-        
-        self._write( 'shortcuts', shortcuts )
-        
-        result = self._read( 'shortcuts' )
-        
-        self.assertEqual( len( result ), 1 )
-        
-        result = self._read( 'shortcuts', 'test' )
-        
-        self.assertEqual( result.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ), shortcuts.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ) )
-        self.assertEqual( result.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ), shortcuts.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ) )
-        
-        #
-        
-        self._write( 'delete_shortcuts', 'test' )
-        
-        result = self._read( 'shortcuts' )
-        
-        self.assertEqual( result, [] )
-        
-    
     def test_file_query_ids( self ):
         
         self._clear_db()
@@ -1118,6 +1085,39 @@ class TestClientDB( unittest.TestCase ):
         result = self._read( 'web_sessions' )
         
         self.assertEqual( result, [ session ] )
+        
+    
+    def test_shortcuts( self ):
+        
+        result = self._read( 'shortcuts' )
+        
+        self.assertEqual( result, [] )
+        
+        #
+        
+        shortcuts = ClientData.Shortcuts( 'test' )
+        
+        shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ( os.urandom( 32 ), 'action_data' ) )
+        shortcuts.SetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END, ( None, 'other_action_data' ) )
+        
+        self._write( 'shortcuts', shortcuts )
+        
+        result = self._read( 'shortcuts' )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        result = self._read( 'shortcuts', 'test' )
+        
+        self.assertEqual( result.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ), shortcuts.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ) )
+        self.assertEqual( result.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ), shortcuts.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ) )
+        
+        #
+        
+        self._write( 'delete_shortcuts', 'test' )
+        
+        result = self._read( 'shortcuts' )
+        
+        self.assertEqual( result, [] )
         
     
     def test_shutdown_timestamps( self ):

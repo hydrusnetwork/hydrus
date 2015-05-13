@@ -35,7 +35,9 @@ import HydrusGlobals
 
 def DAEMONCheckExportFolders():
     
-    if not HC.options[ 'pause_export_folders_sync' ]:
+    options = wx.GetApp().GetOptions()
+    
+    if not options[ 'pause_export_folders_sync' ]:
         
         export_folders = wx.GetApp().Read( 'export_folders' )
         
@@ -73,7 +75,7 @@ def DAEMONCheckExportFolders():
                     
                     while i < len( query_hash_ids ):
                         
-                        if HC.options[ 'pause_export_folders_sync' ]: return
+                        if options[ 'pause_export_folders_sync' ]: return
                         
                         if i == 0: ( last_i, i ) = ( 0, base )
                         else: ( last_i, i ) = ( i, i + base )
@@ -120,7 +122,9 @@ def DAEMONCheckExportFolders():
     
 def DAEMONCheckImportFolders():
     
-    if not HC.options[ 'pause_import_folders_sync' ]:
+    options = wx.GetApp().GetOptions()
+    
+    if not options[ 'pause_import_folders_sync' ]:
         
         import_folders = wx.GetApp().Read( 'import_folders' )
         
@@ -149,7 +153,7 @@ def DAEMONCheckImportFolders():
                     
                     for ( i, path ) in enumerate( all_paths ):
                         
-                        if HC.options[ 'pause_import_folders_sync' ]: return
+                        if options[ 'pause_import_folders_sync' ]: return
                         
                         info = os.lstat( path )
                         
@@ -328,11 +332,13 @@ def DAEMONResizeThumbnails():
     
     limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
     
+    options = wx.GetApp().GetOptions()
+    
     for thumbnail_path in thumbnail_paths_to_render:
         
         try:
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, options[ 'thumbnail_dimensions' ] )
             
             thumbnail_resized_path = thumbnail_path + '_resized'
             
@@ -360,6 +366,8 @@ def DAEMONSynchroniseAccounts():
     
     services = wx.GetApp().GetManager( 'services' ).GetServices( HC.RESTRICTED_SERVICES )
     
+    options = wx.GetApp().GetOptions()
+    
     do_notify = False
     
     for service in services:
@@ -372,7 +380,7 @@ def DAEMONSynchroniseAccounts():
         
         if service_type in HC.REPOSITORIES:
             
-            if HC.options[ 'pause_repo_sync' ]: continue
+            if options[ 'pause_repo_sync' ]: continue
             
             info = service.GetInfo()
             
@@ -581,7 +589,9 @@ def DAEMONSynchroniseRepositories():
     
     HydrusGlobals.repos_changed = False
     
-    if not HC.options[ 'pause_repo_sync' ]:
+    options = wx.GetApp().GetOptions()
+    
+    if not options[ 'pause_repo_sync' ]:
         
         services = wx.GetApp().GetManager( 'services' ).GetServices( HC.REPOSITORIES )
         
@@ -612,13 +622,13 @@ def DAEMONSynchroniseRepositories():
                     
                     while service.CanDownloadUpdate():
                         
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
+                        while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
                             
                             time.sleep( 0.1 )
                             
                             if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
+                            if options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
                             
                             if HydrusGlobals.shutdown: raise Exception( 'application shutting down!' )
                             
@@ -705,13 +715,13 @@ def DAEMONSynchroniseRepositories():
                     
                     while service.CanProcessUpdate():
                         
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
+                        while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
                             
                             time.sleep( 0.1 )
                             
                             if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
+                            if options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
                             
                             if HydrusGlobals.shutdown: raise Exception( 'application shutting down!' )
                             
@@ -770,13 +780,13 @@ def DAEMONSynchroniseRepositories():
                         
                         for ( i, content_update ) in enumerate( update.IterateContentUpdates() ):
                             
-                            while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
+                            while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
                                 
                                 time.sleep( 0.1 )
                                 
                                 if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_2', 'paused' )
                                 
-                                if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_2', 'repository synchronisation paused' )
+                                if options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_2', 'repository synchronisation paused' )
                                 
                                 if HydrusGlobals.shutdown: raise Exception( 'application shutting down!' )
                                 
@@ -906,13 +916,13 @@ def DAEMONSynchroniseRepositories():
                     
                     if len( thumbnail_hashes_i_need ) > 0:
                         
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
+                        while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
                             
                             time.sleep( 0.1 )
                             
                             if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
+                            if options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
                             
                             if HydrusGlobals.shutdown: raise Exception( 'application shutting down!' )
                             
@@ -1014,7 +1024,9 @@ def DAEMONSynchroniseSubscriptions():
     
     HydrusGlobals.subs_changed = False
     
-    if not HC.options[ 'pause_subs_sync' ]:
+    options = wx.GetApp().GetOptions()
+    
+    if not options[ 'pause_subs_sync' ]:
         
         subscription_names = wx.GetApp().Read( 'subscription_names' )
         
@@ -1111,13 +1123,13 @@ def DAEMONSynchroniseSubscriptions():
                     
                     while True:
                         
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_subs_sync' ] or HydrusGlobals.shutdown:
+                        while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_subs_sync' ] or HydrusGlobals.shutdown:
                             
                             time.sleep( 0.1 )
                             
                             if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.options[ 'pause_subs_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
+                            if options[ 'pause_subs_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
                             
                             if HydrusGlobals.shutdown: raise Exception( 'application shutting down!' )
                             
@@ -1185,13 +1197,13 @@ def DAEMONSynchroniseSubscriptions():
                     
                     for ( i, url_args ) in enumerate( all_url_args ):
                         
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_subs_sync' ] or HydrusGlobals.shutdown:
+                        while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_subs_sync' ] or HydrusGlobals.shutdown:
                             
                             time.sleep( 0.1 )
                             
                             if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.options[ 'pause_subs_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
+                            if options[ 'pause_subs_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
                             
                             if HydrusGlobals.shutdown: raise Exception( 'application shutting down!' )
                             

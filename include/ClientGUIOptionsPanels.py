@@ -4,6 +4,7 @@ import ClientGUICommon
 import ClientCaches
 import HydrusConstants as HC
 import wx
+import wx.lib.masked.timectrl
 import HydrusGlobals
 
 class OptionsPanel( wx.Panel ):
@@ -250,6 +251,106 @@ class OptionsPanelImport( OptionsPanel ):
             self._min_resolution.SetValue( ( 50, 50 ) )
             self._min_resolution.SetValue( None )
             
+        
+    
+class OptionsPanelPeriodic( OptionsPanel ):
+    
+    def __init__( self, parent ):
+        
+        OptionsPanel.__init__( self, parent )
+        
+        self._multiplier = wx.SpinCtrl( self, min = 1, max = 1000 )
+        
+        self._wavelength = wx.Choice( self )
+        
+        self._wavelength.Append( 'days', CC.DAY )
+        self._wavelength.Append( 'weeks', CC.WEEK )
+        self._wavelength.Append( 'months', CC.MONTH )
+        
+        self._wavelength.Bind( wx.EVT_CHOICE, self.EventWavelength )
+        
+        self._weekday_phase = wx.Choice( self )
+        
+        self._weekday_phase.Append( 'monday', 0 )
+        self._weekday_phase.Append( 'tuesday', 1 )
+        self._weekday_phase.Append( 'wednesday', 2 )
+        self._weekday_phase.Append( 'thursday', 3 )
+        self._weekday_phase.Append( 'friday', 4 )
+        self._weekday_phase.Append( 'saturday', 5 )
+        self._weekday_phase.Append( 'sunday', 6 )
+        
+        self._monthday_phase = wx.SpinCtrl( self, min = 1, max = 28 )
+        
+        self._time_phase = wx.lib.masked.timectrl.TimeCtrl( self, fmt24hr = True, spinButton = True )
+        
+        self._reset = wx.Button( self, label = 'forget failure' )
+        self._reset.Bind( wx.EVT_BUTTON, self.EventReset )
+        
+        self._paused = wx.CheckBox( self, label = 'paused' )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        # this is complicated, with the statictexts to be hidden and so on
+        
+        vbox.AddF( self._auto_archive, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._exclude_deleted, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._min_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        self.SetInfo( {} )
+        
+        self._wavelength.Select( 0 )
+        
+    
+    def EventReset( self, event ):
+        
+        # tell the periodic to reset itself
+        
+        raise NotImplementedError()
+        
+    
+    def EventWavelength( self, event ):
+        
+        selection = self._wavelength.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            # this is more complicated, since there will be a bit of statictext as well
+            
+            wavelength = self._wavelength.GetClientData( selection )
+            
+            if wavelength == CC.DAY:
+                
+                self._weekday_phase.Hide()
+                self._monthday_phase.Hide()
+                
+            elif wavelength == CC.WEEK:
+                
+                self._weekday_phase.Show()
+                self._monthday_phase.Hide()
+                
+            elif wavelength == CC.MONTH:
+                
+                self._weekday_phase.Hide()
+                self._monthday_phase.Show()
+                
+            
+            # maybe a layout here as well?
+            
+        
+    
+    def GetInfo( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def SetInfo( self, info ):
+        
+        # 7 days, at 8pm
+        
+        raise NotImplementedError()
         
     
 class OptionsPanelTags( OptionsPanel ):

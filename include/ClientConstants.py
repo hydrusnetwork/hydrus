@@ -96,6 +96,12 @@ field_string_lookup[ FIELD_FILE ] = 'file'
 field_string_lookup[ FIELD_THREAD_ID ] = 'thread id'
 field_string_lookup[ FIELD_PASSWORD ] = 'password'
 
+FILE_UNKNOWN = 0
+FILE_SUCCESSFUL = 1
+FILE_REDUNDANT = 2
+FILE_DELETED = 3
+FILE_FAILED = 4
+
 FLAGS_NONE = wx.SizerFlags( 0 )
 
 FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
@@ -118,6 +124,10 @@ FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+
+DAY = 0
+WEEK = 1
+MONTH = 2
 
 RESTRICTION_MIN_RESOLUTION = 0
 RESTRICTION_MAX_RESOLUTION = 1

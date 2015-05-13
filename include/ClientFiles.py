@@ -7,6 +7,7 @@ import dircache
 import itertools
 import ClientData
 import ClientConstants
+import wx
 
 def GetAllFileHashes():
     
@@ -203,7 +204,9 @@ def GetThumbnailPath( hash, full_size = True ):
             
             full_size_path = GetThumbnailPath( hash, True )
             
-            thumbnail_dimensions = HC.options[ 'thumbnail_dimensions' ]
+            options = wx.GetApp().GetOptions()
+            
+            thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
             
             thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
             
