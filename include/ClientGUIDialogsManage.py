@@ -6,6 +6,7 @@ import HydrusTags
 import ClientCaches
 import ClientConstants as CC
 import ClientData
+import ClientDefaults
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
@@ -27,6 +28,7 @@ import urllib
 import wx
 import yaml
 import HydrusData
+import HydrusExceptions
 import HydrusFileHandling
 import HydrusGlobals
 
@@ -46,66 +48,51 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._token = wx.TextCtrl( self )
-            self._pin = wx.TextCtrl( self )
-            
-            self._status = wx.StaticText( self )
-            
-            self._SetStatus()
-            
-            self._reauthenticate = wx.Button( self, label = 'reauthenticate' )
-            self._reauthenticate.Bind( wx.EVT_BUTTON, self.EventReauthenticate )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._token.SetValue( token )
-            self._pin.SetValue( pin )
-            
-        
-        def ArrangeControls():
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'token' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._token, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'pin' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._pin, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._reauthenticate, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-        
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage 4chan pass' )
         
         ( token, pin, self._timeout ) = wx.GetApp().Read( '4chan_pass' )
         
-        InitialiseControls()
+        self._token = wx.TextCtrl( self )
+        self._pin = wx.TextCtrl( self )
         
-        PopulateControls()
+        self._status = wx.StaticText( self )
         
-        ArrangeControls()
+        self._SetStatus()
+        
+        self._reauthenticate = wx.Button( self, label = 'reauthenticate' )
+        self._reauthenticate.Bind( wx.EVT_BUTTON, self.EventReauthenticate )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        self._token.SetValue( token )
+        self._pin.SetValue( pin )
+        
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'token' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._token, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( wx.StaticText( self, label = 'pin' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._pin, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._reauthenticate, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
         
         ( x, y ) = self.GetEffectiveMinSize()
         
@@ -172,93 +159,78 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent, service_key ):
         
-        def InitialiseControls():
-            
-            self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
-            
-            self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ], delete_key_callback = self.Delete )
-            
-            self._add = wx.Button( self._account_types_panel, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
-            self._edit = wx.Button( self._account_types_panel, label = 'edit' )
-            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-            
-            self._delete = wx.Button( self._account_types_panel, label = 'delete' )
-            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
-            
-            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-            
-            response = service.Request( HC.GET, 'account_types' )
-            
-            account_types = response[ 'account_types' ]
-            
-            self._titles_to_account_types = {}
-            
-            for account_type in account_types:
-                
-                title = account_type.GetTitle()
-                
-                self._titles_to_account_types[ title ] = account_type
-                
-                permissions = account_type.GetPermissions()
-                
-                permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
-                
-                max_num_bytes = account_type.GetMaxBytes()
-                max_num_requests = account_type.GetMaxRequests()
-                
-                max_num_bytes_string = account_type.GetMaxBytesString()
-                max_num_requests_string = account_type.GetMaxRequestsString()
-                
-                self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
-                
-            
-        
-        def ArrangeControls():
-            
-            h_b_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            h_b_box.AddF( self._add, CC.FLAGS_MIXED )
-            h_b_box.AddF( self._edit, CC.FLAGS_MIXED )
-            h_b_box.AddF( self._delete, CC.FLAGS_MIXED )
-            
-            self._account_types_panel.AddF( self._ctrl_account_types, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._account_types_panel.AddF( h_b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._apply, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-        
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage account types' )
         
         self._service_key = service_key
         
         self._edit_log = []
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
     
+        self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
+        
+        self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ], delete_key_callback = self.Delete )
+        
+        self._add = wx.Button( self._account_types_panel, label = 'add' )
+        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+        
+        self._edit = wx.Button( self._account_types_panel, label = 'edit' )
+        self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._delete = wx.Button( self._account_types_panel, label = 'delete' )
+        self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
+        self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        
+        response = service.Request( HC.GET, 'account_types' )
+        
+        account_types = response[ 'account_types' ]
+        
+        self._titles_to_account_types = {}
+        
+        for account_type in account_types:
+            
+            title = account_type.GetTitle()
+            
+            self._titles_to_account_types[ title ] = account_type
+            
+            permissions = account_type.GetPermissions()
+            
+            permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
+            
+            max_num_bytes = account_type.GetMaxBytes()
+            max_num_requests = account_type.GetMaxRequests()
+            
+            max_num_bytes_string = account_type.GetMaxBytesString()
+            max_num_requests_string = account_type.GetMaxRequestsString()
+            
+            self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
+            
+        
+        h_b_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        h_b_box.AddF( self._add, CC.FLAGS_MIXED )
+        h_b_box.AddF( self._edit, CC.FLAGS_MIXED )
+        h_b_box.AddF( self._delete, CC.FLAGS_MIXED )
+        
+        self._account_types_panel.AddF( self._ctrl_account_types, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._account_types_panel.AddF( h_b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._apply, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox.AddF( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
         ( x, y ) = self.GetEffectiveMinSize()
         
         self.SetInitialSize( ( 980, y ) )
@@ -392,7 +364,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._edit_log = []
+            self._names_to_delete = []
             
             self._boorus = ClientGUICommon.ListBook( self )
             
@@ -421,9 +393,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             for ( name, booru ) in boorus.items():
                 
-                page_info = ( self._Panel, ( self._boorus, booru ), {} )
-                
-                self._boorus.AddPage( page_info, name )
+                self._boorus.AddPageArgs( name, self._Panel, ( self._boorus, booru ), {} )
                 
             
         
@@ -473,21 +443,19 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     name = dlg.GetValue()
                     
-                    if self._boorus.NameExists( name ): raise Exception( 'That name is already in use!' )
+                    if self._boorus.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
                     
-                    if name == '': raise Exception( 'Please enter a nickname for the service.' )
+                    if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
                     
                     booru = ClientData.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
                     
-                    self._edit_log.append( ( HC.SET, ( name, booru ) ) )
+                    page = self._Panel( self._boorus, booru, is_new = True )
                     
-                    page = self._Panel( self._boorus, booru )
+                    self._boorus.AddPage( name, page, select = True )
                     
-                    self._boorus.AddPage( page, name, select = True )
+                except HydrusExceptions.NameException as e:
                     
-                except Exception as e:
-                    
-                    wx.MessageBox( HydrusData.ToString( e ) )
+                    wx.MessageBox( str( e ) )
                     
                     self.EventAdd( event )
                     
@@ -519,25 +487,19 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for ( action, data ) in self._edit_log:
+            for name in self._names_to_delete:
                 
-                if action == HC.SET:
+                wx.GetApp().Write( 'delete_remote_booru', name )
+                
+            
+            for ( name, page ) in self._boorus.GetNamesToActivePages().items():
+                
+                if page.HasChanges():
                     
-                    ( name, booru ) = data
+                    booru = page.GetBooru()
                     
                     wx.GetApp().Write( 'remote_booru', name, booru )
                     
-                elif action == HC.DELETE:
-                    
-                    name = data
-                    
-                    wx.GetApp().Write( 'delete_remote_booru', name )
-                    
-                
-            
-            for ( name, page ) in self._boorus.GetNameToPageDict().items():
-                
-                if page.HasChanges(): self._edit_log.append( ( HC.SET, ( name, page.GetBooru() ) ) )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -551,7 +513,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             name = self._boorus.GetCurrentName()
             
-            self._edit_log.append( ( HC.DELETE, name ) )
+            self._names_to_delete.append( name )
             
             self._boorus.DeleteCurrentPage()
             
@@ -577,14 +539,12 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                         
                         new_booru = ClientData.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
                         
-                        self._edit_log.append( ( HC.SET, ( name, new_booru ) ) )
+                        page = self._Panel( self._boorus, new_booru, is_new = True )
                         
-                        page = self._Panel( self._boorus, new_booru )
-                        
-                        self._boorus.AddPage( page, name, select = True )
+                        self._boorus.AddPage( name, page, select = True )
                         
                     
-                    page = self._boorus.GetNameToPageDict()[ name ]
+                    page = self._boorus.GetNamesToActivePages()[ name ]
                     
                     page.Update( booru )
                     
@@ -598,11 +558,12 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, booru ):
+        def __init__( self, parent, booru, is_new = False ):
             
             wx.Panel.__init__( self, parent )
             
             self._booru = booru
+            self._is_new = is_new
             
             ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
             
@@ -748,7 +709,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 
             
             InitialiseControls()
-                
+            
             PopulateControls()
             
             ArrangeControls()
@@ -823,6 +784,8 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
         
         def HasChanges( self ):
+            
+            if self._is_new: return True
             
             ( booru_name, my_search_url, my_search_separator, my_advance_by_page_num, my_thumb_classname, my_image_id, my_image_data, my_tag_classnames_to_namespaces ) = self._GetInfo()
             
@@ -1152,7 +1115,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             return
             
         
-        for ( name, page ) in self._contacts.GetNameToPageDict().items():
+        for ( name, page ) in self._contacts.GetNamesToActivePages().items():
             
             if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( page.GetOriginalName(), page.GetContact() ) ) )
             
@@ -1213,7 +1176,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                             
                             if True:
                                 
-                                name_to_page_dict = self._contacts.GetNameToPageDict()
+                                name_to_page_dict = self._contacts.GetNamesToActivePages()
                                 
                                 if name in name_to_page_dict: page = name_to_page_dict[ name ]
                                 else: page = name_to_page_dict[ ' identities - ' + name ]
@@ -1417,7 +1380,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete )
+            self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete )
             
             self._add_button = wx.Button( self, label = 'add' )
             self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -1442,13 +1405,14 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             for ( path, details ) in self._original_paths_to_details.items():
                 
+                export_type = details[ 'type' ]
                 predicates = details[ 'predicates' ]
                 period = details[ 'period' ]
                 phrase = details[ 'phrase' ]
                 
-                ( pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( predicates, period, phrase )
+                ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_type, predicates, period, phrase )
                 
-                self._export_folders.Append( ( path, pretty_predicates, pretty_period, pretty_phrase ), ( path, predicates, period, phrase ) )
+                self._export_folders.Append( ( path, pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ), ( path, export_type, predicates, period, phrase ) )
                 
             
         
@@ -1499,27 +1463,37 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         all_existing_client_data = self._export_folders.GetClientData()
         
-        if path not in ( existing_path for ( existing_path, predicates, period, phrase ) in all_existing_client_data ):
+        if path not in ( existing_path for ( existing_path, export_type, predicates, period, phrase ) in all_existing_client_data ):
             
+            export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
             predicates = []
             period = 15 * 60
             phrase = '{hash}'
             
-            with DialogManageExportFoldersEdit( self, path, predicates, period, phrase ) as dlg:
+            with DialogManageExportFoldersEdit( self, path, export_type, predicates, period, phrase ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, predicates, period, phrase ) = dlg.GetInfo()
+                    ( path, export_type, predicates, period, phrase ) = dlg.GetInfo()
                     
-                    ( pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( predicates, period, phrase )
+                    ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_type, predicates, period, phrase )
                     
-                    self._export_folders.Append( ( path, pretty_predicates, pretty_period, pretty_phrase ), ( path, predicates, period, phrase ) )
+                    self._export_folders.Append( ( path, pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ), ( path, export_type, predicates, period, phrase ) )
                     
                 
             
         
     
-    def _GetPrettyVariables( self, predicates, period, phrase ):
+    def _GetPrettyVariables( self, export_type, predicates, period, phrase ):
+        
+        if export_type == HC.EXPORT_FOLDER_TYPE_REGULAR:
+            
+            pretty_export_type = 'regular'
+            
+        elif export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+            
+            pretty_export_type = 'synchronise'
+            
         
         pretty_predicates = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in predicates )
         
@@ -1527,7 +1501,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         pretty_phrase = phrase
         
-        return ( pretty_predicates, pretty_period, pretty_phrase )
+        return ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase )
         
     
     def Delete( self ): self._export_folders.RemoveAllSelected()
@@ -1553,17 +1527,17 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for index in indices:
             
-            ( path, predicates, period, phrase ) = self._export_folders.GetClientData( index )
+            ( path, export_type, predicates, period, phrase ) = self._export_folders.GetClientData( index )
             
-            with DialogManageExportFoldersEdit( self, path, predicates, period, phrase ) as dlg:
+            with DialogManageExportFoldersEdit( self, path, export_type, predicates, period, phrase ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, predicates, period, phrase ) = dlg.GetInfo()
+                    ( path, export_type, predicates, period, phrase ) = dlg.GetInfo()
                     
-                    ( pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( predicates, period, phrase )
+                    ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_type, predicates, period, phrase )
                     
-                    self._export_folders.UpdateRow( index, ( path, pretty_predicates, pretty_period, pretty_phrase ), ( path, predicates, period, phrase ) )
+                    self._export_folders.UpdateRow( index, ( path, pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ), ( path, export_type, predicates, period, phrase ) )
                     
                 
             
@@ -1577,11 +1551,12 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         paths = set()
         
-        for ( path, predicates, period, phrase ) in client_data:
+        for ( path, export_type, predicates, period, phrase ) in client_data:
             
             if path in self._original_paths_to_details: details = self._original_paths_to_details[ path ]
             else: details = { 'last_checked' : 0 }
             
+            details[ 'type' ] = export_type
             details[ 'predicates' ] = predicates
             details[ 'period' ] = period
             details[ 'phrase' ] = phrase
@@ -1602,13 +1577,21 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
 class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, path, predicates, period, phrase ):
+    def __init__( self, parent, path, export_type, predicates, period, phrase ):
         
         def InitialiseControls():
             
             self._path_box = ClientGUICommon.StaticBox( self, 'export path' )
             
             self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
+            
+            #
+            
+            self._type_box = ClientGUICommon.StaticBox( self, 'type of export folder' )
+            
+            self._type = ClientGUICommon.BetterChoice( self._type_box )
+            self._type.Append( 'regular', HC.EXPORT_FOLDER_TYPE_REGULAR )
+            self._type.Append( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
             
             #
             
@@ -1646,6 +1629,8 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
+            self._type.SelectClientData( export_type )
+            
             self._path.SetPath( path )
             
             self._period.SetRange( 3, 180 )
@@ -1658,6 +1643,18 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         def ArrangeControls():
             
             self._path_box.AddF( self._path, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            text = '''regular - try to export the files to the directory, overwriting if the filesize if different
+
+synchronise - try to export the files to the directory, overwriting if the filesize if different, and delete anything else in the directory
+
+If you select synchronise, be careful!'''
+            
+            st = wx.StaticText( self._type_box, label = text )
+            st.Wrap( 480 )
+            
+            self._type_box.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._type_box.AddF( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._query_box.AddF( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._query_box.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1679,6 +1676,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1733,13 +1731,15 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         path = self._path.GetPath()
         
+        export_type = self._type.GetChoice()
+        
         predicates = self._predicates_box.GetPredicates()
         
         period = self._period.GetValue() * 60
         
         phrase = self._pattern.GetValue()
         
-        return ( path, predicates, period, phrase )
+        return ( path, export_type, predicates, period, phrase )
         
     
     def RemovePredicate( self, page_key, predicate ):
@@ -1782,15 +1782,13 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            self._edit_log = []
+            self._names_to_delete = []
             
             sites = wx.GetApp().Read( 'imageboards' )
             
             for ( name, imageboards ) in sites.items():
                 
-                page_info = ( self._Panel, ( self._sites, imageboards ), {} )
-                
-                self._sites.AddPage( page_info, name )
+                self._sites.AddPageArgs( name, self._Panel, ( self._sites, imageboards ), {} )
                 
             
         
@@ -1840,19 +1838,17 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     name = dlg.GetValue()
                     
-                    if self._sites.NameExists( name ): raise Exception( 'That name is already in use!' )
+                    if self._sites.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
                     
-                    if name == '': raise Exception( 'Please enter a nickname for the service.' )
+                    if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
                     
-                    self._edit_log.append( ( HC.SET, ( name, [] ) ) )
+                    page = self._Panel( self._sites, [], is_new = True )
                     
-                    page = self._Panel( self._sites, [] )
+                    self._sites.AddPage( name, page, select = True )
                     
-                    self._sites.AddPage( page, name, select = True )
+                except HydrusExceptions.NameException as e:
                     
-                except Exception as e:
-                    
-                    wx.MessageBox( HydrusData.ToString( e ) )
+                    wx.MessageBox( str( e ) )
                     
                     self.EventAdd( event )
                     
@@ -1886,25 +1882,19 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for ( action, data ) in self._edit_log:
+            for name in self._names_to_delete:
                 
-                if action == HC.DELETE:
+                wx.GetApp().Write( 'delete_imageboard', name )
+                
+            
+            for ( name, page ) in self._sites.GetNamesToActivePages().items():
+                
+                if page.HasChanges():
                     
-                    name = data
-                    
-                    wx.GetApp().Write( 'delete_imageboard', name )
-                    
-                elif action == HC.SET:
-                    
-                    ( name, imageboards ) = data
+                    imageboards = page.GetImageboards()
                     
                     wx.GetApp().Write( 'imageboard', name, imageboards )
                     
-                
-            
-            for ( name, page ) in self._sites.GetNameToPageDict().items():
-                
-                if page.HasChanges(): self._edit_log.append( ( HC.SET, ( name, page.GetImageboards() ) ) )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -1918,7 +1908,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             name = self._sites.GetCurrentName()
             
-            self._edit_log.append( ( HC.DELETE, name ) )
+            self._names_to_delete.append( name )
             
             self._sites.DeleteCurrentPage()
             
@@ -1940,14 +1930,12 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     if not self._sites.NameExists( name ):
                         
-                        self._edit_log.append( ( HC.SET, ( name, [] ) ) )
+                        page = self._Panel( self._sites, [], is_new = True )
                         
-                        page = self._Panel( self._sites, [] )
-                        
-                        self._sites.AddPage( page, name, select = True )
+                        self._sites.AddPage( name, page, select = True )
                         
                     
-                    page = self._sites.GetNameToPageDict()[ name ]
+                    page = self._sites.GetNamesToActivePages()[ name ]
                     
                     for imageboard in imageboards:
                         
@@ -1972,7 +1960,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, imageboards ):
+        def __init__( self, parent, imageboards, is_new = False ):
             
             def InitialiseControls():
                 
@@ -1998,9 +1986,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     name = imageboard.GetName()
                     
-                    page_info = ( self._Panel, ( self._imageboards, imageboard ), {} )
-                    
-                    self._imageboards.AddPage( page_info, name )
+                    self._imageboards.AddPageArgs( name, self._Panel, ( self._imageboards, imageboard ), {} )
                     
                 
             
@@ -2025,6 +2011,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             self._original_imageboards = imageboards
             self._has_changes = False
+            self._is_new = is_new
             
             InitialiseControls()
             
@@ -2047,15 +2034,15 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                         
                         name = dlg.GetValue()
                         
-                        if self._imageboards.NameExists( name ): raise Exception( 'That name is already in use!' )
+                        if self._imageboards.NameExists( name ): raise HydrusExceptions.NameException()
                         
                         if name == '': raise Exception( 'Please enter a nickname for the service.' )
                         
                         imageboard = ClientData.Imageboard( name, '', 60, [], {} )
                         
-                        page = self._Panel( self._imageboards, imageboard )
+                        page = self._Panel( self._imageboards, imageboard, is_new = True )
                         
-                        self._imageboards.AddPage( page, name, select = True )
+                        self._imageboards.AddPage( name, page, select = True )
                         
                         self._has_changes = True
                         
@@ -2103,9 +2090,11 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         def GetImageboards( self ):
             
-            names_to_imageboards = { imageboard.GetName() : imageboard for imageboard in self._original_imageboards }
+            current_names = self._imageboards.GetNames()
             
-            for page in self._imageboards.GetNameToPageDict().values():
+            names_to_imageboards = { imageboard.GetName() : imageboard for imageboard in self._original_imageboards if imageboard.GetName() in current_names }
+            
+            for page in self._imageboards.GetNamesToActivePages().values():
                 
                 imageboard = page.GetImageboard()
                 
@@ -2115,7 +2104,12 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             return names_to_imageboards.values()
             
         
-        def HasChanges( self ): return self._has_changes or True in ( page.HasChanges() for page in self._imageboards.GetNameToPageDict().values() )
+        def HasChanges( self ):
+            
+            if self._is_new: return True
+            
+            return self._has_changes or True in ( page.HasChanges() for page in self._imageboards.GetNamesToActivePages().values() )
+            
         
         def UpdateImageboard( self, imageboard ):
             
@@ -2125,23 +2119,24 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 new_imageboard = ClientData.Imageboard( name, '', 60, [], {} )
                 
-                page = self._Panel( self._imageboards, new_imageboard )
+                page = self._Panel( self._imageboards, new_imageboard, is_new = True )
                 
-                self._imageboards.AddPage( page, name, select = True )
+                self._imageboards.AddPage( name, page, select = True )
                 
             
-            page = self._imageboards.GetNameToPageDict()[ name ]
+            page = self._imageboards.GetNamesToActivePages()[ name ]
             
             page.Update( imageboard )
             
         
         class _Panel( wx.Panel ):
             
-            def __init__( self, parent, imageboard ):
+            def __init__( self, parent, imageboard, is_new = False ):
                 
                 wx.Panel.__init__( self, parent )
                 
                 self._imageboard = imageboard
+                self._is_new = is_new
                 
                 ( post_url, flood_time, form_fields, restrictions ) = self._imageboard.GetBoardInfo()
                 
@@ -2412,6 +2407,8 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
             
             def HasChanges( self ):
+                
+                if self._is_new: return True
                 
                 ( my_name, my_post_url, my_flood_time, my_form_fields, my_restrictions ) = self._GetInfo()
                 
@@ -2692,10 +2689,6 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             self._type = ClientGUICommon.BetterChoice( self._type_box )
             self._type.Append( 'delete', HC.IMPORT_FOLDER_TYPE_DELETE )
             self._type.Append( 'synchronise', HC.IMPORT_FOLDER_TYPE_SYNCHRONISE )
-            message = '''delete - try to import all files in folder and delete them if they succeed
-
-synchronise - try to import all new files in folder'''
-            self._type.SetToolTipString( message )
             
             #
             
@@ -2723,7 +2716,7 @@ synchronise - try to import all new files in folder'''
             
             self._path.SetPath( path )
             
-            self._type.Select( import_type )
+            self._type.SelectClientData( import_type )
             
             self._check_period.SetRange( 3, 180 )
             
@@ -2736,6 +2729,16 @@ synchronise - try to import all new files in folder'''
             
             self._path_box.AddF( self._path, CC.FLAGS_EXPAND_PERPENDICULAR )
             
+            text = '''delete - try to import all files in folder and delete them if they succeed
+
+synchronise - try to import all new files in folder
+
+If you select delete, make sure that is what you mean!'''
+            
+            st = wx.StaticText( self._type_box, label = text )
+            st.Wrap( 480 )
+            
+            self._type_box.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._type_box.AddF( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._period_box.AddF( self._check_period, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2809,7 +2812,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._thumbnail_height = wx.SpinCtrl( self._file_page, min=20, max=200 )
             self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            self._listbook.AddPage( self._file_page, 'files and thumbnails' )
+            self._listbook.AddPage( 'files and thumbnails', self._file_page )
             
             # maintenance and memory
             
@@ -2847,7 +2850,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._autocomplete_short_wait = wx.SpinCtrl( self._maintenance_page, min = 0, max = 10000 )
             self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
             
-            self._listbook.AddPage( self._maintenance_page, 'maintenance and memory' )
+            self._listbook.AddPage( 'maintenance and memory', self._maintenance_page )
             
             # media
             
@@ -2856,7 +2859,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._fit_to_canvas = wx.CheckBox( self._media_page, label = '' )
             
-            self._listbook.AddPage( self._media_page, 'media' )
+            self._listbook.AddPage( 'media', self._media_page )
             
             # gui
             
@@ -2880,7 +2883,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._default_tag_repository = ClientGUICommon.BetterChoice( self._gui_page )
             
-            self._listbook.AddPage( self._gui_page, 'gui' )
+            self._listbook.AddPage( 'gui', self._gui_page )
             
             # sound
             
@@ -2889,7 +2892,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._play_dumper_noises = wx.CheckBox( self._sound_page, label = 'play success/fail noises when dumping' )
             
-            self._listbook.AddPage( self._sound_page, 'sound' )
+            self._listbook.AddPage( 'sound', self._sound_page )
             
             # default file system predicates
             
@@ -2920,7 +2923,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._file_system_predicate_width = ClientGUIPredicates.PanelPredicateSystemWidth( self._file_system_predicates_page )
             
-            self._listbook.AddPage( self._file_system_predicates_page, 'default file system predicates' )
+            self._listbook.AddPage( 'default file system predicates', self._file_system_predicates_page )
             
             # default advanced tag options
             
@@ -2939,7 +2942,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._advanced_tag_options_delete = wx.Button( self._advanced_tag_options_page, label = 'delete' )
             self._advanced_tag_options_delete.Bind( wx.EVT_BUTTON, self.EventATODelete )
             
-            self._listbook.AddPage( self._advanced_tag_options_page, 'default advanced tag options' )
+            self._listbook.AddPage( 'default advanced tag options', self._advanced_tag_options_page )
             
             # colours
             
@@ -2965,7 +2968,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._new_namespace_colour = wx.TextCtrl( self._colour_page, style = wx.TE_PROCESS_ENTER )
             self._new_namespace_colour.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownNamespace )
             
-            self._listbook.AddPage( self._colour_page, 'colours' )
+            self._listbook.AddPage( 'colours', self._colour_page )
             
             # server
             
@@ -2974,7 +2977,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._local_port = wx.SpinCtrl( self._server_page, min = 0, max = 65535 )
             
-            self._listbook.AddPage( self._server_page, 'local server' )
+            self._listbook.AddPage( 'local server', self._server_page )
             
             # sort/collect
             
@@ -2991,7 +2994,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._new_sort_by = wx.TextCtrl( self._sort_by_page, style = wx.TE_PROCESS_ENTER )
             self._new_sort_by.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownSortBy )
             
-            self._listbook.AddPage( self._sort_by_page, 'sort/collect' )
+            self._listbook.AddPage( 'sort/collect', self._sort_by_page )
             
             # shortcuts
             
@@ -3009,7 +3012,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._shortcuts_delete = wx.Button( self._shortcuts_page, label = 'delete' )
             self._shortcuts_delete.Bind( wx.EVT_BUTTON, self.EventShortcutsDelete )
             
-            self._listbook.AddPage( self._shortcuts_page, 'shortcuts' )
+            self._listbook.AddPage( 'shortcuts', self._shortcuts_page )
             
             # thread checker
             
@@ -3022,7 +3025,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._thread_check_period = wx.SpinCtrl( self._thread_checker_page, min = 30, max = 86400 )
             self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
             
-            self._listbook.AddPage( self._thread_checker_page, 'thread checker' )
+            self._listbook.AddPage( 'thread checker', self._thread_checker_page )
             
             #
             
@@ -3179,7 +3182,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self._file_page, label = 'Default export directory: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._export_location, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Exclude deleted files from new imports and remote searches: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'By default, do not reimport files that have been previously deleted: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._exclude_deleted_files, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail width: ' ), CC.FLAGS_MIXED )
@@ -3962,7 +3965,10 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 self._panels.append( self._LikePanel( self, like_services, media ) )
                 
             
-            for service in numerical_services: self._panels.append( self._NumericalPanel( self, service.GetServiceKey(), media ) )
+            if len( numerical_services ) > 0:
+                
+                self._panels.append( self._NumericalPanel( self, numerical_services, media ) )
+                
             
             self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -4114,8 +4120,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 if rating_state != original_rating_state:
                     
-                    if rating_state == ClientRatings.ALL_ON: rating = 1
-                    elif rating_state == ClientRatings.ALL_OFF: rating = 0
+                    if rating_state == ClientRatings.LIKE: rating = 1
+                    elif rating_state == ClientRatings.DISLIKE: rating = 0
                     else: rating = None
                     
                     content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
@@ -4144,272 +4150,90 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
     
     class _NumericalPanel( wx.Panel ):
         
-        def __init__( self, parent, service_key, media ):
+        def __init__( self, parent, services, media ):
             
             wx.Panel.__init__( self, parent )
             
-            self._service_key = service_key
-            self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._services = services
             
             self._media = media
             
-            service_type = self._service.GetServiceType()
+            self._service_keys_to_controls = {}
+            self._service_keys_to_original_ratings_states = {}
             
-            def InitialiseControls():
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 0, 1 )
+            
+            for service in self._services:
                 
-                self._ratings_panel = ClientGUICommon.StaticBox( self, self._service.GetName() )
+                name = service.GetName()
                 
-                self._current_score = wx.StaticText( self._ratings_panel, style = wx.ALIGN_CENTER )
+                service_key = service.GetServiceKey()
                 
-                score_font = self._GetScoreFont()
+                ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( self._media, service_key )
                 
-                self._current_score.SetFont( score_font )
+                control = ClientGUICommon.RatingNumericalDialog( self, service_key )
                 
-                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): all_rating_services = [ local_ratings for ( local_ratings, remote_ratings ) in [ media.GetRatings() for media in self._media ] ]
-                elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): all_rating_services = [ remote_ratings for ( local_ratings, remote_ratings ) in [ media.GetRatings() for media in self._media ] ]
-                
-                if service_type in ( HC.LOCAL_RATING_LIKE, HC.RATING_LIKE_REPOSITORY ):
+                if rating_state != ClientRatings.SET:
                     
-                    ( like, dislike ) = self._service.GetLikeDislike()
+                    control.SetRatingState( rating_state )
                     
-                    if service_type == HC.LOCAL_RATING_LIKE:
-                        
-                        ratings = [ rating_services.GetRating( self._service_key ) for rating_services in all_rating_services ]
-                        
-                        if all( ( i is None for i in ratings ) ):
-                            
-                            choices = [ like, dislike, 'make no changes' ]
-                            
-                            if len( self._media ) > 1: self._current_score.SetLabel( 'none rated' )
-                            else: self._current_score.SetLabel( 'not rated' )
-                            
-                        elif None in ratings:
-                            
-                            choices = [ like, dislike, 'remove rating', 'make no changes' ]
-                            
-                            self._current_score.SetLabel( 'not all rated' )
-                            
-                        else:
-                            
-                            if all( ( i == 1 for i in ratings ) ):
-                                
-                                choices = [ dislike, 'remove rating', 'make no changes' ]
-                                
-                                if len( self._media ) > 1: self._current_score.SetLabel( 'all ' + like )
-                                else: self._current_score.SetLabel( like )
-                                
-                            elif all( ( i == 0 for i in ratings ) ):
-                                
-                                choices = [ like, 'remove rating', 'make no changes' ]
-                                
-                                if len( self._media ) > 1: self._current_score.SetLabel( 'all ' + dislike )
-                                else: self._current_score.SetLabel( dislike )
-                                
-                            else:
-                                
-                                choices = [ like, dislike, 'remove rating', 'make no changes' ]
-                                
-                            
-                            overall_rating = float( sum( ratings ) ) / float( len( ratings ) )
-                            
-                            self._current_score.SetLabel( HydrusData.ToString( '%.2f' % overall_rating ) )
-                            
-                        
-                        if len( self._media ) > 1:
-                            
-                            ratings_counter = collections.Counter( ratings )
-                            
-                            likes = ratings_counter[ 1 ]
-                            dislikes = ratings_counter[ 0 ]
-                            nones = ratings_counter[ None ]
-                            
-                            scores = []
-                            
-                            if likes > 0: scores.append( HydrusData.ToString( likes ) + ' likes' )
-                            if dislikes > 0: scores.append( HydrusData.ToString( dislikes ) + ' dislikes' )
-                            if nones > 0: scores.append( HydrusData.ToString( nones ) + ' not rated' )
-                            
-                            self._current_score.SetLabel( ', '.join( scores ) )
-                            
-                        else:
-                            
-                            ( rating, ) = ratings
-                            
-                            if rating is None: self._current_score.SetLabel( 'not rated' )
-                            elif rating == 1: self._current_score.SetLabel( like )
-                            elif rating == 0: self._current_score.SetLabel( dislike )
-                            
-                        
-                    else:
-                        
-                        self._current_score.SetLabel( '23 ' + like + 's, 44 ' + dislike + 's' )
-                        
+                else:
                     
-                elif service_type in ( HC.LOCAL_RATING_NUMERICAL, HC.RATING_NUMERICAL_REPOSITORY ):
-                    
-                    if service_type == HC.LOCAL_RATING_NUMERICAL:
-                        
-                        ( min, max ) = self._service.GetLowerUpper()
-                        
-                        self._slider = wx.Slider( self._ratings_panel, minValue = min, maxValue = max, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
-                        self._slider.Bind( wx.EVT_SLIDER, self.EventSlider )
-                        
-                        ratings = [ rating_services.GetRating( self._service_key ) for rating_services in all_rating_services ]
-                        
-                        if all( ( i is None for i in ratings ) ):
-                            
-                            choices = [ 'set rating', 'make no changes' ]
-                            
-                            if len( self._media ) > 1: self._current_score.SetLabel( 'none rated' )
-                            else: self._current_score.SetLabel( 'not rated' )
-                            
-                        elif None in ratings:
-                            
-                            choices = [ 'set rating', 'remove rating', 'make no changes' ]
-                            
-                            if len( self._media ) > 1: self._current_score.SetLabel( 'not all rated' )
-                            else: self._current_score.SetLabel( 'not rated' )
-                            
-                        else:
-                            
-                            # you know what? this should really be a bargraph or something!
-                            #                               *     
-                            #                               *     
-                            #                               *     
-                            #                          *    *     
-                            #    *      *              *    *     
-                            #   None    0    1    2    3    4    5
-                            # but we can't rely on integers, so just think about it
-                            # some kind of sense of distribution would be helpful though
-                            
-                            choices = [ 'set rating', 'remove rating', 'make no changes' ]
-                            
-                            overall_rating = float( sum( ratings ) ) / float( len( ratings ) )
-                            
-                            overall_rating_converted = ( overall_rating * ( max - min ) ) + min
-                            
-                            self._slider.SetValue( int( overall_rating_converted + 0.5 ) )
-                            
-                            str_overall_rating = HydrusData.ToString( '%.2f' % overall_rating_converted )
-                            
-                            if min in ( 0, 1 ): str_overall_rating += '/' + HydrusData.ToString( '%.2f' % max )
-                            
-                            self._current_score.SetLabel( str_overall_rating )
-                            
-                        
-                    else:
-                        
-                        self._current_score.SetLabel( '3.82/5' )
-                        
+                    control.SetRating( rating )
                     
                 
-                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                    
-                    initial_index = choices.index( 'make no changes' )
-                    
-                    choice_pairs = [ ( choice, choice ) for choice in choices ]
-                    
-                    self._choices = ClientGUICommon.RadioBox( self._ratings_panel, 'actions', choice_pairs, initial_index )
-                    
+                self._service_keys_to_controls[ service_key ] = control
+                self._service_keys_to_original_ratings_states[ service_key ] = ( rating_state, rating )
+                
+                gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
+                gridbox.AddF( control, CC.FLAGS_MIXED )
                 
             
-            def PopulateControls():
-                
-                pass
-                
-            
-            def ArrangeControls():
-                
-                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-                
-                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): label = 'local rating'
-                elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): label = 'remote rating'
-                
-                self._ratings_panel.AddF( self._current_score, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                    
-                    if service_type == HC.LOCAL_RATING_LIKE:
-                        
-                        self._ratings_panel.AddF( self._choices, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        
-                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                        
-                        self._ratings_panel.AddF( self._slider, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        self._ratings_panel.AddF( self._choices, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        
-                    
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( self._ratings_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                self.SetSizer( vbox )
-                
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-            
-        
-        def _GetScoreFont( self ):
-            
-            normal_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
-            
-            normal_font_size = normal_font.GetPointSize()
-            normal_font_family = normal_font.GetFamily()
-            
-            return wx.Font( normal_font_size * 2, normal_font_family, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD )
-            
-        
-        def EventSlider( self, event ):
-            
-            rating = self._slider.GetValue()
-            
-            self._choices.SetSelection( 0 )
-            
-            self._choices.SetString( 0, 'set rating to ' + HydrusData.ToString( rating ) )
-            
-            event.Skip()
+            self.SetSizer( gridbox )
             
         
         def GetContentUpdates( self ):
             
-            service_type = self._service.GetServiceType()
-            
-            choice_text = self._choices.GetSelectedClientData()
-            
-            if choice_text == 'remove rating': rating = None
-            else:
-                
-                if service_type == HC.LOCAL_RATING_LIKE:
-                    
-                    ( like, dislike ) = self._service.GetLikeDislike()
-                    
-                    if choice_text == like: rating = 1
-                    elif choice_text == dislike: rating = 0
-                    
-                elif service_type == HC.LOCAL_RATING_NUMERICAL: rating = float( self._slider.GetValue() - self._slider.GetMin() ) / float( self._slider.GetMax() - self._slider.GetMin() )
-                
+            service_keys_to_content_updates = {}
             
             hashes = { hash for hash in itertools.chain.from_iterable( ( media.GetHashes() for media in self._media ) ) }
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
+            for ( service_key, control ) in self._service_keys_to_controls.items():
+                
+                ( original_rating_state, original_rating ) = self._service_keys_to_original_ratings_states[ service_key ]
+                
+                rating_state = control.GetRatingState()
+                rating = control.GetRating()
+                
+                if rating_state != original_rating_state or rating != original_rating:
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
+                    
+                    service_keys_to_content_updates[ service_key ] = ( content_update, )
+                    
+                
             
-            return { self._service_key : ( content_update, ) }
+            return service_keys_to_content_updates
             
         
         def HasChanges( self ):
             
-            choice_text = self._choices.GetSelectedClientData()
+            for ( service_key, control ) in self._service_keys_to_controls.items():
+                
+                ( original_rating_state, original_rating ) = self._service_keys_to_original_ratings_states[ service_key ]
+                
+                rating_state = control.GetRatingState()
+                rating = control.GetRating()
+                
+                if rating_state != original_rating_state or rating != original_rating: return True
+                
             
-            if choice_text == 'make no changes': return False
-            else: return True
+            return False
             
-        
-        def GetServiceKey( self ): return self._service_key
         
     
 class DialogManageServer( ClientGUIDialogs.Dialog ):
@@ -4454,11 +4278,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             for ( service_key, service_type, options ) in self._services_info:
                 
-                page = self._Panel( self._services_listbook, service_key, service_type, options )
-                
                 name = HC.service_string_lookup[ service_type ] + '@' + HydrusData.ToString( options[ 'port' ] )
                 
-                self._services_listbook.AddPage( page, name )
+                page = self._Panel( self._services_listbook, service_key, service_type, options )
+                
+                self._services_listbook.AddPage( name, page )
                 
             
         
@@ -4510,7 +4334,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             ( service_key, service_type, options ) = service_panel.GetInfo()
             
-            for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() if page != service_panel ]:
+            for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNamesToActivePages().values() if page != service_panel ]:
                 
                 if options[ 'port' ] == existing_options[ 'port' ]: raise Exception( 'That port is already in use!' )
                 
@@ -4535,7 +4359,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         existing_ports = set()
         
-        for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() ]: existing_ports.add( existing_options[ 'port' ] )
+        for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNamesToActivePages().values() ]: existing_ports.add( existing_options[ 'port' ] )
         
         while port in existing_ports: port += 1
         
@@ -4549,7 +4373,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         name = HC.service_string_lookup[ service_type ] + '@' + HydrusData.ToString( port )
         
-        self._services_listbook.AddPage( page, name, select = True )
+        self._services_listbook.AddPage( name, page, select = True )
         
     
     def EventOK( self, event ):
@@ -4562,7 +4386,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             return
             
         
-        for ( name, page ) in self._services_listbook.GetNameToPageDict().items():
+        for ( name, page ) in self._services_listbook.GetNamesToActivePages().items():
             
             if page.HasChanges():
                 
@@ -4804,7 +4628,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 self._service_types_to_listbooks[ service_type ] = listbook
                 self._listbooks_to_service_types[ listbook ] = service_type
                 
-                parent_listbook.AddPage( listbook, name )
+                parent_listbook.AddPage( name, listbook )
                 
                 services = wx.GetApp().GetManager( 'services' ).GetServices( ( service_type, ) )
                 
@@ -4814,9 +4638,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     name = service.GetName()
                     info = service.GetInfo()
                     
-                    page_info = ( self._Panel, ( listbook, service_key, service_type, name, info ), {} )
-                    
-                    listbook.AddPage( page_info, name )
+                    listbook.AddPageArgs( name, self._Panel, ( listbook, service_key, service_type, name, info ), {} )
                     
                 
             
@@ -4889,7 +4711,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     if old_name is not None and name != old_name:
                         
-                        if services_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                        if services_listbook.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
                         
                         services_listbook.RenamePage( old_name, name )
                         
@@ -4914,9 +4736,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         services_listbook = local_or_remote_listbook.GetCurrentPage()
                         
-                        if services_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                        if services_listbook.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
                         
-                        if name == '': raise Exception( 'Please enter a nickname for the service.' )
+                        if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
                         
                         service_key = os.urandom( 32 )
                         service_type = self._listbooks_to_service_types[ services_listbook ]
@@ -4960,27 +4782,32 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if service_type == HC.TAG_REPOSITORY: info[ 'tag_archive_sync' ] = {}
                         
-                        if service_type == HC.LOCAL_RATING_LIKE:
+                        if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                             
-                            info[ 'like' ] = 'like'
-                            info[ 'dislike' ] = 'dislike'
+                            if service_type == HC.LOCAL_RATING_NUMERICAL:
+                                
+                                info[ 'num_stars' ] = 5
+                                
+                                info[ 'colours' ] = ClientRatings.default_numerical_colours
+                                
+                            else:
+                                
+                                info[ 'colours' ] = ClientRatings.default_like_colours
+                                
                             
-                        elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                            
-                            info[ 'lower' ] = 0
-                            info[ 'upper' ] = 5
+                            info[ 'shape' ] = ClientRatings.CIRCLE
                             
                         
                         self._edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
                         
                         page = self._Panel( services_listbook, service_key, service_type, name, info )
                         
-                        services_listbook.AddPage( page, name, select = True )
+                        services_listbook.AddPage( name, page, select = True )
                         
                     
-                except Exception as e:
+                except HydrusExceptions.NameException as e:
                     
-                    wx.MessageBox( traceback.format_exc() )
+                    wx.MessageBox( str( e ) )
                     
                     self.EventAdd( event )
                     
@@ -4991,9 +4818,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     def EventExport( self, event ):
         
         try: self._CheckCurrentServiceIsValid()
-        except Exception as e:
+        except HydrusExceptions.NameException as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( str( e ) )
             
             return
             
@@ -5037,9 +4864,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     def EventOK( self, event ):
         
         try: self._CheckCurrentServiceIsValid()
-        except Exception as e:
+        except HydrusExceptions.NameException as e:
             
-            HydrusData.ShowException( e )
+            wx.MessageBox( str( e ) )
             
             return
             
@@ -5048,7 +4875,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         for listbook in all_listbooks:
             
-            all_pages = listbook.GetNameToPageDict().values()
+            all_pages = listbook.GetNamesToActivePages().values()
             
             for page in all_pages:
                 
@@ -5071,9 +4898,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     def EventPageChanging( self, event ):
         
         try: self._CheckCurrentServiceIsValid()
-        except Exception as e:
+        except HydrusExceptions.NameException as e:
             
-            HydrusData.ShowException( e )
+            wx.MessageBox( str( e ) )
             
             event.Veto()
             
@@ -5164,7 +4991,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        page = services_listbook.GetNameToPageDict()[ name ]
+                        page = services_listbook.GetNamesToActivePages()[ name ]
                         
                         page.Update( service_key, service_type, name, info )
                         
@@ -5176,7 +5003,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 page = self._Panel( services_listbook, service_key, service_type, name, info )
                 
-                services_listbook.AddPage( page, name, select = True )
+                services_listbook.AddPage( name, page, select = True )
                 
             
         
@@ -5231,23 +5058,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     self._local_rating_panel = ClientGUICommon.StaticBox( self, 'local rating configuration' )
                     
-                    if service_type == HC.LOCAL_RATING_LIKE:
+                    if service_type == HC.LOCAL_RATING_NUMERICAL:
                         
-                        like = info[ 'like' ]
-                        dislike = info[ 'dislike' ]
+                        num_stars = info[ 'num_stars' ]
                         
-                        self._like = wx.TextCtrl( self._local_rating_panel, value = like )
-                        self._dislike = wx.TextCtrl( self._local_rating_panel, value = dislike )
-                        
-                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                        
-                        lower = info[ 'lower' ]
-                        upper = info[ 'upper' ]
-                        
-                        self._lower = wx.SpinCtrl( self._local_rating_panel, min = -2000, max = 2000 )
-                        self._lower.SetValue( lower )
-                        self._upper = wx.SpinCtrl( self._local_rating_panel, min = -2000, max = 2000 )
-                        self._upper.SetValue( upper )
+                        self._num_stars = wx.SpinCtrl( self._local_rating_panel, min = 1, max = 20 )
+                        self._num_stars.SetValue( num_stars )
                         
                     
                 
@@ -5357,22 +5173,17 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     gridbox.AddGrowableCol( 1, 1 )
                     
-                    if service_type == HC.LOCAL_RATING_LIKE:
+                    if service_type == HC.LOCAL_RATING_NUMERICAL:
                         
-                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'like' ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._like, CC.FLAGS_EXPAND_BOTH_WAYS )
+                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'number of \'stars\'' ), CC.FLAGS_MIXED )
+                        gridbox.AddF( self._num_stars, CC.FLAGS_EXPAND_BOTH_WAYS )
                         
-                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'dislike' ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._dislike, CC.FLAGS_EXPAND_BOTH_WAYS )
-                        
-                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                        
-                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'lower limit' ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._lower, CC.FLAGS_EXPAND_BOTH_WAYS )
-                        
-                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'upper limit' ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._upper, CC.FLAGS_EXPAND_BOTH_WAYS )
-                        
+                    
+                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'shape options will go here soon' ), CC.FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = ':D' ), CC.FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'colour options will go here soon' ), CC.FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = ':D' ), CC.FLAGS_EXPAND_BOTH_WAYS )
                     
                     self._local_rating_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                     
@@ -5624,19 +5435,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 info[ 'paused' ] = self._pause_synchronisation.GetValue()
                 
             
-            if service_type == HC.LOCAL_RATING_LIKE:
+            if service_type == HC.LOCAL_RATING_NUMERICAL:
                 
-                info[ 'like' ] = self._like.GetValue()
-                info[ 'dislike' ] = self._dislike.GetValue()
-                
-            elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                
-                ( lower, upper ) = ( self._lower.GetValue(), self._upper.GetValue() )
-                
-                if upper < lower: upper = lower + 1
-                
-                info[ 'lower' ] = lower
-                info[ 'upper' ] = upper
+                info[ 'num_stars' ] = self._num_stars.GetValue()
                 
             
             if service_type in HC.TAG_SERVICES:
@@ -5699,21 +5500,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 self._service_credentials.SetValue( credentials.GetConnectionString() )
                 
             
-            if service_type == HC.LOCAL_RATING_LIKE:
+            if service_type == HC.LOCAL_RATING_NUMERICAL:
                 
-                like = info[ 'like' ]
-                dislike = info[ 'dislike' ]
+                num_stars = info[ 'num_stars' ]
                 
-                self._like.SetValue( like )
-                self._dislike.SetValue( dislike )
-                
-            elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                
-                lower = info[ 'lower' ]
-                upper = info[ 'upper' ]
-                
-                self._lower.SetValue( lower )
-                self._upper.SetValue( upper )
+                self._num_stars.SetValue( num_stars )
                 
             
         
@@ -5749,9 +5540,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             for name in self._original_subscription_names:
                 
-                page_info = ( self._Panel, ( self._listbook, name ), {} )
-                
-                self._listbook.AddPage( page_info, name )
+                self._listbook.AddPageArgs( name, self._Panel, ( self._listbook, name ), {} )
                 
             
         
@@ -5805,17 +5594,17 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     name = dlg.GetValue()
                     
-                    if self._listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                    if self._listbook.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
                     
                     if name == '': raise Exception( 'Please enter a nickname for the subscription.' )
                     
                     page = self._Panel( self._listbook, name, new_subscription = True )
                     
-                    self._listbook.AddPage( page, name, select = True )
+                    self._listbook.AddPage( name, page, select = True )
                     
-                except Exception as e:
+                except HydrusExceptions.NameException as e:
                     
-                    wx.MessageBox( HydrusData.ToString( e ) )
+                    wx.MessageBox( str( e ) )
                     
                     self.EventAdd( event )
                     
@@ -5856,7 +5645,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        all_pages = self._listbook.GetNameToPageDict().values()
+        all_pages = self._listbook.GetNamesToActivePages().values()
         
         try:
             
@@ -5905,7 +5694,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                             
                             self._listbook.Select( name )
                             
-                            page = self._listbook.GetNameToPageDict()[ name ]
+                            page = self._listbook.GetNamesToActivePages()[ name ]
                             
                             page.Update( info )
                             
@@ -5917,7 +5706,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     page.Update( info )
                     
-                    self._listbook.AddPage( page, name, select = True )
+                    self._listbook.AddPage( name, page, select = True )
                     
                 
             except:
@@ -5963,6 +5752,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
                 
+                self._get_tags_if_redundant = wx.CheckBox( self._info_panel, label = 'get tags even if file already in db' )
+                
                 text = 'initial sync file limit'
                 
                 self._initial_limit = ClientGUICommon.NoneableSpinCtrl( self._info_panel, text, none_phrase = 'no limit', min = 1, max = 1000000 )
@@ -5974,7 +5765,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
                 
-                self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImport( self )
+                self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
                 
             
             def PopulateControls():
@@ -6009,6 +5800,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 self._info_panel.AddF( wx.StaticText( self._info_panel, label = last_checked_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._info_panel.AddF( wx.StaticText( self._info_panel, label = HydrusData.ToString( len( info[ 'url_cache' ] ) ) + ' urls in cache' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._info_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_LONE_BUTTON )
                 self._info_panel.AddF( self._initial_limit, CC.FLAGS_LONE_BUTTON )
                 self._info_panel.AddF( self._paused, CC.FLAGS_LONE_BUTTON )
                 self._info_panel.AddF( self._reset_cache_button, CC.FLAGS_LONE_BUTTON )
@@ -6036,9 +5828,10 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 info[ 'query' ] = ''
                 info[ 'frequency_type' ] = 86400
                 info[ 'frequency' ] = 7
+                info[ 'get_tags_if_redundant' ] = False
                 info[ 'initial_limit' ] = 500
                 info[ 'advanced_tag_options' ] = {}
-                info[ 'advanced_import_options' ] = {} # blaaah not sure
+                info[ 'advanced_import_options' ] = ClientDefaults.GetDefaultAdvancedImportOptions()
                 info[ 'last_checked' ] = None
                 info[ 'url_cache' ] = set()
                 info[ 'paused' ] = False
@@ -6144,6 +5937,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             query = info[ 'query' ]
             frequency_type = info[ 'frequency_type' ]
             frequency = info[ 'frequency' ]
+            get_tags_if_redundant = info[ 'get_tags_if_redundant' ]
             initial_limit = info[ 'initial_limit' ]
             advanced_tag_options = info[ 'advanced_tag_options' ]
             advanced_import_options = info[ 'advanced_import_options' ]
@@ -6191,6 +5985,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             if index_to_select is not None: self._frequency_type.Select( index_to_select )
             
+            self._get_tags_if_redundant.SetValue( get_tags_if_redundant )
             self._initial_limit.SetValue( initial_limit )
             
             self._paused.SetValue( paused )
@@ -6246,6 +6041,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             info[ 'frequency' ] = self._frequency.GetValue()
             info[ 'frequency_type' ] = self._frequency_type.GetClientData( self._frequency_type.GetSelection() )
             
+            info[ 'get_tags_if_redundant' ] = self._get_tags_if_redundant.GetValue()
             info[ 'initial_limit' ] = self._initial_limit.GetValue()
             
             info[ 'advanced_tag_options' ] = self._advanced_tag_options.GetInfo()
@@ -6305,7 +6101,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
                 
                 page = self._Panel( self._tag_services, service_key )
                 
-                self._tag_services.AddPage( page, name )
+                self._tag_services.AddPage( name, page )
                 
             
             self._tag_services.Select( default_name )
@@ -6363,7 +6159,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         try:
             
-            info = [ page.GetInfo() for page in self._tag_services.GetNameToPageDict().values() if page.HasInfo() ]
+            info = [ page.GetInfo() for page in self._tag_services.GetNamesToActivePages().values() if page.HasInfo() ]
             
             wx.GetApp().Write( 'tag_censorship', info )
             
@@ -6487,9 +6283,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     name = service.GetName()
                     service_key = service.GetServiceKey()
                     
-                    page_info = ( self._Panel, ( self._tag_repositories, service_key, tag ), {} )
-                    
-                    self._tag_repositories.AddPage( page_info, name )
+                    self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
                     
                 
             
@@ -6497,7 +6291,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             name = CC.LOCAL_TAG_SERVICE_KEY
             
-            self._tag_repositories.AddPage( page, name )
+            self._tag_repositories.AddPage( name, page )
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
@@ -6568,7 +6362,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for page in self._tag_repositories.GetNameToPageDict().values():
+            for page in self._tag_repositories.GetNamesToActivePages().values():
                 
                 ( service_key, content_updates ) = page.GetContentUpdates()
                 
@@ -7004,7 +6798,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             name = CC.LOCAL_TAG_SERVICE_KEY
             
-            self._tag_repositories.AddPage( page, name )
+            self._tag_repositories.AddPage( name, page )
             
             services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
             
@@ -7017,9 +6811,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     name = service.GetName()
                     service_key = service.GetServiceKey()
                     
-                    page_info = ( self._Panel, ( self._tag_repositories, service_key, tag ), {} )
-                    
-                    self._tag_repositories.AddPage( page_info, name )
+                    self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
                     
                 
             
@@ -7092,7 +6884,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for page in self._tag_repositories.GetNameToPageDict().values():
+            for page in self._tag_repositories.GetNamesToActivePages().values():
                 
                 ( service_key, content_updates ) = page.GetContentUpdates()
                 
@@ -7610,7 +7402,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), media )
                 
-                self._tag_repositories.AddPage( page, name )
+                self._tag_repositories.AddPage( name, page )
                 
                 if service_key == HC.options[ 'default_tag_repository' ]: name_to_select = name
                 
@@ -7679,14 +7471,14 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def _ClearPanels( self ):
         
-        for page in self._tag_repositories.GetNameToPageDict().values(): page.SetMedia( set() )
+        for page in self._tag_repositories.GetNamesToActivePages().values(): page.SetMedia( set() )
         
     
     def _CommitCurrentChanges( self ):
         
         service_keys_to_content_updates = {}
         
-        for page in self._tag_repositories.GetNameToPageDict().values():
+        for page in self._tag_repositories.GetNamesToActivePages().values():
             
             ( service_key, content_updates ) = page.GetContentUpdates()
             
@@ -7712,7 +7504,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._current_media = new_media
             
-            for page in self._tag_repositories.GetNameToPageDict().values(): page.SetMedia( ( new_media, ) )
+            for page in self._tag_repositories.GetNamesToActivePages().values(): page.SetMedia( ( new_media, ) )
             
         
     

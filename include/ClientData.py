@@ -804,26 +804,155 @@ class GalleryQuery( HydrusSerialisable.SerialisableBase ):
         self._site_type = None
         self._query_type = None
         self._query = None
-        # add 'check tags if redundant' here
-        self._import_file_options = None
-        self._import_tag_options = None
+        self._get_tags_if_redundant = False
+        self._file_limit = 500
+        self._paused = False
+        self._gallery_page = 0
+        self._url_cache = None
+        self._options = {}
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._site_type, self._query_type, self._query, self._import_file_options.GetEasySerialisedInfo(), self._import_tag_options.GetEasySerialisedInfo() )
+        serialisable_url_cache = self._url_cache.GetEasySerialisedInfo()
+        
+        serialisable_options = { name : options.GetEasySerialisedInfo() for ( name, options ) in self._options.items() }
+        
+        return ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, self._file_limit, serialisable_url_cache, serialisable_options )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._site_type, self._query_type, self._query, easy_serialised_import_file_options, easy_serialised_import_tag_options ) = serialisable_info
+        ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, easy_serialisable_url_cache, easy_serialisable_options ) = serialisable_info
         
-        self._import_file_options = HydrusSerialisable.CreateFromEasy( easy_serialised_import_file_options )
+        self._url_cache = HydrusSerialisable.CreateFromEasy( easy_serialisable_url_cache )
         
-        self._import_tag_options = HydrusSerialisable.CreateFromEasy( easy_serialised_import_tag_options )
+        self._options = { name : HydrusSerialisable.CreateFromEasy( easy_serialisable_suboptions ) for ( name, easy_serialisable_suboptions ) in easy_serialisable_options.items() }
+        
+    
+    def GetQuery( self ):
+        
+        return self._query
+        
+    
+    def SetTuple( self, site_type, query_type, query, get_tags_if_redundant, file_limit, options ):
+        
+        self._site_type = site_type
+        self._query_type = query_type
+        self._query = query
+        self._get_tags_if_redundant = get_tags_if_redundant
+        self._file_limit = file_limit
+        self._url_cache = URLCache()
+        self._options = options
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_QUERY ] = GalleryQuery
+
+class HDDImport( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_HDD_IMPORT
+    VERSION = 1
+    
+    def __init__( self, name ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._paths_info = None
+        self._paths_to_tags = None
+        self._delete_file_after_import = None
+        self._import_file_options = None
+        
+        self._current_position = 0
+        self._file_status_counts = {}
+        self._paused = False
+        
+        self._lock = threading.Lock()
+        self._import_status = ''
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_url_cache = self._url_cache.GetEasySerialisedInfo()
+        
+        serialisable_options = { name : options.GetEasySerialisedInfo() for ( name, options ) in self._options.items() }
+        
+        return ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, serialisable_url_cache, serialisable_options )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, easy_serialisable_url_cache, easy_serialisable_options ) = serialisable_info
+        
+        self._url_cache = HydrusSerialisable.CreateFromEasy( easy_serialisable_url_cache )
+        
+        self._options = { name : HydrusSerialisable.CreateFromEasy( easy_serialisable_suboptions ) for ( name, easy_serialisable_suboptions ) in easy_serialisable_options.items() }
+        
+    
+    def GetImportStatus( self ):
+        
+        with self._lock:
+            
+            return self._import_status
+            
+        
+    
+    def GetQueueStatus( self ):
+        
+        with self._lock:
+            
+            value = self._current_position
+            range = len( self._paths_info )
+            
+            # return progress string
+            # also return string for num_successful and so on
+            
+            pass
+            
+        
+    
+    def MainLoop( self ):
+        
+        # use the lock sparingly, remember
+        # obey pause and hc.shutdown
+        # maybe also an internal shutdown, on managementpanel cleanupbeforedestroy
+        # update file_status_counts
+        # increment current_position
+        
+        pass
+        
+    
+    def Pause( self ):
+        
+        with self._lock:
+            
+            self._paused = True
+            
+        
+    
+    def Resume( self ):
+        
+        with self._lock:
+            
+            self._paused = False
+            
+        
+    
+    def SetTuple( self, paths_info, paths_to_tags, delete_file_after_import, import_file_options ):
+        
+        self._paths_info = paths_info
+        self._paths_to_tags = paths_to_tags
+        self._delete_file_after_import = delete_file_after_import
+        self._import_file_options = import_file_options
+        
+    
+    def Start( self ):
+        
+        # init a daemon to work through the list
+        
+        pass
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_HDD_IMPORT ] = HDDImport
 
 class Imageboard( HydrusData.HydrusYAMLBase ):
     
@@ -874,7 +1003,7 @@ class ImportFileOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FILE_OPTIONS
     VERSION = 1
     
-    def __init__( self, name ):
+    def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -884,31 +1013,29 @@ class ImportFileOptions( HydrusSerialisable.SerialisableBase ):
         self._exclude_deleted = options[ 'exclude_deleted_files' ]
         self._min_size = None
         self._min_resolution = None
-        self._file_limit = None
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution, self._file_limit )
+        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution, self._file_limit ) = serialisable_info
+        ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution ) = serialisable_info
         
     
     def ToTuple( self ):
         
-        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution, self._file_limit )
+        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
         
     
-    def SetTuple( self, automatic_archive, exclude_deleted, min_size, min_resolution, file_limit ):
+    def SetTuple( self, automatic_archive, exclude_deleted, min_size, min_resolution ):
         
         self._automatic_archive = automatic_archive
         self._exclude_deleted = exclude_deleted
         self._min_size = min_size
         self._min_resolution = min_resolution
-        file_limit = file_limit
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FILE_OPTIONS ] = ImportFileOptions
@@ -918,11 +1045,10 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS
     VERSION = 1
     
-    def __init__( self, name ):
+    def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self._get_tags_on_redundant = False
         self._service_keys_to_namespaces = {}
         
     
@@ -930,12 +1056,12 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
         
         safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() }
         
-        return ( self._get_tags_on_redundant, safe_service_keys_to_namespaces )
+        return safe_service_keys_to_namespaces
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._get_tags_on_redundant, safe_service_keys_to_namespaces ) = serialisable_info
+        safe_service_keys_to_namespaces = serialisable_info
         
         self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() }
         
@@ -1161,10 +1287,6 @@ class Service( HydrusData.HydrusYAMLBase ):
         
     
     def GetServiceKey( self ): return self._service_key
-    
-    def GetLikeDislike( self ): return ( self._info[ 'like' ], self._info[ 'dislike' ] )
-    
-    def GetLowerUpper( self ): return ( self._info[ 'lower' ], self._info[ 'upper' ] )
     
     def GetName( self ): return self._name
     
@@ -1604,19 +1726,29 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
-        self._gallery_query = None
-        self._periodic_info = None # include last checked and paused
-        self._url_cache = []
+        self._site_type = None
+        self._query_type = None
+        self._query = None
+        self._get_tags_if_redundant = False
+        self._file_limit = 500
+        self._gallery_page = 0
+        self._url_cache = None
+        self._options = {}
+        self._periodic = None
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( serialisable_mouse_actions, serialisable_keyboard_actions )
+        return ( self._gallery_query.GetEasySerialisedInfo(), self._periodic.GetEasySerialisedInfo() )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_mouse_actions, serialisable_keyboard_actions ) = serialisable_info
+        ( easy_serialised_gallery_query, easy_serialised_periodic ) = serialisable_info
+        
+        self._gallery_query = HydrusSerialisable.CreateFromEasy( easy_serialised_gallery_query )
+        
+        self._periodic = HydrusSerialisable.CreateFromEasy( easy_serialised_periodic )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ] = Subscription
@@ -1817,6 +1949,88 @@ class UndoManager( object ):
             wx.GetApp().WriteSynchronous( action, *args, **kwargs )
             
             HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+            
+        
+    
+class URLCache( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_CACHE
+    VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._urls_ordered = []
+        self._urls_to_info = {}
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_info = []
+        
+        for url in self._urls_ordered:
+            
+            url_info = self._urls_to_info[ url ]
+            
+            serialisable_url_info = dict( url_info )
+            
+            serialisable_hashes = { hash_name : hash.encode( 'hex' ) for ( hash_name, hash ) in url_info[ 'hashes' ].items() }
+            
+            serialisable_url_info[ 'hashes' ] = serialisable_hashes
+            
+            serialisable_info.append( ( url, serialisable_url_info ) )
+            
+        
+        return serialisable_url_info
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        for ( url, serialisable_url_info ) in serialisable_info:
+            
+            self._urls_ordered.append( url )
+            
+            url_info = dict( serialisable_url_info )
+            
+            hashes = { hash_name : hash.decode( 'hex' ) for ( hash_name, hash ) in serialisable_url_info[ 'hashes' ].items() }
+            
+            url_info[ 'hashes' ] = hashes
+            
+            self._urls_to_info[ url ] = url_info
+            
+        
+    
+    def AddURL( self, url ):
+        
+        self._urls_ordered.append( url )
+        
+        url_info = {}
+        
+        url_info[ 'timestamp' ] = HydrusData.GetNow()
+        url_info[ 'status' ] = CC.FILE_UNKNOWN
+        url_info[ 'hashes' ] = {}
+        
+        self._urls_to_info[ url ] = url_info
+        
+    
+    def SetURLStatus( self, url, status, error_info = None ):
+        
+        url_info = self._urls_to_info[ url ]
+        
+        url_info[ 'status' ] = status
+        
+        if error_info is not None:
+            
+            url_info[ 'error_info' ] = error_info
+            
+        elif 'error_info' in url_info:
+            
+            del url_info[ 'error_info' ]
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_URL_CACHE ] = URLCache
 
 def GetDefaultAdvancedTagOptions( lookup ):
     

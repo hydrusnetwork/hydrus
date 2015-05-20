@@ -22,7 +22,6 @@ import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
-import ClientDaemons
 import lz4
 import os
 import Queue
@@ -1174,7 +1173,7 @@ class DB( HydrusDB.HydrusDB ):
 
             def make_files_deletable( function_called, path, traceback_gumpf ):
                 
-                os.chmod( path, stat.S_IWRITE )
+                os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
                 
                 function_called( path ) # try again
                 
@@ -1598,7 +1597,8 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                os.chmod( path, stat.S_IWRITE )
+                try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                except: pass
                 
                 os.remove( path )
                 
@@ -2301,10 +2301,6 @@ class DB( HydrusDB.HydrusDB ):
         
         for wildcard in wildcards_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) )
         
-        options = wx.GetApp().GetOptions()
-        
-        if file_service_type == HC.FILE_REPOSITORY and options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
-        
         query_hash_ids.difference_update( exclude_query_hash_ids )
         
         #
@@ -2433,19 +2429,6 @@ class DB( HydrusDB.HydrusDB ):
             service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_INBOX } )
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-            
-            if service_type == HC.FILE_REPOSITORY:
-                
-                options = wx.GetApp().GetOptions()
-                
-                if options[ 'exclude_deleted_files' ]:
-                    
-                    ( num_everything_deleted, ) = self._c.execute( 'SELECT COUNT( * ) FROM files_info, deleted_files USING ( hash_id ) WHERE files_info.service_id = ? AND deleted_files.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
-                    
-                    num_everything -= num_everything_deleted
-                    
-                
-            
             num_inbox = service_info[ HC.SERVICE_INFO_NUM_INBOX ]
             num_archive = num_everything - num_inbox
             
@@ -3740,16 +3723,16 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ImportFile( self, path, advanced_import_options = None, service_keys_to_tags = None, generate_media_result = False, override_deleted = False, url = None ):
         
-        if advanced_import_options is None: advanced_import_options = {}
+        if advanced_import_options is None: advanced_import_options = ClientDefaults.GetDefaultAdvancedImportOptions()
         if service_keys_to_tags is None: service_keys_to_tags = {}
         
         result = 'successful'
         
         can_add = True
         
-        archive = 'auto_archive' in advanced_import_options
+        archive = advanced_import_options[ 'auto_archive' ]
         
-        exclude_deleted_files = 'exclude_deleted_files' in advanced_import_options
+        exclude_deleted_files = advanced_import_options[ 'exclude_deleted_files' ]
         
         HydrusImageHandling.ConvertToPngIfBmp( path )
         
@@ -3793,7 +3776,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if width is not None and height is not None:
                 
-                if 'min_resolution' in advanced_import_options:
+                if advanced_import_options[ 'min_resolution' ] is not None:
                     
                     ( min_x, min_y ) = advanced_import_options[ 'min_resolution' ]
                     
@@ -3801,7 +3784,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            if 'min_size' in advanced_import_options:
+            if advanced_import_options[ 'min_size' ] is not None:
                 
                 min_size = advanced_import_options[ 'min_size' ]
                 
@@ -3816,7 +3799,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 shutil.copy( path, dest_path )
                 
-                os.chmod( dest_path, stat.S_IREAD )
+                try: os.chmod( dest_path, stat.S_IREAD )
+                except: pass
                 
             
             if mime in HC.MIMES_WITH_THUMBNAILS:
@@ -4892,58 +4876,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
-        if version == 108:
-            
-            self._c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
-            self._c.execute( 'CREATE INDEX processed_mappings_hash_id_index ON processed_mappings ( hash_id );' )
-            self._c.execute( 'CREATE INDEX processed_mappings_service_id_tag_id_index ON processed_mappings ( service_id, tag_id );' )
-            self._c.execute( 'CREATE INDEX processed_mappings_service_id_hash_id_index ON processed_mappings ( service_id, hash_id );' )
-            self._c.execute( 'CREATE INDEX processed_mappings_service_id_status_index ON processed_mappings ( service_id, status );' )
-            self._c.execute( 'CREATE INDEX processed_mappings_status_index ON processed_mappings ( status );' )
-            
-            service_ids = [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services;' ) ]
-            
-            for ( i, service_id ) in enumerate( service_ids ):
-                
-                HydrusGlobals.pubsub.pub( 'splash_set_text', 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
-                
-                self._c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( service_id, ) )
-                
-            
-            current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
-            
-            for filename in current_updates:
-                
-                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
-                
-                os.rename( path, path + 'old' )
-                
-            
-            current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
-            
-            for ( i, filename ) in enumerate( current_updates ):
-                
-                if i % 100 == 0: HydrusGlobals.pubsub.pub( 'splash_set_text', 'renaming updates ' + str( i ) + '/' + str( len( current_updates ) ) )
-                
-                ( service_key_hex, gumpf ) = filename.split( '_' )
-                
-                service_key = service_key_hex.decode( 'hex' )
-                
-                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
-                
-                with open( path, 'rb' ) as f: update_text = f.read()
-                
-                update = yaml.safe_load( update_text )
-                
-                ( begin, end ) = update.GetBeginEnd()
-                
-                new_path = ClientFiles.GetUpdatePath( service_key, begin )
-                
-                if os.path.exists( new_path ): os.remove( path )
-                else: os.rename( path, new_path )
-                
-            
-        
         if version == 109:
             
             self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
@@ -5375,6 +5307,85 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.execute( 'UPDATE json_dumps_named SET dump = ? WHERE dump_type = ? AND dump_name = ?;', ( sqlite3.Binary( dump ), dump_type, dump_name ) )
                 
             
+        
+        if version == 157:
+            
+            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) ).fetchall()
+            
+            for ( dump_type, dump_name, dump ) in results:
+                
+                dump[ 'get_tags_if_redundant' ] = False
+                
+                a_i_o = dump[ 'advanced_import_options' ]
+                
+                if 'auto_archive' not in a_i_o:
+                    
+                    a_i_o[ 'auto_archive' ] = False
+                    
+                
+                if 'exclude_deleted_files' not in a_i_o:
+                    
+                    a_i_o[ 'exclude_deleted_files' ] = False
+                    
+                
+                if 'min_resolution' not in a_i_o:
+                    
+                    a_i_o[ 'min_resolution' ] = None
+                    
+                
+                if 'min_size' not in a_i_o:
+                    
+                    a_i_o[ 'min_size' ] = None
+                    
+                
+                self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
+                
+            
+            #
+            
+            results = self._c.execute( 'SELECT service_id, service_type, info FROM services WHERE service_type IN ( ?, ? );', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ).fetchall()
+            
+            for ( service_id, service_type, info ) in results:
+                
+                if service_type == HC.LOCAL_RATING_LIKE:
+                    
+                    del info[ 'like' ]
+                    del info[ 'dislike' ]
+                    
+                    info[ 'colours' ] = ClientRatings.default_like_colours
+                    
+                else:
+                    
+                    upper = info[ 'upper' ]
+                    lower = info[ 'lower' ]
+                    
+                    del info[ 'upper' ]
+                    del info[ 'lower' ]
+                    
+                    info[ 'num_stars' ] = upper - lower
+                    
+                    info[ 'colours' ] = ClientRatings.default_numerical_colours
+                    
+                
+                info[ 'shape' ] = ClientRatings.CIRCLE
+                
+                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
+            
+            #
+            
+            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_EXPORT_FOLDER, ) ).fetchall()
+            
+            for ( dump_type, dump_name, dump ) in results:
+                
+                details = dump
+                
+                details[ 'type' ] = HC.EXPORT_FOLDER_TYPE_REGULAR
+                
+                self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
+                
+            
+        
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
@@ -5979,7 +5990,7 @@ class DB( HydrusDB.HydrusDB ):
             
             def make_files_deletable( function_called, path, traceback_gumpf ):
                 
-                os.chmod( path, stat.S_IWRITE )
+                os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
                 
                 function_called( path ) # try again
                 
@@ -6000,19 +6011,5 @@ class DB( HydrusDB.HydrusDB ):
         shutil.copytree( path + os.path.sep + 'client_files', HC.CLIENT_FILES_DIR )
         shutil.copytree( path + os.path.sep + 'client_thumbnails', HC.CLIENT_THUMBNAILS_DIR )
         shutil.copytree( path + os.path.sep + 'client_updates', HC.CLIENT_UPDATES_DIR )
-        
-    
-    def StartDaemons( self ):
-        
-        HydrusThreading.DAEMONWorker( 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 )
-        HydrusThreading.DAEMONWorker( 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 )
-        HydrusThreading.DAEMONWorker( 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
-        HydrusThreading.DAEMONWorker( 'ResizeThumbnails', ClientDaemons.DAEMONResizeThumbnails, period = 3600 * 24, init_wait = 600 )
-        HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) )
-        HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
-        HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 )
-        HydrusThreading.DAEMONWorker( 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )
-        
-        HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
         
     

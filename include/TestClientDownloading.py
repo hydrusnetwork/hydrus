@@ -39,7 +39,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = ClientDownloading.DownloaderDeviantArt( 'sakimichan' )
+        downloader = ClientDownloading.GalleryParserDeviantArt( 'sakimichan' )
         
         #
         
@@ -83,7 +83,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = ClientDownloading.DownloaderNewgrounds( 'warlord-of-noodles' )
+        downloader = ClientDownloading.GalleryParserNewgrounds( 'warlord-of-noodles' )
         
         #
         
@@ -133,7 +133,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = ClientDownloading.DownloaderPixiv( 'tags', 'naruto' )
+        downloader = ClientDownloading.GalleryParserPixiv( 'tags', 'naruto' )
         
         #
         
@@ -177,7 +177,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = ClientDownloading.DownloaderBooru( ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ], [ 'animal_ears' ] )
+        downloader = ClientDownloading.GalleryParserBooru( ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ], [ 'animal_ears' ] )
         
         #
         
@@ -243,7 +243,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = ClientDownloading.DownloaderBooru( ClientDefaults.GetDefaultBoorus()[ 'e621' ], [ 'flash' ] )
+        downloader = ClientDownloading.GalleryParserBooru( ClientDefaults.GetDefaultBoorus()[ 'e621' ], [ 'flash' ] )
         
         #
         
@@ -321,8 +321,8 @@ class TestDownloaders( unittest.TestCase ):
         info[ 'filter_order' ] = 0
         info[ 'filter_type' ] = 0
         
-        pictures_downloader = ClientDownloading.GetDownloader( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist pictures', 'Sparrow', info )
-        scraps_downloader = ClientDownloading.GetDownloader( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist scraps', 'Sparrow', info )
+        pictures_downloader = ClientDownloading.GetGalleryParser( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist pictures', 'Sparrow', info )
+        scraps_downloader = ClientDownloading.GetGalleryParser( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist scraps', 'Sparrow', info )
         
         #
         

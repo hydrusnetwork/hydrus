@@ -2086,29 +2086,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateDB( self, version ):
         
-        if version == 108:
-            
-            data = self._c.execute( 'SELECT service_id, begin, end FROM update_cache;' ).fetchall()
-            
-            self._c.execute( 'DROP TABLE update_cache;' )
-            
-            self._c.execute( 'CREATE TABLE update_cache ( service_id INTEGER REFERENCES services ON DELETE CASCADE, begin INTEGER, end INTEGER, dirty INTEGER_BOOLEAN, PRIMARY KEY( service_id, begin ) );' )
-            self._c.execute( 'CREATE UNIQUE INDEX update_cache_service_id_end_index ON update_cache ( service_id, end );' )
-            self._c.execute( 'CREATE INDEX update_cache_service_id_dirty_index ON update_cache ( service_id, dirty );' )
-            
-            self._c.executemany( 'INSERT INTO update_cache ( service_id, begin, end, dirty ) VALUES ( ?, ?, ?, ? );', ( ( service_id, begin, end, True ) for ( service_id, begin, end ) in data ) )
-            
-            stuff_in_updates_dir = dircache.listdir( HC.SERVER_UPDATES_DIR )
-            
-            for filename in stuff_in_updates_dir:
-                
-                path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
-                
-                if os.path.isdir( path ): shutil.rmtree( path )
-                else: os.remove( path )
-                
-            
-        
         if version == 128:
             
             self._c.execute( 'COMMIT' )

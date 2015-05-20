@@ -522,11 +522,37 @@ class Canvas( object ):
         HydrusGlobals.pubsub.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
         
     
+    def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
+    
     def _CopyHashToClipboard( self ):
         
         hex_hash = self._current_display_media.GetHash().encode( 'hex' )
         
         HydrusGlobals.pubsub.pub( 'clipboard', 'text', hex_hash )
+        
+    
+    def _CopyLocalUrlToClipboard( self ):
+        
+        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_display_media.GetHash().encode( 'hex' )
+        
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', local_url )
+        
+    
+    def _CopyPathToClipboard( self ):
+        
+        path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
+        
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', path )
+        
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+            
+        
+        self.SetFocus() # annoying bug because of the modal dialog
         
     
     def _DrawBackgroundBitmap( self ):
@@ -583,19 +609,21 @@ class Canvas( object ):
         return False
         
     
+    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
+    
     def _ManageRatings( self ):
         
         if self._current_media is not None:
             
-            with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_display_media, ) ) as dlg: dlg.ShowModal()
             
         
     
     def _ManageTags( self ):
         
-        if self._current_media is not None:
+        if self._current_display_media is not None:
             
-            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_media, ) ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key ) as dlg: dlg.ShowModal()
             
         
     
@@ -612,7 +640,7 @@ class Canvas( object ):
             
         
     
-    def _PrefetchImages( self ): pass
+    def _PrefetchNeighbours( self ): pass
     
     def _RecalcZoom( self ):
         
@@ -851,7 +879,7 @@ class Canvas( object ):
                         
                         if self._claim_focus: self._media_container.SetFocus()
                         
-                        if not initial_image: self._PrefetchImages()
+                        self._PrefetchNeighbours()
                         
                     else: self._current_media = None
                     
@@ -962,34 +990,27 @@ class CanvasWithDetails( Canvas ):
             
             icons_to_show = []
             
-            if self._current_media.HasInbox(): icons_to_show.append( CC.GlobalBMPs.inbox_bmp )
-            
-            locations_manager = self._current_media.GetLocationsManager()
-            
-            if self._file_service.GetServiceType() == HC.LOCAL_FILE:
+            if self._current_media.HasInbox():
                 
-                if len( locations_manager.GetPendingRemote() ) > 0: icons_to_show.append( CC.GlobalBMPs.file_repository_pending_bmp )
-                elif len( locations_manager.GetCurrentRemote() ) > 0: icons_to_show.append( CC.GlobalBMPs.file_repository_bmp )
+                dc.DrawBitmap( CC.GlobalBMPs.inbox_bmp, client_width - 18, 2 )
                 
-            elif self._file_service_key in locations_manager.GetCurrentRemote():
-                
-                if self._file_service_key in locations_manager.GetPetitionedRemote(): icons_to_show.append( CC.GlobalBMPs.file_repository_petitioned_bmp )
+                current_y += 18
                 
             
-            current_x = client_width - 18
+            # repo strings
             
-            for icon_bmp in icons_to_show:
-                
-                dc.DrawBitmap( icon_bmp, current_x, 2 )
-                
-                current_x -= 20
-                
+            file_repo_strings = self._current_media.GetLocationsManager().GetFileRepositoryStrings()
             
-            if len( icons_to_show ) > 0: current_y += 18
+            for file_repo_string in file_repo_strings:
+                
+                ( text_width, text_height ) = dc.GetTextExtent( file_repo_string )
+                
+                dc.DrawText( file_repo_string, client_width - text_width - 3, current_y )
+                
+                current_y += text_height + 4
+                
             
             # ratings
-            
-            top_right_strings = []
             
             ( local_ratings, remote_ratings ) = self._current_display_media.GetRatings()
             
@@ -1014,45 +1035,24 @@ class CanvasWithDetails( Canvas ):
                 like_rating_current_x -= 16
                 
             
-            if len( like_services ) > 0: current_y += 16
+            if len( like_services ) > 0: current_y += 20
             
-            service_keys_to_ratings = local_ratings.GetServiceKeysToRatings()
             
-            for ( service_key, rating ) in service_keys_to_ratings.items():
-                
-                if rating is None: continue
-                
-                if service_key not in self._service_keys_to_services:
-                    
-                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-                    
-                    self._service_keys_to_services[ service_key ] = service
-                    
-                
-                service = self._service_keys_to_services[ service_key ]
-                
-                service_type = service.GetServiceType()
-                
-                if service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    ( lower, upper ) = service.GetLowerUpper()
-                    
-                    s = HydrusData.ConvertNumericalRatingToPrettyString( lower, upper, rating )
-                    
-                    top_right_strings.append( s )
-                    
-                
+            numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
             
-            if len( top_right_strings ) > 0:
+            for numerical_service in numerical_services:
                 
-                for s in top_right_strings:
-                    
-                    ( x, y ) = dc.GetTextExtent( s )
-                    
-                    dc.DrawText( s, client_width - x - 3, current_y )
-                    
-                    current_y += y
-                    
+                service_key = numerical_service.GetServiceKey()
+                
+                ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_display_media, ), service_key )
+                
+                stars = ClientRatings.GetStars( service_key, rating_state, rating )
+                
+                numerical_width = ClientRatings.GetNumericalWidth( service_key )
+                
+                ClientRatings.DrawNumerical( dc, client_width - numerical_width, current_y, stars )
+                
+                current_y += 20
                 
             
             # middle
@@ -1099,7 +1099,99 @@ class CanvasPanel( Canvas, wx.Window ):
         HydrusGlobals.pubsub.sub( self, 'FocusChanged', 'focus_changed' )
         HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
         wx.CallAfter( self.Refresh )
+        
+    
+    def EventMenu( self, event ):
+        
+        # is None bit means this is prob from a keydown->menu event
+        if event.GetEventObject() is None and self._HydrusShouldNotProcessInput(): event.Skip()
+        else:
+            
+            action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+            
+            if action is not None:
+                
+                ( command, data ) = action
+                
+                if command == 'archive': self._Archive()
+                elif command == 'copy_files':
+                    with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                elif command == 'copy_hash': self._CopyHashToClipboard()
+                elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
+                elif command == 'copy_path': self._CopyPathToClipboard()
+                elif command == 'delete': self._Delete()
+                elif command == 'inbox': self._Inbox()
+                elif command == 'manage_ratings': self._ManageRatings()
+                elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
+                elif command == 'open_externally': self._OpenExternally()
+                else: event.Skip()
+                
+            
+        
+    
+    def EventShowMenu( self, event ):
+        
+        if self._current_display_media is not None:
+            
+            services = wx.GetApp().GetManager( 'services' ).GetServices()
+            
+            local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+            
+            i_can_post_ratings = len( local_ratings_services ) > 0
+            
+            menu = wx.Menu()
+            
+            menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyInfo() )
+            menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyAge() )
+            
+            #
+            
+            menu.AppendSeparator()
+            
+            manage_menu = wx.Menu()
+            
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
+            
+            if i_can_post_ratings: manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+            
+            menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+            
+            menu.AppendSeparator()
+            
+            if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
+            if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+            
+            menu.AppendSeparator()
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', CC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+            
+            share_menu = wx.Menu()
+            
+            copy_menu = wx.Menu()
+            
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ), 'hash' )
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
+            
+            share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+            
+            menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
+            
+            self.PopupMenu( menu )
+            
+            self._menu_open = False
+            
+            wx.CallAfter( menu.Destroy )
+            
+            event.Skip()
+            
         
     
     def FocusChanged( self, page_key, media ):
@@ -1208,7 +1300,9 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         return index_string
         
     
-    def _PrefetchImages( self ):
+    def _PrefetchNeighbours( self ):
+        
+        media_looked_at = set()
         
         to_render = []
         
@@ -1217,19 +1311,57 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         if self._just_started:
             
-            extra_delay_base = 800
+            delay_base = 800
+            
+            num_to_go_back = 2
+            num_to_go_forward = 2
             
             self._just_started = False
             
-        else: extra_delay_base = 200
-        
-        for i in range( 10 ):
+        else:
             
-            previous = self._GetPrevious( previous )
+            delay_base = 200
+            
+            num_to_go_back = 3
+            num_to_go_forward = 5
+            
+        
+        # if media_looked_at nukes the list, we want shorter delays, so do next first
+        
+        for i in range( num_to_go_forward ):
+            
             next = self._GetNext( next )
             
-            to_render.append( ( previous, 100 + ( extra_delay_base * 2 * i * i ) ) )
-            to_render.append( ( next, 100 + ( extra_delay_base * i * i ) ) )
+            if next in media_looked_at:
+                
+                break
+                
+            else:
+                
+                media_looked_at.add( next )
+                
+            
+            delay = delay_base * ( i + 1 )
+            
+            to_render.append( ( next, delay ) )
+            
+        
+        for i in range( num_to_go_back ):
+            
+            previous = self._GetPrevious( previous )
+            
+            if previous in media_looked_at:
+                
+                break
+                
+            else:
+                
+                media_looked_at.add( previous )
+                
+            
+            delay = delay_base * 2 * ( i + 1 )
+            
+            to_render.append( ( previous, delay ) )
             
         
         ( my_width, my_height ) = self.GetClientSize()
@@ -1714,28 +1846,6 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
         self._hover_commands.SetNavigable( True )
         
     
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
-    
-    def _Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
-            
-        
-        self.SetFocus() # annoying bug because of the modal dialog
-        
-    
-    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
-    
-    def _ManageTags( self ):
-        
-        if self._current_display_media is not None:
-            
-            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key ) as dlg: dlg.ShowModal()
-            
-        
-    
     def Archive( self, canvas_key ):
         
         if self._canvas_key == self._canvas_key:
@@ -1835,22 +1945,6 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         HydrusGlobals.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
-    
-    def _CopyLocalUrlToClipboard( self ):
-        
-        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_display_media.GetHash().encode( 'hex' )
-        
-        HydrusGlobals.pubsub.pub( 'clipboard', 'text', local_url )
-        
-    
-    def _CopyPathToClipboard( self ):
-        
-        path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
-        
-        HydrusGlobals.pubsub.pub( 'clipboard', 'text', path )
-        
-    
-    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _PausePlaySlideshow( self ):
         
@@ -2453,7 +2547,6 @@ class FullscreenHoverFrame( wx.Frame ):
         self._canvas_key = canvas_key
         self._current_media = None
         
-        #self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         self.SetBackgroundColour( wx.WHITE )
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
@@ -2829,6 +2922,8 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         
         self._icon_panel = wx.Panel( self )
         
+        self._icon_panel.SetBackgroundColour( wx.WHITE )
+        
         self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.inbox_bmp )
         
         icon_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -2837,6 +2932,12 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         icon_hbox.AddF( self._inbox_icon, CC.FLAGS_MIXED )
         
         self._icon_panel.SetSizer( icon_hbox )
+        
+        # repo strings
+        
+        self._file_repos = wx.StaticText( self, label = '', style = wx.ALIGN_RIGHT )
+        
+        # likes
         
         like_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2856,17 +2957,33 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         # each numerical one in turn
         
         vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.AddF( ( 1, 2 ), CC.FLAGS_NONE )
+        vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        numerical_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        
+        for service in numerical_services:
+            
+            service_key = service.GetServiceKey()
+            
+            control = ClientGUICommon.RatingNumericalCanvas( self, service_key, canvas_key )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.AddF( control, CC.FLAGS_NONE )
+            
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
         
         self.SetSizer( vbox )
         
-        self._ShowHideIcons()
+        self._ResetData()
         
         HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
     
-    def _ShowHideIcons( self ):
+    def _ResetData( self ):
         
         if self._current_media is not None:
             
@@ -2877,6 +2994,21 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
             else:
                 
                 self._icon_panel.Hide()
+                
+            
+            file_repo_strings = self._current_media.GetLocationsManager().GetFileRepositoryStrings()
+            
+            if len( file_repo_strings ) == 0:
+                
+                self._file_repos.Hide()
+                
+            else:
+                
+                file_repo_string = os.linesep.join( file_repo_strings )
+                
+                self._file_repos.SetLabel( file_repo_string )
+                
+                self._file_repos.Show()
                 
             
             self.Fit()
@@ -2927,7 +3059,7 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
             
             if do_redraw:
                 
-                self._ShowHideIcons()
+                self._ResetData()
                 
             
         
@@ -2938,7 +3070,7 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
             
             FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
             
-            self._ShowHideIcons()
+            self._ResetData()
             
         
     
@@ -3032,409 +3164,6 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
             
             self._ResetTags()
             
-        
-    
-class FullscreenPopout( wx.Frame ):
-    
-    def __init__( self, parent ):
-        
-        wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_SIMPLE )
-        
-        self._last_drag_coordinates = None
-        self._total_drag_delta = ( 0, 0 )
-        
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-        
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        self._popout_window = self._InitialisePopoutWindow( hbox )
-        
-        self._popout_window.Hide()
-        
-        self._button_window = self._InitialiseButtonWindow( hbox )
-        
-        hbox.AddF( self._popout_window, CC.FLAGS_EXPAND_PERPENDICULAR )
-        hbox.AddF( self._button_window, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( hbox )
-        
-        self._SizeAndPosition()
-        
-        tlp = self.GetParent().GetTopLevelParent()
-        
-        tlp.Bind( wx.EVT_SIZE, self.EventResize )
-        tlp.Bind( wx.EVT_MOVE, self.EventMove )
-        
-        self.Show()
-        
-    
-    def _InitialiseButtonWindow( self, sizer ):
-        
-        button_window = wx.Window( self )
-        
-        self._move_button = wx.Button( button_window, label = u'\u2022', size = ( 20, 20 ) )
-        self._move_button.SetCursor( wx.StockCursor( wx.CURSOR_SIZING ) )
-        self._move_button.Bind( wx.EVT_MOTION, self.EventDrag )
-        self._move_button.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
-        self._move_button.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
-        
-        self._arrow_button = wx.Button( button_window, label = '>', size = ( 20, 80 ) )
-        self._arrow_button.Bind( wx.EVT_BUTTON, self.EventArrowClicked )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._move_button, CC.FLAGS_MIXED )
-        vbox.AddF( self._arrow_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        button_window.SetSizer( vbox )
-        
-        return button_window
-        
-    
-    def _SizeAndPosition( self ):
-        
-        self.Fit()
-        
-        parent = self.GetParent()
-        
-        ( parent_width, parent_height ) = parent.GetClientSize()
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        my_y = ( parent_height - my_height ) / 2
-        
-        ( offset_x, offset_y ) = self._total_drag_delta
-        
-        self.SetPosition( parent.ClientToScreenXY( 0 + offset_x, my_y + offset_y ) )
-        
-    
-    def EventArrowClicked( self, event ):
-        
-        if self._popout_window.IsShown():
-            
-            self._popout_window.Hide()
-            self._arrow_button.SetLabel( '>' )
-            
-        else:
-            
-            self._popout_window.Show()
-            self._arrow_button.SetLabel( '<' )
-            
-        
-        self._SizeAndPosition()
-        
-        self.Layout()
-        
-    
-    def EventMove( self, event ):
-        
-        self._SizeAndPosition()
-        
-        event.Skip()
-        
-    
-    def EventDrag( self, event ):
-        
-        CC.CAN_HIDE_MOUSE = True
-        
-        if event.Dragging() and self._last_drag_coordinates is not None:
-            
-            ( old_x, old_y ) = self._last_drag_coordinates
-            
-            ( x, y ) = event.GetPosition()
-            
-            ( delta_x, delta_y ) = ( x - old_x, y - old_y )
-            
-            ( old_delta_x, old_delta_y ) = self._total_drag_delta
-            
-            self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
-            
-            self._SizeAndPosition()
-            
-        
-    
-    def EventDragBegin( self, event ):
-        
-        self._last_drag_coordinates = event.GetPosition()
-        
-        event.Skip()
-        
-    
-    def EventDragEnd( self, event ):
-        
-        self._last_drag_coordinates = None
-        
-        event.Skip()
-        
-    
-    def EventResize( self, event ):
-        
-        self._SizeAndPosition()
-        
-        event.Skip()
-        
-    
-class FullscreenPopoutFilterCustom( FullscreenPopout ):
-    
-    def _InitialisePopoutWindow( self, sizer ):
-        
-        window = wx.Window( self )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        parent = self.GetParent()
-        
-        actions = wx.Button( window, label = 'actions' )
-        actions.Bind( wx.EVT_BUTTON, parent.EventActions )
-        
-        fullscreen_switch = wx.Button( window, label = 'switch fullscreen' )
-        fullscreen_switch.Bind( wx.EVT_BUTTON, parent.EventFullscreenSwitch )
-        
-        done = wx.Button( window, label = 'done' )
-        done.Bind( wx.EVT_BUTTON, parent.EventClose )
-        
-        vbox.AddF( actions, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fullscreen_switch, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( done, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        window.SetSizer( vbox )
-        
-        return window
-        
-    
-class FullscreenPopoutFilterInbox( FullscreenPopout ):
-    
-    def _InitialisePopoutWindow( self, sizer ):
-        
-        window = wx.Window( self )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        parent = self.GetParent()
-        
-        keep = wx.Button( window, label = 'archive' )
-        keep.Bind( wx.EVT_BUTTON, parent.EventButtonKeep )
-        
-        delete = wx.Button( window, label = 'delete' )
-        delete.Bind( wx.EVT_BUTTON, parent.EventButtonDelete )
-        
-        skip = wx.Button( window, label = 'skip' )
-        skip.Bind( wx.EVT_BUTTON, parent.EventButtonSkip )
-        
-        back = wx.Button( window, label = 'back' )
-        back.Bind( wx.EVT_BUTTON, parent.EventButtonBack )
-        
-        fullscreen_switch = wx.Button( window, label = 'switch fullscreen' )
-        fullscreen_switch.Bind( wx.EVT_BUTTON, parent.EventFullscreenSwitch )
-        
-        done = wx.Button( window, label = 'done' )
-        done.Bind( wx.EVT_BUTTON, parent.EventButtonDone )
-        
-        vbox.AddF( keep, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( delete, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( skip, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( back, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fullscreen_switch, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( done, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        window.SetSizer( vbox )
-        
-        return window
-        
-    
-class FullscreenPopoutFilterLike( FullscreenPopout ):
-    
-    def _InitialisePopoutWindow( self, sizer ):
-        
-        window = wx.Window( self )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        parent = self.GetParent()
-        
-        like = wx.Button( window, label = 'like' )
-        like.Bind( wx.EVT_BUTTON, parent.EventButtonKeep )
-        
-        dislike = wx.Button( window, label = 'dislike' )
-        dislike.Bind( wx.EVT_BUTTON, parent.EventButtonDelete )
-        
-        skip = wx.Button( window, label = 'skip' )
-        skip.Bind( wx.EVT_BUTTON, parent.EventButtonSkip )
-        
-        back = wx.Button( window, label = 'back' )
-        back.Bind( wx.EVT_BUTTON, parent.EventButtonBack )
-        
-        fullscreen_switch = wx.Button( window, label = 'switch fullscreen' )
-        fullscreen_switch.Bind( wx.EVT_BUTTON, parent.EventFullscreenSwitch )
-        
-        done = wx.Button( window, label = 'done' )
-        done.Bind( wx.EVT_BUTTON, parent.EventButtonDone )
-        
-        vbox.AddF( like, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( dislike, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( skip, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( back, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fullscreen_switch, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( done, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        window.SetSizer( vbox )
-        
-        return window
-        
-    
-class FullscreenPopoutFilterNumerical( FullscreenPopout ):
-    
-    def __init__( self, parent, callable_parent ):
-        
-        self._callable_parent = callable_parent
-        
-        FullscreenPopout.__init__( self, parent )
-        
-    
-    def _InitialisePopoutWindow( self, sizer ):
-        
-        window = wx.Window( self )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        parent = self.GetParent()
-        
-        #
-        
-        accuracy_slider_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        if 'ratings_filter_accuracy' not in HC.options:
-            
-            HC.options[ 'ratings_filter_accuracy' ] = 1
-            
-            wx.GetApp().Write( 'save_options', HC.options )
-            
-        
-        value = HC.options[ 'ratings_filter_accuracy' ]
-        
-        self._accuracy_slider = wx.Slider( window, size = ( 50, -1 ), value = value, minValue = 0, maxValue = 4 )
-        self._accuracy_slider.Bind( wx.EVT_SLIDER, self.EventAccuracySlider )
-        
-        accuracy_slider_hbox.AddF( wx.StaticText( window, label = 'quick' ), CC.FLAGS_MIXED )
-        accuracy_slider_hbox.AddF( self._accuracy_slider, CC.FLAGS_EXPAND_BOTH_WAYS )
-        accuracy_slider_hbox.AddF( wx.StaticText( window, label = 'accurate' ), CC.FLAGS_MIXED )
-        
-        self.EventAccuracySlider( None )
-        
-        #
-        
-        if 'ratings_filter_compare_same' not in HC.options:
-            
-            HC.options[ 'ratings_filter_compare_same' ] = False
-            
-            wx.GetApp().Write( 'save_options', HC.options )
-            
-        
-        compare_same = HC.options[ 'ratings_filter_compare_same' ]
-        
-        self._compare_same = wx.CheckBox( window, label = 'compare same image until rating is done' )
-        self._compare_same.SetValue( compare_same )
-        self._compare_same.Bind( wx.EVT_CHECKBOX, self.EventCompareSame )
-        
-        self.EventCompareSame( None )
-        
-        #
-        
-        self._left_right_slider_sizer = wx.BoxSizer( wx.HORIZONTAL )
-        
-        if 'ratings_filter_left_right' not in HC.options:
-            
-            HC.options[ 'ratings_filter_left_right' ] = 'left'
-            
-            wx.GetApp().Write( 'save_options', HC.options )
-            
-        
-        left_right = HC.options[ 'ratings_filter_left_right' ]
-        
-        if left_right == 'left': left_right_value = 0
-        elif left_right == 'random': left_right_value = 1
-        else: left_right_value = 2
-        
-        self._left_right_slider = wx.Slider( window, size = ( 30, -1 ), value = left_right_value, minValue = 0, maxValue = 2 )
-        self._left_right_slider.Bind( wx.EVT_SLIDER, self.EventLeftRight )
-        
-        self._left_right_slider_sizer.AddF( wx.StaticText( window, label = 'left' ), CC.FLAGS_MIXED )
-        self._left_right_slider_sizer.AddF( self._left_right_slider, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._left_right_slider_sizer.AddF( wx.StaticText( window, label = 'right' ), CC.FLAGS_MIXED )
-        
-        self.EventLeftRight( None )
-        
-        #
-        
-        left = wx.Button( window, label = 'left is better' )
-        left.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonLeft )
-        
-        right = wx.Button( window, label = 'right is better' )
-        right.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonRight )
-        
-        equal = wx.Button( window, label = 'they are about the same' )
-        equal.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonEqual )
-        
-        skip = wx.Button( window, label = 'skip' )
-        skip.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonSkip )
-        
-        back = wx.Button( window, label = 'back' )
-        back.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonBack )
-        
-        dont_filter = wx.Button( window, label = 'don\'t filter this file' )
-        dont_filter.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonDontFilter )
-        
-        fullscreen_switch = wx.Button( window, label = 'switch fullscreen' )
-        fullscreen_switch.Bind( wx.EVT_BUTTON, self._callable_parent.EventFullscreenSwitch )
-        
-        done = wx.Button( window, label = 'done' )
-        done.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonDone )
-        
-        vbox.AddF( accuracy_slider_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._compare_same, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._left_right_slider_sizer, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.AddF( wx.StaticLine( window, style = wx.LI_HORIZONTAL ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.AddF( left, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( right, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( equal, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( skip, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( back, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( dont_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fullscreen_switch, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( done, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        window.SetSizer( vbox )
-        
-        return window
-        
-    
-    def EventAccuracySlider( self, event ):
-        
-        value = self._accuracy_slider.GetValue()
-        
-        self._callable_parent.SetAccuracy( value )
-        
-    
-    def EventCompareSame( self, event ):
-        
-        compare_same = self._compare_same.GetValue()
-        
-        self._callable_parent.SetCompareSame( compare_same )
-        
-    
-    def EventLeftRight( self, event ):
-        
-        value = self._left_right_slider.GetValue()
-        
-        if value == 0: left_right = 'left'
-        elif value == 1: left_right = 'random'
-        else: left_right = 'right'
-        
-        self._callable_parent.SetLeftRight( left_right )
         
     
 class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
@@ -3554,7 +3283,6 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         wx.GetApp().SetTopWindow( self )
         
         self._left_window = self._Panel( self._splitter )
-        FullscreenPopoutFilterNumerical( self._left_window, self )
         
         self._right_window = self._Panel( self._splitter )
         

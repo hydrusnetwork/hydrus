@@ -1,5 +1,6 @@
 import ClientCaches
 import ClientData
+import ClientDaemons
 import hashlib
 import httplib
 import HydrusConstants as HC
@@ -250,7 +251,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.RestartServer()
         self.RestartBooru()
-        self._db.StartDaemons()
+        self.StartDaemons()
         
     
     def MaintainDB( self ):
@@ -489,6 +490,20 @@ class Controller( HydrusController.HydrusController ):
         
     
     def StartFileQuery( self, query_key, search_context ): HydrusThreading.CallToThread( self.THREADDoFileQuery, query_key, search_context )
+    
+    def StartDaemons( self ):
+        
+        HydrusThreading.DAEMONWorker( 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 )
+        HydrusThreading.DAEMONWorker( 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 )
+        HydrusThreading.DAEMONWorker( 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
+        HydrusThreading.DAEMONWorker( 'ResizeThumbnails', ClientDaemons.DAEMONResizeThumbnails, period = 3600 * 24, init_wait = 600 )
+        HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) )
+        HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
+        HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 )
+        HydrusThreading.DAEMONWorker( 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )
+        
+        HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
+        
     
     def THREADDoFileQuery( self, query_key, search_context ):
         

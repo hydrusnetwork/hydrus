@@ -4,6 +4,7 @@ class DBAccessException( Exception ): pass
 class FileException( Exception ): pass
 class ForbiddenException( Exception ): pass
 class MimeException( Exception ): pass
+class NameException( Exception ): pass
 class NetworkVersionException( Exception ): pass
 class NoContentException( Exception ): pass
 class NotFoundException( Exception ): pass

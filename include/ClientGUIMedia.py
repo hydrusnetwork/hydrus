@@ -407,21 +407,17 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if len( wx.GetApp().GetManager( 'services' ).GetServices( HC.RATINGS_SERVICES ) ) > 0:
                 
-                try:
+                flat_media = []
+                
+                for media in self._selected_media:
                     
-                    flat_media = []
+                    if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
+                    else: flat_media.append( media )
                     
-                    for media in self._selected_media:
-                        
-                        if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
-                        else: flat_media.append( media )
-                        
-                    
-                    with ClientGUIDialogsManage.DialogManageRatings( None, flat_media ) as dlg: dlg.ShowModal()
-                    
-                    self.SetFocus()
-                    
-                except: wx.MessageBox( traceback.format_exc() )
+                
+                with ClientGUIDialogsManage.DialogManageRatings( None, flat_media ) as dlg: dlg.ShowModal()
+                
+                self.SetFocus()
                 
             
         
@@ -2412,14 +2408,33 @@ class Thumbnail( Selectable ):
             dc.DrawText( num_files_str, 18, height - text_y - 2 )
             
         
-        if self._file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
+        # repo icons
+        
+        repo_icon_x = 0
+        
+        num_current = len( locations_manager.GetCurrentRemote() )
+        num_pending = len( locations_manager.GetPendingRemote() )
+        num_petitioned = len( locations_manager.GetPetitionedRemote() )
+        
+        if num_current > num_petitioned:
             
-            if len( locations_manager.GetPendingRemote() ) > 0: dc.DrawBitmap( CC.GlobalBMPs.file_repository_pending_bmp, 0, 0 )
-            elif len( locations_manager.GetCurrentRemote() ) > 0: dc.DrawBitmap( CC.GlobalBMPs.file_repository_bmp, 0, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository_bmp, repo_icon_x, 0 )
             
-        elif self._file_service_key in locations_manager.GetCurrentRemote():
+            repo_icon_x += 20
             
-            if self._file_service_key in locations_manager.GetPetitionedRemote(): dc.DrawBitmap( CC.GlobalBMPs.file_repository_petitioned_bmp, 0, 0 )
+        
+        if num_pending > 0:
+            
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository_pending_bmp, repo_icon_x, 0 )
+            
+            repo_icon_x += 20
+            
+        
+        if num_petitioned > 0:
+            
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository_petitioned_bmp, repo_icon_x, 0 )
+            
+            repo_icon_x += 20
             
         
         return bmp

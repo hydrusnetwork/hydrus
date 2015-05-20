@@ -510,7 +510,6 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
         PanelPredicateSystem.__init__( self, parent )
         
         self._service_like = wx.Choice( self )
-        self._service_like.Bind( wx.EVT_CHOICE, self.EventRatingsService )
         
         self._value_like = wx.Choice( self, choices=[ 'like', 'dislike', 'rated', 'not rated' ] ) # set words based on current service
         
@@ -522,8 +521,6 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
         
         if len( self._local_likes ) > 0: self._service_like.SetSelection( 0 )
         
-        self.EventRatingsService( None )
-        
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), CC.FLAGS_MIXED )
@@ -534,24 +531,6 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
         self.SetSizer( hbox )
         
         wx.CallAfter( self._value_like.SetFocus )
-        
-    
-    def EventRatingsService( self, event ):
-        
-        try:
-            
-            service = self._service_like.GetClientData( self._service_like.GetSelection() )
-            
-            ( like, dislike ) = service.GetLikeDislike()
-            
-            selection = self._value_like.GetSelection()
-            
-            self._value_like.SetString( 0, like )
-            self._value_like.SetString( 1, dislike )
-            
-            self._value_like.SetSelection( selection )
-            
-        except: pass
         
     
     def GetInfo( self ):

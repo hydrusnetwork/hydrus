@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientDB
 import ClientDefaults
+import ClientRatings
 import collections
 import HydrusConstants as HC
 import HydrusExceptions
@@ -63,7 +64,7 @@ class TestClientDB( unittest.TestCase ):
         
         def make_temp_files_deletable( function_called, path, traceback_gumpf ):
             
-            os.chmod( path, stat.S_IWRITE )
+            os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
             
             try: function_called( path ) # try again
             except: pass
@@ -995,15 +996,16 @@ class TestClientDB( unittest.TestCase ):
         
         info = {}
         
-        info[ 'like' ] = 'love'
-        info[ 'dislike' ] = 'hate'
+        info[ 'shape' ] = ClientRatings.CIRCLE
+        info[ 'colours' ] = ClientRatings.default_like_colours
         
         new_local_like = ( os.urandom( 32 ), HC.LOCAL_RATING_LIKE, 'new local rating', info )
         
         info = {}
         
-        info[ 'lower' ] = 1
-        info[ 'upper' ] = 5
+        info[ 'shape' ] = ClientRatings.CIRCLE
+        info[ 'colours' ] = ClientRatings.default_numerical_colours
+        info[ 'num_stars' ] = 5
         
         new_local_numerical = ( os.urandom( 32 ), HC.LOCAL_RATING_NUMERICAL, 'new local numerical', info )
         
@@ -1164,7 +1166,7 @@ class TestServerDB( unittest.TestCase ):
         
         def make_temp_files_deletable( function_called, path, traceback_gumpf ):
             
-            os.chmod( path, stat.S_IWRITE )
+            os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
             
             try: function_called( path ) # try again
             except: pass

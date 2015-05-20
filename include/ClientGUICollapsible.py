@@ -30,17 +30,17 @@ class CollapsibleOptions( ClientGUICommon.StaticBox ):
 class CollapsibleOptionsHentaiFoundry( CollapsibleOptions ):
     
     options_panel_class = ClientGUIOptionsPanels.OptionsPanelHentaiFoundry
-    staticbox_title = 'advanced hentai foundry options'
+    staticbox_title = 'import options - hentai foundry'
     
-class CollapsibleOptionsImport( CollapsibleOptions ):
+class CollapsibleOptionsImportFiles( CollapsibleOptions ):
     
-    options_panel_class = ClientGUIOptionsPanels.OptionsPanelImport
-    staticbox_title = 'advanced import options'
+    options_panel_class = ClientGUIOptionsPanels.OptionsPanelImportFiles
+    staticbox_title = 'import options - files'
     
 class CollapsibleOptionsTags( CollapsibleOptions ):
     
     options_panel_class = ClientGUIOptionsPanels.OptionsPanelTags
-    staticbox_title = 'advanced tag options'
+    staticbox_title = 'import options - tags'
     
     def __init__( self, parent, namespaces = None ):
         

@@ -42,15 +42,15 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to
     
     return service_keys_to_content_updates
     
-def GetDownloader( site_type, *args ):
+def GetGalleryParser( site_type, *args ):
     
-    if site_type == HC.SITE_TYPE_BOORU: c = DownloaderBooru
-    elif site_type == HC.SITE_TYPE_DEVIANT_ART: c = DownloaderDeviantArt
-    elif site_type == HC.SITE_TYPE_GIPHY: c = DownloaderGiphy
-    elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY: c = DownloaderHentaiFoundry
-    elif site_type == HC.SITE_TYPE_PIXIV: c = DownloaderPixiv
-    elif site_type == HC.SITE_TYPE_TUMBLR: c = DownloaderTumblr
-    elif site_type == HC.SITE_TYPE_NEWGROUNDS: c = DownloaderNewgrounds
+    if site_type == HC.SITE_TYPE_BOORU: c = GalleryParserBooru
+    elif site_type == HC.SITE_TYPE_DEVIANT_ART: c = GalleryParserDeviantArt
+    elif site_type == HC.SITE_TYPE_GIPHY: c = GalleryParserGiphy
+    elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY: c = GalleryParserHentaiFoundry
+    elif site_type == HC.SITE_TYPE_PIXIV: c = GalleryParserPixiv
+    elif site_type == HC.SITE_TYPE_TUMBLR: c = GalleryParserTumblr
+    elif site_type == HC.SITE_TYPE_NEWGROUNDS: c = GalleryParserNewgrounds
     
     return c( *args )
     
@@ -101,7 +101,7 @@ def GetYoutubeFormats( youtube_url ):
     
     return info
     
-class Downloader( object ):
+class GalleryParser( object ):
     
     def __init__( self ):
         
@@ -181,7 +181,7 @@ class Downloader( object ):
     
     def SetupGallerySearch( self ): pass
     
-class DownloaderBooru( Downloader ):
+class GalleryParserBooru( GalleryParser ):
     
     def __init__( self, booru, tags ):
         
@@ -192,7 +192,7 @@ class DownloaderBooru( Downloader ):
         
         ( self._search_url, self._advance_by_page_num, self._search_separator, self._thumb_classname ) = booru.GetGalleryParsingInfo()
         
-        Downloader.__init__( self )
+        GalleryParser.__init__( self )
         
     
     def _GetNextGalleryPageURL( self ):
@@ -372,14 +372,14 @@ class DownloaderBooru( Downloader ):
         return tags
         
     
-class DownloaderDeviantArt( Downloader ):
+class GalleryParserDeviantArt( GalleryParser ):
     
     def __init__( self, artist ):
         
         self._gallery_url = 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset='
         self._artist = artist
         
-        Downloader.__init__( self )
+        GalleryParser.__init__( self )
         
     
     def _GetNextGalleryPageURL( self ): return self._gallery_url + HydrusData.ToString( self._num_pages_done * 24 )
@@ -458,13 +458,13 @@ class DownloaderDeviantArt( Downloader ):
     
     def GetTags( self, url, tags ): return tags
     
-class DownloaderGiphy( Downloader ):
+class GalleryParserGiphy( GalleryParser ):
     
     def __init__( self, tag ):
         
         self._gallery_url = 'http://giphy.com/api/gifs?tag=' + urllib.quote( tag.replace( ' ', '+' ) ) + '&page='
         
-        Downloader.__init__( self )
+        GalleryParser.__init__( self )
         
     
     def _GetNextGalleryPageURL( self ): return self._gallery_url + HydrusData.ToString( self._num_pages_done + 1 )
@@ -506,7 +506,7 @@ class DownloaderGiphy( Downloader ):
         return tags
         
     
-class DownloaderHentaiFoundry( Downloader ):
+class GalleryParserHentaiFoundry( GalleryParser ):
     
     def __init__( self, query_type, query, advanced_hentai_foundry_options ):
         
@@ -514,7 +514,7 @@ class DownloaderHentaiFoundry( Downloader ):
         self._query = query
         self._advanced_hentai_foundry_options = advanced_hentai_foundry_options
         
-        Downloader.__init__( self )
+        GalleryParser.__init__( self )
         
     
     def _AddSessionCookies( self, request_headers ):
@@ -704,13 +704,13 @@ class DownloaderHentaiFoundry( Downloader ):
         wx.GetApp().DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
         
     
-class DownloaderNewgrounds( Downloader ):
+class GalleryParserNewgrounds( GalleryParser ):
     
     def __init__( self, query ):
         
         self._query = query
         
-        Downloader.__init__( self )
+        GalleryParser.__init__( self )
         
     
     def _GetFileURLAndTags( self, url ):
@@ -861,14 +861,14 @@ class DownloaderNewgrounds( Downloader ):
         return tags
         
     
-class DownloaderPixiv( Downloader ):
+class GalleryParserPixiv( GalleryParser ):
     
     def __init__( self, query_type, query ):
         
         self._query_type = query_type
         self._query = query
         
-        Downloader.__init__( self )
+        GalleryParser.__init__( self )
         
     
     def _AddSessionCookies( self, request_headers ):
@@ -994,13 +994,13 @@ class DownloaderPixiv( Downloader ):
         return tags
         
     
-class DownloaderTumblr( Downloader ):
+class GalleryParserTumblr( GalleryParser ):
     
     def __init__( self, username ):
         
         self._gallery_url = 'http://' + username + '.tumblr.com/api/read/json?start=%start%&num=50'
         
-        Downloader.__init__( self )
+        GalleryParser.__init__( self )
         
     
     def _GetNextGalleryPageURL( self ): return self._gallery_url.replace( '%start%', HydrusData.ToString( self._num_pages_done * 50 ) )
@@ -1122,12 +1122,12 @@ class ImportArgsGenerator( object ):
     
 class ImportArgsGeneratorGallery( ImportArgsGenerator ):
     
-    def __init__( self, job_key, item, advanced_import_options, advanced_tag_options, downloaders_factory ):
+    def __init__( self, job_key, item, advanced_import_options, advanced_tag_options, gallery_parsers_factory ):
         
         ImportArgsGenerator.__init__( self, job_key, item, advanced_import_options )
         
         self._advanced_tag_options = advanced_tag_options
-        self._downloaders_factory = downloaders_factory
+        self._gallery_parsers_factory = gallery_parsers_factory
         
     
     def _GetArgs( self, temp_path ):
@@ -1138,7 +1138,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         self._job_key.SetVariable( 'status', 'downloading' )
         
-        downloader = self._downloaders_factory( 'example' )[0]
+        gallery_parser = self._gallery_parsers_factory( 'example' )[0]
         
         def hook( range, value ):
             
@@ -1146,19 +1146,19 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
             self._job_key.SetVariable( 'value', value )
             
         
-        downloader.AddReportHook( hook )
+        gallery_parser.AddReportHook( hook )
         
         do_tags = len( self._advanced_tag_options ) > 0
         
-        if do_tags: tags = downloader.GetFileAndTags( temp_path, *url_args )
+        if do_tags: tags = gallery_parser.GetFileAndTags( temp_path, *url_args )
         else:
             
-            downloader.GetFile( temp_path, *url_args )
+            gallery_parser.GetFile( temp_path, *url_args )
             
             tags = []
             
         
-        downloader.ClearReportHooks()
+        gallery_parser.ClearReportHooks()
         
         service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
         
@@ -1175,11 +1175,11 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         self._job_key.SetVariable( 'status', 'checking url status' )
         
-        downloader = self._downloaders_factory( 'example' )[0]
+        gallery_parser = self._gallery_parsers_factory( 'example' )[0]
         
         ( status, hash ) = wx.GetApp().Read( 'url_status', url )
         
-        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options: status = 'new'
+        if status == 'deleted' and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = 'new'
         
         if status == 'redundant':
             
@@ -1189,7 +1189,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
             
             if do_tags:
                 
-                tags = downloader.GetTags( *url_args )
+                tags = gallery_parser.GetTags( *url_args )
                 
                 service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
                 
@@ -1314,7 +1314,7 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         ( status, hash ) = wx.GetApp().Read( 'md5_status', md5 )
         
-        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options: status = 'new'
+        if status == 'deleted' and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = 'new'
         
         if status == 'redundant':
             
@@ -1369,7 +1369,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         ( status, hash ) = wx.GetApp().Read( 'url_status', url )
         
-        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options: status = 'new'
+        if status == 'deleted' and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = 'new'
         
         if status == 'redundant':
             
@@ -1426,7 +1426,6 @@ class ImportController( object ):
             elif job_type == 'import_queue_builder':
                 
                 job_key.SetVariable( 'queue', [] )
-                job_key.SetVariable( 'file_limit', None )
                 
             
         
@@ -1652,22 +1651,22 @@ class ImportQueueBuilder( object ):
     
 class ImportQueueBuilderGallery( ImportQueueBuilder ):
     
-    def __init__( self, job_key, item, downloaders_factory ):
+    def __init__( self, job_key, item, gallery_parsers_factory ):
         
         ImportQueueBuilder.__init__( self, job_key, item )
         
-        self._downloaders_factory = downloaders_factory
+        self._gallery_parsers_factory = gallery_parsers_factory
         
     
     def __call__( self ):
         
         try:
             
-            raw_query = self._item
+            ( raw_query, self._get_tags_if_redundant, self._file_limit ) = self._item
             
-            downloaders = list( self._downloaders_factory( raw_query ) )
+            gallery_parsers = list( self._gallery_parsers_factory( raw_query ) )
             
-            downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
+            gallery_parsers[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
             
             total_urls_found = 0
             
@@ -1677,9 +1676,9 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
             
             while True:
                 
-                downloaders_to_remove = []
+                gallery_parsers_to_remove = []
                 
-                for downloader in downloaders:
+                for gallery_parser in gallery_parsers:
                     
                     urls_in_pages = HydrusData.ConvertIntToPrettyString( total_urls_found ) + ' urls in ' + HydrusData.ConvertIntToPrettyString( pages_found ) + ' pages'
                     
@@ -1701,18 +1700,32 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                     
                     self._job_key.SetVariable( 'status', 'found ' + urls_in_pages + '. looking for next page' )
                     
-                    page_of_url_args = downloader.GetAnotherPage()
+                    page_of_url_args = gallery_parser.GetAnotherPage()
                     
-                    total_urls_found += len( page_of_url_args )
-                    
-                    if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
+                    if len( page_of_url_args ) == 0: gallery_parsers_to_remove.append( gallery_parser )
                     else:
                         
                         queue = self._job_key.GetVariable( 'queue' )
                         
                         queue = list( queue )
                         
-                        queue.extend( page_of_url_args )
+                        if self._file_limit is not None:
+                            
+                            while len( page_of_url_args ) > 0 and total_urls_found < self._file_limit:
+                                
+                                url_args = page_of_url_args.pop( 0 )
+                                
+                                queue.append( url_args )
+                                
+                                total_urls_found += 1
+                                
+                            
+                        else:
+                            
+                            queue.extend( page_of_url_args )
+                            
+                            total_urls_found += len( page_of_url_args )
+                            
                         
                         self._job_key.SetVariable( 'queue', queue )
                         
@@ -1722,9 +1735,9 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                 
                 urls_in_pages = HydrusData.ConvertIntToPrettyString( total_urls_found ) + ' urls in ' + HydrusData.ConvertIntToPrettyString( pages_found ) + ' pages'
                 
-                for downloader in downloaders_to_remove: downloaders.remove( downloader )
+                for gallery_parser in gallery_parsers_to_remove: gallery_parsers.remove( gallery_parser )
                 
-                if len( downloaders ) == 0: break
+                if len( gallery_parsers ) == 0: break
                 
                 while self._job_key.IsPaused():
                     
@@ -1737,9 +1750,7 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                 
                 if HydrusGlobals.shutdown or self._job_key.IsDone(): break
                 
-                file_limit = self._job_key.GetVariable( 'file_limit' )
-                
-                if file_limit is not None and total_urls_found > file_limit: break
+                if self._file_limit is not None and total_urls_found >= self._file_limit: break
                 
             
             self._job_key.SetVariable( 'status', 'finished. found ' + urls_in_pages )
@@ -1765,7 +1776,7 @@ class ImportQueueBuilderURLs( ImportQueueBuilder ):
         
         try:
             
-            url = self._item
+            ( url, get_tags_if_redundant, file_limit ) = self._item
             
             self._job_key.SetVariable( 'status', 'Connecting to address' )
             

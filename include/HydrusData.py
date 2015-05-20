@@ -210,6 +210,18 @@ def ConvertShortcutToPrettyShortcut( modifier, key ):
     
     return ( modifier, key )
     
+def ConvertSiteTypeGalleryTypeToPrettyString( site_type, gallery_type ):
+    
+    if site_type == HC.SITE_TYPE_BOORU: s = gallery_type.GetName()
+    else:
+        
+        s = HC.site_type_string_lookup[ site_type ]
+        
+        if gallery_type is not None: s += ' by ' + gallery_type
+        
+    
+    return s
+    
 def ConvertStatusToPrefix( status ):
     
     if status == HC.CURRENT: return ''

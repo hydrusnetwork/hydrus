@@ -8,6 +8,46 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 158</h3></li>
+				<ul>
+					<li>subscriptions now have a 'get tags even if file already in db' checkbox, defaulting to false, which will significantly speed up subs with redundant files</li>
+					<li>subscriptions will now more accurately obey initial limit</li>
+					<li>gallery downloaders will now more accurately obey file limit</li>
+					<li>merged some hentai foundry code into the general downloader</li>
+					<li>cleaned and refactored a lot of import page initialisation code</li>
+					<li>cleaned and refactored of lot of import management panel code</li>
+					<li>cleaned and refactored of lot of import code</li>
+					<li>created numerical rating control</li>
+					<li>added numerical rating control to rating dialog</li>
+					<li>added numerical rating control to rating hover window</li>
+					<li>updated like and numerical rating service info for future support of custom colours and shapes</li>
+					<li>fixed listbooks page deletion display</li>
+					<li>fixed manage boorus saving changes to existing panels</li>
+					<li>fixed manage imageboards saving changes to existing panels</li>
+					<li>fixed manage imageboards saving remove imageboard</li>
+					<li>improved and refactored listbook code, further separating active and proto pages</li>
+					<li>improved some listbook name conflict error handling</li>
+					<li>misc cleaning</li>
+					<li>export folders and the export dialog will also export file attributes like access and modification time</li>
+					<li>export folders will now overwrite destination files if they are a different size to the exportee</li>
+					<li>export folders can now be set to 'synchronise', and so will delete any other files in the directory. existing export folders will behave exactly as before</li>
+					<li>improved misc export and import folder code</li>
+					<li>moved folder type tooltip to an explicit bit of text on export and import folder edit dialogs</li>
+					<li>thumbnails can now display multiple hydrus file repository icons (current, pending, and petitioned) if multiple states apply</li>
+					<li>hydrus file repository icons are gone from media viewer--now there is a text list</li>
+					<li>hydrus file repository text list is added to hover window as well</li>
+					<li>exclude_deleted option will no longer hide files from file repository search results--it was more confusing than helpful</li>
+					<li>improved some error-prone logic in how advanced_import_options were being stored</li>
+					<li>ratings hover window icon background colour is fixed</li>
+					<li>imported bmps should now be converted to pngs with 1:1 colour (before, they were being collapsed to a 256-colour palette, which was showing ugly dither on complicated images)</li>
+					<li>fixed a sometimes segfault crash on search refresh on OS X</li>
+					<li>the preview window now supports a simple right-click menu</li>
+					<li>added 'open installation folder' to file menu</li>
+					<li>improved some media viewer precaching code, which should speed up some scrolling, particularly on the first scroll</li>
+					<li>improved some layout code</li>
+					<li>improved some file permissions code</li>
+					<li>cleaned some canvas code</li>
+				</ul>
 				<li><h3>version 157</h3></li>
 				<ul>
 					<li>fixed a bug in listbook page initialisation and retrieval that was affecting many dialogs on OK</li>

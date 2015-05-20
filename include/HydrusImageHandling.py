@@ -42,8 +42,6 @@ def ConvertToPngIfBmp( path ):
             
             pil_image = GeneratePILImage( temp_path )
             
-            pil_image = pil_image.convert( 'P' )
-            
             pil_image.save( path, 'PNG' )
             
         finally:

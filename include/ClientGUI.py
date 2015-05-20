@@ -513,7 +513,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open Quick E&xport Folder' ), p( 'Open the export folder so you can easily access the files you have exported.' ) )
+            
+            menu.AppendSeparator()
+            
+            open = wx.Menu()
+            
+            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_install_folder' ), p( 'Installation Directory' ), p( 'Open the installation directory for this client.' ) )
+            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Quick Export Directory' ), p( 'Open the export directory so you can easily access the files you have exported.' ) )
+            
+            menu.AppendMenu( CC.ID_NULL, p( 'Open' ), open )
+            
             menu.AppendSeparator()
             
             gui_sessions = wx.GetApp().Read( 'gui_sessions' )
@@ -660,25 +669,25 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu = wx.Menu()
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_booru' ), p( 'Booru' ), p( 'Open a new tab to download files from a booru.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'giphy', None ) ), p( 'Giphy' ), p( 'Open a new tab to download files from Giphy.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'deviant art', 'artist' ) ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_GIPHY, None ) ), p( 'Giphy' ), p( 'Open a new tab to download files from Giphy.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_DEVIANT_ART, 'artist' ) ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
             hf_submenu = wx.Menu()
-            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'hentai foundry', 'artist' ) ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
-            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'hentai foundry', 'tags' ) ), p( 'By Tags' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
+            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist' ) ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
+            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_HENTAI_FOUNDRY, 'tags' ) ), p( 'By Tags' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
             submenu.AppendMenu( CC.ID_NULL, p( '&Hentai Foundry' ), hf_submenu )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'newgrounds', None ) ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_NEWGROUNDS, None ) ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
             
             ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
             
             if id != '' and password != '':
                 
                 pixiv_submenu = wx.Menu()
-                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'pixiv', 'artist_id' ) ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
-                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'pixiv', 'tag' ) ), p( 'By Tag' ), p( 'Open a new tab to download files from Hentai Pixiv.' ) )
+                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_PIXIV, 'artist_id' ) ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
+                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_PIXIV, 'tag' ) ), p( 'By Tag' ), p( 'Open a new tab to download files from Hentai Pixiv.' ) )
                 submenu.AppendMenu( CC.ID_NULL, p( '&Pixiv' ), pixiv_submenu )
                 
             
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( 'tumblr', None ) ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_TUMBLR, None ) ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( '&New Gallery Download Page' ), submenu )
             
@@ -1176,18 +1185,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 booru = dlg.GetBooru()
                 
-                self._NewPageImportGallery( 'booru', booru )
+                self._NewPageImportGallery( HC.SITE_TYPE_BOORU, booru )
                 
             
         
     
-    def _NewPageImportGallery( self, name, import_type ):
+    def _NewPageImportGallery( self, site_type, gallery_type ):
         
-        new_page = ClientGUIPages.PageImportGallery( self._notebook, name, import_type )
+        new_page = ClientGUIPages.PageImportGallery( self._notebook, site_type, gallery_type )
         
-        if name == 'booru': page_name = import_type.GetName()
-        elif import_type is None: page_name = name
-        else: page_name = name + ' by ' + import_type
+        page_name = HydrusData.ConvertSiteTypeGalleryTypeToPrettyString( site_type, gallery_type )
         
         self._notebook.AddPage( new_page, page_name, select = True )
         
@@ -1261,6 +1268,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         export_path = ClientData.GetExportPath()
         
         HydrusFileHandling.LaunchDirectory( export_path )
+        
+    
+    def _OpenInstallFolder( self ):
+        
+        HydrusFileHandling.LaunchDirectory( HC.BASE_DIR )
         
     
     def _PauseSync( self, sync_type ):
@@ -1922,9 +1934,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'new_import_booru': self._NewPageImportBooru()
             elif command == 'new_import_gallery':
                 
-                ( gallery_name, gallery_type ) = data
+                ( site_type, gallery_type ) = data
                 
-                self._NewPageImportGallery( gallery_name, gallery_type )
+                self._NewPageImportGallery( site_type, gallery_type )
                 
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_url': self._NewPageImportURL()
@@ -1935,6 +1947,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
             elif command == 'open_export_folder': self._OpenExportFolder()
+            elif command == 'open_install_folder': self._OpenInstallFolder()
             elif command == 'options': self._ManageOptions()
             elif command == 'pause_export_folders_sync': self._PauseSync( 'export_folders' )
             elif command == 'pause_import_folders_sync': self._PauseSync( 'import_folders' )
@@ -2016,7 +2029,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         FrameComposeMessage( empty_draft_message )
         
     '''
-    def NewPageImportGallery( self, gallery_name, gallery_type ): self._NewPageImportGallery( gallery_name, gallery_type )
+    def NewPageImportGallery( self, site_type, gallery_type ): self._NewPageImportGallery( site_type, gallery_type )
     
     def NewPageImportHDD( self, paths_info, advanced_import_options = None, paths_to_tags = None, delete_after_success = False ):
         
@@ -2253,43 +2266,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
     def __init__( self ):
         
-        def InitialiseControls():
-            
-            self._notebook = wx.Notebook( self )
-            
-            self._local_listbook = ClientGUICommon.ListBook( self._notebook )
-            self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
-            
-            self._edit = wx.Button( self, label = 'manage services' )
-            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-            
-            self._ok = wx.Button( self, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._InitialiseServices()
-            
-        
-        def ArrangeControls():
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._notebook.AddPage( self._local_listbook, 'local' )
-            self._notebook.AddPage( self._remote_listbook, 'remote' )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._edit, CC.FLAGS_SMALL_INDENT )
-            vbox.AddF( self._ok, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            self.SetInitialSize( ( 880, 620 ) )
-            
-        
         ( pos_x, pos_y ) = wx.GetApp().GetGUI().GetPositionTuple()
         
         pos = ( pos_x + 25, pos_y + 50 )
@@ -2298,11 +2274,33 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         ClientGUICommon.Frame.__init__( self, tlp, title = wx.GetApp().PrepStringForDisplay( 'Review Services' ), pos = pos )
         
-        InitialiseControls()
+        self._notebook = wx.Notebook( self )
         
-        PopulateControls()
+        self._local_listbook = ClientGUICommon.ListBook( self._notebook )
+        self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
         
-        ArrangeControls()
+        self._edit = wx.Button( self, label = 'manage services' )
+        self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._ok = wx.Button( self, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._InitialiseServices()
+        
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        
+        self._notebook.AddPage( self._local_listbook, 'local' )
+        self._notebook.AddPage( self._remote_listbook, 'remote' )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._edit, CC.FLAGS_SMALL_INDENT )
+        vbox.AddF( self._ok, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        self.SetInitialSize( ( 880, 620 ) )
         
         self.Show( True )
         
@@ -2346,16 +2344,14 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 listbook_dict[ service_type ] = listbook
                 
-                parent_listbook.AddPage( listbook, name )
+                parent_listbook.AddPage( name, listbook )
                 
             
             listbook = listbook_dict[ service_type ]
             
-            page_info = ( self._Panel, [ listbook, service.GetServiceKey() ], {} )
-            
             name = service.GetName()
             
-            listbook.AddPage( page_info, name )
+            listbook.AddPageArgs( name, self._Panel, ( listbook, service.GetServiceKey() ), {} )
             
         
         wx.CallAfter( self._local_listbook.Layout )

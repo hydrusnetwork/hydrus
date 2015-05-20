@@ -2,6 +2,8 @@ import ClientGUICollapsible
 import ClientConstants as CC
 import ClientGUICommon
 import ClientCaches
+import ClientData
+import ClientDefaults
 import HydrusConstants as HC
 import wx
 import wx.lib.masked.timectrl
@@ -185,7 +187,7 @@ class OptionsPanelHentaiFoundry( OptionsPanel ):
         #info[ 'filter_type' ] = 0
         
     
-class OptionsPanelImport( OptionsPanel ):
+class OptionsPanelImportFiles( OptionsPanel ):
     
     def __init__( self, parent ):
         
@@ -196,8 +198,10 @@ class OptionsPanelImport( OptionsPanel ):
         self._exclude_deleted = wx.CheckBox( self, label = 'exclude already deleted files' )
         
         self._min_size = ClientGUICommon.NoneableSpinCtrl( self, 'minimum size (KB): ', multiplier = 1024 )
+        self._min_size.SetValue( 5120 )
         
         self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'minimum resolution: ', num_dimensions = 2 )
+        self._min_resolution.SetValue( ( 50, 50 ) )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -208,49 +212,47 @@ class OptionsPanelImport( OptionsPanel ):
         
         self.SetSizer( vbox )
         
-        self.SetInfo( {} )
+        self.SetInfo( ClientDefaults.GetDefaultAdvancedImportOptions() )
         
     
     def GetInfo( self ):
         
         info = {}
         
-        if self._auto_archive.GetValue(): info[ 'auto_archive' ] = True
+        info[ 'auto_archive' ] = self._auto_archive.GetValue()
         
-        if self._exclude_deleted.GetValue(): info[ 'exclude_deleted_files' ] = True
+        info[ 'exclude_deleted_files' ] = self._exclude_deleted.GetValue()
         
-        min_size = self._min_size.GetValue()
+        info[ 'min_resolution' ] = self._min_resolution.GetValue()
         
-        if min_size is not None: info[ 'min_size' ] = min_size
-        
-        min_resolution = self._min_resolution.GetValue()
-        
-        if min_resolution is not None: info[ 'min_resolution' ] = min_resolution
+        info[ 'min_size' ] = self._min_size.GetValue()
         
         return info
         
     
+    def GetOptions( self ):
+        
+        options = ClientData.ImportFileOptions()
+        
+        automatic_archive = self._auto_archive.GetValue()
+        exclude_deleted = self._exclude_deleted.GetValue()
+        min_size = self._min_size.GetValue()
+        min_resolution = self._min_resolution.GetValue()
+        
+        options.SetTuple( automatic_archive, exclude_deleted, min_size, min_resolution )
+        
+        return options
+        
+    
     def SetInfo( self, info ):
         
-        if 'auto_archive' in info: self._auto_archive.SetValue( info[ 'auto_archive' ] )
-        else: self._auto_archive.SetValue( False )
+        self._auto_archive.SetValue( info[ 'auto_archive' ] )
         
-        if 'exclude_deleted_files' in info: self._exclude_deleted.SetValue( info[ 'exclude_deleted_files' ] )
-        else: self._exclude_deleted.SetValue( HC.options[ 'exclude_deleted_files' ] )
+        self._exclude_deleted.SetValue( info[ 'exclude_deleted_files' ] )
         
-        if 'min_size' in info: self._min_size.SetValue( info[ 'min_size' ] )
-        else:
-            
-            self._min_size.SetValue( 5120 )
-            self._min_size.SetValue( None )
-            
+        self._min_size.SetValue( info[ 'min_size' ] )
         
-        if 'min_resolution' in info: self._min_resolution.SetValue( info[ 'min_resolution' ] )
-        else:
-            
-            self._min_resolution.SetValue( ( 50, 50 ) )
-            self._min_resolution.SetValue( None )
-            
+        self._min_resolution.SetValue( info[ 'min_resolution' ] )
         
     
 class OptionsPanelPeriodic( OptionsPanel ):

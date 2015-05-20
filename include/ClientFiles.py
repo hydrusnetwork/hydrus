@@ -134,6 +134,46 @@ class LocationsManager( object ):
     def GetDeleted( self ): return self._deleted
     def GetDeletedRemote( self ): return self._deleted - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
     
+    def GetFileRepositoryStrings( self ):
+    
+        current = self.GetCurrentRemote()
+        pending = self.GetPendingRemote()
+        petitioned = self.GetPetitionedRemote()
+        
+        file_repo_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
+        
+        file_repo_services = list( file_repo_services )
+        
+        cmp_func = lambda a, b: cmp( a.GetName(), b.GetName() )
+        
+        file_repo_services.sort( cmp = cmp_func )
+        
+        file_repo_service_keys_and_names = [ ( file_repo_service.GetServiceKey(), file_repo_service.GetName() ) for file_repo_service in file_repo_services ]
+        
+        file_repo_strings = []
+        
+        for ( service_key, name ) in file_repo_service_keys_and_names:
+            
+            if service_key in pending:
+                
+                file_repo_strings.append( name + ' (+)' )
+                
+            elif service_key in current:
+                
+                if service_key in petitioned:
+                    
+                    file_repo_strings.append( name + ' (-)' )
+                    
+                else:
+                    
+                    file_repo_strings.append( name )
+                    
+                
+            
+        
+        return file_repo_strings
+        
+    
     def GetPending( self ): return self._pending
     def GetPendingRemote( self ): return self._pending - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
     

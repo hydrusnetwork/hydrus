@@ -165,6 +165,19 @@ def GetClientDefaultOptions():
     
     return options
     
+def GetDefaultAdvancedImportOptions():
+    
+    options = wx.GetApp().GetOptions()
+    
+    a_i_o = {}
+    
+    a_i_o[ 'auto_archive' ] = False
+    a_i_o[ 'exclude_deleted_files' ] = options[ 'exclude_deleted_files' ]
+    a_i_o[ 'min_size' ] = None
+    a_i_o[ 'min_resolution' ] = None
+    
+    return a_i_o
+    
 def GetDefaultBoorus():
     
     boorus = {}

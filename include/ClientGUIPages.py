@@ -6,6 +6,7 @@ import ClientGUIManagement
 import ClientGUIMedia
 import ClientGUICanvas
 import ClientDownloading
+import HydrusData
 import HydrusThreading
 import inspect
 import os
@@ -28,22 +29,14 @@ class PageBase( object ):
         self._management_panel = None
         self._media_panel = None
         
-        self._InitControllers()
-        
         self._pretty_status = ''
         
         HydrusGlobals.pubsub.sub( self, 'SetPrettyStatus', 'new_page_status' )
         
     
-    def _InitControllers( self ): pass
-    
     def _InitManagementPanel( self ): pass
     
     def _InitMediaPanel( self ): pass
-    
-    def _PauseControllers( self ): pass
-    
-    def _ResumeControllers( self ): pass
     
     def CleanBeforeDestroy( self ): pass
     
@@ -65,8 +58,6 @@ class PageBase( object ):
     def PageShown( self ): HydrusGlobals.pubsub.pub( 'page_shown', self._page_key )
     
     def Pause( self ):
-        
-        self._PauseControllers()
         
         HydrusGlobals.pubsub.pub( 'pause', self._page_key )
         
@@ -96,8 +87,6 @@ class PageBase( object ):
     def TestAbleToClose( self ): pass
     
     def Resume( self ):
-        
-        self._ResumeControllers()
         
         HydrusGlobals.pubsub.pub( 'resume', self._page_key )
         
@@ -235,7 +224,10 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
             
             self.ReplaceWindow( self._media_panel, new_panel )
             
-            wx.CallAfter( self._media_panel.Destroy )
+            self._media_panel.Hide()
+            
+            # If this is a CallAfter, OS X segfaults on refresh jej
+            wx.CallLater( 500, self._media_panel.Destroy )
             
             self._media_panel = new_panel
             
@@ -247,60 +239,7 @@ class PageImport( PageWithMedia ):
     
     _is_storable = True
     
-    def _GenerateImportArgsGeneratorFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
-            
-            return ClientDownloading.ImportArgsGenerator( job_key, item, advanced_import_options )
-            
-        
-        return factory
-        
-    
-    def _GenerateImportQueueBuilderFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            return ClientDownloading.ImportQueueBuilder( job_key, item )
-            
-        
-        return factory
-        
-    
     def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_key, self._initial_media_results )
-    
-    def _InitControllers( self ):
-        
-        import_args_generator_factory = self._GenerateImportArgsGeneratorFactory()
-        import_queue_builder_factory = self._GenerateImportQueueBuilderFactory()
-        
-        self._import_controller = ClientDownloading.ImportController( import_args_generator_factory, import_queue_builder_factory, page_key = self._page_key )
-        
-        self._import_controller.StartDaemon()
-        
-    
-    def _PauseControllers( self ):
-        
-        controller_job_key = self._import_controller.GetJobKey( 'controller' )
-        
-        controller_job_key.Pause()
-        
-    
-    def _ResumeControllers( self ):
-        
-        controller_job_key = self._import_controller.GetJobKey( 'controller' )
-        
-        controller_job_key.Resume()
-        
-    
-    def CleanBeforeDestroy( self ):
-        
-        PageWithMedia.CleanBeforeDestroy( self )
-        
-        self._import_controller.CleanBeforeDestroy()
-        
     
     def GetSessionArgs( self ):
         
@@ -314,216 +253,26 @@ class PageImport( PageWithMedia ):
     
 class PageImportGallery( PageImport ):
     
-    def __init__( self, parent, gallery_name, gallery_type, initial_hashes = None, starting_from_session = False ):
+    def __init__( self, parent, site_type, gallery_type, initial_hashes = None, starting_from_session = False ):
         
         if initial_hashes is None: initial_hashes = []
         
-        self._gallery_name = gallery_name
+        self._site_type = site_type
         self._gallery_type = gallery_type
         
         PageImport.__init__( self, parent, initial_hashes = initial_hashes, starting_from_session = starting_from_session )
         
     
-    def _GenerateImportArgsGeneratorFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
-            
-            advanced_tag_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedTagOptions )
-            
-            downloaders_factory = self._GetDownloadersFactory()
-            
-            return ClientDownloading.ImportArgsGeneratorGallery( job_key, item, advanced_import_options, advanced_tag_options, downloaders_factory )
-            
-        
-        return factory
-        
-    
-    def _GenerateImportQueueBuilderFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            downloaders_factory = self._GetDownloadersFactory()
-            
-            return ClientDownloading.ImportQueueBuilderGallery( job_key, item, downloaders_factory )
-            
-        
-        return factory
-        
-    
-    def _GetDownloadersFactory( self ):
-        
-        if self._gallery_name == 'booru':
-            
-            def downloaders_factory( raw_tags ):
-                
-                booru = self._gallery_type
-                tags = raw_tags.split( ' ' )
-                
-                return ( ClientDownloading.DownloaderBooru( booru, tags ), )
-                
-            
-        elif self._gallery_name == 'deviant art':
-            
-            if self._gallery_type == 'artist':
-                
-                def downloaders_factory( artist ):
-                    
-                    return ( ClientDownloading.DownloaderDeviantArt( artist ), )
-                    
-                
-            
-        elif self._gallery_name == 'giphy':
-            
-            def downloaders_factory( tag ):
-                
-                return ( ClientDownloading.DownloaderGiphy( tag ), )
-                
-            
-        elif self._gallery_name == 'hentai foundry':
-            
-            if self._gallery_type == 'artist':
-                
-                def downloaders_factory( artist ):
-                    
-                    advanced_hentai_foundry_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedHentaiFoundryOptions )
-                    
-                    pictures_downloader = ClientDownloading.DownloaderHentaiFoundry( 'artist pictures', artist, advanced_hentai_foundry_options )
-                    scraps_downloader = ClientDownloading.DownloaderHentaiFoundry( 'artist scraps', artist, advanced_hentai_foundry_options )
-                    
-                    return ( pictures_downloader, scraps_downloader )
-                    
-                
-            elif self._gallery_type == 'tags':
-                
-                def downloaders_factory( raw_tags ):
-                    
-                    advanced_hentai_foundry_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedHentaiFoundryOptions )
-                    
-                    tags = raw_tags.split( ' ' )
-                    
-                    return ( ClientDownloading.DownloaderHentaiFoundry( 'tags', tags, advanced_hentai_foundry_options ), )
-                    
-                
-            
-        elif self._gallery_name == 'newgrounds':
-            
-            def downloaders_factory( artist ):
-                
-                return ( ClientDownloading.DownloaderNewgrounds( artist ), )
-                
-            
-        elif self._gallery_name == 'pixiv':
-            
-            if self._gallery_type in ( 'artist', 'artist_id' ):
-                
-                def downloaders_factory( artist_id ):
-                    
-                    return ( ClientDownloading.DownloaderPixiv( 'artist_id', artist_id ), )
-                    
-                
-            elif self._gallery_type == 'tag':
-                
-                def downloaders_factory( tag ):
-                    
-                    return ( ClientDownloading.DownloaderPixiv( 'tags', tag ), )
-                    
-                
-            
-        elif self._gallery_name == 'tumblr':
-            
-            def downloaders_factory( username ):
-                
-                return ( ClientDownloading.DownloaderTumblr( username ), )
-                
-            
-        
-        return downloaders_factory
-        
-    
     def _InitManagementPanel( self ):
         
-        if self._gallery_name == 'hentai foundry':
-            
-            name = 'hentai foundry'
-            namespaces = [ 'creator', 'title', '' ]
-            
-            if self._gallery_type == 'artist': initial_search_value = 'artist username'
-            elif self._gallery_type == 'tags': initial_search_value = 'search tags'
-            
-            ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_HENTAI_FOUNDRY )
-            
-            self._management_panel = ClientGUIManagement.ManagementPanelImportsGalleryHentaiFoundry( self._search_preview_split, self, self._page_key, self._import_controller, name, namespaces, ato, initial_search_value, starting_from_session = self._starting_from_session )
-            
-        else:
-            
-            if self._gallery_name == 'booru':
-                
-                booru = self._gallery_type
-                
-                name = booru.GetName()
-                namespaces = booru.GetNamespaces()
-                initial_search_value = 'search tags'
-                
-                ato = ClientData.GetDefaultAdvancedTagOptions( ( HC.SITE_TYPE_BOORU, name ) )
-                
-            elif self._gallery_name == 'deviant art':
-                
-                if self._gallery_type == 'artist':
-                    
-                    name = 'deviant art'
-                    namespaces = [ 'creator', 'title' ]
-                    initial_search_value = 'artist username'
-                    
-                
-                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_DEVIANT_ART )
-                
-            elif self._gallery_name == 'giphy':
-                
-                name = 'giphy'
-                namespaces = [ '' ]
-        
-                initial_search_value = 'search tag'
-                
-                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_GIPHY )
-                
-            elif self._gallery_name == 'newgrounds':
-                
-                name = 'newgrounds'
-                namespaces = [ 'creator', 'title', '' ]
-                initial_search_value = 'artist username'
-                
-                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_NEWGROUNDS )
-                
-            elif self._gallery_name == 'pixiv':
-                
-                name = 'pixiv'
-                namespaces = [ 'creator', 'title', '' ]
-                
-                if self._gallery_type in ( 'artist', 'artist_id' ): initial_search_value = 'numerical artist id'
-                elif self._gallery_type == 'tag': initial_search_value = 'search tag'
-                
-                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_PIXIV )
-                
-            elif self._gallery_name == 'tumblr':
-                
-                name = 'tumblr'
-                namespaces = [ '' ]
-                initial_search_value = 'username'
-                
-                ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_TUMBLR )
-                
-            
-            self._management_panel = ClientGUIManagement.ManagementPanelImportsGallery( self._search_preview_split, self, self._page_key, self._import_controller, name, namespaces, ato, initial_search_value, starting_from_session = self._starting_from_session )
-            
+        self._management_panel = ClientGUIManagement.ManagementPanelImportsGallery( self._search_preview_split, self, self._page_key, self._site_type, self._gallery_type, starting_from_session = self._starting_from_session )
         
     
     def GetSessionArgs( self ):
         
         hashes = [ media.GetHash() for media in self._media_panel.GetFlatMedia() ]
         
-        args = ( self._gallery_name, self._gallery_type )
+        args = ( self._site_type, self._gallery_type )
         kwargs = { 'initial_hashes' : hashes }
         
         return ( args, kwargs )
@@ -543,20 +292,8 @@ class PageImportHDD( PageImport ):
         
         PageImport.__init__( self, parent, initial_hashes = initial_hashes, starting_from_session = starting_from_session )
         
-        self._import_controller.PendImportQueueJob( self._paths_info )
-        
     
-    def _GenerateImportArgsGeneratorFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            return ClientDownloading.ImportArgsGeneratorHDD( job_key, item, self._advanced_import_options, self._paths_to_tags, self._delete_after_success )
-            
-        
-        return factory
-        
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportHDD( self._search_preview_split, self, self._page_key, self._import_controller, starting_from_session = self._starting_from_session )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportHDD( self._search_preview_split, self, self._page_key, self._paths_info, self._advanced_import_options, self._paths_to_tags, self._delete_after_success, starting_from_session = self._starting_from_session )
     
     def GetSessionArgs( self ):
         
@@ -570,60 +307,11 @@ class PageImportHDD( PageImport ):
     
 class PageImportThreadWatcher( PageImport ):
     
-    def _GenerateImportArgsGeneratorFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
-            advanced_tag_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedTagOptions )
-            
-            # fourchan_board should be on the job_key or whatever. it is stuck on initial queue generation
-            # we should not be getting it from the management_panel
-            # we should have access to this info from the job_key or w/e
-            
-            return ClientDownloading.ImportArgsGeneratorThread( job_key, item, advanced_import_options, advanced_tag_options )
-            
-        
-        return factory
-        
-    
-    def _GenerateImportQueueBuilderFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            return ClientDownloading.ImportQueueBuilderThread( job_key, item )
-            
-        
-        return factory
-        
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportThreadWatcher( self._search_preview_split, self, self._page_key, self._import_controller, starting_from_session = self._starting_from_session )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportThreadWatcher( self._search_preview_split, self, self._page_key, starting_from_session = self._starting_from_session )
     
 class PageImportURL( PageImport ):
     
-    def _GenerateImportArgsGeneratorFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
-            
-            return ClientDownloading.ImportArgsGeneratorURLs( job_key, item, advanced_import_options )
-            
-        
-        return factory
-        
-    
-    def _GenerateImportQueueBuilderFactory( self ):
-        
-        def factory( job_key, item ):
-            
-            return ClientDownloading.ImportQueueBuilderURLs( job_key, item )
-            
-        
-        return factory
-        
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportsURL( self._search_preview_split, self, self._page_key, self._import_controller, starting_from_session = self._starting_from_session )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportsURL( self._search_preview_split, self, self._page_key, starting_from_session = self._starting_from_session )
     
 class PagePetitions( PageWithMedia ):
     

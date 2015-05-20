@@ -93,22 +93,61 @@ def DAEMONCheckExportFolders():
                     
                     terms = ClientData.ParseExportPhrase( phrase )
                     
+                    filenames_used = set()
+                    
                     for media_result in media_results:
                         
                         hash = media_result.GetHash()
                         mime = media_result.GetMime()
                         
-                        filename = ClientData.GenerateExportFilename( media_result, terms )
+                        source_path = ClientFiles.GetFilePath( hash, mime )
                         
-                        ext = HC.mime_ext_lookup[ mime ]
+                        filename = ClientData.GenerateExportFilename( media_result, terms ) + HC.mime_ext_lookup[ mime ]
                         
-                        path = folder_path + os.path.sep + filename + ext
+                        dest_path = folder_path + os.path.sep + filename
                         
-                        if not os.path.exists( path ):
+                        do_copy = True
+                        
+                        if filename in filenames_used:
                             
-                            source_path = ClientFiles.GetFilePath( hash, mime )
+                            do_copy = False
                             
-                            shutil.copy( source_path, path )
+                        elif os.path.exists( dest_path ):
+                            
+                            source_info = os.lstat( source_path )
+                            
+                            source_size = source_info[6]
+                            
+                            dest_info = os.lstat( dest_path )
+                            
+                            dest_size = dest_info[6]
+                            
+                            if source_size == dest_size:
+                                
+                                do_copy = False
+                                
+                            
+                        
+                        if do_copy:
+                            
+                            shutil.copy( source_path, dest_path )
+                            shutil.copystat( source_path, dest_path )
+                            try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
+                            except: pass
+                            
+                        
+                        filenames_used.add( filename )
+                        
+                    
+                    if details[ 'type' ] == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+                        
+                        all_filenames = dircache.listdir( folder_path )
+                        
+                        deletee_paths = { folder_path + os.path.sep + filename for filename in all_filenames if filename not in filenames_used }
+                        
+                        for deletee_path in deletee_paths:
+                            
+                            os.remove( deletee_path )
                             
                         
                     
@@ -1039,6 +1078,7 @@ def DAEMONSynchroniseSubscriptions():
             query = info[ 'query' ]
             frequency_type = info[ 'frequency_type' ]
             frequency = info[ 'frequency' ]
+            get_tags_if_redundant = info[ 'get_tags_if_redundant' ]
             initial_limit = info[ 'initial_limit' ]
             advanced_tag_options = info[ 'advanced_tag_options' ]
             advanced_import_options = info[ 'advanced_import_options' ]
@@ -1115,9 +1155,9 @@ def DAEMONSynchroniseSubscriptions():
                     elif site_type == HC.SITE_TYPE_PIXIV: all_args = ( ( query_type, query ), )
                     else: all_args = ( ( query, ), )
                     
-                    downloaders = [ ClientDownloading.GetDownloader( site_type, *args ) for args in all_args ]
+                    gallery_parsers = [ ClientDownloading.GetGalleryParser( site_type, *args ) for args in all_args ]
                     
-                    downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
+                    gallery_parsers[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
                     
                     all_url_args = []
                     
@@ -1158,25 +1198,43 @@ def DAEMONSynchroniseSubscriptions():
                                 
                             
                         
-                        if last_checked == 0 and initial_limit is not None and len( all_url_args ) > initial_limit: break
+                        if last_checked == 0 and initial_limit is not None and len( all_url_args ) >= initial_limit: break
                         
-                        downloaders_to_remove = []
+                        gallery_parsers_to_remove = []
                         
-                        for downloader in downloaders:
+                        for gallery_parser in gallery_parsers:
                             
-                            if last_checked == 0 and initial_limit is not None and len( all_url_args ) > initial_limit: break
+                            if last_checked == 0 and initial_limit is not None and len( all_url_args ) >= initial_limit: break
                             
-                            page_of_url_args = downloader.GetAnotherPage()
+                            page_of_url_args = gallery_parser.GetAnotherPage()
                             
-                            if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
+                            if len( page_of_url_args ) == 0: gallery_parsers_to_remove.append( gallery_parser )
                             else:
                                 
                                 fresh_url_args = [ url_args for url_args in page_of_url_args if url_args[0] not in url_cache ]
                                 
-                                # i.e. we have hit the url cache, so no need to fetch any more pages
-                                if len( fresh_url_args ) == 0 or len( fresh_url_args ) != len( page_of_url_args ): downloaders_to_remove.append( downloader )
+                                reached_url_cache = len( fresh_url_args ) != len( page_of_url_args )
                                 
-                                all_url_args.extend( fresh_url_args )
+                                if reached_url_cache: gallery_parsers_to_remove.append( gallery_parser )
+                                
+                                if initial_limit is not None:
+                                    
+                                    while len( fresh_url_args ) > 0:
+                                        
+                                        url_args = fresh_url_args.pop( 0 )
+                                        
+                                        all_url_args.append( url_args )
+                                        
+                                        if len( all_url_args ) >= initial_limit:
+                                            
+                                            break
+                                            
+                                        
+                                    
+                                else:
+                                    
+                                    all_url_args.extend( fresh_url_args )
+                                    
                                 
                                 job_key.SetVariable( 'popup_message_text_1', 'found ' + HydrusData.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files' )
                                 
@@ -1184,9 +1242,9 @@ def DAEMONSynchroniseSubscriptions():
                             time.sleep( 5 )
                             
                         
-                        for downloader in downloaders_to_remove: downloaders.remove( downloader )
+                        for gallery_parser in gallery_parsers_to_remove: gallery_parsers.remove( gallery_parser )
                         
-                        if len( downloaders ) == 0: break
+                        if len( gallery_parsers ) == 0: break
                         
                     
                     all_url_args.reverse() # to do oldest first, which means we can save incrementally
@@ -1252,17 +1310,17 @@ def DAEMONSynchroniseSubscriptions():
                             
                             ( status, hash ) = wx.GetApp().Read( 'url_status', url )
                             
-                            if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
+                            if status == 'deleted' and not advanced_import_options[ 'exclude_deleted_files' ]: status = 'new'
                             
                             if status == 'redundant':
                                 
-                                if do_tags:
+                                if do_tags and get_tags_if_redundant:
                                     
                                     try:
                                         
                                         job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'found file in db, fetching tags' )
                                         
-                                        tags = downloader.GetTags( *url_args )
+                                        tags = gallery_parser.GetTags( *url_args )
                                         
                                         service_keys_to_tags = ClientDownloading.ConvertTagsToServiceKeysToTags( tags, advanced_tag_options )
                                         
@@ -1283,10 +1341,10 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 try:
                                     
-                                    if do_tags: tags = downloader.GetFileAndTags( temp_path, *url_args )
+                                    if do_tags: tags = gallery_parser.GetFileAndTags( temp_path, *url_args )
                                     else:
                                         
-                                        downloader.GetFile( temp_path, *url_args )
+                                        gallery_parser.GetFile( temp_path, *url_args )
                                         
                                         tags = []
                                         
@@ -1319,6 +1377,7 @@ def DAEMONSynchroniseSubscriptions():
                             info[ 'query' ] = query
                             info[ 'frequency_type' ] = frequency_type
                             info[ 'frequency' ] = frequency
+                            info[ 'get_tags_if_redundant' ] = get_tags_if_redundant
                             info[ 'initial_limit' ] = initial_limit
                             info[ 'advanced_tag_options' ] = advanced_tag_options
                             info[ 'advanced_import_options' ] = advanced_import_options
@@ -1370,6 +1429,7 @@ def DAEMONSynchroniseSubscriptions():
                 info[ 'query' ] = query
                 info[ 'frequency_type' ] = frequency_type
                 info[ 'frequency' ] = frequency
+                info[ 'get_tags_if_redundant' ] = get_tags_if_redundant
                 info[ 'initial_limit' ] = initial_limit
                 info[ 'advanced_tag_options' ] = advanced_tag_options
                 info[ 'advanced_import_options' ] = advanced_import_options

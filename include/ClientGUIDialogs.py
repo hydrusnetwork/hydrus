@@ -467,52 +467,35 @@ class DialogButtonChoice( Dialog ):
     
     def __init__( self, parent, intro, choices ):
         
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            self._buttons = []
-            self._ids_to_data = {}
-            
-            i = 0
-            
-            for ( text, data ) in choices:
-                
-                self._buttons.append( wx.Button( self, label = text, id = i ) )
-                
-                self._ids_to_data[ i ] = data
-                
-                i += 1
-                
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            for button in self._buttons: vbox.AddF( button, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'choose what to do', position = 'center' )
         
-        InitialiseControls()
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        PopulateControls()
+        self._buttons = []
+        self._ids_to_data = {}
         
-        ArrangeControls()
+        i = 0
+        
+        for ( text, data ) in choices:
+            
+            self._buttons.append( wx.Button( self, label = text, id = i ) )
+            
+            self._ids_to_data[ i ] = data
+            
+            i += 1
+            
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        for button in self._buttons: vbox.AddF( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         
@@ -538,47 +521,30 @@ class DialogChooseNewServiceMethod( Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            register_message = 'I want to initialise a new account with the server. I have a registration key (a key starting with \'r\').'
-            
-            self._register = wx.Button( self, label = register_message )
-            self._register.Bind( wx.EVT_BUTTON, self.EventRegister )
-            
-            setup_message = 'The account is already initialised; I just want to add it to this client. I have a normal access key.'
-            
-            self._setup = wx.Button( self, id = wx.ID_OK, label = setup_message )
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._register, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'how to set up the account?', position = 'center' )
         
-        InitialiseControls()
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        PopulateControls()
+        register_message = 'I want to initialise a new account with the server. I have a registration key (a key starting with \'r\').'
         
-        ArrangeControls()
+        self._register = wx.Button( self, label = register_message )
+        self._register.Bind( wx.EVT_BUTTON, self.EventRegister )
+        
+        setup_message = 'The account is already initialised; I just want to add it to this client. I have a normal access key.'
+        
+        self._setup = wx.Button( self, id = wx.ID_OK, label = setup_message )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._register, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         self._should_register = False
         
@@ -598,52 +564,35 @@ class DialogFinishFiltering( Dialog ):
     
     def __init__( self, parent, num_kept, num_deleted, keep = 'keep', delete = 'delete' ):
         
-        def InitialiseControls():
-            
-            self._commit = wx.Button( self, id = wx.ID_YES, label = 'commit' )
-            self._commit.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._forget = wx.Button( self, id = wx.ID_NO, label = 'forget' )
-            self._forget.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            self._back = wx.Button( self, id = wx.ID_CANCEL, label = 'back to filtering' )
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            label = keep + ' ' + HydrusData.ConvertIntToPrettyString( num_kept ) + ' and ' + delete + ' ' + HydrusData.ConvertIntToPrettyString( num_deleted ) + ' files?'
-            
-            vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'are you sure?', position = 'center' )
         
-        InitialiseControls()
+        self._commit = wx.Button( self, id = wx.ID_YES, label = 'commit' )
+        self._commit.SetForegroundColour( ( 0, 128, 0 ) )
         
-        PopulateControls()
+        self._forget = wx.Button( self, id = wx.ID_NO, label = 'forget' )
+        self._forget.SetForegroundColour( ( 128, 0, 0 ) )
         
-        ArrangeControls()
+        self._back = wx.Button( self, id = wx.ID_CANCEL, label = 'back to filtering' )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        label = keep + ' ' + HydrusData.ConvertIntToPrettyString( num_kept ) + ' and ' + delete + ' ' + HydrusData.ConvertIntToPrettyString( num_deleted ) + ' files?'
+        
+        vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._commit.SetFocus )
         
@@ -652,57 +601,40 @@ class DialogFinishRatingFiltering( Dialog ):
     
     def __init__( self, parent, num_certain_ratings, num_uncertain_ratings ):
         
-        def InitialiseControls():
-            
-            self._commit = wx.Button( self, id = wx.ID_YES, label = 'commit' )
-            self._commit.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._forget = wx.Button( self, id = wx.ID_NO, label = 'forget' )
-            self._forget.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            self._back = wx.Button( self, id = wx.ID_CANCEL, label = 'back to filtering' )
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            info_strings = []
-            
-            if num_certain_ratings > 0: info_strings.append( HydrusData.ConvertIntToPrettyString( num_certain_ratings ) + ' ratings' )
-            if num_uncertain_ratings > 0: info_strings.append( HydrusData.ConvertIntToPrettyString( num_uncertain_ratings ) + ' uncertain changes' )
-            
-            label = 'Apply ' + ' and '.join( info_strings ) + '?'
-            
-            vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'are you sure?', position = 'center' )
         
-        InitialiseControls()
+        self._commit = wx.Button( self, id = wx.ID_YES, label = 'commit' )
+        self._commit.SetForegroundColour( ( 0, 128, 0 ) )
         
-        PopulateControls()
+        self._forget = wx.Button( self, id = wx.ID_NO, label = 'forget' )
+        self._forget.SetForegroundColour( ( 128, 0, 0 ) )
         
-        ArrangeControls()
+        self._back = wx.Button( self, id = wx.ID_CANCEL, label = 'back to filtering' )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        info_strings = []
+        
+        if num_certain_ratings > 0: info_strings.append( HydrusData.ConvertIntToPrettyString( num_certain_ratings ) + ' ratings' )
+        if num_uncertain_ratings > 0: info_strings.append( HydrusData.ConvertIntToPrettyString( num_uncertain_ratings ) + ' uncertain changes' )
+        
+        label = 'Apply ' + ' and '.join( info_strings ) + '?'
+        
+        vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._commit.SetFocus )
         
@@ -711,55 +643,38 @@ class DialogFirstStart( Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok!' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            message1 = 'Hi, this looks like the first time you have started the hydrus client. Don\'t forget to check out the'
-            link = wx.HyperlinkCtrl( self, id = -1, label = 'help', url = 'file://' + HC.BASE_DIR + '/help/index.html' )
-            message2 = 'if you haven\'t already.'
-            message3 = 'When you close this dialog, the client will start its local http server. You will probably get a firewall warning.'
-            message4 = 'You can block it if you like, or you can allow it. It doesn\'t phone home, or expose your files to your network; it just provides another way to locally export your files.'
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self, label = message1 ), CC.FLAGS_MIXED )
-            hbox.AddF( link, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = message2 ), CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            vbox.AddF( wx.StaticText( self, label = message3 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = message4 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'First start', position = 'center' )
         
-        InitialiseControls()
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        PopulateControls()
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok!' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
-        ArrangeControls()
+        message1 = 'Hi, this looks like the first time you have started the hydrus client. Don\'t forget to check out the'
+        link = wx.HyperlinkCtrl( self, id = -1, label = 'help', url = 'file://' + HC.BASE_DIR + '/help/index.html' )
+        message2 = 'if you haven\'t already.'
+        message3 = 'When you close this dialog, the client will start its local http server. You will probably get a firewall warning.'
+        message4 = 'You can block it if you like, or you can allow it. It doesn\'t phone home, or expose your files to your network; it just provides another way to locally export your files.'
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( wx.StaticText( self, label = message1 ), CC.FLAGS_MIXED )
+        hbox.AddF( link, CC.FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self, label = message2 ), CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox.AddF( wx.StaticText( self, label = message3 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( wx.StaticText( self, label = message4 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -1186,16 +1101,6 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._current_ratings_like_service = service
                 
-                ( like, dislike ) = service.GetLikeDislike()
-                
-                self._ratings_like_like.SetLabel( like )
-                self._ratings_like_dislike.SetLabel( dislike )
-                
-            else:
-                
-                self._ratings_like_like.SetLabel( 'like' )
-                self._ratings_like_dislike.SetLabel( 'dislike' )
-                
             
         
         if self._ratings_numerical_service_keys.GetCount() > 0:
@@ -1210,11 +1115,10 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._current_ratings_numerical_service = service
                 
-                ( lower, upper ) = service.GetLowerUpper()
+                num_stars = service.GetInfo( 'num_stars' )
                 
-                self._ratings_numerical_slider.SetRange( lower, upper )
+                self._ratings_numerical_slider.SetRange( num_stars )
                 
-            else: self._ratings_numerical_slider.SetRange( 0, 5 )
             
         
     
@@ -1235,17 +1139,15 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._service_key = self._ratings_like_service_keys.GetClientData( selection )
             
-            ( like, dislike ) = self._current_ratings_like_service.GetLikeDislike()
-            
             if self._ratings_like_like.GetValue():
                 
                 self._action = 1.0
-                self._pretty_action = like
+                self._pretty_action = 'like'
                 
             elif self._ratings_like_dislike.GetValue():
                 
                 self._action = 0.0
-                self._pretty_action = dislike
+                self._pretty_action = 'dislike'
                 
             else:
                 
@@ -1613,7 +1515,7 @@ class DialogInputLocalFiles( Dialog ):
             self._remove_files_button = wx.Button( self, label = 'Remove Files' )
             self._remove_files_button.Bind( wx.EVT_BUTTON, self.EventRemovePaths )
             
-            self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImport( self )
+            self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
             
             self._delete_after_success = wx.CheckBox( self, label = 'delete files after successful import' )
             
@@ -3254,10 +3156,9 @@ class DialogPageChooser( Dialog ):
         elif entry_type == 'page_import_booru': button.SetLabel( 'booru' )
         elif entry_type == 'page_import_gallery':
             
-            ( name, gallery_type ) = obj
+            ( name, site_type, gallery_type ) = obj
             
-            if gallery_type is None: button.SetLabel( name )
-            else: button.SetLabel( name + ' by ' + gallery_type )
+            button.SetLabel( name )
             
         elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
         elif entry_type == 'page_import_url': button.SetLabel( 'url' )
@@ -3284,16 +3185,16 @@ class DialogPageChooser( Dialog ):
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery':
             
-            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', None ) ), ( 'page_import_gallery', ( 'deviant art', 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', None ) ) ]
+            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', HC.SITE_TYPE_GIPHY, None ) ), ( 'page_import_gallery', ( 'deviant art', HC.SITE_TYPE_DEVIANT_ART, 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', HC.SITE_TYPE_NEWGROUNDS, None ) ) ]
             
             ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
             
             if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
             
-            entries.extend( [ ( 'page_import_gallery', ( 'tumblr', None ) ) ] )
+            entries.extend( [ ( 'page_import_gallery', ( 'tumblr', HC.SITE_TYPE_TUMBLR, None ) ) ] )
             
-        elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', ( 'hentai foundry', 'artist' ) ), ( 'page_import_gallery', ( 'hentai foundry', 'tags' ) ) ]
-        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv', 'artist_id' ) ), ( 'page_import_gallery', ( 'pixiv', 'tag' ) ) ]
+        elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', ( 'hentai foundry by artist', HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist' ) ), ( 'page_import_gallery', ( 'hentai foundry by tags', HC.SITE_TYPE_HENTAI_FOUNDRY, 'tags' ) ) ]
+        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv by artist id', HC.SITE_TYPE_PIXIV, 'artist_id' ) ), ( 'page_import_gallery', ( 'pixiv by tag', HC.SITE_TYPE_PIXIV, 'tag' ) ) ]
         elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_key ) for service_key in self._petition_service_keys ]
         
         if len( entries ) <= 4:
@@ -3343,15 +3244,15 @@ class DialogPageChooser( Dialog ):
                             
                             booru = dlg.GetBooru()
                             
-                            HydrusGlobals.pubsub.pub( 'new_import_gallery', 'booru', booru )
+                            HydrusGlobals.pubsub.pub( 'new_import_gallery', HC.SITE_TYPE_BOORU, booru )
                             
                         
                     
                 elif entry_type == 'page_import_gallery':
                     
-                    ( gallery_name, gallery_type ) = obj
+                    ( name, site_type, gallery_type ) = obj
                     
-                    HydrusGlobals.pubsub.pub( 'new_import_gallery', gallery_name, gallery_type )
+                    HydrusGlobals.pubsub.pub( 'new_import_gallery', site_type, gallery_type )
                     
                 elif entry_type == 'page_import_thread_watcher': HydrusGlobals.pubsub.pub( 'new_page_import_thread_watcher' )
                 elif entry_type == 'page_import_url': HydrusGlobals.pubsub.pub( 'new_page_import_url' )
@@ -3417,11 +3318,9 @@ class DialogPathsToTags( Dialog ):
                     
                     service_key = service.GetServiceKey()
                     
-                    page_info = ( self._Panel, ( self._tag_repositories, service_key, paths ), {} )
-                    
                     name = service.GetName()
                     
-                    self._tag_repositories.AddPage( page_info, name )
+                    self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, paths ), {} )
                     
                 
             
@@ -3429,7 +3328,7 @@ class DialogPathsToTags( Dialog ):
             
             name = CC.LOCAL_TAG_SERVICE_KEY
             
-            self._tag_repositories.AddPage( page, name )
+            self._tag_repositories.AddPage( name, page )
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
@@ -3514,7 +3413,7 @@ class DialogPathsToTags( Dialog ):
         
         paths_to_tags = collections.defaultdict( dict )
         
-        for page in self._tag_repositories.GetNameToPageDict().values():
+        for page in self._tag_repositories.GetNamesToActivePages().values():
             
             ( service_key, page_of_paths_to_tags ) = page.GetInfo()
             
@@ -4427,7 +4326,7 @@ class DialogShortcuts( Dialog ):
             
             page = self._Panel( self._shortcuts, default_shortcuts )
             
-            self._shortcuts.AddPage( page, 'default' )
+            self._shortcuts.AddPage( 'default', page )
             
             all_shortcuts = wx.GetApp().Read( 'shortcuts' )
             
@@ -4435,9 +4334,7 @@ class DialogShortcuts( Dialog ):
             
             for ( name, shortcuts ) in names_to_shortcuts.items():
                 
-                page_info = ( self._Panel, ( self._shortcuts, shortcuts ), {} )
-                
-                self._shortcuts.AddPage( page_info, name )
+                self._shortcuts.AddPageArgs( name, self._Panel, ( self._shortcuts, shortcuts ), {} )
                 
             
         
@@ -4543,7 +4440,7 @@ class DialogShortcuts( Dialog ):
                 
             
         
-        for ( name, page ) in self._shortcuts.GetNameToPageDict().items():
+        for ( name, page ) in self._shortcuts.GetNamesToActivePages().items():
             
             if name != 'default':
                 
@@ -4589,7 +4486,7 @@ class DialogShortcuts( Dialog ):
                 
                 page = self._Panel( self._shortcuts, shortcuts )
                 
-                self._shortcuts.AddPage( page, name )
+                self._shortcuts.AddPage( name, page, select = True )
                 
             
         
@@ -4998,6 +4895,9 @@ class DialogSetupExport( Dialog ):
                     source_path = ClientFiles.GetFilePath( hash, mime )
                     
                     shutil.copy( source_path, path )
+                    shutil.copystat( source_path, path )
+                    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                    except: pass
                     
                 except:
                     

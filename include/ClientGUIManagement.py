@@ -1144,11 +1144,11 @@ class ManagementPanelDumper( ManagementPanel ):
     
 class ManagementPanelImport( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, import_controller, starting_from_session = False ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
         ManagementPanel.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
-        self._import_controller = import_controller
+        self._InitController()
         
         self._import_panel = ClientGUICommon.StaticBox( self, 'current file' )
         
@@ -1195,10 +1195,6 @@ class ManagementPanelImport( ManagementPanel ):
         
         self._InitExtraVboxElements( vbox )
         
-        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImport( self )
-        
-        vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
         self._MakeCurrentSelectionTagsBox( vbox )
         
         self.SetSizer( vbox )
@@ -1209,6 +1205,38 @@ class ManagementPanelImport( ManagementPanel ):
         
         self._timer_update = wx.Timer( self, id = ID_TIMER_UPDATE )
         self._timer_update.Start( 100, wx.TIMER_CONTINUOUS )
+        
+    
+    def _GenerateImportArgsGeneratorFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            advanced_import_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedImportOptions )
+            
+            return ClientDownloading.ImportArgsGenerator( job_key, item, advanced_import_options )
+            
+        
+        return factory
+        
+    
+    def _GenerateImportQueueBuilderFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            return ClientDownloading.ImportQueueBuilder( job_key, item )
+            
+        
+        return factory
+        
+    
+    def _InitController( self ):
+        
+        import_args_generator_factory = self._GenerateImportArgsGeneratorFactory()
+        import_queue_builder_factory = self._GenerateImportQueueBuilderFactory()
+        
+        self._import_controller = ClientDownloading.ImportController( import_args_generator_factory, import_queue_builder_factory, page_key = self._page_key )
+        
+        self._import_controller.StartDaemon()
         
     
     def _InitExtraVboxElements( self, vbox ):
@@ -1312,6 +1340,13 @@ class ManagementPanelImport( ManagementPanel ):
             
         
     
+    def CleanBeforeDestroy( self ):
+        
+        ManagementPanel.CleanBeforeDestroy( self )
+        
+        self._import_controller.CleanBeforeDestroy()
+        
+    
     def EventCancelImportQueue( self, event ):
         
         import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
@@ -1332,7 +1367,29 @@ class ManagementPanelImport( ManagementPanel ):
         self._UpdateGUI()
         
     
-    def GetAdvancedImportOptions( self ): return self._advanced_import_options.GetInfo()
+    def Pause( self, page_key ):
+        
+        ManagementPanel.Pause( self, page_key )
+        
+        if page_key == self._page_key:
+            
+            controller_job_key = self._import_controller.GetJobKey( 'controller' )
+            
+            controller_job_key.Pause()
+            
+        
+    
+    def Resume( self, page_key ):
+        
+        ManagementPanel.Resume( self, page_key )
+        
+        if page_key == self._page_key:
+            
+            controller_job_key = self._import_controller.GetJobKey( 'controller' )
+            
+            controller_job_key.Resume()
+            
+        
     
     def TIMEREventUpdate( self, event ): self._UpdateGUI()
     
@@ -1375,14 +1432,8 @@ class ManagementPanelImports( ManagementPanelImport ):
         queue_pause_buttons_hbox.AddF( self._building_import_queue_pause_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_pause_buttons_hbox.AddF( self._building_import_queue_cancel_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        text = 'file limit'
-        
-        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._building_import_queue_panel, text, none_phrase = 'no limit', min = 1, max = 1000000 )
-        self._file_limit.SetValue( 500 )
-        
         self._building_import_queue_panel.AddF( self._building_import_queue_info, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._building_import_queue_panel.AddF( queue_pause_buttons_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._building_import_queue_panel.AddF( self._file_limit, CC.FLAGS_SIZER_CENTER )
         
         vbox.AddF( self._building_import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1392,9 +1443,6 @@ class ManagementPanelImports( ManagementPanelImport ):
         
         self._pending_import_queues_listbox = wx.ListBox( self._pending_import_queues_panel, size = ( -1, 200 ) )
         
-        self._new_queue_input = wx.TextCtrl( self._pending_import_queues_panel, style = wx.TE_PROCESS_ENTER )
-        self._new_queue_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
         self._up = wx.Button( self._pending_import_queues_panel, label = u'\u2191' )
         self._up.Bind( wx.EVT_BUTTON, self.EventUp )
         
@@ -1403,6 +1451,16 @@ class ManagementPanelImports( ManagementPanelImport ):
         
         self._down = wx.Button( self._pending_import_queues_panel, label = u'\u2193' )
         self._down.Bind( wx.EVT_BUTTON, self.EventDown )
+        
+        self._new_queue_input = wx.TextCtrl( self._pending_import_queues_panel, style = wx.TE_PROCESS_ENTER )
+        self._new_queue_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self._get_tags_if_redundant = wx.CheckBox( self._pending_import_queues_panel, label = 'get tags even if file already in db' )
+        self._get_tags_if_redundant.SetValue( False )
+        self._get_tags_if_redundant.Hide()
+        
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._pending_import_queues_panel, 'file limit', none_phrase = 'no limit', min = 1, max = 1000000 )
+        self._file_limit.SetValue( 500 )
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1417,10 +1475,16 @@ class ManagementPanelImports( ManagementPanelImport ):
         
         self._pending_import_queues_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._pending_import_queues_panel.AddF( self._new_queue_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_import_queues_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_CENTER )
+        self._pending_import_queues_panel.AddF( self._file_limit, CC.FLAGS_CENTER )
         
         vbox.AddF( self._pending_import_queues_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        wx.CallAfter( self._new_queue_input.SelectAll ) # to select the 'artist username' init gumpf
+        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
+        
+        vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        wx.CallAfter( self._new_queue_input.SelectAll )
         
     
     def _UpdateGUI( self ):
@@ -1482,19 +1546,19 @@ class ManagementPanelImports( ManagementPanelImport ):
             self._import_gauge.SetValue( value )
             
         
-        # file limit
-        
-        import_queue_builder_job_key.SetVariable( 'file_limit', self._file_limit.GetValue() )
-        
         # pending import queues
         
         pending_import_queue_jobs = self._import_controller.GetPendingImportQueueJobs()
         
         if pending_import_queue_jobs != self._pending_import_queues_listbox.GetItems():
             
-            self._pending_import_queues_listbox.SetItems( pending_import_queue_jobs )
+            pending_import_queue_strings = [ query for ( query, get_tags_if_redundant, file_limit ) in pending_import_queue_jobs ]
+            
+            self._pending_import_queues_listbox.SetItems( pending_import_queue_strings )
             
         
+    
+    def GetAdvancedImportOptions( self ): return self._advanced_import_options.GetInfo()
     
     def EventCancelImportQueueBuilder( self, event ):
         
@@ -1513,7 +1577,10 @@ class ManagementPanelImports( ManagementPanelImport ):
             
             if s != '':
                 
-                self._import_controller.PendImportQueueJob( s )
+                get_tags_if_redundant = self._get_tags_if_redundant.GetValue()
+                file_limit = self._file_limit.GetValue()
+                
+                self._import_controller.PendImportQueueJob( ( s, get_tags_if_redundant, file_limit ) )
                 
                 self._UpdateGUI()
                 
@@ -1591,14 +1658,130 @@ class ManagementPanelImports( ManagementPanelImport ):
     
 class ManagementPanelImportsGallery( ManagementPanelImports ):
     
-    def __init__( self, parent, page, page_key, import_controller, name, namespaces, ato, initial_search_value, starting_from_session = False ):
+    def __init__( self, parent, page, page_key, site_type, gallery_type, starting_from_session = False ):
         
-        self._name = name
-        self._namespaces = namespaces
-        self._ato = ato
-        self._initial_search_value = initial_search_value
+        self._site_type = site_type
+        self._gallery_type = gallery_type
         
-        ManagementPanelImports.__init__( self, parent, page, page_key, import_controller, starting_from_session = starting_from_session )
+        ManagementPanelImports.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        
+    
+    def _GenerateImportArgsGeneratorFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            advanced_import_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedImportOptions )
+            
+            advanced_tag_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedTagOptions )
+            
+            gallery_parsers_factory = self._GetGalleryParsersFactory()
+            
+            return ClientDownloading.ImportArgsGeneratorGallery( job_key, item, advanced_import_options, advanced_tag_options, gallery_parsers_factory )
+            
+        
+        return factory
+        
+    
+    def _GenerateImportQueueBuilderFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            gallery_parsers_factory = self._GetGalleryParsersFactory()
+            
+            return ClientDownloading.ImportQueueBuilderGallery( job_key, item, gallery_parsers_factory )
+            
+        
+        return factory
+        
+    
+    def _GetGalleryParsersFactory( self ):
+        
+        if self._site_type == HC.SITE_TYPE_BOORU:
+            
+            def gallery_parsers_factory( raw_tags ):
+                
+                booru = self._gallery_type
+                tags = raw_tags.split( ' ' )
+                
+                return ( ClientDownloading.GalleryParserBooru( booru, tags ), )
+                
+            
+        elif self._site_type == HC.SITE_TYPE_DEVIANT_ART:
+            
+            if self._gallery_type == 'artist':
+                
+                def gallery_parsers_factory( artist ):
+                    
+                    return ( ClientDownloading.GalleryParserDeviantArt( artist ), )
+                    
+                
+            
+        elif self._site_type == HC.SITE_TYPE_GIPHY:
+            
+            def gallery_parsers_factory( tag ):
+                
+                return ( ClientDownloading.GalleryParserGiphy( tag ), )
+                
+            
+        elif self._site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
+            
+            if self._gallery_type == 'artist':
+                
+                def gallery_parsers_factory( artist ):
+                    
+                    advanced_hentai_foundry_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedHentaiFoundryOptions )
+                    
+                    pictures_gallery_parser = ClientDownloading.GalleryParserHentaiFoundry( 'artist pictures', artist, advanced_hentai_foundry_options )
+                    scraps_gallery_parser = ClientDownloading.GalleryParserHentaiFoundry( 'artist scraps', artist, advanced_hentai_foundry_options )
+                    
+                    return ( pictures_gallery_parser, scraps_gallery_parser )
+                    
+                
+            elif self._gallery_type == 'tags':
+                
+                def gallery_parsers_factory( raw_tags ):
+                    
+                    advanced_hentai_foundry_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedHentaiFoundryOptions )
+                    
+                    tags = raw_tags.split( ' ' )
+                    
+                    return ( ClientDownloading.GalleryParserHentaiFoundry( 'tags', tags, advanced_hentai_foundry_options ), )
+                    
+                
+            
+        elif self._site_type == HC.SITE_TYPE_NEWGROUNDS:
+            
+            def gallery_parsers_factory( artist ):
+                
+                return ( ClientDownloading.GalleryParserNewgrounds( artist ), )
+                
+            
+        elif self._site_type == HC.SITE_TYPE_PIXIV:
+            
+            if self._gallery_type in ( 'artist', 'artist_id' ):
+                
+                def gallery_parsers_factory( artist_id ):
+                    
+                    return ( ClientDownloading.GalleryParserPixiv( 'artist_id', artist_id ), )
+                    
+                
+            elif self._gallery_type == 'tag':
+                
+                def gallery_parsers_factory( tag ):
+                    
+                    return ( ClientDownloading.GalleryParserPixiv( 'tags', tag ), )
+                    
+                
+            
+        elif self._site_type == HC.SITE_TYPE_TUMBLR:
+            
+            def gallery_parsers_factory( username ):
+                
+                return ( ClientDownloading.GalleryParserTumblr( username ), )
+                
+            
+        
+        return gallery_parsers_factory
         
     
     def _InitExtraVboxElements( self, vbox ):
@@ -1607,32 +1790,112 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
         
         #
         
-        self._new_queue_input.SetValue( self._initial_search_value )
+        if self._site_type == HC.SITE_TYPE_BOORU:
+            
+            booru = self._gallery_type
+            
+            name = booru.GetName()
+            
+            namespaces = booru.GetNamespaces()
+            initial_search_value = 'search tags'
+            
+            ato = ClientData.GetDefaultAdvancedTagOptions( ( HC.SITE_TYPE_BOORU, name ) )
+            
+        elif self._site_type == HC.SITE_TYPE_DEVIANT_ART:
+            
+            if self._gallery_type == 'artist':
+                
+                namespaces = [ 'creator', 'title' ]
+                initial_search_value = 'artist username'
+                
+            
+            ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_DEVIANT_ART )
+            
+        elif self._site_type == HC.SITE_TYPE_GIPHY:
+            
+            namespaces = [ '' ]
+    
+            initial_search_value = 'search tag'
+            
+            ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_GIPHY )
+            
+        elif self._site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
+            
+            namespaces = [ 'creator', 'title', '' ]
+            
+            if self._gallery_type == 'artist': initial_search_value = 'artist username'
+            elif self._gallery_type == 'tags': initial_search_value = 'search tags'
+            
+            ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_HENTAI_FOUNDRY )
+            
+        elif self._site_type == HC.SITE_TYPE_NEWGROUNDS:
+            
+            namespaces = [ 'creator', 'title', '' ]
+            initial_search_value = 'artist username'
+            
+            ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_NEWGROUNDS )
+            
+        elif self._site_type == HC.SITE_TYPE_PIXIV:
+            
+            namespaces = [ 'creator', 'title', '' ]
+            
+            if self._gallery_type in ( 'artist', 'artist_id' ): initial_search_value = 'numerical artist id'
+            elif self._gallery_type == 'tag': initial_search_value = 'search tag'
+            
+            ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_PIXIV )
+            
+        elif self._site_type == HC.SITE_TYPE_TUMBLR:
+            
+            namespaces = [ '' ]
+            initial_search_value = 'username'
+            
+            ato = ClientData.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_TUMBLR )
+            
+        
+        self._new_queue_input.SetValue( initial_search_value )
         
         #
         
-        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, self._namespaces )
-        self._advanced_tag_options.SetInfo( self._ato )
+        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces )
+        self._advanced_tag_options.SetInfo( ato )
+        
+        if self._site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
+            
+            self._advanced_hentai_foundry_options = ClientGUICollapsible.CollapsibleOptionsHentaiFoundry( self )
+            
+            vbox.AddF( self._advanced_hentai_foundry_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
         
         vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
-    def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
-    
-class ManagementPanelImportsGalleryHentaiFoundry( ManagementPanelImportsGallery ):
-    
-    def _InitExtraVboxElements( self, vbox ):
-        
-        ManagementPanelImportsGallery._InitExtraVboxElements( self, vbox )
-        
-        self._advanced_hentai_foundry_options = ClientGUICollapsible.CollapsibleOptionsHentaiFoundry( self )
-        
-        vbox.AddF( self._advanced_hentai_foundry_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-    
     def GetAdvancedHentaiFoundryOptions( self ): return self._advanced_hentai_foundry_options.GetInfo()
     
+    def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
+    
 class ManagementPanelImportsURL( ManagementPanelImports ):
+    
+    def _GenerateImportArgsGeneratorFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            advanced_import_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedImportOptions )
+            
+            return ClientDownloading.ImportArgsGeneratorURLs( job_key, item, advanced_import_options )
+            
+        
+        return factory
+        
+    
+    def _GenerateImportQueueBuilderFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            return ClientDownloading.ImportQueueBuilderURLs( job_key, item )
+            
+        
+        return factory
+        
     
     def _InitExtraVboxElements( self, vbox ):
         
@@ -1640,16 +1903,32 @@ class ManagementPanelImportsURL( ManagementPanelImports ):
         
         self._building_import_queue_pause_button.Hide()
         self._building_import_queue_cancel_button.Hide()
+        self._get_tags_if_redundant.Hide()
         self._file_limit.Hide()
         
     
 class ManagementPanelImportHDD( ManagementPanelImport ):
     
-    def __init__( self, *args, **kwargs ):
+    def __init__( self, parent, page, page_key, paths_info, advanced_import_options, paths_to_tags, delete_after_success, starting_from_session = False ):
         
-        ManagementPanelImport.__init__( self, *args, **kwargs )
+        self._paths_info = paths_info
+        self._advanced_import_options = advanced_import_options
+        self._paths_to_tags = paths_to_tags
+        self._delete_after_success = delete_after_success
         
-        self._advanced_import_options.Hide()
+        ManagementPanelImport.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        
+        self._import_controller.PendImportQueueJob( self._paths_info )
+        
+    
+    def _GenerateImportArgsGeneratorFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            return ClientDownloading.ImportArgsGeneratorHDD( job_key, item, self._advanced_import_options, self._paths_to_tags, self._delete_after_success )
+            
+        
+        return factory
         
     
     def _InitExtraVboxElements( self, vbox ):
@@ -1661,6 +1940,33 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
         
     
 class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
+    
+    def _GenerateImportArgsGeneratorFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            advanced_import_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedImportOptions )
+            advanced_tag_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedTagOptions )
+            
+            # fourchan_board should be on the job_key or whatever. it is stuck on initial queue generation
+            # we should not be getting it from the management_panel
+            # we should have access to this info from the job_key or w/e
+            
+            return ClientDownloading.ImportArgsGeneratorThread( job_key, item, advanced_import_options, advanced_tag_options )
+            
+        
+        return factory
+        
+    
+    def _GenerateImportQueueBuilderFactory( self ):
+        
+        def factory( job_key, item ):
+            
+            return ClientDownloading.ImportQueueBuilderThread( job_key, item )
+            
+        
+        return factory
+        
     
     def _InitExtraVboxElements( self, vbox ):
         
@@ -1718,6 +2024,10 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = [ 'filename' ] )
         
         vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
+        
+        vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def _SetThreadVariables( self ):
@@ -1783,6 +2093,8 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
         except: self._SetThreadVariables()
         
+    
+    def GetAdvancedImportOptions( self ): return self._advanced_import_options.GetInfo()
     
     def EventKeyDown( self, event ):
         

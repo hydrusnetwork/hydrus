@@ -17,6 +17,7 @@ from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
 import HydrusTags
 import HydrusData
+import HydrusExceptions
 import ClientSearch
 import HydrusGlobals
 
@@ -1473,7 +1474,8 @@ class ListBook( wx.Panel ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
-        self._names_to_pages = {}
+        self._names_to_active_pages = {}
+        self._names_to_proto_pages = {}
         
         self._list_box = self.LB( self, style = wx.LB_SINGLE | wx.LB_SORT )
         
@@ -1532,11 +1534,9 @@ class ListBook( wx.Panel ):
         if selection == wx.NOT_FOUND: self._current_panel = self._empty_panel
         else:
             
-            panel_info = self._names_to_pages[ self._current_name ]
-            
-            if type( panel_info ) == tuple:
+            if self._current_name in self._names_to_proto_pages:
                 
-                ( classname, args, kwargs ) = panel_info
+                ( classname, args, kwargs ) = self._names_to_proto_pages[ self._current_name ]
                 
                 page = classname( *args, **kwargs )
                 
@@ -1544,12 +1544,14 @@ class ListBook( wx.Panel ):
                 
                 self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
-                self._names_to_pages[ self._current_name ] = page
+                self._names_to_active_pages[ self._current_name ] = page
+                
+                del self._names_to_proto_pages[ self._current_name ]
                 
                 self._RecalcListBoxWidth()
                 
             
-            self._current_panel = self._names_to_pages[ self._current_name ]
+            self._current_panel = self._names_to_active_pages[ self._current_name ]
             
         
         self._current_panel.Show()
@@ -1563,7 +1565,7 @@ class ListBook( wx.Panel ):
         self.ProcessEvent( event )
         
     
-    def AddPage( self, page, name, select = False ):
+    def AddPage( self, name, page, select = False ):
         
         if type( page ) != tuple:
             
@@ -1574,12 +1576,28 @@ class ListBook( wx.Panel ):
         
         self._list_box.Append( name )
         
-        self._names_to_pages[ name ] = page
+        self._names_to_active_pages[ name ] = page
         
         self._RecalcListBoxWidth()
         
         if self._list_box.GetCount() == 1: self._Select( 0 )
         elif select: self._Select( self._list_box.FindString( name ) )
+        
+    
+    def AddPageArgs( self, name, classname, args, kwargs ):
+        
+        if self.NameExists( name ):
+            
+            raise HydrusExceptions.NameException( 'That name is already in use!' )
+            
+        
+        self._list_box.Append( name )
+        
+        self._names_to_proto_pages[ name ] = ( classname, args, kwargs )
+        
+        self._RecalcListBoxWidth()
+        
+        if self._list_box.GetCount() == 1: self._Select( 0 )
         
     
     def DeleteAllPages( self ):
@@ -1594,9 +1612,38 @@ class ListBook( wx.Panel ):
         
         self._current_panel = self._empty_panel
         
-        self._names_to_pages = {}
+        self._names_to_active_pages = {}
+        self._names_to_proto_pages = {}
         
         self._list_box.Clear()
+        
+    
+    def DeleteCurrentPage( self ):
+        
+        selection = self._list_box.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            name_to_delete = self._current_name
+            page_to_delete = self._current_panel
+            
+            next_selection = selection + 1
+            previous_selection = selection - 1
+            
+            if next_selection < self._list_box.GetCount(): self._Select( next_selection )
+            elif previous_selection >= 0: self._Select( previous_selection )
+            else: self._Select( wx.NOT_FOUND )
+            
+            self._panel_sizer.Detach( page_to_delete )
+            
+            wx.CallAfter( page_to_delete.Destroy )
+            
+            del self._names_to_active_pages[ name_to_delete ]
+            
+            self._list_box.Delete( self._list_box.FindString( name_to_delete ) )
+            
+            self._RecalcListBoxWidth()
+            
         
     
     def EventMenu( self, event ):
@@ -1634,56 +1681,43 @@ class ListBook( wx.Panel ):
         else: return self._current_panel
         
     
-    def GetNameToPageDict( self ):
+    def GetNames( self ):
         
-        result = { name : page_info for ( name, page_info ) in self._names_to_pages.items() if type( page_info ) != tuple }
+        names = set()
         
-        return result
+        names.update( self._names_to_proto_pages.keys() )
+        names.update( self._names_to_active_pages.keys() )
+        
+        return names
         
     
-    def NameExists( self, name, panel = None ): return self._list_box.FindString( name ) != wx.NOT_FOUND
+    def GetNamesToActivePages( self ):
+        
+        return self._names_to_active_pages
+        
     
-    def DeleteCurrentPage( self ):
-        
-        selection = self._list_box.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            next_selection = selection + 1
-            previous_selection = selection - 1
-            
-            if next_selection < self._list_box.GetCount(): self._Select( next_selection )
-            elif previous_selection >= 0: self._Select( previous_selection )
-            else: self._Select( wx.NOT_FOUND )
-            
-            panel_info = self._names_to_pages[ self._current_name ]
-            
-            if type( panel_info ) != tuple:
-                
-                self._panel_sizer.Detach( panel_info )
-                
-                wx.CallAfter( panel_info.Destroy )
-                
-            
-            del self._names_to_pages[ self._current_name ]
-            
-            self._list_box.Delete( selection )
-            
-            self._RecalcListBoxWidth()
-            
-        
+    def NameExists( self, name ): return self._list_box.FindString( name ) != wx.NOT_FOUND
     
     def RenamePage( self, name, new_name ):
         
-        if self._list_box.FindString( new_name ) != wx.NOT_FOUND: raise Exception( 'That name is already in use!' )
+        if self.NameExists( new_name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
         
         if self._current_name == name: self._current_name = new_name
         
-        page = self._names_to_pages[ name ]
+        if name in self._names_to_active_pages:
+            
+            dict_to_rename = self._names_to_active_pages
+            
+        else:
+            
+            dict_to_rename = self._names_to_proto_pages
+            
         
-        del self._names_to_pages[ name ]
+        page_info = dict_to_rename[ name ]
         
-        self._names_to_pages[ new_name ] = page
+        del dict_to_rename[ name ]
+        
+        dict_to_rename[ new_name ] = page_info
         
         self._list_box.SetString( self._list_box.FindString( name ), new_name )
         
@@ -1721,7 +1755,7 @@ class ListBook( wx.Panel ):
     
     def SelectPage( self, page_to_select ):
         
-        for ( name, page ) in self._names_to_pages.items():
+        for ( name, page ) in self._names_to_active_pages.items():
             
             if page == page_to_select:
                 
@@ -3913,7 +3947,7 @@ class RatingLikeDialog( RatingLike ):
         
         RatingLike.__init__( self, parent, service_key )
         
-        self._rating_state = ClientRatings.ALL_NULL
+        self._rating_state = ClientRatings.NULL
         
     
     def _Draw( self ):
@@ -3933,8 +3967,8 @@ class RatingLikeDialog( RatingLike ):
     
     def EventLeftDown( self, event ):
         
-        if self._rating_state == ClientRatings.ALL_ON: self._rating_state = ClientRatings.ALL_NULL
-        else: self._rating_state = ClientRatings.ALL_ON
+        if self._rating_state == ClientRatings.LIKE: self._rating_state = ClientRatings.NULL
+        else: self._rating_state = ClientRatings.LIKE
         
         self._dirty = True
         
@@ -3943,8 +3977,8 @@ class RatingLikeDialog( RatingLike ):
     
     def EventRightDown( self, event ):
         
-        if self._rating_state == ClientRatings.ALL_OFF: self._rating_state = ClientRatings.ALL_NULL
-        else: self._rating_state = ClientRatings.ALL_OFF
+        if self._rating_state == ClientRatings.DISLIKE: self._rating_state = ClientRatings.NULL
+        else: self._rating_state = ClientRatings.DISLIKE
         
         self._dirty = True
         
@@ -3959,6 +3993,10 @@ class RatingLikeDialog( RatingLike ):
     def SetRatingState( self, rating_state ):
         
         self._rating_state = rating_state
+        
+        self._dirty = True
+        
+        self.Refresh()
         
     
 class RatingLikeCanvas( RatingLike ):
@@ -4005,7 +4043,7 @@ class RatingLikeCanvas( RatingLike ):
         
         if self._current_media is not None:
             
-            if self._rating_state == ClientRatings.ALL_ON: rating = None
+            if self._rating_state == ClientRatings.LIKE: rating = None
             else: rating = 1
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
@@ -4018,7 +4056,7 @@ class RatingLikeCanvas( RatingLike ):
         
         if self._current_media is not None:
             
-            if self._rating_state == ClientRatings.ALL_OFF: rating = None
+            if self._rating_state == ClientRatings.DISLIKE: rating = None
             else: rating = 0
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
@@ -4064,6 +4102,284 @@ class RatingLikeCanvas( RatingLike ):
             self._hashes = self._current_media.GetHashes()
             
             self._dirty = True
+            
+            self.Refresh()
+            
+        
+    
+class RatingNumerical( wx.Window ):
+    
+    def __init__( self, parent, service_key ):
+        
+        wx.Window.__init__( self, parent )
+        
+        self._service_key = service_key
+        
+        self._service = wx.GetApp().GetManager( 'services' ).GetService( self._service_key )
+        
+        self._num_stars = self._service.GetInfo( 'num_stars' )
+        
+        my_width = ClientRatings.GetNumericalWidth( self._service_key )
+        
+        self._canvas_bmp = wx.EmptyBitmap( my_width, 16, 24 )
+        
+        self.Bind( wx.EVT_PAINT, self.EventPaint )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
+        self.Bind( wx.EVT_LEFT_DCLICK, self.EventLeftDown )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventRightDown )
+        self.Bind( wx.EVT_RIGHT_DCLICK, self.EventRightDown )
+        
+        self.SetMinSize( ( my_width, 16 ) )
+        
+        self._dirty = True
+        
+    
+    def _Draw( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _GetRatingFromClickEvent( self, event ):
+        
+        x = event.GetX()
+        y = event.GetY()
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        # assuming a border of 2 on every side here
+        
+        my_active_width = my_width - 4
+        my_active_height = my_height - 4
+        
+        x_adjusted = x - 2
+        y_adjusted = y - 2
+        
+        if 0 <= y and y <= my_active_height:
+            
+            if 0 <= x and x <= my_active_width:
+                
+                proportion_filled = float( x_adjusted ) / my_active_width
+                
+                rating = round( proportion_filled * self._num_stars ) / self._num_stars
+                
+                return rating
+                
+            
+        
+        return None
+        
+    
+    def GetDC( self ): return wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+    
+    def EventEraseBackground( self, event ): pass
+    
+    def EventLeftDown( self, event ):
+        
+        raise NotImplementedError()
+        
+    
+    def EventPaint( self, event ):
+        
+        if self._dirty:
+            
+            self._Draw()
+            
+        
+        wx.BufferedPaintDC( self, self._canvas_bmp )
+        
+    
+    def EventRightDown( self, event ):
+        
+        raise NotImplementedError()
+        
+    
+class RatingNumericalDialog( RatingNumerical ):
+    
+    def __init__( self, parent, service_key ):
+        
+        RatingNumerical.__init__( self, parent, service_key )
+        
+        self._rating_state = ClientRatings.NULL
+        self._rating = 0.0
+        
+    
+    def _Draw( self ):
+        
+        dc = self.GetDC()
+        
+        dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
+        
+        dc.Clear()
+        
+        stars = ClientRatings.GetStars( self._service_key, self._rating_state, self._rating )
+        
+        ClientRatings.DrawNumerical( dc, 0, 0, stars )
+        
+        self._dirty = False
+        
+    
+    def EventLeftDown( self, event ):
+        
+        rating = self._GetRatingFromClickEvent( event )
+        
+        if rating is not None:
+            
+            self._rating_state = ClientRatings.SET
+            
+            self._rating = rating
+            
+            self._dirty = True
+            
+            self.Refresh()
+            
+        
+    
+    def EventRightDown( self, event ):
+        
+        self._rating_state = ClientRatings.NULL
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
+    def GetRating( self ):
+        
+        return self._rating
+        
+    
+    def GetRatingState( self ):
+        
+        return self._rating_state
+        
+    
+    def SetRating( self, rating ):
+        
+        self._rating_state = ClientRatings.SET
+        
+        self._rating = rating
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
+    def SetRatingState( self, rating_state ):
+        
+        self._rating_state = rating_state
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
+class RatingNumericalCanvas( RatingNumerical ):
+
+    def __init__( self, parent, service_key, canvas_key ):
+        
+        RatingNumerical.__init__( self, parent, service_key )
+        
+        self._canvas_key = canvas_key
+        self._current_media = None
+        self._rating_state = None
+        self._rating = None
+        
+        name = self._service.GetName()
+        
+        self.SetToolTipString( name )
+        
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.pubsub.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        
+    
+    def _Draw( self ):
+        
+        dc = self.GetDC()
+        
+        dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
+        
+        dc.Clear()
+        
+        if self._current_media is not None:
+            
+            ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
+            
+            stars = ClientRatings.GetStars( self._service_key, self._rating_state, self._rating )
+            
+            ClientRatings.DrawNumerical( dc, 0, 0, stars )
+            
+        
+        self._dirty = False
+        
+    
+    def EventLeftDown( self, event ):
+        
+        if self._current_media is not None:
+            
+            rating = self._GetRatingFromClickEvent( event )
+            
+            if rating is not None:
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+                
+                wx.GetApp().Write( 'content_updates', { self._service_key : ( content_update, ) } )
+                
+            
+        
+    
+    def EventRightDown( self, event ):
+        
+        if self._current_media is not None:
+            
+            rating = None
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            
+            wx.GetApp().Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                for content_update in content_updates:
+                    
+                    ( data_type, action, row ) = content_update.ToTuple()
+                    
+                    if data_type == HC.CONTENT_DATA_TYPE_RATINGS:
+                        
+                        hashes = content_update.GetHashes()
+                        
+                        if len( self._hashes.intersection( hashes ) ) > 0:
+                            
+                            self._dirty = True
+                            
+                            self.Refresh()
+                            
+                            return
+                            
+                        
+                    
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = media
+            
+            self._hashes = self._current_media.GetHashes()
+            
+            self._dirty = True
+            
+            self.Refresh()
             
         
     
