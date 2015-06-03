@@ -568,7 +568,7 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
         
         self._local_numericals = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
-        for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service.GetServiceKey() )
+        for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service )
         
         self._sign_numerical.SetSelection( 0 )
         
@@ -592,20 +592,16 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
     
     def EventRatingsService( self, event ):
         
-        try:
-            
-            service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
-            
-            ( lower, upper ) = service.GetLowerUpper()
-            
-            self._value_numerical.SetRange( lower, upper )
-            
-        except: pass
+        service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
+        
+        num_stars = service.GetInfo( 'num_stars' )
+        
+        self._value_numerical.SetRange( 0, num_stars )
         
     
     def GetInfo( self ):
         
-        service_key = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
+        service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
         
         operator = self._sign_numerical.GetStringSelection()
         
@@ -617,14 +613,14 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
             
         else:
             
-            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-            
-            ( lower, upper ) = service.GetLowerUpper()
+            num_stars = service.GetInfo( 'num_stars' )
             
             value_raw = self._value_numerical.GetValue()
             
-            value = float( value_raw - lower ) / float( upper - lower )
+            value = float( value_raw ) / num_stars
             
+        
+        service_key = service.GetServiceKey()
         
         info = ( service_key, operator, value )
         

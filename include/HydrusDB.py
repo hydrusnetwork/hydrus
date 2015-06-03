@@ -145,8 +145,6 @@ class HydrusDB( object ):
     
     def _ProcessJob( self, job ):
         
-        HydrusGlobals.pubsub.pub( 'db_locked_status', 'db locked' )
-        
         job_type = job.GetType()
         
         action = job.GetAction()
@@ -180,8 +178,6 @@ class HydrusDB( object ):
             self._ManageDBError( job, e )
             
         
-        HydrusGlobals.pubsub.pub( 'db_locked_status', '' )
-        
     
     def _Read( self, action, *args, **kwargs ):
         
@@ -205,6 +201,11 @@ class HydrusDB( object ):
     
     def pub_after_commit( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
     
+    def CurrentlyDoingJob( self ):
+        
+        return self._currently_doing_job
+        
+    
     def LoopIsFinished( self ): return self._loop_finished
     
     def MainLoop( self ):
@@ -222,6 +223,8 @@ class HydrusDB( object ):
                 ( priority, job ) = self._jobs.get( timeout = 1 )
                 
                 self._currently_doing_job = True
+                
+                HydrusGlobals.pubsub.pub( 'refresh_status' )
                 
                 self._pubsubs = []
                 
@@ -256,6 +259,8 @@ class HydrusDB( object ):
                     
                 
                 self._currently_doing_job = False
+                
+                HydrusGlobals.pubsub.pub( 'refresh_status' )
                 
             except Queue.Empty: pass # no jobs this second; let's see if we should shutdown
             

@@ -48,13 +48,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self.SetDropTarget( ClientGUICommon.FileDropTarget( self.ImportFiles ) )
         
         self._statusbar = self.CreateStatusBar()
-        self._statusbar.SetFieldsCount( 4 )
-        self._statusbar.SetStatusWidths( [ -1, 100, 120, 50 ] )
-        
-        self._statusbar_media = ''
-        self._statusbar_inbox = ''
-        self._statusbar_downloads = ''
-        self._statusbar_db_locked = ''
+        self._statusbar.SetFieldsCount( 3 )
+        self._statusbar.SetStatusWidths( [ -1, 25, 50 ] )
         
         self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
         
@@ -93,8 +88,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HydrusGlobals.pubsub.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
         HydrusGlobals.pubsub.sub( self, 'RefreshStatusBar', 'refresh_status' )
         HydrusGlobals.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
-        HydrusGlobals.pubsub.sub( self, 'SetDownloadsStatus', 'downloads_status' )
-        HydrusGlobals.pubsub.sub( self, 'SetInboxStatus', 'inbox_status' )
         HydrusGlobals.pubsub.sub( self, 'SetMediaFocus', 'set_media_focus' )
         
         self._menus = {}
@@ -509,7 +502,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         def file():
             
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_metadata' ), p( '&Import Metadata' ), p( 'Add YAML metadata.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_tags' ), p( '&Import Tag Archive' ), p( 'Add tags from a tag archive.' ) )
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
@@ -794,8 +787,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
+            #menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
+            #menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
             menu.AppendSeparator()
@@ -909,6 +902,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             debug = wx.Menu()
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'force_idle' ), p( 'Force Idle Mode' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ) )
             
@@ -947,7 +941,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _ImportMetadata( self ):
+    def _ImportTags( self ):
         
         with wx.FileDialog( self, style = wx.FD_MULTIPLE ) as dlg:
             
@@ -955,48 +949,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 paths = dlg.GetPaths()
                 
+                services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+                
+                service_keys = [ service.GetServiceKey() for service in services ]
+                
+                service_key = ClientGUIDialogs.SelectServiceKey( service_keys = service_keys )
+                
                 for path in paths:
                     
-                    try:
-                        
-                        with open( path, 'rb' ) as f: o = yaml.safe_load( f )
-                        
-                        if isinstance( o, HydrusData.ServerToClientUpdate ):
-                            
-                            # turn this into a thread that'll spam it to a gui-polite gauge
-                            
-                            update = o
-                            
-                            service_key = ClientGUIDialogs.SelectServiceKey( service_types = ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
-                            
-                            if service_key is not None:
-                                
-                                content_updates = []
-                                current_weight = 0
-                                
-                                for content_update in update.IterateContentUpdates():
-                                    
-                                    content_updates.append( content_update )
-                                    
-                                    current_weight += len( content_update.GetHashes() )
-                                    
-                                    if current_weight > 50:
-                                        
-                                        wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
-                                        
-                                        content_updates = []
-                                        current_weight = 0
-                                        
-                                    
-                                
-                                if len( content_updates ) > 0: wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
-                                
-                            
-                        
-                    except Exception as e:
-                        
-                        HydrusData.ShowException( e )
-                        
+                    ClientGUIDialogs.ImportFromHTA( self, path, service_key )
                     
                 
         
@@ -1328,12 +1289,27 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         if page is None: media_status = ''
         else: media_status = page.GetPrettyStatus()
         
-        self._statusbar_media = media_status
+        if wx.GetApp().CurrentlyIdle():
+            
+            idle_status = 'idle'
+            
+        else:
+            
+            idle_status = ''
+            
         
-        self._statusbar.SetStatusText( self._statusbar_media, number = 0 )
-        self._statusbar.SetStatusText( self._statusbar_inbox, number = 1 )
-        self._statusbar.SetStatusText( self._statusbar_downloads, number = 2 )
-        self._statusbar.SetStatusText( self._statusbar_db_locked, number = 3 )
+        if wx.GetApp().GetDB().CurrentlyDoingJob():
+            
+            db_status = 'db locked'
+            
+        else:
+            
+            db_status = ''
+            
+        
+        self._statusbar.SetStatusText( media_status, number = 0 )
+        self._statusbar.SetStatusText( idle_status, number = 1 )
+        self._statusbar.SetStatusText( db_status, number = 2 )
         
     
     def _RegenerateThumbnails( self ):
@@ -1701,7 +1677,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading petitions' )
                     
-                    service.Request( HC.POST, 'update', { 'update' : update } )
+                    service.Request( HC.POST, 'content_update_package', { 'update' : update } )
                     
                     content_updates = update.GetContentUpdates( for_client = True )
                     
@@ -1737,7 +1713,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HydrusData.ConvertIntToPrettyString( i + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( len( updates ) ) )
                     job_key.SetVariable( 'popup_message_gauge_1', ( i, len( updates ) ) )
                     
-                    service.Request( HC.POST, 'update', { 'update' : update } )
+                    service.Request( HC.POST, 'content_update_package', { 'update' : update } )
                     
                     content_updates = update.GetContentUpdates( for_client = True )
                     
@@ -1907,13 +1883,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'delete_service_info': self._DeleteServiceInfo()
             elif command == 'exit': self.EventExit( event )
             elif command == 'fetch_ip': self._FetchIP( data )
+            elif command == 'force_idle':
+                
+                wx.GetApp().ForceIdle()
+                
             elif command == '8chan_board': webbrowser.open( 'http://8ch.net/hydrus/index.html' )
             elif command == 'file_integrity': self._CheckFileIntegrity()
             elif command == 'help': webbrowser.open( 'file://' + HC.BASE_DIR + '/help/index.html' )
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
             elif command == 'import_files': self._ImportFiles()
-            elif command == 'import_metadata': self._ImportMetadata()
+            elif command == 'import_tags': self._ImportTags()
             elif command == 'load_gui_session': self._LoadGUISession( data )
             elif command == 'manage_4chan_pass': self._Manage4chanPass()
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
@@ -2165,37 +2145,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
         
     
-    def SetDBLockedStatus( self, status ):
-        
-        if self.IsShown():
-            
-            self._statusbar_db_locked = status
-            
-            self._RefreshStatusBar()
-            
-        
-    
-    def SetDownloadsStatus( self, status ):
-        
-        if self.IsShown():
-            
-            self._statusbar_downloads = status
-            
-            self._RefreshStatusBar()
-            
-        
-    
     def SetMediaFocus( self ): self._SetMediaFocus()
-    
-    def SetInboxStatus( self, status ):
-        
-        if self.IsShown():
-            
-            self._statusbar_inbox = status
-            
-            self._RefreshStatusBar()
-            
-        
     
     def Shutdown( self ):
         
@@ -3045,6 +2995,9 @@ class FrameSplash( ClientGUICommon.Frame ):
         
         wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR, title = 'hydrus client' )
         
+        self._dirty = True
+        self._text = ''
+        
         self._bmp = wx.EmptyBitmap( self.WIDTH, self.HEIGHT, 24 )
         
         self.SetSize( ( self.WIDTH, self.HEIGHT ) )
@@ -3068,6 +3021,27 @@ class FrameSplash( ClientGUICommon.Frame ):
         
         HydrusGlobals.pubsub.sub( self, 'SetText', 'splash_set_text' )
         HydrusGlobals.pubsub.sub( self, 'Destroy', 'splash_destroy' )
+        
+    
+    def _Redraw( self ):
+        
+        dc = wx.MemoryDC( self._bmp )
+        
+        dc.SetBackground( wx.Brush( wx.WHITE ) )
+        
+        dc.Clear()
+        
+        x = ( self.WIDTH - 124 ) / 2
+        
+        dc.DrawBitmap( self._hydrus, x, 15 )
+        
+        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+        
+        ( width, height ) = dc.GetTextExtent( self._text )
+        
+        x = ( self.WIDTH - width ) / 2
+        
+        dc.DrawText( self._text, x, 200 )
         
     
     def EventDrag( self, event ):
@@ -3108,28 +3082,24 @@ class FrameSplash( ClientGUICommon.Frame ):
     
     def EventEraseBackground( self, event ): pass
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._bmp )
+    def EventPaint( self, event ):
+        
+        if self._dirty:
+            
+            self._Redraw()
+            
+        
+        wx.BufferedPaintDC( self, self._bmp )
+        
     
     def SetText( self, text ):
         
         print( text )
         
-        dc = wx.BufferedDC( wx.ClientDC( self ), self._bmp )
+        self._text = text
         
-        dc.SetBackground( wx.Brush( wx.WHITE ) )
+        self._dirty = True
         
-        dc.Clear()
-        
-        x = ( self.WIDTH - 124 ) / 2
-        
-        dc.DrawBitmap( self._hydrus, x, 15 )
-        
-        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-        
-        ( width, height ) = dc.GetTextExtent( text )
-        
-        x = ( self.WIDTH - width ) / 2
-        
-        dc.DrawText( text, x, 200 )
+        self.Refresh()
         
     

@@ -48,8 +48,8 @@ options = {}
 
 # Misc
 
-NETWORK_VERSION = 15
-SOFTWARE_VERSION = 158
+NETWORK_VERSION = 16
+SOFTWARE_VERSION = 159
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -225,6 +225,7 @@ SERVICE_UPDATE_LAST_CHECK = 6
 SERVICE_UPDATE_NEWS = 7
 SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP = 8
 SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP = 9
+SERVICE_UPDATE_SUBINDEX_COUNT = 10
 
 ADD = 0
 DELETE = 1
@@ -260,6 +261,7 @@ VIDEO_WMV = 18
 UNDETERMINED_WM = 19
 VIDEO_MKV = 20
 VIDEO_WEBM = 21
+APPLICATION_JSON = 22
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -299,6 +301,7 @@ mime_enum_lookup[ 'application/x-yaml' ] = APPLICATION_YAML
 mime_enum_lookup[ 'PDF document' ] = APPLICATION_PDF
 mime_enum_lookup[ 'application/pdf' ] = APPLICATION_PDF
 mime_enum_lookup[ 'application/zip' ] = APPLICATION_ZIP
+mime_enum_lookup[ 'application/json' ] = APPLICATION_JSON
 mime_enum_lookup[ 'application/hydrus-encrypted-zip' ] = APPLICATION_HYDRUS_ENCRYPTED_ZIP
 mime_enum_lookup[ 'application' ] = APPLICATIONS
 mime_enum_lookup[ 'audio/mp3' ] = AUDIO_MP3
@@ -326,6 +329,7 @@ mime_string_lookup[ IMAGE_ICON ] = 'image/vnd.microsoft.icon'
 mime_string_lookup[ APPLICATION_FLASH ] = 'application/x-shockwave-flash'
 mime_string_lookup[ APPLICATION_OCTET_STREAM ] = 'application/octet-stream'
 mime_string_lookup[ APPLICATION_YAML ] = 'application/x-yaml'
+mime_string_lookup[ APPLICATION_JSON ] = 'application/json'
 mime_string_lookup[ APPLICATION_PDF ] = 'application/pdf'
 mime_string_lookup[ APPLICATION_ZIP ] = 'application/zip'
 mime_string_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = 'application/hydrus-encrypted-zip'
@@ -356,6 +360,7 @@ mime_ext_lookup[ IMAGE_ICON ] = '.ico'
 mime_ext_lookup[ APPLICATION_FLASH ] = '.swf'
 mime_ext_lookup[ APPLICATION_OCTET_STREAM ] = '.bin'
 mime_ext_lookup[ APPLICATION_YAML ] = '.yaml'
+mime_ext_lookup[ APPLICATION_JSON ] = '.json'
 mime_ext_lookup[ APPLICATION_PDF ] = '.pdf'
 mime_ext_lookup[ APPLICATION_ZIP ] = '.zip'
 mime_ext_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = '.zip.encrypted'
@@ -485,75 +490,15 @@ wxk_code_string_lookup = {
 
 BANDWIDTH_CONSUMING_REQUESTS = set()
 
-BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, GET, 'update' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, POST, 'mappings' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, POST, 'petitions' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'update' ) )
+BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, GET, 'content_update_package' ) )
+BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, GET, 'service_update_package' ) )
+BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, POST, 'content_update_package' ) )
+BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'content_update_package' ) )
 BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'file' ) )
+BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'service_update_package' ) )
 BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'thumbnail' ) )
+BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, POST, 'content_update_package' ) )
 BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, POST, 'file' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, POST, 'petitions' ) )
-
-service_requests = []
-service_requests.append( ( GET, '', None ) )
-service_requests.append( ( GET, 'favicon.ico', None ) )
-
-local_file_requests = list( service_requests )
-local_file_requests.append( ( GET, 'file', None ) )
-local_file_requests.append( ( GET, 'thumbnail', None ) )
-
-restricted_requests = list( service_requests )
-restricted_requests.append( ( GET, 'access_key', None ) )
-restricted_requests.append( ( GET, 'access_key_verification', None ) )
-restricted_requests.append( ( GET, 'account', None ) )
-restricted_requests.append( ( GET, 'account_info', MANAGE_USERS ) )
-restricted_requests.append( ( GET, 'account_types', MANAGE_USERS ) )
-restricted_requests.append( ( GET, 'options', GENERAL_ADMIN ) )
-restricted_requests.append( ( GET, 'registration_keys', GENERAL_ADMIN ) )
-restricted_requests.append( ( GET, 'session_key', None ) )
-restricted_requests.append( ( GET, 'stats', GENERAL_ADMIN ) )
-restricted_requests.append( ( POST, 'account', ( MANAGE_USERS, GENERAL_ADMIN ) ) )
-restricted_requests.append( ( POST, 'account_types', GENERAL_ADMIN ) )
-
-admin_requests = list( restricted_requests )
-admin_requests.append( ( GET, 'init', None ) )
-admin_requests.append( ( GET, 'services_info', EDIT_SERVICES ) )
-admin_requests.append( ( POST, 'backup', EDIT_SERVICES ) )
-admin_requests.append( ( POST, 'services', EDIT_SERVICES ) )
-
-repository_requests = list( restricted_requests )
-repository_requests.append( ( GET, 'num_petitions', RESOLVE_PETITIONS ) )
-repository_requests.append( ( GET, 'petition', RESOLVE_PETITIONS ) )
-repository_requests.append( ( GET, 'update', GET_DATA ) )
-repository_requests.append( ( POST, 'news', GENERAL_ADMIN ) )
-repository_requests.append( ( POST, 'update', POST_DATA ) )
-
-file_repository_requests = list( repository_requests )
-file_repository_requests.append( ( GET, 'file', GET_DATA ) )
-file_repository_requests.append( ( GET, 'ip', GENERAL_ADMIN ) )
-file_repository_requests.append( ( GET, 'thumbnail', GET_DATA ) )
-file_repository_requests.append( ( POST, 'file', POST_DATA ) )
-
-tag_repository_requests = list( repository_requests )
-
-message_depot_requests = list( restricted_requests )
-message_depot_requests.append( ( GET, 'message', GET_DATA ) )
-message_depot_requests.append( ( GET, 'message_info_since', GET_DATA ) )
-message_depot_requests.append( ( GET, 'public_key', None ) )
-message_depot_requests.append( ( POST, 'contact', POST_DATA ) )
-message_depot_requests.append( ( POST, 'message', None ) )
-message_depot_requests.append( ( POST, 'message_statuses', None ) )
-
-all_requests = []
-all_requests.extend( [ ( LOCAL_FILE, request_type, request, permissions ) for ( request_type, request, permissions ) in local_file_requests ] )
-all_requests.extend( [ ( SERVER_ADMIN, request_type, request, permissions ) for ( request_type, request, permissions ) in admin_requests ] )
-all_requests.extend( [ ( FILE_REPOSITORY, request_type, request, permissions ) for ( request_type, request, permissions ) in file_repository_requests ] )
-all_requests.extend( [ ( TAG_REPOSITORY, request_type, request, permissions ) for ( request_type, request, permissions ) in tag_repository_requests ] )
-all_requests.extend( [ ( MESSAGE_DEPOT, request_type, request, permissions ) for ( request_type, request, permissions ) in message_depot_requests ] )
-
-ALLOWED_REQUESTS = { ( service_type, request_type, request ) for ( service_type, request_type, request, permissions ) in all_requests }
-
-REQUESTS_TO_PERMISSIONS = { ( service_type, request_type, request ) : permissions for ( service_type, request_type, request, permissions ) in all_requests }
 
 # default options
 

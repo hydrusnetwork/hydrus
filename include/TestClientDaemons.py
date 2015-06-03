@@ -8,7 +8,7 @@ import TestConstants
 import tempfile
 import unittest
 import HydrusData
-import ClientConstants
+import ClientConstants as CC
 import HydrusGlobals
 import wx
 
@@ -55,7 +55,7 @@ class TestDaemons( unittest.TestCase ):
             
             self.assertEqual( len( import_file ), 3 )
             
-            expected_tag_part = { 'service_keys_to_tags' : { ClientConstants.LOCAL_TAG_SERVICE_KEY : set( [ 'local tag' ] ) } }
+            expected_tag_part = { 'service_keys_to_tags' : { CC.LOCAL_TAG_SERVICE_KEY : set( [ 'local tag' ] ) } }
             
             ( one, two, three ) = import_file
             

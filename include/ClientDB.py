@@ -2747,11 +2747,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
         
-        obj = HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ dump_type ]()
-        
-        obj.InitialiseFromSerialisedInfo( version, dump )
-        
-        return obj
+        return HydrusSerialisable.CreateFromTuple( ( dump_type, version, dump ) )
         
     
     
@@ -2765,11 +2761,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( dump_name, version, dump ) in results:
                 
-                obj = HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ dump_type ]( dump_name )
-                
-                obj.InitialiseFromSerialisedInfo( version, dump )
-                
-                objs.append( obj )
+                objs.append( HydrusSerialisable.CreateFromTuple( ( dump_type, dump_name, version, dump ) ) )
                 
             
             return objs
@@ -2778,11 +2770,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
             
-            obj = HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ dump_type ]( dump_name )
-            
-            obj.InitialiseFromSerialisedInfo( version, dump )
-            
-            return obj
+            return HydrusSerialisable.CreateFromTuple( ( dump_type, dump_name, version, dump ) )
             
         
     
@@ -2800,7 +2788,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
-                if result is not None: return ( 'deleted', None )
+                if result is not None: return ( CC.STATUS_DELETED, None )
                 
             
             result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
@@ -2809,11 +2797,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash = self._GetHash( hash_id )
                 
-                return ( 'redundant', hash )
+                return ( CC.STATUS_REDUNDANT, hash )
                 
             
         
-        return ( 'new', None )
+        return ( CC.STATUS_NEW, None )
         
     
     def _GetMediaResults( self, service_key, hash_ids ):
@@ -3077,7 +3065,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type == HC.TAG_REPOSITORY:
             
-            updates = []
+            content_update_packages = []
             
             # mappings
             
@@ -3118,7 +3106,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                     
-                    updates.append( HydrusData.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
+                    content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes ) )
                     
                     content_data = HydrusData.GetEmptyDataDict()
                     
@@ -3157,7 +3145,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                     
-                    updates.append( HydrusData.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
+                    content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes ) )
                     
                     content_data = HydrusData.GetEmptyDataDict()
                     
@@ -3171,7 +3159,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                 
-                updates.append( HydrusData.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
+                content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes ) )
                 
                 content_data = HydrusData.GetEmptyDataDict()
                 
@@ -3204,10 +3192,10 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                 
-                updates.append( HydrusData.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
+                content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes ) )
                 
             
-            return updates
+            return content_update_packages
             
         elif service_type == HC.FILE_REPOSITORY:
             
@@ -3225,9 +3213,9 @@ class DB( HydrusDB.HydrusDB ):
             
             content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
-            update = HydrusData.ClientToServerUpdate( content_data, hash_ids_to_hashes )
+            content_update_package = HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes )
             
-            return ( upload_hashes, update )
+            return ( upload_hashes, content_update_package )
             
         
     
@@ -3643,7 +3631,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
-                if result is not None: return ( 'deleted', None )
+                if result is not None: return ( CC.STATUS_DELETED, None )
                 
             
             result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
@@ -3652,11 +3640,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash = self._GetHash( hash_id )
                 
-                return ( 'redundant', hash )
+                return ( CC.STATUS_REDUNDANT, hash )
                 
             
         
-        return ( 'new', None )
+        return ( CC.STATUS_NEW, None )
         
     
     def _GetWebSessions( self ):
@@ -3726,7 +3714,7 @@ class DB( HydrusDB.HydrusDB ):
         if advanced_import_options is None: advanced_import_options = ClientDefaults.GetDefaultAdvancedImportOptions()
         if service_keys_to_tags is None: service_keys_to_tags = {}
         
-        result = 'successful'
+        result = CC.STATUS_SUCCESSFUL
         
         can_add = True
         
@@ -3746,7 +3734,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if already_in_db:
             
-            result = 'redundant'
+            result = CC.STATUS_REDUNDANT
             
             if archive:
                 
@@ -3763,7 +3751,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if exclude_deleted_files and self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None:
                     
-                    result = 'deleted'
+                    result = CC.STATUS_DELETED
                     
                     can_add = False
                     
@@ -4689,19 +4677,17 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SetJSONDump( self, obj ):
         
-        ( dump_type, version ) = obj.GetTypeAndVersion()
-        
-        dump = obj.GetSerialisedInfo()
-        
         if isinstance( obj, HydrusSerialisable.SerialisableBaseNamed ):
             
-            dump_name = obj.GetName()
+            ( dump_type, dump_name, version, dump ) = HydrusSerialisable.DumpToTuple( obj )
             
             self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
             
             self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, dump ) VALUES ( ?, ?, ?, ? );', ( dump_type, dump_name, version, sqlite3.Binary( dump ) ) )
             
         else:
+            
+            ( dump_type, version, dump ) = HydrusSerialisable.DumpToTuple( obj )
             
             self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
             
@@ -5284,11 +5270,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for obj in objs:
                 
-                ( dump_type, dump_version ) = obj.GetTypeAndVersion()
-                
-                dump_name = obj.GetName()
-                
-                dump = obj.GetSerialisedInfo()
+                ( dump_type, dump_name, dump_version, dump ) = HydrusSerialisable.DumpToTuple( obj )
                 
                 self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, dump ) VALUES ( ?, ?, ?, ? );', ( dump_type, dump_name, dump_version, sqlite3.Binary( dump ) ) )
                 
@@ -5386,6 +5368,25 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 158:
+            
+            results = self._c.execute( 'SELECT service_id, service_type, info FROM services WHERE service_type IN ( ?, ? );', ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY ) ).fetchall()
+            
+            for ( service_id, service_type, info ) in results:
+                
+                info[ 'first_timestamp' ] = None
+                info[ 'next_download_timestamp' ] = 0
+                
+                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
+            
+            for filename in dircache.listdir( HC.CLIENT_UPDATES_DIR ):
+                
+                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                
+                os.remove( path )
+                
+            
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         

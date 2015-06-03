@@ -629,12 +629,12 @@ class TestClientDB( unittest.TestCase ):
         
         ( written_result, written_hash ) = self._write( 'import_file', path )
         
-        self.assertEqual( written_result, 'successful' )
+        self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
         self.assertEqual( written_hash, hash )
         
         ( written_result, written_media_result ) = self._write( 'import_file', path, generate_media_result = True )
         
-        self.assertEqual( written_result, 'redundant' )
+        self.assertEqual( written_result, CC.STATUS_REDUNDANT )
         
         ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = written_media_result.ToTuple()
         
@@ -735,7 +735,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'md5_status', md5 )
         
-        self.assertEqual( result, ( 'new', None ) )
+        self.assertEqual( result, ( CC.STATUS_NEW, None ) )
         
         #
         
@@ -745,7 +745,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'md5_status', md5 )
         
-        self.assertEqual( result, ( 'redundant', hash ) )
+        self.assertEqual( result, ( CC.STATUS_REDUNDANT, hash ) )
         
         #
         
@@ -761,13 +761,13 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'md5_status', md5 )
         
-        self.assertEqual( result, ( 'deleted', None ) )
+        self.assertEqual( result, ( CC.STATUS_DELETED, None ) )
         
         HC.options[ 'exclude_deleted_files' ] = False
         
         result = self._read( 'md5_status', md5 )
         
-        self.assertEqual( result, ( 'new', None ) )
+        self.assertEqual( result, ( CC.STATUS_NEW, None ) )
         
     
     def test_media_results( self ):

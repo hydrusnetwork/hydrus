@@ -13,6 +13,7 @@ import HydrusFileHandling
 import HydrusImageHandling
 import HydrusNATPunch
 import HydrusServer
+import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
@@ -235,13 +236,13 @@ def DAEMONCheckImportFolders():
                                 
                                 ( result, hash ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path, service_keys_to_tags = service_keys_to_tags )
                                 
-                                if result in ( 'successful', 'redundant' ):
+                                if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                                     
                                     successful_hashes.add( hash )
                                     
                                     if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: details[ 'cached_imported_paths' ].add( path )
                                     
-                                elif result == 'deleted':
+                                elif result == CC.STATUS_DELETED:
                                     
                                     details[ 'failed_imported_paths' ].add( path )
                                     
@@ -307,8 +308,6 @@ def DAEMONDownloadFiles():
             try: file_repository = wx.GetApp().GetManager( 'services' ).GetService( service_key )
             except HydrusExceptions.NotFoundException: continue
             
-            HydrusGlobals.pubsub.pub( 'downloads_status', HydrusData.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
-            
             if file_repository.CanDownload(): 
                 
                 try:
@@ -324,8 +323,6 @@ def DAEMONDownloadFiles():
                         num_downloads -= 1
                         
                         wx.GetApp().WaitUntilWXThreadIdle()
-                        
-                        HydrusGlobals.pubsub.pub( 'downloads_status', HydrusData.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
                         
                         wx.GetApp().WriteSynchronous( 'import_file', temp_path )
                         
@@ -345,9 +342,6 @@ def DAEMONDownloadFiles():
             if HydrusGlobals.shutdown: return
             
         
-    
-    if num_downloads == 0: HydrusGlobals.pubsub.pub( 'downloads_status', 'no file downloads' )
-    elif num_downloads > 0: HydrusGlobals.pubsub.pub( 'downloads_status', HydrusData.ConvertIntToPrettyString( num_downloads ) + ' inactive file downloads' )
     
 def DAEMONFlushServiceUpdates( list_of_service_keys_to_service_updates ):
     
@@ -450,180 +444,7 @@ def DAEMONSynchroniseAccounts():
         
     
     if do_notify: HydrusGlobals.pubsub.pub( 'notify_new_permissions' )
-    '''
-def DAEMONSynchroniseMessages():
     
-    services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.MESSAGE_DEPOT, ) )
-    
-    for service in services:
-        
-        try:
-            
-            service_key = service.GetServiceKey()
-            service_type = service.GetServiceType()
-            name = service.GetName()
-            
-            if service.CanCheck():
-                
-                contact = service.GetContact()
-                
-                connection = service.GetConnection()
-                
-                private_key = service.GetPrivateKey()
-                
-                # is the account associated?
-                
-                if not contact.HasPublicKey():
-                    
-                    try:
-                        
-                        public_key = HydrusEncryption.GetPublicKey( private_key )
-                        
-                        connection.Post( 'contact', public_key = public_key )
-                        
-                        wx.GetApp().WriteSynchronous( 'contact_associated', service_key )
-                        
-                        contact = service.GetContact()
-                        
-                        HydrusData.ShowText( 'associated public key with account at ' + name )
-                        
-                    except:
-                        
-                        continue
-                        
-                    
-                
-                # see if there are any new message_keys to download or statuses
-                
-                last_check = service.GetLastCheck()
-                
-                ( message_keys, statuses ) = connection.Get( 'message_info_since', since = last_check )
-                
-                decrypted_statuses = []
-                
-                for status in statuses:
-                    
-                    try: decrypted_statuses.append( HydrusMessageHandling.UnpackageDeliveredStatus( status, private_key ) )
-                    except: pass
-                    
-                
-                new_last_check = HydrusData.GetNow() - 5
-                
-                wx.GetApp().WriteSynchronous( 'message_info_since', service_key, message_keys, decrypted_statuses, new_last_check )
-                
-                if len( message_keys ) > 0: HydrusData.ShowText( 'Checked ' + name + ' up to ' + HydrusData.ConvertTimestampToPrettyTime( new_last_check ) + ', finding ' + HydrusData.ToString( len( message_keys ) ) + ' new messages' )
-                
-            
-            # try to download any messages that still need downloading
-            
-            if service.CanDownload():
-                
-                serverside_message_keys = wx.GetApp().Read( 'message_keys_to_download', service_key )
-                
-                if len( serverside_message_keys ) > 0:
-                    
-                    connection = service.GetConnection()
-                    
-                    private_key = service.GetPrivateKey()
-                    
-                    num_processed = 0
-                    
-                    for serverside_message_key in serverside_message_keys:
-                        
-                        try:
-                            
-                            encrypted_message = connection.Get( 'message', message_key = serverside_message_key.encode( 'hex' ) )
-                            
-                            message = HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, private_key )
-                            
-                            wx.GetApp().WriteSynchronous( 'message', message, serverside_message_key = serverside_message_key )
-                            
-                            num_processed += 1
-                            
-                        except Exception as e:
-                            
-                            if issubclass( e, httplib.HTTPException ): break # it was an http error; try again later
-                            
-                        
-                    
-                    if num_processed > 0:
-                        
-                        HydrusData.ShowText( 'Downloaded and parsed ' + HydrusData.ToString( num_processed ) + ' messages from ' + name )
-                        
-                    
-                
-            
-        except Exception as e:
-            
-            HydrusData.ShowText( 'Failed to check ' + name + ':' )
-            
-            HydrusData.ShowException( e )
-            
-        
-    
-    wx.GetApp().WriteSynchronous( 'flush_message_statuses' )
-    
-    # send messages to recipients and update my status to sent/failed
-    
-    messages_to_send = wx.GetApp().Read( 'messages_to_send' )
-    
-    for ( message_key, contacts_to ) in messages_to_send:
-        
-        message = wx.GetApp().Read( 'transport_message', message_key )
-        
-        contact_from = message.GetContactFrom()
-        
-        from_anon = contact_from is None or contact_from.GetName() == 'Anonymous'
-        
-        if not from_anon:
-            
-            my_public_key = contact_from.GetPublicKey()
-            my_contact_key = contact_from.GetContactKey()
-            
-            my_message_depot = wx.GetApp().GetManager( 'services' ).GetService( contact_from.GetServiceKey() )
-            
-            from_connection = my_message_depot.GetConnection()
-            
-        
-        service_status_updates = []
-        local_status_updates = []
-        
-        for contact_to in contacts_to:
-            
-            public_key = contact_to.GetPublicKey()
-            contact_key = contact_to.GetContactKey()
-            
-            encrypted_message = HydrusMessageHandling.PackageMessageForDelivery( message, public_key )
-            
-            try:
-                
-                to_connection = contact_to.GetConnection()
-                
-                to_connection.Post( 'message', message = encrypted_message, contact_key = contact_key )
-                
-                status = 'sent'
-                
-            except:
-                
-                HydrusData.ShowText( 'Sending a message failed: ' + os.linesep + traceback.format_exc() )
-                
-                status = 'failed'
-                
-            
-            status_key = hashlib.sha256( contact_key + message_key ).digest()
-            
-            if not from_anon: service_status_updates.append( ( status_key, HydrusMessageHandling.PackageStatusForDelivery( ( message_key, contact_key, status ), my_public_key ) ) )
-            
-            local_status_updates.append( ( contact_key, status ) )
-            
-        
-        if not from_anon: from_connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = service_status_updates )
-        
-        wx.GetApp().WriteSynchronous( 'message_statuses', message_key, local_status_updates )
-        
-    
-    wx.GetApp().Read( 'status_num_inbox' )
-    '''
 def DAEMONSynchroniseRepositories():
     
     HydrusGlobals.repos_changed = False
@@ -702,33 +523,59 @@ def DAEMONSynchroniseRepositories():
                         
                         if first_timestamp is None:
                             
-                            range = None
-                            value = 0
+                            gauge_range = None
+                            gauge_value = 0
                             
                             update_index_string = 'initial update: '
                             
                         else:
                             
-                            range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
-                            value = ( ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
+                            gauge_range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
+                            gauge_value = ( ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                             
-                            update_index_string = 'update ' + HydrusData.ConvertIntToPrettyString( value ) + '/' + HydrusData.ConvertIntToPrettyString( range ) + ': '
+                            update_index_string = 'update ' + HydrusData.ConvertIntToPrettyString( gauge_value ) + '/' + HydrusData.ConvertIntToPrettyString( gauge_range ) + ': '
                             
                         
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'downloading and parsing' )
-                        job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
+                        subupdate_index_string = 'service update: '
                         
-                        update = service.Request( HC.GET, 'update', { 'begin' : next_download_timestamp } )
+                        job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'downloading and parsing' )
+                        job_key.SetVariable( 'popup_message_gauge_1', ( gauge_value, gauge_range ) )
                         
-                        ( begin, end ) = update.GetBeginEnd()
+                        service_update_package = service.Request( HC.GET, 'service_update_package', { 'begin' : next_download_timestamp } )
                         
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'saving to disk' )
+                        begin = service_update_package.GetBegin()
                         
-                        update_path = ClientFiles.GetUpdatePath( service_key, begin )
+                        subindex_count = service_update_package.GetSubindexCount()
                         
-                        with open( update_path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
+                        for subindex in range( subindex_count ):
+                            
+                            path = ClientFiles.GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
+                            
+                            if not os.path.exists( path ):
+                                
+                                subupdate_index_string = 'content update ' + HydrusData.ConvertIntToPrettyString( subindex + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( subindex_count ) + ': '
+                                
+                                job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'downloading and parsing' )
+                                
+                                content_update_package = service.Request( HC.GET, 'content_update_package', { 'begin' : begin, 'subindex' : subindex } )
+                                
+                                obj_string = HydrusSerialisable.DumpToString( content_update_package )
+                                
+                                job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'saving to disk' )
+                                
+                                with open( path, 'wb' ) as f: f.write( obj_string )
+                                
+                            
                         
-                        next_download_timestamp = end + 1
+                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'committing' )
+                        
+                        path = ClientFiles.GetExpectedServiceUpdatePackagePath( service_key, begin )
+                        
+                        obj_string = HydrusSerialisable.DumpToString( service_update_package )
+                        
+                        with open( path, 'wb' ) as f: f.write( obj_string )
+                        
+                        next_download_timestamp = service_update_package.GetNextBegin()
                         
                         service_updates = [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP, next_download_timestamp ) ]
                         
@@ -745,6 +592,8 @@ def DAEMONSynchroniseRepositories():
                 
                 num_updates_processed = 0
                 total_content_weight_processed = 0
+                update_time_tracker = []
+                update_speed_string = ''
                 
                 if service.CanProcessUpdate():
                     
@@ -793,131 +642,172 @@ def DAEMONSynchroniseRepositories():
                         
                         ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = service.GetTimestamps()
                         
-                        range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
+                        gauge_range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                         
-                        if next_processing_timestamp == 0: value = 0
-                        else: value = ( ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
+                        if next_processing_timestamp == 0: gauge_value = 0
+                        else: gauge_value = ( ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                         
-                        update_index_string = 'update ' + HydrusData.ConvertIntToPrettyString( value ) + '/' + HydrusData.ConvertIntToPrettyString( range ) + ': '
+                        update_index_string = 'update ' + HydrusData.ConvertIntToPrettyString( gauge_value ) + '/' + HydrusData.ConvertIntToPrettyString( gauge_range ) + ': '
                         
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'loading from disk' )
-                        job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
+                        subupdate_index_string = 'service update: '
                         
-                        update_path = ClientFiles.GetUpdatePath( service_key, next_processing_timestamp )
+                        job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'loading from disk' )
+                        job_key.SetVariable( 'popup_message_gauge_1', ( gauge_value, gauge_range ) )
                         
-                        with open( update_path, 'rb' ) as f: update_yaml = f.read()
+                        path = ClientFiles.GetExpectedServiceUpdatePackagePath( service_key, next_processing_timestamp )
                         
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'parsing' )
+                        with open( path, 'rb' ) as f: obj_string = f.read()
                         
-                        update = yaml.safe_load( update_yaml )
+                        service_update_package = HydrusSerialisable.CreateFromString( obj_string )
                         
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'processing' )
+                        subindex_count = service_update_package.GetSubindexCount()
                         
-                        num_content_updates = update.GetNumContentUpdates()
-                        content_updates = []
-                        current_weight = 0
-                        
-                        for ( i, content_update ) in enumerate( update.IterateContentUpdates() ):
+                        for subindex in range( subindex_count ):
                             
-                            while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
+                            subupdate_index_string = 'content update ' + HydrusData.ConvertIntToPrettyString( subindex + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( subindex_count ) + ': '
+                            
+                            path = ClientFiles.GetExpectedContentUpdatePackagePath( service_key, next_processing_timestamp, subindex )
+                            
+                            job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'loading from disk' )
+                            
+                            with open( path, 'rb' ) as f: obj_string = f.read()
+                            
+                            job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'parsing' )
+                            
+                            content_update_package = HydrusSerialisable.CreateFromString( obj_string )
+                            
+                            job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'processing' )
+                            
+                            num_content_updates = content_update_package.GetNumContentUpdates()
+                            content_updates = []
+                            current_weight = 0
+                            
+                            for ( i, content_update ) in enumerate( content_update_package.IterateContentUpdates() ):
                                 
-                                time.sleep( 0.1 )
+                                while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
+                                    
+                                    time.sleep( 0.1 )
+                                    
+                                    if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_2', 'paused' )
+                                    
+                                    if options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_2', 'repository synchronisation paused' )
+                                    
+                                    if HydrusGlobals.shutdown: raise Exception( 'application shutting down!' )
+                                    
+                                    if job_key.IsCancelled():
+                                        
+                                        job_key.SetVariable( 'popup_message_text_2', 'cancelled' )
+                                        
+                                        print( job_key.ToString() )
+                                        
+                                        return
+                                        
+                                    
+                                    if HydrusGlobals.repos_changed:
+                                        
+                                        job_key.SetVariable( 'popup_message_text_2', 'repositories were changed during processing; this job was abandoned' )
+                                        
+                                        print( job_key.ToString() )
+                                        
+                                        time.sleep( 5 )
+                                        
+                                        job_key.Cancel()
+                                        
+                                        HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                                        
+                                        return
+                                        
+                                    
                                 
-                                if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_2', 'paused' )
+                                content_update_index_string = 'content part ' + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + ': '
                                 
-                                if options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_2', 'repository synchronisation paused' )
+                                job_key.SetVariable( 'popup_message_gauge_2', ( i, num_content_updates ) )
                                 
-                                if HydrusGlobals.shutdown: raise Exception( 'application shutting down!' )
+                                content_updates.append( content_update )
                                 
-                                if job_key.IsCancelled():
-                                    
-                                    job_key.SetVariable( 'popup_message_text_2', 'cancelled' )
-                                    
-                                    print( job_key.ToString() )
-                                    
-                                    return
-                                    
+                                current_weight += len( content_update.GetHashes() )
                                 
-                                if HydrusGlobals.repos_changed:
+                                if current_weight > WEIGHT_THRESHOLD:
                                     
-                                    job_key.SetVariable( 'popup_message_text_2', 'repositories were changed during processing; this job was abandoned' )
+                                    job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' + update_speed_string )
                                     
-                                    print( job_key.ToString() )
+                                    wx.GetApp().WaitUntilWXThreadIdle()
                                     
-                                    time.sleep( 5 )
+                                    before_precise = HydrusData.GetNowPrecise()
                                     
-                                    job_key.Cancel()
+                                    wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
                                     
-                                    HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                                    after_precise = HydrusData.GetNowPrecise()
                                     
-                                    return
+                                    if wx.GetApp().CurrentlyIdle(): ideal_packet_time = 10.0
+                                    else: ideal_packet_time = 0.5
+                                    
+                                    it_took = after_precise - before_precise
+                                    
+                                    too_long = ideal_packet_time * 1.5
+                                    too_short = ideal_packet_time * 0.8
+                                    really_too_long = ideal_packet_time * 10
+                                    
+                                    if it_took > too_long: WEIGHT_THRESHOLD /= 1.5
+                                    elif it_took < too_short: WEIGHT_THRESHOLD *= 1.05
+                                    
+                                    if it_took > really_too_long or WEIGHT_THRESHOLD < 1.0:
+                                        
+                                        job_key.SetVariable( 'popup_message_text_2', 'taking a break' )
+                                        
+                                        time.sleep( 10 )
+                                        
+                                        WEIGHT_THRESHOLD = 1.0
+                                        
+                                    
+                                    total_content_weight_processed += current_weight
+                                    
+                                    #
+                                    
+                                    if len( update_time_tracker ) > 10:
+                                        
+                                        update_time_tracker.pop()
+                                        
+                                    
+                                    update_time_tracker.append( ( current_weight, it_took ) )
+                                    
+                                    recent_total_weight = 0
+                                    recent_total_time = 0.0
+                                    
+                                    for ( weight, took ) in update_time_tracker:
+                                        
+                                        recent_total_weight += weight
+                                        recent_total_time += took
+                                        
+                                        recent_speed = int( recent_total_weight / recent_total_time )
+                                        
+                                        update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( recent_speed ) + ' rows/s'
+                                        
+                                    
+                                    #
+                                    
+                                    content_updates = []
+                                    current_weight = 0
                                     
                                 
                             
-                            content_update_index_string = 'content part ' + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + ': '
-                            
-                            job_key.SetVariable( 'popup_message_gauge_2', ( i, num_content_updates ) )
-                            
-                            content_updates.append( content_update )
-                            
-                            current_weight += len( content_update.GetHashes() )
-                            
-                            if current_weight > WEIGHT_THRESHOLD:
+                            if len( content_updates ) > 0:
                                 
-                                job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' )
+                                content_update_index_string = 'content part ' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + '/' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + ': '
                                 
-                                wx.GetApp().WaitUntilWXThreadIdle()
-                                
-                                before_precise = HydrusData.GetNowPrecise()
+                                job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' + update_speed_string )
                                 
                                 wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
                                 
-                                after_precise = HydrusData.GetNowPrecise()
-                                
-                                if wx.GetApp().CurrentlyIdle(): ideal_packet_time = 10.0
-                                else: ideal_packet_time = 0.5
-                                
-                                too_long = ideal_packet_time * 1.5
-                                too_short = ideal_packet_time * 0.8
-                                really_too_long = ideal_packet_time * 20
-                                
-                                if after_precise - before_precise > too_long: WEIGHT_THRESHOLD /= 1.5
-                                elif after_precise - before_precise < too_short: WEIGHT_THRESHOLD *= 1.05
-                                
-                                if after_precise - before_precise > really_too_long or WEIGHT_THRESHOLD < 1.0:
-                                    
-                                    job_key.SetVariable( 'popup_message_text_2', 'taking a break' )
-                                    
-                                    time.sleep( 10 )
-                                    
-                                    WEIGHT_THRESHOLD = 1.0
-                                    
-                                
                                 total_content_weight_processed += current_weight
                                 
-                                content_updates = []
-                                current_weight = 0
-                                
-                            
-                        
-                        if len( content_updates ) > 0:
-                            
-                            content_update_index_string = 'content part ' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + '/' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + ': '
-                            
-                            job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' )
-                            
-                            wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
-                            
-                            total_content_weight_processed += current_weight
                             
                         
                         job_key.SetVariable( 'popup_message_text_2', 'committing service updates' )
                         
-                        service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
+                        service_updates = [ service_update for service_update in service_update_package.IterateServiceUpdates() ]
                         
-                        ( begin, end ) = update.GetBeginEnd()
-                        
-                        next_processing_timestamp = end + 1
+                        next_processing_timestamp = service_update_package.GetNextBegin()
                         
                         service_updates.append( HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP, next_processing_timestamp ) )
                         
@@ -1159,7 +1049,9 @@ def DAEMONSynchroniseSubscriptions():
                     
                     gallery_parsers[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
                     
-                    all_url_args = []
+                    all_urls = []
+                    
+                    page_index = 0
                     
                     while True:
                         
@@ -1198,34 +1090,34 @@ def DAEMONSynchroniseSubscriptions():
                                 
                             
                         
-                        if last_checked == 0 and initial_limit is not None and len( all_url_args ) >= initial_limit: break
+                        if last_checked == 0 and initial_limit is not None and len( all_urls ) >= initial_limit: break
                         
                         gallery_parsers_to_remove = []
                         
                         for gallery_parser in gallery_parsers:
                             
-                            if last_checked == 0 and initial_limit is not None and len( all_url_args ) >= initial_limit: break
+                            if last_checked == 0 and initial_limit is not None and len( all_urls ) >= initial_limit: break
                             
-                            page_of_url_args = gallery_parser.GetAnotherPage()
+                            page_of_urls = gallery_parser.GetPage( page_index )
                             
-                            if len( page_of_url_args ) == 0: gallery_parsers_to_remove.append( gallery_parser )
+                            if len( page_of_urls ) == 0: gallery_parsers_to_remove.append( gallery_parser )
                             else:
                                 
-                                fresh_url_args = [ url_args for url_args in page_of_url_args if url_args[0] not in url_cache ]
+                                fresh_urls = [ url for url in page_of_urls if url not in url_cache ]
                                 
-                                reached_url_cache = len( fresh_url_args ) != len( page_of_url_args )
+                                reached_url_cache = len( fresh_urls ) != len( page_of_urls )
                                 
                                 if reached_url_cache: gallery_parsers_to_remove.append( gallery_parser )
                                 
                                 if initial_limit is not None:
                                     
-                                    while len( fresh_url_args ) > 0:
+                                    while len( fresh_urls ) > 0:
                                         
-                                        url_args = fresh_url_args.pop( 0 )
+                                        url = fresh_urls.pop( 0 )
                                         
-                                        all_url_args.append( url_args )
+                                        all_urls.append( url )
                                         
-                                        if len( all_url_args ) >= initial_limit:
+                                        if len( all_urls ) >= initial_limit:
                                             
                                             break
                                             
@@ -1233,10 +1125,10 @@ def DAEMONSynchroniseSubscriptions():
                                     
                                 else:
                                     
-                                    all_url_args.extend( fresh_url_args )
+                                    all_urls.extend( fresh_urls )
                                     
                                 
-                                job_key.SetVariable( 'popup_message_text_1', 'found ' + HydrusData.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files' )
+                                job_key.SetVariable( 'popup_message_text_1', 'found ' + HydrusData.ConvertIntToPrettyString( len( all_urls ) ) + ' new files' )
                                 
                             
                             time.sleep( 5 )
@@ -1246,14 +1138,16 @@ def DAEMONSynchroniseSubscriptions():
                         
                         if len( gallery_parsers ) == 0: break
                         
+                        page_index += 1
+                        
                     
-                    all_url_args.reverse() # to do oldest first, which means we can save incrementally
+                    all_urls.reverse() # to do oldest first, which means we can save incrementally
                     
                     num_new = 0
                     
                     successful_hashes = set()
                     
-                    for ( i, url_args ) in enumerate( all_url_args ):
+                    for ( i, url ) in enumerate( all_urls ):
                         
                         while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_subs_sync' ] or HydrusGlobals.shutdown:
                             
@@ -1292,14 +1186,12 @@ def DAEMONSynchroniseSubscriptions():
                         
                         try:
                             
-                            url = url_args[0]
-                            
                             url_cache.add( url )
                             
-                            x_out_of_y = 'file ' + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( len( all_url_args ) ) + ': '
+                            x_out_of_y = 'file ' + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( len( all_urls ) ) + ': '
                             
                             job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'checking url status' )
-                            job_key.SetVariable( 'popup_message_gauge_1', ( i, len( all_url_args ) ) )
+                            job_key.SetVariable( 'popup_message_gauge_1', ( i, len( all_urls ) ) )
                             
                             if len( successful_hashes ) > 0:
                                 
@@ -1310,9 +1202,9 @@ def DAEMONSynchroniseSubscriptions():
                             
                             ( status, hash ) = wx.GetApp().Read( 'url_status', url )
                             
-                            if status == 'deleted' and not advanced_import_options[ 'exclude_deleted_files' ]: status = 'new'
+                            if status == CC.STATUS_DELETED and not advanced_import_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
                             
-                            if status == 'redundant':
+                            if status == CC.STATUS_REDUNDANT:
                                 
                                 if do_tags and get_tags_if_redundant:
                                     
@@ -1320,7 +1212,7 @@ def DAEMONSynchroniseSubscriptions():
                                         
                                         job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'found file in db, fetching tags' )
                                         
-                                        tags = gallery_parser.GetTags( *url_args )
+                                        tags = gallery_parser.GetTags( url )
                                         
                                         service_keys_to_tags = ClientDownloading.ConvertTagsToServiceKeysToTags( tags, advanced_tag_options )
                                         
@@ -1331,7 +1223,7 @@ def DAEMONSynchroniseSubscriptions():
                                     except: pass
                                     
                                 
-                            elif status == 'new':
+                            elif status == CC.STATUS_NEW:
                                 
                                 num_new += 1
                                 
@@ -1341,10 +1233,10 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 try:
                                     
-                                    if do_tags: tags = gallery_parser.GetFileAndTags( temp_path, *url_args )
+                                    if do_tags: tags = gallery_parser.GetFileAndTags( temp_path, url )
                                     else:
                                         
-                                        gallery_parser.GetFile( temp_path, *url_args )
+                                        gallery_parser.GetFile( temp_path, url )
                                         
                                         tags = []
                                         
@@ -1360,7 +1252,7 @@ def DAEMONSynchroniseSubscriptions():
                                     HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
                                     
                                 
-                                if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
+                                if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ): successful_hashes.add( hash )
                                 
                             
                         except Exception as e:

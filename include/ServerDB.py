@@ -7,7 +7,7 @@ import HydrusDB
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
-import HydrusServer
+import HydrusSerialisable
 import itertools
 import os
 import Queue
@@ -513,16 +513,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CleanUpdate( self, service_key, begin, end ):
         
+        self._GenerateUpdate( service_key, begin, end )
+        
         service_id = self._GetServiceId( service_key )
-        
-        service_type = self._GetServiceType( service_id )
-        
-        if service_type == HC.FILE_REPOSITORY: clean_update = self._GenerateFileUpdate( service_id, begin, end )
-        elif service_type == HC.TAG_REPOSITORY: clean_update = self._GenerateTagUpdate( service_id, begin, end )
-        
-        path = ServerFiles.GetExpectedUpdatePath( service_key, begin )
-        
-        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
         
         self._c.execute( 'UPDATE update_cache SET dirty = ? WHERE service_id = ? AND begin = ?;', ( False, service_id, begin ) )
         
@@ -679,16 +672,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CreateUpdate( self, service_key, begin, end ):
         
+        self._GenerateUpdate( service_key, begin, end )
+        
         service_id = self._GetServiceId( service_key )
-        
-        service_type = self._GetServiceType( service_id )
-        
-        if service_type == HC.FILE_REPOSITORY: update = self._GenerateFileUpdate( service_id, begin, end )
-        elif service_type == HC.TAG_REPOSITORY: update = self._GenerateTagUpdate( service_id, begin, end )
-        
-        path = ServerFiles.GetExpectedUpdatePath( service_key, begin )
-        
-        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
         
         self._c.execute( 'INSERT OR REPLACE INTO update_cache ( service_id, begin, end, dirty ) VALUES ( ?, ?, ?, ? );', ( service_id, begin, end, False ) )
         
@@ -794,62 +780,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'UPDATE accounts SET used_bytes = used_bytes + ?, used_requests = used_requests + ? WHERE account_key = ?;', [ ( sum( num_bytes_list ), len( num_bytes_list ), sqlite3.Binary( account_key ) ) for ( account_key, num_bytes_list ) in requests_dict.items() ] )
         
     
-    def _GenerateFileUpdate( self, service_id, begin, end ):
-        
-        hash_ids = set()
-        
-        service_data = {}
-        content_data = HydrusData.GetEmptyDataDict()
-        
-        #
-        
-        files_info = [ ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in self._c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM file_map, files_info USING ( hash_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) ]
-        
-        hash_ids.update( ( file_info[0] for file_info in files_info ) )
-        
-        content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_ADD ] = files_info
-        
-        #
-        
-        deleted_files_info = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) ]
-        
-        hash_ids.update( deleted_files_info )
-        
-        content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_DELETE ] = deleted_files_info
-        
-        #
-        
-        news = self._c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
-        
-        service_data[ HC.SERVICE_UPDATE_BEGIN_END ] = ( begin, end )
-        service_data[ HC.SERVICE_UPDATE_NEWS ] = news
-        
-        #
-        
-        hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
-        
-        return HydrusData.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
-        
-    
-    def _GenerateRatingUpdate( self, service_id, begin, end ):
-        
-        ratings_info = self._c.execute( 'SELECT hash, hash_id, score, count, new_timestamp, current_timestamp FROM aggregate_ratings, hashes USING ( hash_id ) WHERE service_id = ? AND ( new_timestamp BETWEEN ? AND ? OR current_timestamp BETWEEN ? AND ? );', ( service_id, begin, end, begin, end ) ).fetchall()
-        
-        current_timestamps = { rating_info[5] for rating_info in ratings_info }
-        
-        hash_ids = [ rating_info[1] for rating_info in ratings_info ]
-        
-        self._c.execute( 'UPDATE aggregate_ratings SET current_timestamp = new_timestamp AND new_timestamp = 0 WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
-        
-        self._c.executemany( 'UPDATE updates SET dirty = ? WHERE service_id = ? AND ? BETWEEN begin AND end;', [ ( True, service_id, current_timestamp ) for current_timestamp in current_timestamps if current_timestamp != 0 ] )
-        
-        ratings = [ ( hash, score, count ) for ( hash, hash_id, score, count, new_timestamp, current_timestamp ) in ratings_info ]
-        
-        news = self._c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
-        
-        return HC.UpdateServerToClientRatings( ratings, news, begin, end )
-        
-    
     def _GenerateRegistrationKeys( self, service_key, num, title, lifetime = None ):
         
         service_id = self._GetServiceId( service_key )
@@ -868,75 +798,85 @@ class DB( HydrusDB.HydrusDB ):
         return [ registration_key for ( registration_key, account_key, access_key ) in keys ]
         
     
-    def _GenerateTagUpdate( self, service_id, begin, end ):
+    def _GenerateUpdate( self, service_key, begin, end ):
         
-        service_data = {}
-        content_data = HydrusData.GetEmptyDataDict()
+        service_id = self._GetServiceId( service_key )
         
-        hash_ids = set()
+        service_type = self._GetServiceType( service_id )
         
-        # mappings
+        if service_type == HC.FILE_REPOSITORY:
+            
+            iterator = self._IterateFileUpdateContentData
+            
+        elif service_type == HC.TAG_REPOSITORY:
+            
+            iterator = self._IterateTagUpdateContentData
+            
         
-        mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mappings USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) )
+        subindex = 0
+        weight = 0
         
-        hash_ids.update( itertools.chain.from_iterable( mappings_dict.values() ) )
+        content_update_package = HydrusData.ServerToClientContentUpdatePackage()
         
-        mappings = mappings_dict.items()
+        smaller_time_step = ( end - begin ) / 100
         
-        content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_ADD ] = mappings
+        sub_begin = begin
         
-        #
+        while sub_begin <= end:
+            
+            sub_end = min( ( sub_begin + smaller_time_step ) - 1, end )
+            
+            for ( data_type, action, rows, hash_ids_to_hashes, rows_weight ) in iterator( service_id, sub_begin, sub_end ):
+                
+                content_update_package.AddContentData( data_type, action, rows, hash_ids_to_hashes )
+                
+                weight += rows_weight
+                
+                if weight >= 100000:
+                    
+                    path = ServerFiles.GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
+                    
+                    network_string = HydrusSerialisable.DumpToNetworkString( content_update_package )
+                    
+                    with open( path, 'wb' ) as f: f.write( network_string )
+                    
+                    subindex += 1
+                    weight = 0
+                    
+                    content_update_package = HydrusData.ServerToClientContentUpdatePackage()
+                    
+                
+            
+            sub_begin += smaller_time_step
+            
         
-        deleted_mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mapping_petitions USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) )
+        if weight > 0:
+            
+            path = ServerFiles.GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
+            
+            network_string = HydrusSerialisable.DumpToNetworkString( content_update_package )
+            
+            with open( path, 'wb' ) as f: f.write( network_string )
+            
+            subindex += 1
+            
         
-        hash_ids.update( itertools.chain.from_iterable( deleted_mappings_dict.values() ) )
+        subindex_count = subindex
         
-        deleted_mappings = deleted_mappings_dict.items()
+        service_update_package = HydrusData.ServerToClientServiceUpdatePackage()
         
-        content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_DELETE ] = deleted_mappings
-        
-        # tag siblings
-        
-        tag_sibling_ids = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_siblings WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.CURRENT, begin, end ) ).fetchall()
-        
-        tag_siblings = [ ( self._GetTag( old_tag_id ), self._GetTag( new_tag_id ) ) for ( old_tag_id, new_tag_id ) in tag_sibling_ids ]
-        
-        content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_ADD ] = tag_siblings
-        
-        #
-        
-        deleted_tag_sibling_ids = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_siblings WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.DELETED, begin, end ) ).fetchall()
-        
-        deleted_tag_siblings = [ ( self._GetTag( old_tag_id ), self._GetTag( new_tag_id ) ) for ( old_tag_id, new_tag_id ) in deleted_tag_sibling_ids ]
-        
-        content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_DELETE ] = deleted_tag_siblings
-        
-        # tag parents
-        
-        tag_parent_ids = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_parents WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.CURRENT, begin, end ) ).fetchall()
-        
-        tag_parents = [ ( self._GetTag( old_tag_id ), self._GetTag( new_tag_id ) ) for ( old_tag_id, new_tag_id ) in tag_parent_ids ]
-        
-        content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_ADD ] = tag_parents
-        
-        #
-        
-        deleted_tag_parent_ids = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_parents WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.DELETED, begin, end ) ).fetchall()
-        
-        deleted_tag_parents = [ ( self._GetTag( old_tag_id ), self._GetTag( new_tag_id ) ) for ( old_tag_id, new_tag_id ) in deleted_tag_parent_ids ]
-        
-        content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_DELETE ] = deleted_tag_parents
-        
-        # finish off
-        
-        hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
+        service_update_package.SetBeginEnd( begin, end )
+        service_update_package.SetSubindexCount( subindex_count )
         
         news_rows = self._c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
         
-        service_data[ HC.SERVICE_UPDATE_BEGIN_END ] = ( begin, end )
-        service_data[ HC.SERVICE_UPDATE_NEWS ] = news_rows
+        service_update_package.SetNews( news_rows )
         
-        return HydrusData.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
+        path = ServerFiles.GetExpectedServiceUpdatePackagePath( service_key, begin )
+        
+        network_string = HydrusSerialisable.DumpToNetworkString( service_update_package )
+        
+        with open( path, 'wb' ) as f: f.write( network_string )
         
     
     def _GetAccessKey( self, registration_key ):
@@ -1615,6 +1555,118 @@ class DB( HydrusDB.HydrusDB ):
         self._services_over_monthly_data = set()
         
     
+    def _IterateFileUpdateContentData( self, service_id, begin, end ):
+        
+        #
+        
+        files_info = [ ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in self._c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM file_map, files_info USING ( hash_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) ]
+        
+        for block_of_files_info in HydrusData.SplitListIntoChunks( files_info, 10000 ):
+            
+            hash_ids = { file_info[0] for file_info in block_of_files_info }
+            
+            hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
+            
+            yield ( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, block_of_files_info, hash_ids_to_hashes, len( hash_ids ) )
+            
+        
+        #
+        
+        deleted_files_info = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) ]
+        
+        for block_of_deleted_files_info in HydrusData.SplitListIntoChunks( deleted_files_info, 10000 ):
+            
+            hash_ids = block_of_deleted_files_info
+            
+            hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
+            
+            yield ( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_files_info, hash_ids_to_hashes, len( hash_ids ) )
+            
+        
+    
+    def _IterateTagUpdateContentData( self, service_id, begin, end ):
+        
+        # mappings
+        
+        mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mappings USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) )
+        
+        for ( tag, hash_ids ) in mappings_dict.items():
+            
+            for block_of_hash_ids in HydrusData.SplitListIntoChunks( hash_ids, 10000 ):
+                
+                hash_ids_to_hashes = self._GetHashIdsToHashes( block_of_hash_ids )
+                
+                yield ( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, [ ( tag, block_of_hash_ids ) ], hash_ids_to_hashes, len( block_of_hash_ids ) )
+                
+            
+        
+        #
+        
+        deleted_mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mapping_petitions USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) )
+        
+        for ( tag, hash_ids ) in deleted_mappings_dict.items():
+            
+            for block_of_hash_ids in HydrusData.SplitListIntoChunks( hash_ids, 10000 ):
+                
+                hash_ids_to_hashes = self._GetHashIdsToHashes( block_of_hash_ids )
+                
+                yield ( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, [ ( tag, block_of_hash_ids ) ], hash_ids_to_hashes, len( block_of_hash_ids ) )
+                
+            
+        
+        # tag siblings
+        
+        tag_sibling_ids = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_siblings WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.CURRENT, begin, end ) ).fetchall()
+        
+        for block_of_tag_sibling_ids in HydrusData.SplitListIntoChunks( tag_sibling_ids, 10000 ):
+            
+            tag_siblings = [ ( self._GetTag( old_tag_id ), self._GetTag( new_tag_id ) ) for ( old_tag_id, new_tag_id ) in block_of_tag_sibling_ids ]
+            
+            hash_ids_to_hashes = {}
+            
+            yield ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, tag_siblings, hash_ids_to_hashes, len( tag_siblings ) )
+            
+        
+        #
+        
+        deleted_tag_sibling_ids = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_siblings WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.DELETED, begin, end ) ).fetchall()
+        
+        for block_of_deleted_tag_sibling_ids in HydrusData.SplitListIntoChunks( deleted_tag_sibling_ids, 10000 ):
+            
+            deleted_tag_siblings = [ ( self._GetTag( old_tag_id ), self._GetTag( new_tag_id ) ) for ( old_tag_id, new_tag_id ) in block_of_deleted_tag_sibling_ids ]
+            
+            hash_ids_to_hashes = {}
+            
+            yield ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, deleted_tag_siblings, hash_ids_to_hashes, len( deleted_tag_siblings ) )
+            
+        
+        # tag parents
+        
+        tag_parent_ids = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_parents WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.CURRENT, begin, end ) ).fetchall()
+        
+        for block_of_tag_parent_ids in HydrusData.SplitListIntoChunks( tag_parent_ids, 10000 ):
+            
+            tag_parents = [ ( self._GetTag( old_tag_id ), self._GetTag( new_tag_id ) ) for ( old_tag_id, new_tag_id ) in block_of_tag_parent_ids ]
+            
+            hash_ids_to_hashes = {}
+            
+            yield ( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, tag_parents, hash_ids_to_hashes, len( tag_parents ) )
+            
+        
+        #
+        
+        deleted_tag_parent_ids = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_parents WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.DELETED, begin, end ) ).fetchall()
+        
+        for block_of_deleted_tag_parent_ids in HydrusData.SplitListIntoChunks( deleted_tag_parent_ids, 10000 ):
+            
+            deleted_tag_parents = [ ( self._GetTag( old_tag_id ), self._GetTag( new_tag_id ) ) for ( old_tag_id, new_tag_id ) in block_of_deleted_tag_parent_ids ]
+            
+            hash_ids_to_hashes = {}
+            
+            yield ( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, deleted_tag_parents, hash_ids_to_hashes, len( deleted_tag_parents ) )
+            
+        
+    
     def _MakeBackup( self ):
         
         self._c.execute( 'COMMIT' )
@@ -2266,6 +2318,27 @@ class DB( HydrusDB.HydrusDB ):
                 title = account_type.GetTitle()
                 
                 self._c.execute( 'UPDATE account_types SET title = ? WHERE service_id = ? AND account_type_id = ?;', ( title, service_id, account_type_id ) )
+                
+            
+        
+        if version == 158:
+            
+            first_ends = self._c.execute( 'SELECT service_id, end FROM update_cache WHERE begin = ?;', ( 0, ) ).fetchall()
+            
+            self._c.execute( 'DELETE FROM update_cache;' )
+            
+            for filename in dircache.listdir( HC.SERVER_UPDATES_DIR ):
+                
+                path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
+                
+                os.remove( path )
+                
+            
+            for ( service_id, end ) in first_ends:
+                
+                service_key = self._GetServiceKey( service_id )
+                
+                self._CreateUpdate( service_key, 0, end )
                 
             
         

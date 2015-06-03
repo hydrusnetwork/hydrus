@@ -3,6 +3,7 @@ import collections
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusGlobals
+import HydrusSerialisable
 import locale
 import os
 import sqlite3
@@ -917,9 +918,9 @@ UNKNOWN_ACCOUNT_TYPE = AccountType( 'unknown account', [ HC.UNKNOWN_PERMISSION ]
 
 def GetUnknownAccount( account_key = None ): return Account( account_key, UNKNOWN_ACCOUNT_TYPE, 0, None, 0, 0 )
 
-class ClientToServerUpdate( HydrusYAMLBase ):
+class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
     
-    yaml_tag = u'!ClientToServerUpdate'
+    yaml_tag = u'!ClientToServerContentUpdatePackage'
     
     def __init__( self, content_data, hash_ids_to_hashes ):
         
@@ -1151,19 +1152,19 @@ class JobDatabase( object ):
             elif HydrusGlobals.shutdown: raise Exception( 'Application quit before db could serve result!' )
             
         
-        if isinstance( self._result, Exception ):
+        if isinstance( self._result, HydrusExceptions.DBException ):
             
-            if isinstance( self._result, HydrusExceptions.DBException ):
-                
-                ( text, gumpf, db_traceback ) = self._result.args
-                
-                trace_list = traceback.format_stack()
-                
-                caller_traceback = 'Stack Trace (most recent call last):' + os.linesep * 2 + os.linesep.join( trace_list )
-                
-                raise HydrusExceptions.DBException( text, caller_traceback, db_traceback )
-                
-            else: raise self._result
+            ( text, gumpf, db_traceback ) = self._result.args
+            
+            trace_list = traceback.format_stack()
+            
+            caller_traceback = 'Stack Trace (most recent call last):' + os.linesep * 2 + os.linesep.join( trace_list )
+            
+            raise HydrusExceptions.DBException( text, caller_traceback, db_traceback )
+            
+        elif isinstance( self._result, Exception ):
+            
+            raise self._result
             
         else: return self._result
         
@@ -1353,7 +1354,7 @@ class ServerToClientPetition( HydrusYAMLBase ):
         
         content_data[ self._petition_type ][ self._action ].append( row )
         
-        return ClientToServerUpdate( content_data, hash_ids_to_hashes )
+        return ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes )
         
     
     def GetDenial( self ):
@@ -1377,7 +1378,7 @@ class ServerToClientPetition( HydrusYAMLBase ):
         
         content_data[ self._petition_type ][ denial_action ] = row_list
         
-        return ClientToServerUpdate( content_data, hash_ids_to_hashes )
+        return ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes )
         
     
     def GetHashes( self ):
@@ -1424,33 +1425,77 @@ class ServerToClientPetition( HydrusYAMLBase ):
         return action_word + content_phrase + os.linesep * 2 + self._reason
         
     
-class ServerToClientUpdate( HydrusYAMLBase ):
-
-    yaml_tag = u'!ServerToClientUpdate'
+class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
     
-    def __init__( self, service_data, content_data, hash_ids_to_hashes ):
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_CONTENT_UPDATE_PACKAGE
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
         
-        HydrusYAMLBase.__init__( self )
-        
-        self._service_data = service_data
+        HydrusSerialisable.SerialisableBase.__init__( self )
         
         self._content_data = {}
         
-        for data_type in content_data:
+        self._hash_ids_to_hashes = {}
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_content_data = []
+        
+        for ( data_type, actions_dict ) in self._content_data.items():
+            
+            serialisable_actions_dict = []
+            
+            for ( action, rows ) in actions_dict.items():
+                
+                serialisable_actions_dict.append( ( action, rows ) )
+                
+            
+            serialisable_content_data.append( ( data_type, serialisable_actions_dict ) )
+            
+        
+        serialisable_hashes = [ ( hash_id, hash.encode( 'hex' ) ) for ( hash_id, hash ) in self._hash_ids_to_hashes.items() ]
+        
+        return ( serialisable_content_data, serialisable_hashes )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_content_data, serialisable_hashes ) = serialisable_info
+        
+        self._content_data = {}
+        
+        for ( data_type, serialisable_actions_dict ) in serialisable_content_data:
+            
+            actions_dict = {}
+            
+            for ( action, rows ) in serialisable_actions_dict:
+                
+                actions_dict[ action ] = rows
+                
+            
+            self._content_data[ data_type ] = actions_dict
+            
+        
+        self._hash_ids_to_hashes = { hash_id : hash.decode( 'hex' ) for ( hash_id, hash ) in serialisable_hashes }
+        
+    
+    def AddContentData( self, data_type, action, rows, hash_ids_to_hashes ):
+        
+        if data_type not in self._content_data:
             
             self._content_data[ data_type ] = {}
             
-            for action in content_data[ data_type ]: self._content_data[ data_type ][ action ] = content_data[ data_type ][ action ]
+        
+        if action not in self._content_data[ data_type ]:
+            
+            self._content_data[ data_type ][ action ] = []
             
         
-        self._hash_ids_to_hashes = hash_ids_to_hashes
+        self._content_data[ data_type ][ action ].extend( rows )
         
-    
-    def GetBeginEnd( self ):
-        
-        ( begin, end ) = self._service_data[ HC.SERVICE_UPDATE_BEGIN_END ]
-        
-        return ( begin, end )
+        self._hash_ids_to_hashes.update( hash_ids_to_hashes )
         
     
     def GetContentDataIterator( self, data_type, action ):
@@ -1462,7 +1507,7 @@ class ServerToClientUpdate( HydrusYAMLBase ):
         if data_type == HC.CONTENT_DATA_TYPE_FILES:
             
             if action == HC.CONTENT_UPDATE_ADD: return ( ( self._hash_ids_to_hashes[ hash_id ], size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in data )
-            else: return ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids } for hash_ids in ( data, ) )
+            else: return ( ( self._hash_ids_to_hashes[ hash_id ], ) for hash_id in data )
             
         elif data_type == HC.CONTENT_DATA_TYPE_MAPPINGS: return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in data )
         else: return data.__iter__()
@@ -1472,19 +1517,17 @@ class ServerToClientUpdate( HydrusYAMLBase ):
         
         num = 0
         
-        data_types = [ HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ]
-        actions = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ]
-        
-        for ( data_type, action ) in itertools.product( data_types, actions ):
+        for data_type in self._content_data:
             
-            for row in self.GetContentDataIterator( data_type, action ): num += 1
+            for action in self._content_data[ data_type ]:
+                
+                num += len( self._content_data[ data_type ][ action ] )
+                
             
         
         return num
         
     
-    # this needs work!
-    # we need a universal content_update for both client and server
     def IterateContentUpdates( self, as_if_pending = False ):
         
         data_types = [ HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ]
@@ -1507,21 +1550,6 @@ class ServerToClientUpdate( HydrusYAMLBase ):
             
         
     
-    def IterateServiceUpdates( self ):
-        
-        service_types = [ HC.SERVICE_UPDATE_NEWS ]
-        
-        for service_type in service_types:
-            
-            if service_type in self._service_data:
-                
-                data = self._service_data[ service_type ]
-                
-                yield ServiceUpdate( service_type, data )
-                
-            
-        
-    
     def GetHashes( self ): return set( self._hash_ids_to_hashes.values() )
     
     def GetTags( self ):
@@ -1531,16 +1559,84 @@ class ServerToClientUpdate( HydrusYAMLBase ):
         tags.update( ( tag for ( tag, hash_ids ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CURRENT ) ) )
         tags.update( ( tag for ( tag, hash_ids ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.DELETED ) ) )
         
-        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CURRENT ) ) )
+        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CURRENT ) ) )
         tags.update( ( new_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CURRENT ) ) )
-        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.DELETED ) ) )
+        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.DELETED ) ) )
         tags.update( ( new_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.DELETED ) ) )
         
         return tags
         
     
-    def GetServiceData( self, service_type ): return self._service_data[ service_type ]
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_CONTENT_UPDATE_PACKAGE ] = ServerToClientContentUpdatePackage
+
+class ServerToClientServiceUpdatePackage( HydrusSerialisable.SerialisableBase ):
     
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_SERVICE_UPDATE_PACKAGE
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._service_data = {}
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return self._service_data.items()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        self._service_data = dict( serialisable_info )
+        
+    
+    def GetBegin( self ):
+        
+        ( begin, end ) = self._service_data[ HC.SERVICE_UPDATE_BEGIN_END ]
+        
+        return begin
+        
+    
+    def GetNextBegin( self ):
+        
+        ( begin, end ) = self._service_data[ HC.SERVICE_UPDATE_BEGIN_END ]
+        
+        return end + 1
+        
+    
+    def GetSubindexCount( self ):
+        
+        return self._service_data[ HC.SERVICE_UPDATE_SUBINDEX_COUNT ]
+        
+    
+    def IterateServiceUpdates( self ):
+        
+        if HC.SERVICE_UPDATE_NEWS in self._service_data:
+            
+            news_rows = self._service_data[ HC.SERVICE_UPDATE_NEWS ]
+            
+            yield ServiceUpdate( HC.SERVICE_UPDATE_NEWS, news_rows )
+            
+        
+    
+    def SetBeginEnd( self, begin, end ):
+        
+        self._service_data[ HC.SERVICE_UPDATE_BEGIN_END ] = ( begin, end )
+        
+    
+    def SetNews( self, news_rows ):
+        
+        self._service_data[ HC.SERVICE_UPDATE_NEWS ] = news_rows
+        
+    
+    def SetSubindexCount( self, count ):
+        
+        self._service_data[ HC.SERVICE_UPDATE_SUBINDEX_COUNT ] = count
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_SERVICE_UPDATE_PACKAGE ] = ServerToClientServiceUpdatePackage
+
 class ServiceUpdate( object ):
     
     def __init__( self, action, row = None ):

@@ -512,10 +512,12 @@ class ImageContainer( RasterContainer ):
         
         self._hydrus_bitmap = None
         
-        wx.CallAfter( self._InitialiseHydrusBitmap )
+        HydrusThreading.CallToThread( self._InitialiseHydrusBitmap )
         
     
     def _InitialiseHydrusBitmap( self ):
+        
+        time.sleep( 0.00001 )
         
         try:
             

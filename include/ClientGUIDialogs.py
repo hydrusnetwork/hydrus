@@ -48,6 +48,137 @@ COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
 COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
 COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
 
+def ExportToHTA( parent, service_key, hashes ):
+    
+    with wx.FileDialog( parent, style = wx.FD_SAVE, defaultFile = 'archive.db' ) as dlg:
+        
+        if dlg.ShowModal() == wx.ID_OK: path = dlg.GetPath()
+        else: return
+        
+    
+    message = 'Would you like to use hydrus\'s normal hash type, or an alternative?'
+    message += os.linesep * 2
+    message += 'Hydrus uses SHA256 to identify files, but other services use different standards. MD5, SHA1 and SHA512 are available, but only for local files, which may limit your export.'
+    message += os.linesep * 2
+    message += 'If you do not know what this stuff means, click \'normal\'.'
+    
+    with DialogYesNo( parent, message, title = 'Choose which hash type.', yes_label = 'normal', no_label = 'alternative' ) as dlg:
+        
+        result = dlg.ShowModal()
+        
+        if result in ( wx.ID_YES, wx.ID_NO ):
+            
+            if result == wx.ID_YES:
+                
+                hash_type = HydrusTagArchive.HASH_TYPE_SHA256
+                
+            else:
+                
+                with DialogSelectFromListOfStrings( parent, 'Select the hash type', [ 'md5', 'sha1', 'sha512' ] ) as hash_dlg:
+                    
+                    if hash_dlg.ShowModal() == wx.ID_OK:
+                        
+                        s = hash_dlg.GetString()
+                        
+                        if s == 'md5': hash_type = HydrusTagArchive.HASH_TYPE_MD5
+                        elif s == 'sha1': hash_type = HydrusTagArchive.HASH_TYPE_SHA1
+                        elif s == 'sha512': hash_type = HydrusTagArchive.HASH_TYPE_SHA512
+                        
+                    
+                
+            
+        
+    
+    if hash_type is not None:
+        
+        wx.GetApp().Write( 'export_mappings', path, service_key, hash_type, hashes )
+        
+    
+def ImportFromHTA( parent, path, service_key ):
+    
+    hta = HydrusTagArchive.HydrusTagArchive( path )
+    
+    potential_namespaces = hta.GetNamespaces()
+    
+    hta.GetHashType() # this tests if the hta can produce a hashtype
+    
+    del hta
+    
+    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+    
+    service_type = service.GetServiceType()
+    
+    can_delete = True
+    
+    if service_type == HC.TAG_REPOSITORY:
+        
+        account = service.GetInfo( 'account' )
+        
+        if not account.HasPermission( HC.RESOLVE_PETITIONS ): can_delete = False
+        
+    
+    if can_delete:
+        
+        text = 'Would you like to add or delete the archive\'s tags?'
+        
+        with DialogYesNo( parent, text, title = 'Add or delete?', yes_label = 'add', no_label = 'delete' ) as dlg_add:
+            
+            result = dlg_add.ShowModal()
+            
+            if result == wx.ID_YES: adding = True
+            elif result == wx.ID_NO: adding = False
+            else: return
+            
+        
+    else:
+        
+        text = 'You cannot quickly delete tags from this service, so I will assume you want to add tags.'
+        
+        wx.MessageBox( text )
+        
+        adding = True
+        
+    
+    text = 'Choose which namespaces to '
+    
+    if adding: text += 'add.'
+    else: text += 'delete.'
+    
+    with DialogCheckFromListOfStrings( parent, text, HydrusData.ConvertUglyNamespacesToPrettyStrings( potential_namespaces ) ) as dlg_namespaces:
+        
+        if dlg_namespaces.ShowModal() == wx.ID_OK:
+            
+            namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg_namespaces.GetChecked() )
+            
+            text = 'Are you absolutely sure you want to '
+            
+            if adding: text += 'add'
+            else: text += 'delete'
+            
+            text += ' the namespaces:'
+            text += os.linesep * 2
+            text += os.linesep.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) )
+            text += os.linesep * 2
+            
+            if adding: text += 'To '
+            else: text += 'From '
+            
+            text += service.GetName() + ' ?'
+            
+            with DialogYesNo( parent, text ) as dlg_final:
+                
+                if dlg_final.ShowModal() == wx.ID_YES:
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'hta', ( path, adding, namespaces ) ) )
+                    
+                    service_keys_to_content_updates = { service_key : [ content_update ] }
+                    
+                    wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
+                    
+                
+            
+        
+    
 def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
     
     if service_keys is None:
@@ -274,44 +405,7 @@ class DialogAdvancedContentUpdate( Dialog ):
     
     def EventExportToHTA( self, event ):
         
-        with wx.FileDialog( self, style = wx.FD_SAVE, defaultFile = 'archive.db' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK: path = dlg.GetPath()
-            else: return
-            
-        
-        message = 'Would you like to use hydrus\'s normal hash type, or an alternative?'
-        message += os.linesep * 2
-        message += 'Hydrus uses SHA256 to identify files, but other services use different standards. MD5, SHA1 and SHA512 are available, but only for local files, which may limit your export.'
-        message += os.linesep * 2
-        message += 'If you do not know what this stuff means, click \'normal\'.'
-        
-        with DialogYesNo( self, message, title = 'Choose which hash type.', yes_label = 'normal', no_label = 'alternative' ) as dlg:
-            
-            result = dlg.ShowModal()
-            
-            if result in ( wx.ID_YES, wx.ID_NO ):
-                
-                if result == wx.ID_YES: hash_type = HydrusTagArchive.HASH_TYPE_SHA256
-                else:
-                    
-                    with DialogSelectFromListOfStrings( self, 'Select the hash type', [ 'md5', 'sha1', 'sha512' ] ) as hash_dlg:
-                        
-                        if hash_dlg.ShowModal() == wx.ID_OK:
-                            
-                            s = hash_dlg.GetString()
-                            
-                            if s == 'md5': hash_type = HydrusTagArchive.HASH_TYPE_MD5
-                            elif s == 'sha1': hash_type = HydrusTagArchive.HASH_TYPE_SHA1
-                            elif s == 'sha512': hash_type = HydrusTagArchive.HASH_TYPE_SHA512
-                            
-                        else: return
-                        
-                    
-                
-                wx.GetApp().Write( 'export_mappings', path, self._service_key, hash_type, self._hashes )
-                
-            
+        ExportToHTA( self, self._service_key, self._hashes )
         
     
     def EventGo( self, event ):
@@ -368,88 +462,7 @@ class DialogAdvancedContentUpdate( Dialog ):
                 
                 path = dlg_file.GetPath()
                 
-                hta = HydrusTagArchive.HydrusTagArchive( path )
-                
-                potential_namespaces = hta.GetNamespaces()
-                
-                hta.GetHashType() # this tests if the hta can produce a hashtype
-                
-                del hta
-                
-                service = wx.GetApp().GetManager( 'services' ).GetService( self._service_key )
-                
-                service_type = service.GetServiceType()
-                
-                can_delete = True
-                
-                if service_type == HC.TAG_REPOSITORY:
-                    
-                    account = service.GetInfo( 'account' )
-                    
-                    if not account.HasPermission( HC.RESOLVE_PETITIONS ): can_delete = False
-                    
-                
-                if can_delete:
-                    
-                    text = 'Would you like to add or delete the archive\'s tags?'
-                    
-                    with DialogYesNo( self, text, title = 'Add or delete?', yes_label = 'add', no_label = 'delete' ) as dlg_add:
-                        
-                        result = dlg_add.ShowModal()
-                        
-                        if result == wx.ID_YES: adding = True
-                        elif result == wx.ID_NO: adding = False
-                        else: return
-                        
-                    
-                else:
-                    
-                    text = 'You cannot quickly delete tags from this service, so I will assume you want to add tags.'
-                    
-                    wx.MessageBox( text )
-                    
-                    adding = True
-                    
-                
-                text = 'Choose which namespaces to '
-                
-                if adding: text += 'add.'
-                else: text += 'delete.'
-                
-                with DialogCheckFromListOfStrings( self, text, HydrusData.ConvertUglyNamespacesToPrettyStrings( potential_namespaces ) ) as dlg_namespaces:
-                    
-                    if dlg_namespaces.ShowModal() == wx.ID_OK:
-                        
-                        namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg_namespaces.GetChecked() )
-                        
-                        text = 'Are you absolutely sure you want to '
-                        
-                        if adding: text += 'add'
-                        else: text += 'delete'
-                        
-                        text += ' the namespaces:'
-                        text += os.linesep * 2
-                        text += os.linesep.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) )
-                        text += os.linesep * 2
-                        
-                        if adding: text += 'To '
-                        else: text += 'From '
-                        
-                        text += service.GetName() + ' ?'
-                        
-                        with DialogYesNo( self, text ) as dlg_final:
-                            
-                            if dlg_final.ShowModal() == wx.ID_YES:
-                                
-                                content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'hta', ( path, adding, namespaces ) ) )
-                                
-                                service_keys_to_content_updates = { self._service_key : [ content_update ] }
-                                
-                                wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
-                                
-                            
-                        
-                    
+                ImportFromHTA( self, path, self._service_key )
                 
             
         
@@ -992,9 +1005,9 @@ class DialogInputCustomFilterAction( Dialog ):
                     if self._action is None: self._ratings_numerical_remove.SetValue( True )
                     else:
                         
-                        ( lower, upper ) = self._current_ratings_numerical_service.GetLowerUpper()
+                        num_stars = self._current_ratings_numerical_service.GetInfo( 'num_stars' )
                         
-                        slider_value = int( self._action * ( upper - lower ) ) + lower
+                        slider_value = int( round( self._action * num_stars ) )
                         
                         self._ratings_numerical_slider.SetValue( slider_value )
                         
@@ -1117,7 +1130,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 num_stars = service.GetInfo( 'num_stars' )
                 
-                self._ratings_numerical_slider.SetRange( num_stars )
+                self._ratings_numerical_slider.SetRange( 0, num_stars )
                 
             
         
@@ -1177,9 +1190,9 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._pretty_action = HydrusData.ToString( self._ratings_numerical_slider.GetValue() )
                 
-                ( lower, upper ) = self._current_ratings_numerical_service.GetLowerUpper()
+                num_stars = self._current_ratings_numerical_service.GetInfo( 'num_stars' )
                 
-                self._action = ( float( self._pretty_action ) - float( lower ) ) / ( upper - lower )
+                self._action = float( self._pretty_action ) / num_stars
                 
             
             self.EndModal( wx.ID_OK )
@@ -1807,13 +1820,13 @@ class DialogInputLocalFiles( Dialog ):
         self._current_paths = set( self._GetPathsInfo() )
         
     
-    def SetGaugeInfo( self, range, value, text ):
+    def SetGaugeInfo( self, gauge_range, gauge_value, text ):
         
-        if range is None: self._gauge.Pulse()
+        if gauge_range is None: self._gauge.Pulse()
         else:
             
-            self._gauge.SetRange( range )
-            self._gauge.SetValue( value )
+            self._gauge.SetRange( gauge_range )
+            self._gauge.SetValue( gauge_value )
             
         
         self._gauge_text.SetLabel( text )

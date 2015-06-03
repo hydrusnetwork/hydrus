@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusSerialisable
 import httplib
 import multipart
 import os
@@ -370,13 +371,17 @@ class HTTPConnection( object ):
                 try: parsed_response = data.decode( charset )
                 except: parsed_response = data
                 
-            elif content_type in HC.mime_enum_lookup and HC.mime_enum_lookup[ content_type ] == HC.APPLICATION_YAML:
+            elif content_type == 'application/x-yaml':
                 
                 try: parsed_response = yaml.safe_load( data )
-                except Exception as e:
+                except yaml.error.YAMLError as e:
                     
                     raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HydrusData.ToString( e ) )
                     
+                
+            elif content_type == 'application/json':
+                
+                parsed_response = HydrusSerialisable.CreateFromNetworkString( data )
                 
             elif content_type == 'text/html':
                 

@@ -164,7 +164,7 @@ class App( wx.App ):
             with open( path, 'rb' ) as f: file = f.read()
             
             if file == 'blarg': raise Exception( 'File failed to import for some reason!' )
-            else: return ( 'successful', 'hash' )
+            else: return ( CC.STATUS_SUCCESSFUL, 'hash' )
         
     
 if __name__ == '__main__':

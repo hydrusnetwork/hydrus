@@ -48,6 +48,8 @@ NON_ZOOMABLE_MIMES = list( HC.AUDIO ) + [ HC.APPLICATION_PDF ]
 
 NON_LARGABLY_ZOOMABLE_MIMES = [ mime for mime in HC.VIDEO if mime != HC.VIDEO_WEBM ] + [ HC.APPLICATION_FLASH ]
 
+EMBED_BUTTON_MIMES = [ HC.VIDEO_FLV, HC.APPLICATION_FLASH ]
+
 def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
     ( media_width, media_height ) = media.GetResolution()
@@ -329,6 +331,8 @@ class AnimationBar( wx.Window ):
         
         wx.Window.__init__( self, parent, size = ( parent_width, ANIMATED_SCANBAR_HEIGHT ), pos = ( 0, parent_height - ANIMATED_SCANBAR_HEIGHT ) )
         
+        self._dirty = True
+        
         self._canvas_bmp = wx.EmptyBitmap( parent_width, ANIMATED_SCANBAR_HEIGHT, 24 )
         
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
@@ -349,14 +353,12 @@ class AnimationBar( wx.Window ):
         self._timer_update = wx.Timer( self, id = ID_TIMER_ANIMATION_BAR_UPDATE )
         self._timer_update.Start( 100, wx.TIMER_CONTINUOUS )
         
-        self._Draw()
-        
     
-    def _Draw( self ):
+    def _Redraw( self ):
         
         ( my_width, my_height ) = self._canvas_bmp.GetSize()
         
-        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+        dc = wx.MemoryDC( self._canvas_bmp )
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
@@ -382,6 +384,8 @@ class AnimationBar( wx.Window ):
         
         dc.DrawText( s, my_width - x - 3, 3 )
         
+        self._dirty = False
+        
     
     def EventEraseBackground( self, event ): pass
     
@@ -406,7 +410,9 @@ class AnimationBar( wx.Window ):
             
             self._current_frame_index = int( proportion * ( self._num_frames - 1 ) + 0.5 )
             
-            self._Draw()
+            self._dirty = True
+            
+            self.Refresh()
             
             self._media_window.GotoFrame( self._current_frame_index )
             
@@ -418,7 +424,15 @@ class AnimationBar( wx.Window ):
             
         
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    def EventPaint( self, event ):
+        
+        if self._dirty:
+            
+            self._Redraw()
+            
+        
+        wx.BufferedPaintDC( self, self._canvas_bmp )
+        
     
     def EventResize( self, event ):
         
@@ -434,7 +448,9 @@ class AnimationBar( wx.Window ):
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
-                self._Draw()
+                self._dirty = True
+                
+                self.Refresh()
                 
             
         
@@ -443,7 +459,10 @@ class AnimationBar( wx.Window ):
         
         self._current_frame_index = frame_index
         
-        self._Draw()
+        self._dirty = True
+        
+        self.Refresh()
+        
         
     
     def TIMEREventUpdate( self, event ):
@@ -473,7 +492,9 @@ class AnimationBar( wx.Window ):
                     
                     self._current_frame_index = frame_index
                     
-                    self._Draw()
+                    self._dirty = True
+                    
+                    self.Refresh()
                     
                 
             
@@ -491,6 +512,7 @@ class Canvas( object ):
         
         self._canvas_key = os.urandom( 32 )
         
+        self._dirty = True
         self._closing = False
         
         self._service_keys_to_services = {}
@@ -557,15 +579,15 @@ class Canvas( object ):
     
     def _DrawBackgroundBitmap( self ):
         
-        cdc = wx.ClientDC( self )
-        
-        dc = wx.BufferedDC( cdc, self._canvas_bmp )
+        dc = wx.MemoryDC( self._canvas_bmp )
         
         dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         dc.Clear()
         
         self._DrawBackgroundDetails( dc )
+        
+        self._dirty = False
         
     
     def _DrawBackgroundDetails( self, dc ): pass
@@ -663,6 +685,13 @@ class Canvas( object ):
         HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         
     
+    def _SetDirty( self ):
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
     def _SizeAndPositionMediaContainer( self ):
         
         ( new_size, new_position ) = self._GetMediaContainerSizeAndPosition()
@@ -700,22 +729,17 @@ class Canvas( object ):
                         if new_media_width >= my_width or new_media_height >= my_height: return
                         
                     
-                    with wx.FrozenWindow( self ):
-                        
-                        ( drag_x, drag_y ) = self._total_drag_delta
-                        
-                        zoom_ratio = zoom / self._current_zoom
-                        
-                        self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                        
-                        self._current_zoom = zoom
-                        
-                        HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
-                        
-                        self._DrawBackgroundBitmap()
-                        
-                        self._DrawCurrentMedia()
-                        
+                    ( drag_x, drag_y ) = self._total_drag_delta
+                    
+                    zoom_ratio = zoom / self._current_zoom
+                    
+                    self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
+                    
+                    self._current_zoom = zoom
+                    
+                    HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+                    
+                    self._SetDirty()
                     
                     break
                     
@@ -738,22 +762,17 @@ class Canvas( object ):
                 
                 if self._current_zoom > zoom:
                     
-                    with wx.FrozenWindow( self ):
-                        
-                        ( drag_x, drag_y ) = self._total_drag_delta
-                        
-                        zoom_ratio = zoom / self._current_zoom
-                        
-                        self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                        
-                        self._current_zoom = zoom
-                        
-                        HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
-                        
-                        self._DrawBackgroundBitmap()
-                        
-                        self._DrawCurrentMedia()
-                        
+                    ( drag_x, drag_y ) = self._total_drag_delta
+                    
+                    zoom_ratio = zoom / self._current_zoom
+                    
+                    self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
+                    
+                    self._current_zoom = zoom
+                    
+                    HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+                    
+                    self._SetDirty()
                     
                     break
                     
@@ -784,16 +803,27 @@ class Canvas( object ):
                 
                 HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
                 
-                self._DrawBackgroundBitmap()
-                
-                self._DrawCurrentMedia()
+                self._SetDirty()
                 
             
         
     
     def EventEraseBackground( self, event ): pass
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    def EventPaint( self, event ):
+        
+        if self._dirty:
+            
+            self._DrawBackgroundBitmap()
+            
+            if self._media_container is not None:
+                
+                self._DrawCurrentMedia()
+                
+            
+        
+        wx.BufferedPaintDC( self, self._canvas_bmp )
+        
     
     def EventResize( self, event ):
         
@@ -811,17 +841,11 @@ class Canvas( object ):
                 
                 if my_width != media_width or my_height != media_height:
                     
-                    with wx.FrozenWindow( self ):
-                        
-                        self._RecalcZoom()
-                        
-                        self._DrawBackgroundBitmap()
-                        
-                        self._DrawCurrentMedia()
-                        
+                    self._RecalcZoom()
                     
                 
-            else: self._DrawBackgroundBitmap()
+            
+            self._SetDirty()
             
         
         event.Skip()
@@ -887,9 +911,7 @@ class Canvas( object ):
                 HydrusGlobals.pubsub.pub( 'canvas_new_display_media', self._canvas_key, self._current_display_media )
                 HydrusGlobals.pubsub.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
                 
-                self._DrawBackgroundBitmap()
-                
-                self._DrawCurrentMedia()
+                self._SetDirty()
                 
             
         
@@ -1219,9 +1241,7 @@ class CanvasPanel( Canvas, wx.Window ):
             
             if do_redraw:
                 
-                self._DrawBackgroundBitmap()
-                
-                self._DrawCurrentMedia()
+                self._SetDirty()
                 
             
         
@@ -1403,9 +1423,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
             
             HydrusGlobals.pubsub.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
-            self._DrawBackgroundBitmap()
-            
-            self._DrawCurrentMedia()
+            self._SetDirty()
             
         else: self.SetMedia( next_media )
         
@@ -1428,9 +1446,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
             
             HydrusGlobals.pubsub.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
-            self._DrawBackgroundBitmap()
-            
-            self._DrawCurrentMedia()
+            self._SetDirty()
             
         
     
@@ -1542,9 +1558,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
             
             HydrusGlobals.pubsub.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
-            self._DrawBackgroundBitmap()
-            
-            self._DrawCurrentMedia()
+            self._SetDirty()
             
         else: self.SetMedia( next_media )
         
@@ -3247,9 +3261,9 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         if self._service.GetServiceType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
         else:
             
-            ( self._lower, self._upper ) = self._service.GetLowerUpper()
+            num_stars = self._service.GetInfo( 'num_stars' )
             
-            self._score_gap = 1.0 / ( self._upper - self._lower )
+            self._score_gap = 1.0 / num_stars
             
         
         hashes_to_min_max = wx.GetApp().Read( 'ratings_filter', service_key, [ media_result.GetHash() for media_result in media_results ] )
@@ -4064,7 +4078,10 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
             
         
-        def RefreshBackground( self ): self._DrawBackgroundBitmap()
+        def RefreshBackground( self ):
+            
+            self._SetDirty()
+            
         
         def TIMEREventCursorHide( self, event ):
             
@@ -4097,7 +4114,7 @@ class MediaContainer( wx.Window ):
         
         ( media_initial_size, media_initial_position ) = ( self.GetClientSize(), ( 0, 0 ) )
         
-        if do_embed_button and self._media.GetMime() in ( HC.VIDEO_FLV, HC.APPLICATION_FLASH ):
+        if do_embed_button and self._media.GetMime() in EMBED_BUTTON_MIMES:
             
             self._embed_button = EmbedButton( self, media_initial_size )
             self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
@@ -4233,7 +4250,7 @@ class EmbedButton( wx.Window ):
         
         wx.Window.__init__( self, parent, size = size )
         
-        self._Redraw()
+        self._dirty = True
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
@@ -4246,7 +4263,7 @@ class EmbedButton( wx.Window ):
         
         self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
         
-        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+        dc = wx.MemoryDC( self._canvas_bmp )
         
         dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
@@ -4260,7 +4277,7 @@ class EmbedButton( wx.Window ):
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
-        dc.SetBrush( wx.Brush( wx.Colour( 215, 215, 215 ) ) )
+        dc.SetBrush( wx.Brush( wx.Colour( 235, 235, 235 ) ) )
         
         dc.DrawCircle( center_x, center_y, radius )
         
@@ -4280,10 +4297,28 @@ class EmbedButton( wx.Window ):
         
         dc.DrawPolygon( points )
         
+        #
+        
+        dc.SetPen( wx.Pen( wx.Colour( 215, 215, 215 ) ) )
+        
+        dc.SetBrush( wx.TRANSPARENT_BRUSH )
+        
+        dc.DrawRectangle( 0, 0, x, y )
+        
+        self._dirty = False
+        
     
     def EventEraseBackground( self, event ): pass
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    def EventPaint( self, event ):
+        
+        if self._dirty:
+            
+            self._Redraw()
+            
+        
+        wx.BufferedPaintDC( self, self._canvas_bmp )
+        
     
     def EventResize( self, event ):
         
@@ -4293,7 +4328,12 @@ class EmbedButton( wx.Window ):
         
         if my_width != current_bmp_width or my_height != current_bmp_height:
             
-            if my_width > 0 and my_height > 0: self._Redraw()
+            if my_width > 0 and my_height > 0:
+                
+                self._dirty = True
+                
+                self.Refresh()
+                
             
         
     
@@ -4417,7 +4457,7 @@ class StaticImage( wx.Window ):
         
         wx.Window.__init__( self, parent, size = initial_size, pos = initial_position )
         
-        self.SetDoubleBuffered( True )
+        self._dirty = True
         
         self._media = media
         self._image_container = None
@@ -4440,17 +4480,15 @@ class StaticImage( wx.Window ):
         self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
         
     
-    def _Draw( self ):
+    def _Redraw( self ):
         
-        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+        dc = wx.MemoryDC( self._canvas_bmp )
     
         dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         dc.Clear()
         
         if self._image_container.IsRendered():
-            
-            self._timer_render_wait.Stop()
             
             hydrus_bitmap = self._image_container.GetHydrusBitmap()
             
@@ -4475,10 +4513,27 @@ class StaticImage( wx.Window ):
             wx.CallAfter( wx_bitmap.Destroy )
             
         
+        self._dirty = False
+        
+    
+    def _SetDirty( self ):
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
     
     def EventEraseBackground( self, event ): pass
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    def EventPaint( self, event ):
+        
+        if self._dirty:
+            
+            self._Redraw()
+            
+        
+        wx.BufferedPaintDC( self, self._canvas_bmp )
+        
     
     def EventPropagateMouse( self, event ):
         
@@ -4519,7 +4574,7 @@ class StaticImage( wx.Window ):
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
-                self._Draw()
+                self._SetDirty()
                 
                 if not self._image_container.IsRendered(): self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
                 
@@ -4528,6 +4583,11 @@ class StaticImage( wx.Window ):
     
     def TIMEREventRenderWait( self, event ):
         
-        if self.IsShown() and self._image_container.IsRendered(): self._Draw()
+        if self._image_container.IsRendered():
+            
+            self._SetDirty()
+            
+            self._timer_render_wait.Stop()
+            
         
     

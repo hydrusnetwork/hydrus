@@ -155,7 +155,7 @@ class HydrusResourceCommand( Resource ):
             
             value = values[0]
             
-            if name in ( 'begin', 'expires', 'lifetime', 'num', 'service_type', 'service_port', 'since', 'timespan' ):
+            if name in ( 'begin', 'expires', 'lifetime', 'num', 'service_type', 'service_port', 'since', 'subindex', 'timespan' ):
                 
                 try: hydrus_args[ name ] = int( value )
                 except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
@@ -262,9 +262,9 @@ class HydrusResourceCommand( Resource ):
             
             size = info[6]
             
-            if response_context.IsYAML():
+            if response_context.IsJSON():
                 
-                mime = HC.APPLICATION_YAML
+                mime = HC.APPLICATION_JSON
                 
                 content_type = HC.mime_string_lookup[ mime ]
                 
@@ -1228,7 +1228,7 @@ class HydrusResourceCommandRestrictedStats( HydrusResourceCommandRestricted ):
         return response_context
         
     
-class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
+class HydrusResourceCommandRestrictedContentUpdate( HydrusResourceCommandRestricted ):
     
     GET_PERMISSION = HC.GET_DATA
     POST_PERMISSION = HC.POST_DATA
@@ -1238,10 +1238,11 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
     def _threadDoGETJob( self, request ):
         
         begin = request.hydrus_args[ 'begin' ]
+        subindex = request.hydrus_args[ 'subindex' ]
         
-        path = ServerFiles.GetUpdatePath( self._service_key, begin )
+        path = ServerFiles.GetContentUpdatePackagePath( self._service_key, begin, subindex )
         
-        response_context = ResponseContext( 200, path = path, is_yaml = True )
+        response_context = ResponseContext( 200, path = path, is_json = True )
         
         return response_context
         
@@ -1259,10 +1260,27 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         response_context = ResponseContext( 200 )
         
         return response_context
-
+        
+    
+class HydrusResourceCommandRestrictedServiceUpdate( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GET_DATA
+    RECORD_GET_DATA_USAGE = True
+    
+    def _threadDoGETJob( self, request ):
+        
+        begin = request.hydrus_args[ 'begin' ]
+        
+        path = ServerFiles.GetServiceUpdatePackagePath( self._service_key, begin )
+        
+        response_context = ResponseContext( 200, path = path, is_json = True )
+        
+        return response_context
+        
+    
 class ResponseContext( object ):
     
-    def __init__( self, status_code, mime = HC.APPLICATION_YAML, body = None, path = None, is_yaml = False, cookies = None ):
+    def __init__( self, status_code, mime = HC.APPLICATION_YAML, body = None, path = None, is_json = False, cookies = None ):
         
         if cookies is None: cookies = []
         
@@ -1270,7 +1288,7 @@ class ResponseContext( object ):
         self._mime = mime
         self._body = body
         self._path = path
-        self._is_yaml = is_yaml
+        self._is_json = is_json
         self._cookies = cookies
         
     
@@ -1288,7 +1306,5 @@ class ResponseContext( object ):
     
     def HasPath( self ): return self._path is not None
     
-    def IsYAML( self ): return self._is_yaml
-    
-        
+    def IsJSON( self ): return self._is_json
     

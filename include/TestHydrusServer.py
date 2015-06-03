@@ -7,6 +7,7 @@ import httplib
 import HydrusConstants as HC
 import HydrusServer
 import HydrusServerResources
+import HydrusSerialisable
 import itertools
 import os
 import ServerFiles
@@ -337,21 +338,47 @@ class TestServer( unittest.TestCase ):
         
         # update
         
-        update = 'update'
         begin = 100
+        subindex_count = 5
         
-        path = ServerFiles.GetExpectedUpdatePath( service_key, begin )
+        update = HydrusData.ServerToClientServiceUpdatePackage()
+        update.SetBeginEnd( begin, begin + HC.UPDATE_DURATION - 1 )
+        update.SetSubindexCount( subindex_count )
         
-        with open( path, 'wb' ) as f: f.write( update )
+        path = ServerFiles.GetExpectedServiceUpdatePackagePath( service_key, begin )
         
-        response = service.Request( HC.GET, 'update', { 'begin' : begin } )
+        with open( path, 'wb' ) as f: f.write( HydrusSerialisable.DumpToNetworkString( update ) )
         
-        self.assertEqual( response, update )
+        response = service.Request( HC.GET, 'service_update_package', { 'begin' : begin } )
+        
+        self.assertEqual( response.GetBegin(), update.GetBegin() )
         
         try: os.remove( path )
         except: pass
         
-        service.Request( HC.POST, 'update', { 'update' : update } )
+        subindex = 2
+        num_hashes = 12
+        tag = 'series:blah'
+        hash_ids_to_hashes = { i : os.urandom( 32 ) for i in range( 12 ) }
+        rows = [ ( tag, [ i for i in range( num_hashes ) ] ) ]
+        
+        update = HydrusData.ServerToClientContentUpdatePackage()
+        update.AddContentData( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, rows, hash_ids_to_hashes )
+        
+        path = ServerFiles.GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
+        
+        with open( path, 'wb' ) as f: f.write( HydrusSerialisable.DumpToNetworkString( update ) )
+        
+        response = service.Request( HC.GET, 'content_update_package', { 'begin' : begin, 'subindex' : subindex } )
+        
+        self.assertEqual( response.GetNumContentUpdates(), update.GetNumContentUpdates() )
+        
+        try: os.remove( path )
+        except: pass
+        
+        update = HydrusData.ClientToServerContentUpdatePackage( {}, hash_ids_to_hashes )
+        
+        service.Request( HC.POST, 'content_update_package', { 'update' : update } )
         
         written = wx.GetApp().GetWrite( 'update' )
         
@@ -359,7 +386,7 @@ class TestServer( unittest.TestCase ):
         
         ( written_service_key, written_account, written_update ) = args
         
-        self.assertEqual( update, written_update )
+        self.assertEqual( update.GetHashes(), written_update.GetHashes() )
         
     
     def _test_restricted( self, service, host, port ):

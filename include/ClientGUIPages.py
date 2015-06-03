@@ -166,7 +166,7 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
         self._search_preview_split = wx.SplitterWindow( self, style=wx.SP_NOBORDER )
         
         self._search_preview_split.SetMinimumPaneSize( 180 )
-        self._search_preview_split.SetSashGravity( 0.5 )
+        self._search_preview_split.SetSashGravity( 1.0 )
         
         self._search_preview_split.Bind( wx.EVT_SPLITTER_DCLICK, self.EventPreviewUnsplit )
         

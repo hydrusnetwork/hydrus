@@ -10,6 +10,7 @@ import ClientGUICanvas
 import ClientMedia
 import collections
 import HydrusExceptions
+import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import itertools
@@ -1014,69 +1015,18 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( self._selected_media ) > 0:
             
-            try:
+            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
+            
+            service_keys = [ service.GetServiceKey() for service in services ]
+            
+            service_key = ClientGUIDialogs.SelectServiceKey( service_keys = service_keys )
+            
+            hashes = self._GetSelectedHashes()
+            
+            if service_key is not None:
                 
-                flat_media = []
+                ClientGUIDialogs.ExportToHTA( self, service_key, hashes )
                 
-                for media in self._sorted_media:
-                    
-                    if media in self._selected_media:
-                        
-                        if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
-                        else: flat_media.append( media )
-                        
-                    
-                
-                services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
-                
-                service_keys = [ service.GetServiceKey() for service in services ]
-                
-                service_key = ClientGUIDialogs.SelectServiceKey( service_keys = service_keys )
-                
-                if service_key is not None:
-                    
-                    with wx.FileDialog( self, style = wx.FD_SAVE, defaultFile = 'tag_update.yaml' ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            hash_ids_to_hashes = dict( enumerate( ( m.GetHash() for m in flat_media ) ) )
-                            hashes_to_hash_ids = { hash : hash_id for ( hash_id, hash ) in hash_ids_to_hashes.items() }
-                            
-                            tags_to_hash_ids = collections.defaultdict( list )
-                            
-                            for m in flat_media:
-                                
-                                hash = m.GetHash()
-                                hash_id = hashes_to_hash_ids[ hash ]
-                                
-                                tags_manager = m.GetTagsManager()
-                                
-                                current_tags = tags_manager.GetCurrent()
-                                
-                                for tag in current_tags: tags_to_hash_ids[ tag ].append( hash_id )
-                                
-                            
-                            #
-                            
-                            service_data = {}
-                            content_data = HydrusData.GetEmptyDataDict()
-                            
-                            mappings = tags_to_hash_ids.items()
-                            
-                            content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_ADD ] = mappings
-                            
-                            update = HydrusData.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
-                            
-                            yaml_text = yaml.safe_dump( update )
-                            
-                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml_text )
-                            
-                        
-                    
-                
-                self.SetFocus()
-                
-            except: wx.MessageBox( traceback.format_exc() )
             
         
     
@@ -1886,7 +1836,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                share_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
+                #share_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
                 
                 #
                 

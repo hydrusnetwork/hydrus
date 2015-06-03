@@ -1209,14 +1209,7 @@ class ManagementPanelImport( ManagementPanel ):
     
     def _GenerateImportArgsGeneratorFactory( self ):
         
-        def factory( job_key, item ):
-            
-            advanced_import_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedImportOptions )
-            
-            return ClientDownloading.ImportArgsGenerator( job_key, item, advanced_import_options )
-            
-        
-        return factory
+        raise NotImplementedError()
         
     
     def _GenerateImportQueueBuilderFactory( self ):
@@ -1255,10 +1248,12 @@ class ManagementPanelImport( ManagementPanel ):
         
         status_strings = []
         
-        num_successful = import_controller_job_key.GetVariable( 'num_successful' )
-        num_failed = import_controller_job_key.GetVariable( 'num_failed' )
-        num_deleted = import_controller_job_key.GetVariable( 'num_deleted' )
-        num_redundant = import_controller_job_key.GetVariable( 'num_redundant' )
+        result_counts = import_controller_job_key.GetVariable( 'result_counts' )
+        
+        num_successful = result_counts[ CC.STATUS_SUCCESSFUL ]
+        num_failed = result_counts[ CC.STATUS_FAILED ]
+        num_deleted = result_counts[ CC.STATUS_DELETED ]
+        num_redundant = result_counts[ CC.STATUS_REDUNDANT ]
         
         if num_successful > 0: status_strings.append( HydrusData.ToString( num_successful ) + ' successful' )
         if num_failed > 0: status_strings.append( HydrusData.ToString( num_failed ) + ' failed' )
@@ -1309,15 +1304,15 @@ class ManagementPanelImport( ManagementPanel ):
         
         # gauges
         
-        range = import_job_key.GetVariable( 'range' )
+        gauge_range = import_job_key.GetVariable( 'range' )
         
-        if range is None: self._import_gauge.Pulse()
+        if gauge_range is None: self._import_gauge.Pulse()
         else:
             
-            value = import_job_key.GetVariable( 'value' )
+            gauge_value = import_job_key.GetVariable( 'value' )
             
-            self._import_gauge.SetRange( range )
-            self._import_gauge.SetValue( value )
+            self._import_gauge.SetRange( gauge_range )
+            self._import_gauge.SetValue( gauge_value )
             
         
         queue = import_queue_builder_job_key.GetVariable( 'queue' )
@@ -1535,15 +1530,15 @@ class ManagementPanelImports( ManagementPanelImport ):
         
         # gauge
         
-        range = import_job_key.GetVariable( 'range' )
+        gauge_range = import_job_key.GetVariable( 'range' )
         
-        if range is None: self._import_gauge.Pulse()
+        if gauge_range is None: self._import_gauge.Pulse()
         else:
             
-            value = import_job_key.GetVariable( 'value' )
+            gauge_value = import_job_key.GetVariable( 'value' )
             
-            self._import_gauge.SetRange( range )
-            self._import_gauge.SetValue( value )
+            self._import_gauge.SetRange( gauge_range )
+            self._import_gauge.SetValue( gauge_value )
             
         
         # pending import queues
@@ -2094,8 +2089,6 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         except: self._SetThreadVariables()
         
     
-    def GetAdvancedImportOptions( self ): return self._advanced_import_options.GetInfo()
-    
     def EventKeyDown( self, event ):
         
         if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
@@ -2196,6 +2189,8 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
     
     def EventThreadVariable( self, event ): self._SetThreadVariables()
+    
+    def GetAdvancedImportOptions( self ): return self._advanced_import_options.GetInfo()
     
     def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
     
@@ -2339,7 +2334,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         update = self._current_petition.GetApproval()
         
-        self._service.Request( HC.POST, 'update', { 'update' : update } )
+        self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
         
         wx.GetApp().Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
         
@@ -2354,7 +2349,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         update = self._current_petition.GetDenial()
         
-        self._service.Request( HC.POST, 'update', { 'update' : update } )
+        self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
         
         self._current_petition = None
         

@@ -6,7 +6,7 @@ import os
 import dircache
 import itertools
 import ClientData
-import ClientConstants
+import ClientConstants as CC
 import wx
 
 def GetAllFileHashes():
@@ -129,10 +129,10 @@ class LocationsManager( object ):
     def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
     
     def GetCurrent( self ): return self._current
-    def GetCurrentRemote( self ): return self._current - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetCurrentRemote( self ): return self._current - set( ( CC.LOCAL_FILE_SERVICE_KEY, ) )
     
     def GetDeleted( self ): return self._deleted
-    def GetDeletedRemote( self ): return self._deleted - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetDeletedRemote( self ): return self._deleted - set( ( CC.LOCAL_FILE_SERVICE_KEY, ) )
     
     def GetFileRepositoryStrings( self ):
     
@@ -175,14 +175,14 @@ class LocationsManager( object ):
         
     
     def GetPending( self ): return self._pending
-    def GetPendingRemote( self ): return self._pending - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetPendingRemote( self ): return self._pending - set( ( CC.LOCAL_FILE_SERVICE_KEY, ) )
     
     def GetPetitioned( self ): return self._petitioned
-    def GetPetitionedRemote( self ): return self._petitioned - set( ( ClientConstants.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetPetitionedRemote( self ): return self._petitioned - set( ( CC.LOCAL_FILE_SERVICE_KEY, ) )
     
-    def HasDownloading( self ): return ClientConstants.LOCAL_FILE_SERVICE_KEY in self._pending
+    def HasDownloading( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._pending
     
-    def HasLocal( self ): return ClientConstants.LOCAL_FILE_SERVICE_KEY in self._current
+    def HasLocal( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._current
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
@@ -255,11 +255,15 @@ def GetThumbnailPath( hash, full_size = True ):
         
     
     return path
-
-def GetUpdatePath( service_key, begin ):
     
-    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin ) + '.yaml'
-
+def GetExpectedContentUpdatePackagePath( service_key, begin, subindex ):
+    
+    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin ) + '_' + str( subindex ) + '.json'
+    
+def GetExpectedServiceUpdatePackagePath( service_key, begin ):
+    
+    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin ) + '_metadata.json'
+    
 def IterateAllFilePaths():
     
     hex_chars = '0123456789abcdef'
@@ -284,16 +288,4 @@ def IterateAllThumbnailPaths():
         
         for path in next_paths: yield dir + os.path.sep + path
         
-    
-        
-    
-    
-    
-    
-        
-    
-    
-    
-    
-    
     

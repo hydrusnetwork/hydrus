@@ -39,7 +39,10 @@ def DAEMONGenerateUpdates():
     
     for ( service_key, tuples ) in dirty_updates.items():
         
-        for ( begin, end ) in tuples: wx.GetApp().WriteSynchronous( 'clean_update', service_key, begin, end )
+        for ( begin, end ) in tuples:
+            
+            wx.GetApp().WriteSynchronous( 'clean_update', service_key, begin, end )
+            
         
     
     update_ends = wx.GetApp().Read( 'update_ends' )

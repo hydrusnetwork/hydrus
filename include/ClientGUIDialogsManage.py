@@ -6409,9 +6409,12 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 for ( status, pairs ) in self._original_statuses_to_pairs.items():
                     
-                    sign = HydrusData.ConvertStatusToPrefix( status )
-                    
-                    for ( child, parent ) in pairs: self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
+                    if status != HC.DELETED:
+                        
+                        sign = HydrusData.ConvertStatusToPrefix( status )
+                        
+                        for ( child, parent ) in pairs: self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
+                        
                     
                 
                 self._tag_parents.SortListItems( 2 )
@@ -6931,9 +6934,12 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 for ( status, pairs ) in self._original_statuses_to_pairs.items():
                     
-                    sign = HydrusData.ConvertStatusToPrefix( status )
-                    
-                    for ( old, new ) in pairs: self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
+                    if status != HC.DELETED:
+                        
+                        sign = HydrusData.ConvertStatusToPrefix( status )
+                        
+                        for ( old, new ) in pairs: self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
+                        
                     
                 
                 self._tag_siblings.SortListItems( 2 )
@@ -7439,9 +7445,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             ( x, y ) = self.GetEffectiveMinSize()
             
-            ( parent_width, parent_height ) = parent.GetSize()
+            ( parent_window_width, parent_window_height ) = parent.GetTopLevelParent().GetSize()
             
-            self.SetInitialSize( ( x + 200, max( 500, parent_height - 200 ) ) )
+            self.SetInitialSize( ( x + 200, max( 500, parent_window_height - 200 ) ) )
             
         
         self._file_service_key = file_service_key

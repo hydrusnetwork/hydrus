@@ -11,7 +11,7 @@ import time
 import wx
 import HydrusData
 import ClientData
-import ClientConstants
+import ClientConstants as CC
 import HydrusGlobals
 
 class DataCache( object ):
@@ -187,7 +187,7 @@ class LocalBooruCache( object ):
             
             info[ 'hashes_set' ] = set( hashes )
             
-            media_results = wx.GetApp().Read( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, hashes )
+            media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
             
             info[ 'media_results' ] = media_results
             
@@ -203,7 +203,7 @@ class LocalBooruCache( object ):
     
     def _RefreshShares( self ):
         
-        self._local_booru_service = wx.GetApp().GetManager( 'services' ).GetService( ClientConstants.LOCAL_BOORU_SERVICE_KEY )
+        self._local_booru_service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         self._keys_to_infos = {}
         

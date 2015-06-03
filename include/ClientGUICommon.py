@@ -271,9 +271,16 @@ class AutoCompleteDropdown( wx.Panel ):
         
         new_window = event.GetWindow()
         
-        focus_remains_on_self_or_children = new_window == self._dropdown_window or new_window in self._dropdown_window.GetChildren() or new_window == self or new_window is None
-        
-        if not focus_remains_on_self_or_children: self._HideDropdown()
+        if new_window is None:
+            
+            self._HideDropdown()
+            
+        else:
+            
+            focus_remains_on_self_or_children = new_window == self._dropdown_window or new_window in self._dropdown_window.GetChildren() or new_window == self
+            
+            if not focus_remains_on_self_or_children: self._HideDropdown()
+            
         
         event.Skip()
         
@@ -3583,13 +3590,13 @@ class PopupMessage( PopupWindow ):
         
         if self._job_key.HasVariable( 'popup_message_gauge_1' ):
             
-            ( value, range ) = self._job_key.GetVariable( 'popup_message_gauge_1' )
+            ( gauge_value, gauge_range ) = self._job_key.GetVariable( 'popup_message_gauge_1' )
             
-            if range is None or value is None: self._gauge_1.Pulse()
+            if gauge_range is None or gauge_value is None: self._gauge_1.Pulse()
             else:
                 
-                self._gauge_1.SetRange( range )
-                self._gauge_1.SetValue( value )
+                self._gauge_1.SetRange( gauge_range )
+                self._gauge_1.SetValue( gauge_value )
                 
             
             self._gauge_1.Show()
@@ -3608,13 +3615,13 @@ class PopupMessage( PopupWindow ):
         
         if self._job_key.HasVariable( 'popup_message_gauge_2' ):
             
-            ( value, range ) = self._job_key.GetVariable( 'popup_message_gauge_2' )
+            ( gauge_value, gauge_range ) = self._job_key.GetVariable( 'popup_message_gauge_2' )
             
-            if range is None or value is None: self._gauge_2.Pulse()
+            if gauge_range is None or gauge_value is None: self._gauge_2.Pulse()
             else:
                 
-                self._gauge_2.SetRange( range )
-                self._gauge_2.SetValue( value )
+                self._gauge_2.SetRange( gauge_range )
+                self._gauge_2.SetValue( gauge_value )
                 
             
             self._gauge_2.Show()

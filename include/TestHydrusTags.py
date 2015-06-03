@@ -6,7 +6,7 @@ import TestConstants
 import unittest
 import HydrusData
 import ClientData
-import ClientConstants
+import ClientConstants as CC
 import ClientSearch
 import HydrusGlobals
 import wx
@@ -192,10 +192,10 @@ class TestTagsManager( unittest.TestCase ):
         self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = False, include_pending_tags = True ), 0 )
         self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = True ), 1 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), 10 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), 11 )
+        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), 10 )
+        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), 11 )
         
     
     def test_get_pending( self ):
@@ -442,11 +442,11 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:everything (2,000)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, ClientConstants.LOCAL_FILE_SERVICE_KEY ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:is currently in local files' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, ClientConstants.LOCAL_FILE_SERVICE_KEY ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:is not pending to local files' )
         
@@ -490,7 +490,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:number of words < 5,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATING, ( ClientConstants.LOCAL_FILE_SERVICE_KEY, '>', 0.2 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATING, ( CC.LOCAL_FILE_SERVICE_KEY, '>', 0.2 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:rating for local files > 0.2' )
         
@@ -586,7 +586,7 @@ class TestTagParents( unittest.TestCase ):
         predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'grandfather', counts = { HC.CURRENT : 15 } ) )
         predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'not_exist', counts = { HC.CURRENT : 20 } ) )
         
-        self.assertEqual( self._tag_parents_manager.ExpandPredicates( ClientConstants.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
+        self.assertEqual( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
         
         predicates = []
         
@@ -600,7 +600,7 @@ class TestTagParents( unittest.TestCase ):
         results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
         results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
-        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( ClientConstants.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
+        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
         predicates = []
         
@@ -622,68 +622,68 @@ class TestTagParents( unittest.TestCase ):
         results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
         results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
-        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( ClientConstants.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
+        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
     
     def test_expand_tags( self ):
         
         tags = { 'grandmother', 'grandfather' }
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, tags ), tags )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, tags ), tags )
         
         tags = { 'child', 'cousin' }
         
         results = { 'child', 'mother', 'father', 'grandmother', 'grandfather', 'cousin', 'aunt', 'uncle', 'grandmother', 'grandfather' }
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, tags ), results )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, tags ), results )
         
     
     def test_grandparents( self ):
         
-        self.assertEqual( set( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'child' ) ), { 'mother', 'father', 'grandmother', 'grandfather' } )
-        self.assertEqual( set( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'mother' ) ), { 'grandmother', 'grandfather' } )
-        self.assertEqual( set( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'grandmother' ) ), set() )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'child' ) ), { 'mother', 'father', 'grandmother', 'grandfather' } )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'mother' ) ), { 'grandmother', 'grandfather' } )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'grandmother' ) ), set() )
         
     
     def test_current_overwrite( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'current_a' ), [ 'current_b' ] )
-        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'current_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'current_a' ), [ 'current_b' ] )
+        self.assertEqual( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'current_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'current_a' ] ), { 'current_a', 'current_b' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'current_b' ] ), { 'current_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'current_a' ] ), { 'current_a', 'current_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'current_b' ] ), { 'current_b' } )
         
     
     def test_deleted( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'deleted_a' ), [] )
-        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'deleted_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'deleted_a' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'deleted_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'deleted_a' ] ), { 'deleted_a' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'deleted_b' ] ), { 'deleted_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'deleted_a' ] ), { 'deleted_a' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'deleted_b' ] ), { 'deleted_b' } )
         
     
     def test_no_loop( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'closed_loop' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'closed_loop' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'closed_loop' ] ), { 'closed_loop' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'closed_loop' ] ), { 'closed_loop' } )
         
     
     def test_not_exist( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'not_exist' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'not_exist' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'not_exist' ] ), { 'not_exist' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'not_exist' ] ), { 'not_exist' } )
         
     
     def test_pending_overwrite( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'pending_a' ), [ 'pending_b' ] )
-        self.assertEqual( self._tag_parents_manager.GetParents( ClientConstants.COMBINED_TAG_SERVICE_KEY, 'pending_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'pending_a' ), [ 'pending_b' ] )
+        self.assertEqual( self._tag_parents_manager.GetParents( CC.COMBINED_TAG_SERVICE_KEY, 'pending_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'pending_a' ] ), { 'pending_a', 'pending_b' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( ClientConstants.COMBINED_TAG_SERVICE_KEY, [ 'pending_b' ] ), { 'pending_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'pending_a' ] ), { 'pending_a', 'pending_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( CC.COMBINED_TAG_SERVICE_KEY, [ 'pending_b' ] ), { 'pending_b' } )
         
     
 class TestTagSiblings( unittest.TestCase ):

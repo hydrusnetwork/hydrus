@@ -21,9 +21,35 @@ import HydrusTags
 import HydrusData
 import HydrusFileHandling
 import ClientData
-import ClientConstants
+import ClientConstants as CC
 import HydrusGlobals
 
+# This is fairly ugly, but it works for what I need it to do
+
+URL_EXTRA_INFO = {}
+URL_EXTRA_INFO_LOCK = threading.Lock()
+
+def GetExtraURLInfo( url ):
+    
+    with URL_EXTRA_INFO_LOCK:
+        
+        if url in URL_EXTRA_INFO:
+            
+            return URL_EXTRA_INFO[ url ]
+            
+        else:
+            
+            return None
+            
+        
+    
+def SetExtraURLInfo( url, info ):
+    
+    with URL_EXTRA_INFO_LOCK:
+        
+        URL_EXTRA_INFO[ url ] = info
+        
+    
 def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags ):
     
     hashes = set( ( hash, ) )
@@ -32,7 +58,7 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to
     
     for ( service_key, tags ) in service_keys_to_tags.items():
         
-        if service_key == ClientConstants.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
+        if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
         else: action = HC.CONTENT_UPDATE_PENDING
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
@@ -111,8 +137,6 @@ class GalleryParser( object ):
         
         self._all_urls_so_far = set()
         
-        self._num_pages_done = 0
-        
     
     def _AddSessionCookies( self, request_headers ): pass
     
@@ -126,9 +150,15 @@ class GalleryParser( object ):
         return wx.GetApp().DoHTTP( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
         
     
-    def _GetNextGalleryPageURL( self ): return ''
+    def _GetGalleryPageURL( self, page_index ):
+        
+        return ''
+        
     
-    def _GetNextGalleryPageURLs( self ): return ( self._GetNextGalleryPageURL(), )
+    def _GetGalleryPageURLs( self, page_index ):
+        
+        return ( self._GetGalleryPageURL( page_index ), )
+        
     
     def _ParseGalleryPage( self, data, url ):
         
@@ -139,42 +169,38 @@ class GalleryParser( object ):
     
     def ClearReportHooks( self ): self._report_hooks = []
     
-    def GetAnotherPage( self ):
+    def GetFile( self, temp_path, url ): self._FetchData( url, report_hooks = self._report_hooks, temp_path = temp_path )
+    
+    def GetFileAndTags( self, temp_path, url ):
+        
+        temp_path = self.GetFile( temp_path, url )
+        tags = self.GetTags( url )
+        
+        return tags
+        
+    
+    def GetPage( self, page_index ):
         
         if self._we_are_done: return []
         
-        urls = self._GetNextGalleryPageURLs()
+        gallery_urls = self._GetGalleryPageURLs( page_index )
         
-        url_info = []
+        all_urls = []
         
-        for url in urls:
+        for gallery_url in gallery_urls:
             
-            data = self._FetchData( url )
+            data = self._FetchData( gallery_url )
             
-            page_of_url_info = self._ParseGalleryPage( data, url )
+            page_of_urls = self._ParseGalleryPage( data, gallery_url )
             
             # stop ourselves getting into an accidental infinite loop
             
-            url_info += [ info for info in page_of_url_info if info[0] not in self._all_urls_so_far ]
+            all_urls += [ url for url in page_of_urls if url not in self._all_urls_so_far ]
             
-            self._all_urls_so_far.update( [ info[0] for info in url_info ] )
-            
-            # now url_info only contains new url info
+            self._all_urls_so_far.update( page_of_urls )
             
         
-        self._num_pages_done += 1
-        
-        return url_info
-        
-    
-    def GetFile( self, temp_path, url, *args ): self._FetchData( url, report_hooks = self._report_hooks, temp_path = temp_path )
-    
-    def GetFileAndTags( self, temp_path, url, *args ):
-        
-        temp_path = self.GetFile( temp_path, url, *args )
-        tags = self.GetTags( url, *args )
-        
-        return tags
+        return all_urls
         
     
     def GetTags( self, url ): pass
@@ -195,16 +221,16 @@ class GalleryParserBooru( GalleryParser ):
         GalleryParser.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ):
+    def _GetGalleryPageURL( self, page_index ):
         
-        if self._advance_by_page_num: index = 1 + self._num_pages_done
+        if self._advance_by_page_num: url_index = page_index + 1
         else:
             
-            if self._gallery_advance_num is None: index = 0
-            else: index = self._num_pages_done * self._gallery_advance_num
+            if self._gallery_advance_num is None: url_index = 0
+            else: url_index = page_index * self._gallery_advance_num
             
         
-        return self._search_url.replace( '%tags%', self._search_separator.join( [ urllib.quote( tag ) for tag in self._tags ] ) ).replace( '%index%', HydrusData.ToString( index ) )
+        return self._search_url.replace( '%tags%', self._search_separator.join( [ urllib.quote( tag ) for tag in self._tags ] ) ).replace( '%index%', HydrusData.ToString( url_index ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -252,7 +278,7 @@ class GalleryParserBooru( GalleryParser ):
                 if url not in urls_set:
                     
                     urls_set.add( url )
-                    urls.append( ( url, ) )
+                    urls.append( url )
                     
                 
             
@@ -267,6 +293,8 @@ class GalleryParserBooru( GalleryParser ):
         soup = bs4.BeautifulSoup( html )
         
         image_base = None
+        
+        image_url = None
         
         if image_id is not None:
             
@@ -312,6 +340,11 @@ class GalleryParserBooru( GalleryParser ):
                 
                 if link.string == image_data: image_url = link[ 'href' ]
                 
+            
+        
+        if image_url is None:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find the image URL!' )
             
         
         image_url = urlparse.urljoin( url_base, image_url )
@@ -382,11 +415,14 @@ class GalleryParserDeviantArt( GalleryParser ):
         GalleryParser.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ): return self._gallery_url + HydrusData.ToString( self._num_pages_done * 24 )
+    def _GetGalleryPageURL( self, page_index ):
+        
+        return self._gallery_url + HydrusData.ToString( page_index * 24 )
+        
     
     def _ParseGalleryPage( self, html, url_base ):
         
-        results = []
+        urls = []
         
         soup = bs4.BeautifulSoup( html )
         
@@ -400,7 +436,7 @@ class GalleryParserDeviantArt( GalleryParser ):
             
             try: # starts_with_thumb picks up some false positives, but they break
                 
-                page_url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
+                url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
                 
                 raw_title = link[ 'title' ] # sweet dolls by AngeniaC, date, blah blah blah
                 
@@ -415,12 +451,14 @@ class GalleryParserDeviantArt( GalleryParser ):
                 tags.append( 'title:' + title )
                 tags.append( 'creator:' + self._artist )
                 
-                results.append( ( page_url, tags ) )
+                SetExtraURLInfo( url, tags )
+                
+                urls.append( url )
                 
             except: pass
             
         
-        return results
+        return urls
         
     
     def _ParseImagePage( self, html ):
@@ -449,14 +487,26 @@ class GalleryParserDeviantArt( GalleryParser ):
         return self._ParseImagePage( html )
         
     
-    def GetFile( self, temp_path, url, tags ):
+    def GetFile( self, temp_path, url ):
         
         file_url = self._GetFileURL( url )
         
         self._FetchData( file_url, report_hooks = self._report_hooks, temp_path = temp_path )
         
     
-    def GetTags( self, url, tags ): return tags
+    def GetTags( self, url ):
+        
+        result = GetExtraURLInfo( url )
+        
+        if result is None:
+            
+            return []
+            
+        else:
+            
+            return result
+            
+        
     
 class GalleryParserGiphy( GalleryParser ):
     
@@ -467,43 +517,64 @@ class GalleryParserGiphy( GalleryParser ):
         GalleryParser.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ): return self._gallery_url + HydrusData.ToString( self._num_pages_done + 1 )
+    def _GetGalleryPageURL( self, page_index ):
+        
+        return self._gallery_url + HydrusData.ToString( page_index + 1 )
+        
     
     def _ParseGalleryPage( self, data, url_base ):
         
         json_dict = json.loads( data )
         
+        urls = []
+        
         if 'data' in json_dict:
             
             json_data = json_dict[ 'data' ]
             
-            return [ ( d[ 'image_original_url' ], d[ 'id' ] ) for d in json_data ]
+            for d in json_data:
+                
+                url = d[ 'image_original_url' ]
+                id = d[ 'id' ]
+                
+                SetExtraURLInfo( url, id )
+                
+                urls.append( url )
+                
             
-        else: return []
+        
+        return urls
         
     
-    def GetTags( self, url, id ):
+    def GetTags( self, url ):
         
-        url = 'http://giphy.com/api/gifs/' + HydrusData.ToString( id )
+        id = GetExtraURLInfo( url )
         
-        try:
+        if id is None:
             
-            raw_json = self._FetchData( url )
+            return []
             
-            json_dict = json.loads( raw_json )
+        else:
             
-            tags_data = json_dict[ 'data' ][ 'tags' ]
+            url = 'http://giphy.com/api/gifs/' + HydrusData.ToString( id )
             
-            tags = [ tag_data[ 'name' ] for tag_data in tags_data ]
+            try:
+                
+                raw_json = self._FetchData( url )
+                
+                json_dict = json.loads( raw_json )
+                
+                tags_data = json_dict[ 'data' ][ 'tags' ]
+                
+                return [ tag_data[ 'name' ] for tag_data in tags_data ]
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                return []
+                
             
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            tags = []
-            
-        
-        return tags
         
     
 class GalleryParserHentaiFoundry( GalleryParser ):
@@ -533,7 +604,7 @@ class GalleryParserHentaiFoundry( GalleryParser ):
         return self._ParseImagePage( html, url )
         
     
-    def _GetNextGalleryPageURL( self ):
+    def _GetGalleryPageURL( self, page_index ):
         
         if self._query_type in ( 'artist', 'artist pictures' ):
             
@@ -541,7 +612,7 @@ class GalleryParserHentaiFoundry( GalleryParser ):
             
             gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist
             
-            return gallery_url + '/page/' + HydrusData.ToString( self._num_pages_done + 1 )
+            return gallery_url + '/page/' + HydrusData.ToString( page_index + 1 )
             
         elif self._query_type == 'artist scraps':
             
@@ -549,13 +620,13 @@ class GalleryParserHentaiFoundry( GalleryParser ):
             
             gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist + '/scraps'
             
-            return gallery_url + '/page/' + HydrusData.ToString( self._num_pages_done + 1 )
+            return gallery_url + '/page/' + HydrusData.ToString( page_index + 1 )
             
         elif self._query_type == 'tags':
             
             tags = self._query
             
-            return 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page=' + HydrusData.ToString( self._num_pages_done + 1 )
+            return 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page=' + HydrusData.ToString( page_index + 1 )
             # scraps = 0 hide
             # -1 means show both
             # 1 means scraps only. wetf
@@ -583,26 +654,26 @@ class GalleryParserHentaiFoundry( GalleryParser ):
             return False
             
         
+        urls = []
+        
         links = soup.find_all( 'a', href = correct_url )
         
-        urls = [ 'http://www.hentai-foundry.com' + link['href'] for link in links ]
-        
-        result_urls = []
-        
-        for url in urls:
+        for link in links:
+            
+            url = 'http://www.hentai-foundry.com' + link['href']
             
             if url not in urls_set:
                 
                 urls_set.add( url )
                 
-                result_urls.append( ( url, ) )
+                urls.append( url )
                 
             
         
         # this is copied from old code. surely we can improve it?
         if 'class="next"' not in html: self._we_are_done = True
         
-        return result_urls
+        return urls
         
     
     def _ParseImagePage( self, html, url_base ):
@@ -720,7 +791,7 @@ class GalleryParserNewgrounds( GalleryParser ):
         return self._ParseImagePage( html, url )
         
     
-    def _GetNextGalleryPageURLs( self ):
+    def _GetGalleryPageURLs( self, page_index ):
         
         artist = self._query
         
@@ -744,7 +815,7 @@ class GalleryParserNewgrounds( GalleryParser ):
         
         urls_set = set()
         
-        result_urls = []
+        urls = []
         
         for link in links:
             
@@ -758,14 +829,14 @@ class GalleryParserNewgrounds( GalleryParser ):
                         
                         urls_set.add( url )
                         
-                        result_urls.append( ( url, ) )
+                        urls.append( url )
                         
                     
                 
             except: pass
             
         
-        return result_urls
+        return urls
         
     
     def _ParseImagePage( self, html, url_base ):
@@ -880,7 +951,7 @@ class GalleryParserPixiv( GalleryParser ):
         HydrusNetworking.AddCookiesToHeaders( cookies, request_headers )
         
     
-    def _GetNextGalleryPageURL( self ):
+    def _GetGalleryPageURL( self, page_index ):
         
         if self._query_type == 'artist_id':
             
@@ -895,12 +966,12 @@ class GalleryParserPixiv( GalleryParser ):
             gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( tag.encode( 'utf-8' ) ) + '&s_mode=s_tag_full&order=date_d'
             
         
-        return gallery_url + '&p=' + HydrusData.ToString( self._num_pages_done + 1 )
+        return gallery_url + '&p=' + HydrusData.ToString( page_index + 1 )
         
     
     def _ParseGalleryPage( self, html, url_base ):
         
-        results = []
+        urls = []
         
         soup = bs4.BeautifulSoup( html )
         
@@ -910,10 +981,10 @@ class GalleryParserPixiv( GalleryParser ):
             
             url = urlparse.urljoin( url_base, thumbnail_link[ 'href' ] ) # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=33500690
             
-            results.append( ( url, ) )
+            urls.append( url )
             
         
-        return results
+        return urls
         
     
     def _ParseImagePage( self, html, page_url ):
@@ -1000,10 +1071,15 @@ class GalleryParserTumblr( GalleryParser ):
         
         self._gallery_url = 'http://' + username + '.tumblr.com/api/read/json?start=%start%&num=50'
         
+        self._urls_to_tags = {}
+        
         GalleryParser.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ): return self._gallery_url.replace( '%start%', HydrusData.ToString( self._num_pages_done * 50 ) )
+    def _GetGalleryPageURL( self, page_index ):
+        
+        return self._gallery_url.replace( '%start%', HydrusData.ToString( page_index * 50 ) )
+        
     
     def _ParseGalleryPage( self, data, url_base ):
         
@@ -1011,7 +1087,7 @@ class GalleryParserTumblr( GalleryParser ):
         
         json_object = json.loads( processed_raw_json )
         
-        results = []
+        urls = []
         
         if 'posts' in json_object:
             
@@ -1026,14 +1102,28 @@ class GalleryParserTumblr( GalleryParser ):
                     
                     if len( post[ 'photos' ] ) == 0:
                         
-                        try: results.append( ( post[ 'photo-url-1280' ], tags ) )
+                        try:
+                            
+                            url = post[ 'photo-url-1280' ]
+                            
+                            SetExtraURLInfo( url, tags )
+                            
+                            urls.append( url )
+                            
                         except: pass
                         
                     else:
                         
                         for photo in post[ 'photos' ]:
                             
-                            try: results.append( ( photo[ 'photo-url-1280' ], tags ) )
+                            try:
+                                
+                                url = photo[ 'photo-url-1280' ]
+                                
+                                SetExtraURLInfo( url, tags )
+                                
+                                urls.append( url )
+                                
                             except: pass
                             
                         
@@ -1041,10 +1131,22 @@ class GalleryParserTumblr( GalleryParser ):
                 
             
         
-        return results
+        return urls
         
     
-    def GetTags( self, url, tags ): return tags
+    def GetTags( self, url ):
+        
+        result = GetExtraURLInfo( url )
+        
+        if result is None:
+            
+            return []
+            
+        else:
+            
+            return result
+            
+        
     
 class ImportArgsGenerator( object ):
     
@@ -1061,7 +1163,7 @@ class ImportArgsGenerator( object ):
             
             ( result, media_result ) = self._CheckCurrentStatus()
             
-            if result == 'new':
+            if result == CC.STATUS_NEW:
                 
                 ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
                 
@@ -1081,7 +1183,7 @@ class ImportArgsGenerator( object ):
             
             self._job_key.SetVariable( 'result', result )
             
-            if result in ( 'successful', 'redundant' ):
+            if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                 
                 page_key = self._job_key.GetVariable( 'page_key' )
                 
@@ -1099,7 +1201,7 @@ class ImportArgsGenerator( object ):
             
         except Exception as e:
             
-            self._job_key.SetVariable( 'result', 'failed' )
+            self._job_key.SetVariable( 'result', CC.STATUS_FAILED )
             
             if 'name' in locals(): HydrusData.ShowText( 'There was a problem importing ' + name + '!' )
             
@@ -1113,7 +1215,7 @@ class ImportArgsGenerator( object ):
     
     def _CleanUp( self ): pass
     
-    def _CheckCurrentStatus( self ): return ( 'new', None )
+    def _CheckCurrentStatus( self ): return ( CC.STATUS_NEW, None )
     
     def _GetArgs( self, temp_path ):
         
@@ -1132,28 +1234,29 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
     
     def _GetArgs( self, temp_path ):
         
-        url_args = self._item
-        
-        url = url_args[0]
+        url = self._item
         
         self._job_key.SetVariable( 'status', 'downloading' )
         
         gallery_parser = self._gallery_parsers_factory( 'example' )[0]
         
-        def hook( range, value ):
+        def hook( gauge_range, gauge_value ):
             
-            self._job_key.SetVariable( 'range', range )
-            self._job_key.SetVariable( 'value', value )
+            self._job_key.SetVariable( 'range', gauge_range )
+            self._job_key.SetVariable( 'value', gauge_value )
             
         
         gallery_parser.AddReportHook( hook )
         
         do_tags = len( self._advanced_tag_options ) > 0
         
-        if do_tags: tags = gallery_parser.GetFileAndTags( temp_path, *url_args )
+        if do_tags:
+            
+            tags = gallery_parser.GetFileAndTags( temp_path, url )
+            
         else:
             
-            gallery_parser.GetFile( temp_path, *url_args )
+            gallery_parser.GetFile( temp_path, url )
             
             tags = []
             
@@ -1169,9 +1272,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
     
     def _CheckCurrentStatus( self ):
         
-        url_args = self._item
-        
-        url = url_args[0]
+        url = self._item
         
         self._job_key.SetVariable( 'status', 'checking url status' )
         
@@ -1179,17 +1280,17 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         ( status, hash ) = wx.GetApp().Read( 'url_status', url )
         
-        if status == 'deleted' and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = 'new'
+        if status == CC.STATUS_DELETED and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
         
-        if status == 'redundant':
+        if status == CC.STATUS_REDUNDANT:
             
-            ( media_result, ) = wx.GetApp().Read( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             do_tags = len( self._advanced_tag_options ) > 0
             
             if do_tags:
                 
-                tags = gallery_parser.GetTags( *url_args )
+                tags = gallery_parser.GetTags( url )
                 
                 service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
                 
@@ -1219,7 +1320,7 @@ class ImportArgsGeneratorHDD( ImportArgsGenerator ):
         
         result = self._job_key.GetVariable( 'result' )
         
-        if self._delete_after_success and result in ( 'successful', 'redundant' ):
+        if self._delete_after_success and result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
             
             ( path_type, path_info ) = self._item
             
@@ -1289,10 +1390,10 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         ( md5, image_url, filename ) = self._item
         
-        def hook( range, value ):
+        def hook( gauge_range, gauge_value ):
             
-            self._job_key.SetVariable( 'range', range )
-            self._job_key.SetVariable( 'value', value )
+            self._job_key.SetVariable( 'range', gauge_range )
+            self._job_key.SetVariable( 'value', gauge_value )
             
         
         wx.GetApp().DoHTTP( HC.GET, image_url, report_hooks = [ hook ], temp_path = temp_path )
@@ -1314,11 +1415,11 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         ( status, hash ) = wx.GetApp().Read( 'md5_status', md5 )
         
-        if status == 'deleted' and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = 'new'
+        if status == CC.STATUS_DELETED and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
         
-        if status == 'redundant':
+        if status == CC.STATUS_REDUNDANT:
             
-            ( media_result, ) = wx.GetApp().Read( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             do_tags = len( self._advanced_tag_options ) > 0
             
@@ -1348,10 +1449,10 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         self._job_key.SetVariable( 'status', 'downloading' )
         
-        def hook( range, value ):
+        def hook( gauge_range, gauge_value ):
             
-            self._job_key.SetVariable( 'range', range )
-            self._job_key.SetVariable( 'value', value )
+            self._job_key.SetVariable( 'range', gauge_range )
+            self._job_key.SetVariable( 'value', gauge_value )
             
         
         wx.GetApp().DoHTTP( HC.GET, url, report_hooks = [ hook ], temp_path = temp_path )
@@ -1369,11 +1470,11 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         ( status, hash ) = wx.GetApp().Read( 'url_status', url )
         
-        if status == 'deleted' and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = 'new'
+        if status == CC.STATUS_DELETED and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
         
-        if status == 'redundant':
+        if status == CC.STATUS_REDUNDANT:
             
-            ( media_result, ) = wx.GetApp().Read( 'media_results', ClientConstants.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             return ( status, media_result )
             
@@ -1404,10 +1505,14 @@ class ImportController( object ):
         
         if job_type == 'controller':
             
-            job_key.SetVariable( 'num_successful', 0 )
-            job_key.SetVariable( 'num_failed', 0 )
-            job_key.SetVariable( 'num_deleted', 0 )
-            job_key.SetVariable( 'num_redundant', 0 )
+            result_counts = {}
+            
+            result_counts[ CC.STATUS_SUCCESSFUL ] = 0
+            result_counts[ CC.STATUS_FAILED ] = 0
+            result_counts[ CC.STATUS_DELETED ] = 0
+            result_counts[ CC.STATUS_REDUNDANT ] = 0
+            
+            job_key.SetVariable( 'result_counts', result_counts )
             
         else:
             
@@ -1530,11 +1635,9 @@ class ImportController( object ):
                         
                         result = self._import_job_key.GetVariable( 'result' )
                         
-                        variable_name = 'num_' + result
+                        result_counts = self._controller_job_key.GetVariable( 'result_counts' )
                         
-                        num_result = self._controller_job_key.GetVariable( variable_name )
-                        
-                        self._controller_job_key.SetVariable( variable_name, num_result + 1 )
+                        result_counts[ result ] += 1
                         
                         self._import_job_key = self._GetNewJobKey( 'import' )
                         
@@ -1670,7 +1773,9 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
             
             total_urls_found = 0
             
-            pages_found = 0
+            num_pages_found = 0
+            
+            page_index = 0
             
             first_run = True
             
@@ -1680,7 +1785,7 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                 
                 for gallery_parser in gallery_parsers:
                     
-                    urls_in_pages = HydrusData.ConvertIntToPrettyString( total_urls_found ) + ' urls in ' + HydrusData.ConvertIntToPrettyString( pages_found ) + ' pages'
+                    urls_in_pages = HydrusData.ConvertIntToPrettyString( total_urls_found ) + ' urls in ' + HydrusData.ConvertIntToPrettyString( num_pages_found ) + ' pages'
                     
                     while self._job_key.IsPaused():
                         
@@ -1700,9 +1805,9 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                     
                     self._job_key.SetVariable( 'status', 'found ' + urls_in_pages + '. looking for next page' )
                     
-                    page_of_url_args = gallery_parser.GetAnotherPage()
+                    page_of_urls = gallery_parser.GetPage( page_index )
                     
-                    if len( page_of_url_args ) == 0: gallery_parsers_to_remove.append( gallery_parser )
+                    if len( page_of_urls ) == 0: gallery_parsers_to_remove.append( gallery_parser )
                     else:
                         
                         queue = self._job_key.GetVariable( 'queue' )
@@ -1711,29 +1816,29 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                         
                         if self._file_limit is not None:
                             
-                            while len( page_of_url_args ) > 0 and total_urls_found < self._file_limit:
+                            while len( page_of_urls ) > 0 and total_urls_found < self._file_limit:
                                 
-                                url_args = page_of_url_args.pop( 0 )
+                                url = page_of_urls.pop( 0 )
                                 
-                                queue.append( url_args )
+                                queue.append( url )
                                 
                                 total_urls_found += 1
                                 
                             
                         else:
                             
-                            queue.extend( page_of_url_args )
+                            queue.extend( page_of_urls )
                             
-                            total_urls_found += len( page_of_url_args )
+                            total_urls_found += len( page_of_urls )
                             
                         
                         self._job_key.SetVariable( 'queue', queue )
                         
-                        pages_found += 1
+                        num_pages_found += 1
                         
                     
                 
-                urls_in_pages = HydrusData.ConvertIntToPrettyString( total_urls_found ) + ' urls in ' + HydrusData.ConvertIntToPrettyString( pages_found ) + ' pages'
+                urls_in_pages = HydrusData.ConvertIntToPrettyString( total_urls_found ) + ' urls in ' + HydrusData.ConvertIntToPrettyString( num_pages_found ) + ' pages'
                 
                 for gallery_parser in gallery_parsers_to_remove: gallery_parsers.remove( gallery_parser )
                 
@@ -1751,6 +1856,8 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                 if HydrusGlobals.shutdown or self._job_key.IsDone(): break
                 
                 if self._file_limit is not None and total_urls_found >= self._file_limit: break
+                
+                page_index += 1
                 
             
             self._job_key.SetVariable( 'status', 'finished. found ' + urls_in_pages )
@@ -1933,13 +2040,13 @@ class ImportQueueBuilderThread( ImportQueueBuilder ):
     
 def THREADDownloadURL( job_key, url, url_string ):
     
-    def hook( range, value ):
+    def hook( gauge_range, gauge_value ):
         
-        if range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( value )
-        else: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( value ) + '/' + HydrusData.ConvertIntToBytes( range )
+        if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
+        else: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value ) + '/' + HydrusData.ConvertIntToBytes( gauge_range )
         
         job_key.SetVariable( 'popup_message_text_1', text )
-        job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
+        job_key.SetVariable( 'popup_message_gauge_1', ( gauge_value, gauge_range ) )
         
     
     ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
@@ -1958,12 +2065,12 @@ def THREADDownloadURL( job_key, url, url_string ):
         HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
         
     
-    if result in ( 'successful', 'redundant' ):
+    if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
         
         job_key.SetVariable( 'popup_message_text_1', url_string )
         job_key.SetVariable( 'popup_message_files', { hash } )
         
-    elif result == 'deleted':
+    elif result == CC.STATUS_DELETED:
         
         job_key.SetVariable( 'popup_message_text_1', url_string + ' was already deleted!' )
         

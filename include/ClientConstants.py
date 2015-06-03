@@ -96,12 +96,6 @@ field_string_lookup[ FIELD_FILE ] = 'file'
 field_string_lookup[ FIELD_THREAD_ID ] = 'thread id'
 field_string_lookup[ FIELD_PASSWORD ] = 'password'
 
-FILE_UNKNOWN = 0
-FILE_SUCCESSFUL = 1
-FILE_REDUNDANT = 2
-FILE_DELETED = 3
-FILE_FAILED = 4
-
 FLAGS_NONE = wx.SizerFlags( 0 )
 
 FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
@@ -183,6 +177,24 @@ sort_string_lookup[ SORT_BY_NEWEST ] = 'newest first'
 sort_string_lookup[ SORT_BY_OLDEST ] = 'oldest first'
 sort_string_lookup[ SORT_BY_MIME ] = 'mime'
 sort_string_lookup[ SORT_BY_RANDOM ] = 'random order'
+
+STATUS_UNKNOWN = 0
+STATUS_SUCCESSFUL = 1
+STATUS_REDUNDANT = 2
+STATUS_DELETED = 3
+STATUS_FAILED = 4
+STATUS_NEW = 5
+STATUS_PAUSED = 5
+
+status_string_lookup = {}
+
+status_string_lookup[ STATUS_UNKNOWN ] = ''
+status_string_lookup[ STATUS_SUCCESSFUL ] = 'successful'
+status_string_lookup[ STATUS_REDUNDANT ] = 'redundant'
+status_string_lookup[ STATUS_DELETED ] = 'deleted'
+status_string_lookup[ STATUS_FAILED ] = 'failed'
+status_string_lookup[ STATUS_NEW ] = 'new'
+status_string_lookup[ STATUS_PAUSED ] = 'new'
 
 THUMBNAIL_MARGIN = 2
 THUMBNAIL_BORDER = 1

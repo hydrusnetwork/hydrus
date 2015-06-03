@@ -5,7 +5,7 @@ import os
 import TestConstants
 import unittest
 import HydrusData
-import ClientConstants
+import ClientConstants as CC
 
 class TestClientDownloadingFunctions( unittest.TestCase ):
     
@@ -15,7 +15,7 @@ class TestClientDownloadingFunctions( unittest.TestCase ):
         
         hashes = set( [ hash ] )
         
-        local_key = ClientConstants.LOCAL_TAG_SERVICE_KEY
+        local_key = CC.LOCAL_TAG_SERVICE_KEY
         remote_key = os.urandom( 32 )
         
         service_keys_to_tags = { local_key : { 'a' } }

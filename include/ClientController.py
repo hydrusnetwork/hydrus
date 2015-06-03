@@ -157,6 +157,13 @@ class Controller( HydrusController.HydrusController ):
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
     
+    def ForceIdle( self ):
+        
+        self._timestamps[ 'last_user_action' ] = 0
+        
+        HydrusGlobals.pubsub.pub( 'refresh_status' )
+        
+    
     def GetGUI( self ): return self._gui
     
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
@@ -252,6 +259,8 @@ class Controller( HydrusController.HydrusController ):
         self.RestartServer()
         self.RestartBooru()
         self.StartDaemons()
+        
+        self.ResetIdleTimer()
         
     
     def MaintainDB( self ):
@@ -376,7 +385,10 @@ class Controller( HydrusController.HydrusController ):
                             
                         
                     
-                except Exception as e: wx.CallAfter( HydrusData.ShowException, e )
+                except Exception as e:
+                    
+                    wx.CallAfter( HydrusData.ShowException, e )
+                    
                 
             
             if self._booru_service is None: StartServer()
@@ -435,7 +447,10 @@ class Controller( HydrusController.HydrusController ):
                             
                         
                     
-                except Exception as e: wx.CallAfter( HydrusData.ShowException, e )
+                except Exception as e:
+                    
+                    wx.CallAfter( HydrusData.ShowException, e )
+                    
                 
             
             if self._local_service is None: StartServer()
@@ -578,7 +593,7 @@ class Controller( HydrusController.HydrusController ):
         
     
     def THREADExitEverything( self ):
-    
+        
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'exiting gui' )
         
         gui = self.GetGUI()
