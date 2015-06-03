@@ -8,6 +8,53 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 159</h3></li>
+				<ul>
+					<li>split previously monolithic repository updates into smaller pieces</li>
+					<li>added service_update server calls</li>
+					<li>extended content_update server calls to support sub-indices</li>
+					<li>sped up some content update preprocessing code</li>
+					<li>improved some content update preprocessing code</li>
+					<li>radically reduced serverside memory usage while generating updates</li>
+					<li>added iterator splitters to make sure any single update row cannot be too large</li>
+					<li>thanks to iterator splitter, updates should process through the client more smoothly</li>
+					<li>added timespan splitter to make sure any single server update query cannot be too large</li>
+					<li>content updates are resumable if broken part way through downloading the list of them</li>
+					<li>the update popup will state how fast it is currently working in rows per second committed</li>
+					<li>cleanup of a lot of update related code</li>
+					<li>more cleanup of update related code</li>
+					<li>improved serialisable protocol so it'll work better over a network</li>
+					<li>made serialisable protocol much simpler</li>
+					<li>fixed numerical rating system predicate dialog slider range</li>
+					<li>fixed numerical rating system predicate dialog OK for valued predicates</li>
+					<li>fixed numerical rating custom filter action dialog</li>
+					<li>improved some network yaml error handling</li>
+					<li>replaced 'export tags' thumbnail menu entry with a tag archives system</li>
+					<li>replaced 'import metadata' file menu entry with a tag archives system</li>
+					<li>disabled thread dumper and manage imageboards and manage 4chan pass dialogs for now, because dumping code is out of date and completely screwed up</li>
+					<li>client will now not start in idle mode</li>
+					<li>help debug menu has new 'force idle mode' entry</li>
+					<li>idle mode is displayed on status bar</li>
+					<li>simplified client main gui status bar display and code</li>
+					<li>the flash and flv files' embed button now has a little border to delineate it from the canvas background</li>
+					<li>fixed some clientside bandwidth tracking code</li>
+					<li>removed some old networking code</li>
+					<li>made some custom objects draw themselves more efficiently</li>
+					<li>for now, manage tag parents and siblings dialogs will not show deleted rows. I will eventually add a 'show deleted' checkbox, like the manage tags dialog has</li>
+					<li>some static image rendering is slightly less laggy, particularly when browsing large images</li>
+					<li>fixed initial height of manage tags dialog launched from preview window</li>
+					<li>changed the 'search area' vs 'preview' sash gravity so the preview area won't expand or shrink on resize--see if you like it</li>
+					<li>autocomplete dropdown should now hide itself when focus goes to other programs</li>
+					<li>autocomplete dropdown should now hide itself when focus goes to other hydrus frames in os x</li>
+					<li>fleshed out new URLCache object to handle better gallery download url management</li>
+					<li>refactored some file status tracking stuff to a better system</li>
+					<li>refactored gallery page fetching to a better system</li>
+					<li>refactored gallery url handling to a better system</li>
+					<li>some redundant import checking should be much faster</li>
+					<li>improved error handling when booru image page parsing fails to find image url</li>
+					<li>refactored how tags are fetched for DA, tumblr, and giphy as part of the above overhaul</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 158</h3></li>
 				<ul>
 					<li>subscriptions now have a 'get tags even if file already in db' checkbox, defaulting to false, which will significantly speed up subs with redundant files</li>
