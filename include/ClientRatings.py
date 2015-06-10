@@ -25,16 +25,46 @@ default_numerical_colours[ DISLIKE ] = ( ( 0, 0, 0 ), ( 255, 255, 255 ) )
 default_numerical_colours[ NULL ] = ( ( 0, 0, 0 ), ( 191, 191, 191 ) )
 default_numerical_colours[ MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
 
-def DrawLike( dc, x, y, pen_colour, brush_colour ):
+STAR_COORDS = []
+
+STAR_COORDS.append( wx.Point( 6, 0 ) ) # top
+STAR_COORDS.append( wx.Point( 9, 4 ) )
+STAR_COORDS.append( wx.Point( 12, 4 ) ) # right
+STAR_COORDS.append( wx.Point( 9, 8 ) )
+STAR_COORDS.append( wx.Point( 10, 12 ) ) # bottom right
+STAR_COORDS.append( wx.Point( 6, 10 ) )
+STAR_COORDS.append( wx.Point( 2, 12 ) ) # bottom left
+STAR_COORDS.append( wx.Point( 3, 8 ) )
+STAR_COORDS.append( wx.Point( 0, 4 ) ) # left
+STAR_COORDS.append( wx.Point( 3, 4 ) )
+
+def DrawLike( dc, x, y, service_key, rating_state ):
+    
+    shape = GetShape( service_key )
+    
+    ( pen_colour, brush_colour ) = GetPenAndBrushColours( service_key, rating_state )
     
     dc.SetPen( wx.Pen( pen_colour ) )
     dc.SetBrush( wx.Brush( brush_colour ) )
+
+    if shape == CIRCLE:
+        
+        dc.DrawCircle( x + 7, y + 7, 6 )
+        
+    elif shape == SQUARE:
+        
+        dc.DrawRectangle( x + 2, y + 2, 12, 12 )
+        
+    elif shape == STAR:
+        
+        dc.DrawPolygon( STAR_COORDS, x + 1, y + 1 )
+        
     
-    dc.DrawCircle( x + 7, y + 7, 6 )
+def DrawNumerical( dc, x, y, service_key, rating_state, rating ):
     
-def DrawNumerical( dc, x, y, stars ):
+    ( shape, stars ) = GetStars( service_key, rating_state, rating )
     
-    x_delta = 7
+    x_delta = 0
     x_step = 12
     
     for ( num_stars, pen_colour, brush_colour ) in stars:
@@ -44,7 +74,18 @@ def DrawNumerical( dc, x, y, stars ):
         
         for i in range( num_stars ):
             
-            dc.DrawCircle( x + x_delta, y + 7, 6 )
+            if shape == CIRCLE:
+                
+                dc.DrawCircle( x + 7 + x_delta, y + 7, 6 )
+                
+            elif shape == SQUARE:
+                
+                dc.DrawRectangle( x + 2 + x_delta, y + 2, 12, 12 )
+                
+            elif shape == STAR:
+                
+                dc.DrawPolygon( STAR_COORDS, x + 1 + x_delta, y + 1 )
+                
             
             x_delta += x_step
             
@@ -156,9 +197,21 @@ def GetPenAndBrushColours( service_key, rating_state ):
     
     return ( pen_colour, brush_colour )
     
+def GetShape( service_key ):
+    
+    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+    
+    shape = service.GetInfo( 'shape' )
+    
+    return shape
+    
 def GetStars( service_key, rating_state, rating ):
     
     service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+    
+    allow_zero = service.GetInfo( 'allow_zero' )
+    
+    shape = service.GetInfo( 'shape' )
     
     num_stars = service.GetInfo( 'num_stars' )
     
@@ -172,20 +225,27 @@ def GetStars( service_key, rating_state, rating ):
         
     else:
         
-        num_stars_on = int( round( rating * num_stars ) )
+        if allow_zero:
+            
+            num_stars_on = int( round( rating * num_stars ) )
+            
+        else:
+            
+            num_stars_on = int( round( rating * ( num_stars - 1 ) ) ) + 1
+            
+        
+        num_stars_off = num_stars - num_stars_on
         
         ( pen_colour, brush_colour ) = GetPenAndBrushColours( service_key, LIKE )
         
         stars.append( ( num_stars_on, pen_colour, brush_colour ) )
-        
-        num_stars_off = num_stars - num_stars_on
         
         ( pen_colour, brush_colour ) = GetPenAndBrushColours( service_key, DISLIKE )
         
         stars.append( ( num_stars_off, pen_colour, brush_colour ) )
         
     
-    return stars
+    return ( shape, stars )
     
 class CPRemoteRatingsServiceKeys( object ):
     

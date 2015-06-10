@@ -83,6 +83,8 @@ class AutoCompleteDropdown( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
+        self._last_search_text = ''
+        
         tlp = self.GetTopLevelParent()
         
         # There's a big bug in wx where FRAME_FLOAT_ON_PARENT Frames don't get passed their mouse events if their parent is a Dialog jej
@@ -187,6 +189,13 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _BroadcastChoice( self, predicate ): pass
     
+    def _BroadcastCurrentText( self ):
+        
+        text = self._text_ctrl.GetValue()
+        
+        self._BroadcastChoice( text )
+        
+    
     def _GenerateMatches( self ):
         
         raise NotImplementedError()
@@ -225,14 +234,12 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
     
-    def _UpdateList( self ): pass
+    def _UpdateList( self ):
+        
+        pass
+        
     
     def BroadcastChoice( self, predicate ):
-        
-        if self._text_ctrl.GetValue() != '':
-            
-            self._text_ctrl.SetValue( '' )
-            
         
         self._BroadcastChoice( predicate )
         
@@ -244,7 +251,17 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0: self._BroadcastChoice( None )
+        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._last_search_text == '':
+            
+            if self._text_ctrl.GetValue() == '':
+                
+                self._BroadcastChoice( None )
+                
+            else:
+                
+                self._BroadcastCurrentText()
+                
+            
         elif event.KeyCode == wx.WXK_ESCAPE: self.GetTopLevelParent().SetFocus()
         elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
@@ -385,7 +402,15 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
         self._dropdown_window.SetSizer( vbox )
         
     
-    def _BroadcastChoice( self, predicate ): HydrusGlobals.pubsub.pub( 'add_predicate', self._page_key, predicate )
+    def _BroadcastChoice( self, predicate ):
+        
+        if self._text_ctrl.GetValue() != '':
+            
+            self._text_ctrl.SetValue( '' )
+            
+        
+        HydrusGlobals.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        
     
     def _InitDropDownList( self ): return ListBoxMessagesActiveOnly( self._dropdown_window, self.BroadcastChoice )
     
@@ -403,6 +428,8 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
         
     
     def _UpdateList( self ):
+        
+        self._last_search_text = self._text_ctrl.GetValue()
         
         matches = self._GenerateMatches()
         
@@ -466,6 +493,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     def _InitDropDownList( self ): return ListBoxTagsAutocompleteDropdown( self._dropdown_window, self.BroadcastChoice, min_height = self._list_height )
     
     def _UpdateList( self ):
+        
+        self._last_search_text = self._text_ctrl.GetValue()
         
         matches = self._GenerateMatches()
         
@@ -583,7 +612,22 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         HydrusGlobals.pubsub.sub( self, 'IncludePending', 'notify_include_pending' )
         
     
-    def _BroadcastChoice( self, predicate ): HydrusGlobals.pubsub.pub( 'add_predicate', self._page_key, predicate )
+    def _BroadcastChoice( self, predicate ):
+        
+        if self._text_ctrl.GetValue() != '':
+            
+            self._text_ctrl.SetValue( '' )
+            
+        
+        HydrusGlobals.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        
+    
+    def _BroadcastCurrentText( self ):
+        
+        ( inclusive, search_text, entry_predicate ) = self._ParseSearchText()
+        
+        self._BroadcastChoice( entry_predicate )
+        
     
     def _ChangeFileRepository( self, file_service_key ):
         
@@ -599,9 +643,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         HydrusGlobals.pubsub.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
         
     
-    def _GenerateMatches( self ):
-        
-        num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
+    def _ParseSearchText( self ):
         
         raw_entry = self._text_ctrl.GetValue()
         
@@ -619,6 +661,17 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
         search_text = HydrusTags.CleanTag( search_text )
+        
+        entry_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
+        
+        return ( inclusive, search_text, entry_predicate )
+        
+    
+    def _GenerateMatches( self ):
+        
+        num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
+        
+        ( inclusive, search_text, entry_predicate ) = self._ParseSearchText()
         
         if search_text == '':
             
@@ -734,8 +787,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             if self._current_namespace != '': matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
             if '*' in search_text: matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
             
-            entry_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
-            
             try:
                 
                 index = matches.index( entry_predicate )
@@ -803,6 +854,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _BroadcastChoice( self, predicate ):
         
+        if self._text_ctrl.GetValue() != '':
+            
+            self._text_ctrl.SetValue( '' )
+            
+        
         if predicate is None: self._chosen_tag_callable( None )
         else:
             
@@ -825,13 +881,49 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
     
-    def _GenerateMatches( self ):
-        
-        num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
+    def _ParseSearchText( self ):
         
         raw_entry = self._text_ctrl.GetValue()
         
         search_text = HydrusTags.CleanTag( raw_entry )
+        
+        entry_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text )
+        
+        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        
+        sibling = siblings_manager.GetSibling( search_text )
+        
+        if sibling is not None:
+            
+            sibling_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, sibling )
+            
+        else:
+            
+            sibling_predicate = None
+            
+        
+        return ( search_text, entry_predicate, sibling_predicate )
+        
+    
+    def _BroadcastCurrentText( self ):
+        
+        ( search_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
+        
+        if sibling_predicate is not None:
+            
+            self._BroadcastChoice( sibling_predicate )
+            
+        else:
+            
+            self._BroadcastChoice( entry_predicate )
+            
+        
+    
+    def _GenerateMatches( self ):
+        
+        num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
+        
+        ( search_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
         
         if search_text == '':
             
@@ -886,13 +978,12 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             top_predicates = []
             
-            top_predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text ) )
+            top_predicates.append( entry_predicate )
             
-            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
-            
-            sibling = siblings_manager.GetSibling( search_text )
-            
-            if sibling is not None: top_predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, sibling ) )
+            if sibling_predicate is not None:
+                
+                top_predicates.append( sibling_predicate )
+                
             
             for predicate in top_predicates:
                 
@@ -3967,7 +4058,7 @@ class RatingLikeDialog( RatingLike ):
         
         ( pen_colour, brush_colour ) = ClientRatings.GetPenAndBrushColours( self._service_key, self._rating_state )
         
-        ClientRatings.DrawLike( dc, 0, 0, pen_colour, brush_colour )
+        ClientRatings.DrawLike( dc, 0, 0, self._service_key, self._rating_state )
         
         self._dirty = False
         
@@ -4038,9 +4129,7 @@ class RatingLikeCanvas( RatingLike ):
             
             self._rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
             
-            ( pen_colour, brush_colour ) = ClientRatings.GetPenAndBrushColours( self._service_key, self._rating_state )
-            
-            ClientRatings.DrawLike( dc, 0, 0, pen_colour, brush_colour )
+            ClientRatings.DrawLike( dc, 0, 0, self._service_key, self._rating_state )
             
         
         self._dirty = False
@@ -4125,6 +4214,7 @@ class RatingNumerical( wx.Window ):
         self._service = wx.GetApp().GetManager( 'services' ).GetService( self._service_key )
         
         self._num_stars = self._service.GetInfo( 'num_stars' )
+        self._allow_zero = self._service.GetInfo( 'allow_zero' )
         
         my_width = ClientRatings.GetNumericalWidth( self._service_key )
         
@@ -4166,10 +4256,17 @@ class RatingNumerical( wx.Window ):
         if 0 <= y and y <= my_active_height:
             
             if 0 <= x and x <= my_active_width:
-                
+            
                 proportion_filled = float( x_adjusted ) / my_active_width
                 
-                rating = round( proportion_filled * self._num_stars ) / self._num_stars
+                if self._allow_zero:
+                    
+                    rating = round( proportion_filled * self._num_stars ) / self._num_stars
+                    
+                else:
+                    
+                    rating = float( int( proportion_filled * self._num_stars ) ) / ( self._num_stars - 1 )
+                    
                 
                 return rating
                 
@@ -4220,9 +4317,7 @@ class RatingNumericalDialog( RatingNumerical ):
         
         dc.Clear()
         
-        stars = ClientRatings.GetStars( self._service_key, self._rating_state, self._rating )
-        
-        ClientRatings.DrawNumerical( dc, 0, 0, stars )
+        ClientRatings.DrawNumerical( dc, 0, 0, self._service_key, self._rating_state, self._rating )
         
         self._dirty = False
         
@@ -4313,9 +4408,7 @@ class RatingNumericalCanvas( RatingNumerical ):
             
             ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
             
-            stars = ClientRatings.GetStars( self._service_key, self._rating_state, self._rating )
-            
-            ClientRatings.DrawNumerical( dc, 0, 0, stars )
+            ClientRatings.DrawNumerical( dc, 0, 0, self._service_key, self._rating_state, self._rating )
             
         
         self._dirty = False

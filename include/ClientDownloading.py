@@ -1646,7 +1646,7 @@ class ImportController( object ):
                         self._import_queue_job_key.SetVariable( 'queue_position', queue_position )
                         
                     
-                    position_string = HydrusData.ToString( queue_position + 1 ) + '/' + HydrusData.ToString( len( queue ) )
+                    position_string = HydrusData.ConvertValueRangeToPrettyString( queue_position + 1, len( queue ) )
                     
                     if self._import_queue_job_key.IsPaused(): self._import_queue_job_key.SetVariable( 'status', 'paused at ' + position_string )
                     elif self._import_queue_job_key.IsWorking():
@@ -2043,7 +2043,7 @@ def THREADDownloadURL( job_key, url, url_string ):
     def hook( gauge_range, gauge_value ):
         
         if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
-        else: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value ) + '/' + HydrusData.ConvertIntToBytes( gauge_range )
+        else: text = url_string + ' - ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range )
         
         job_key.SetVariable( 'popup_message_text_1', text )
         job_key.SetVariable( 'popup_message_gauge_1', ( gauge_value, gauge_range ) )

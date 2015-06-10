@@ -1222,7 +1222,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if HydrusGlobals.shutdown: return
             
-            job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( len( info ) ) )
+            job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( info ) ) )
             job_key.SetVariable( 'popup_message_gauge_1', ( i, len( info ) ) )
             
             hash = self._GetHash( hash_id )
@@ -1772,7 +1772,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if i % 100 == 0:
                 
-                job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( len( hash_ids ) ) )
+                job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( hash_ids ) ) )
                 job_key.SetVariable( 'popup_message_gauge_1', ( i, len( hash_ids ) ) )
                 
             
@@ -4832,7 +4832,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if i % 100 == 0:
                 
-                job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( len( hash_ids ) ) )
+                job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( hash_ids ) ) )
                 job_key.SetVariable( 'popup_message_gauge_1', ( i, len( hash_ids ) ) )
                 
             
@@ -4861,15 +4861,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
-        
-        if version == 109:
-            
-            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
-            
-            self._c.execute( 'DROP TABLE processed_mappings;' )
-            
-            self._c.execute( 'DROP INDEX mappings_status_index;' )
-            
         
         if version == 110:
             
@@ -5385,6 +5376,18 @@ class DB( HydrusDB.HydrusDB ):
                 path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
                 
                 os.remove( path )
+                
+            
+        
+        if version == 159:
+            
+            results = self._c.execute( 'SELECT service_id, service_type, info FROM services WHERE service_type = ?;', ( HC.LOCAL_RATING_NUMERICAL, ) ).fetchall()
+            
+            for ( service_id, service_type, info ) in results:
+                
+                info[ 'allow_zero' ] = True
+                
+                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                 
             
         

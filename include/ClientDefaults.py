@@ -136,6 +136,8 @@ def GetClientDefaultOptions():
     shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_LEFT ] = 'pan_left'
     shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_RIGHT ] = 'pan_right'
     
+    options[ 'proxy' ] = None
+    
     options[ 'shortcuts' ] = shortcuts
     
     options[ 'confirm_client_exit' ] = False

@@ -5,6 +5,8 @@ import HydrusSerialisable
 import httplib
 import multipart
 import os
+import socket
+import socks
 import threading
 import time
 import urllib
@@ -138,6 +140,25 @@ def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
     return m.get()
     
+def GetLocalConnection( port ):
+    
+    old_socket = httplib.socket.socket
+    
+    httplib.socket.socket = socket._socketobject
+    
+    try:
+        
+        connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 8 )
+        
+        connection.connect()
+        
+    finally:
+        
+        httplib.socket.socket = old_socket
+        
+    
+    return connection
+    
 def ParseURL( url ):
     
     try:
@@ -166,6 +187,16 @@ def ParseURL( url ):
     except: raise Exception( 'Could not parse that URL' )
     
     return ( location, path, query )
+    
+def SetProxy( proxytype, host, port, username = None, password = None ):
+    
+    if proxytype == 'http': proxytype = socks.PROXY_TYPE_HTTP
+    elif proxytype == 'socks4': proxytype = socks.PROXY_TYPE_SOCKS4
+    elif proxytype == 'socks5': proxytype = socks.PROXY_TYPE_SOCKS5
+    
+    socks.setdefaultproxy( proxytype = proxytype, addr = host, port = port, username = username, password = password )
+    
+    socks.wrapmodule( httplib )
     
 class HTTPConnectionManager( object ):
     
@@ -328,6 +359,17 @@ class HTTPConnection( object ):
         
     
     def _ParseResponse( self, response, report_hooks ):
+
+        server_header = response.getheader( 'Server' )
+        
+        if server_header is not None and 'hydrus' in server_header:
+            
+            hydrus_service = True
+            
+        else:
+            
+            hydrus_service = False
+            
         
         content_length = response.getheader( 'Content-Length' )
         
@@ -381,7 +423,14 @@ class HTTPConnection( object ):
                 
             elif content_type == 'application/json':
                 
-                parsed_response = HydrusSerialisable.CreateFromNetworkString( data )
+                if hydrus_service:
+                    
+                    parsed_response = HydrusSerialisable.CreateFromNetworkString( data )
+                    
+                else:
+                    
+                    parsed_response = data
+                    
                 
             elif content_type == 'text/html':
                 
@@ -399,8 +448,18 @@ class HTTPConnection( object ):
         if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = self._timeout )
         elif self._scheme == 'https': self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout )
         
-        try: self._connection.connect()
-        except: raise Exception( 'Could not connect to ' + HydrusData.ToString( self._host ) + '!' )
+        try:
+            
+            self._connection.connect()
+            
+        except Exception as e:
+            
+            text = 'Could not connect to ' + HydrusData.ToString( self._host ) + ':'
+            text += os.linesep * 2
+            text += HydrusData.ToString( e )
+            
+            raise Exception( text )
+            
         
     
     def _WriteResponseToPath( self, response, temp_path, report_hooks ):

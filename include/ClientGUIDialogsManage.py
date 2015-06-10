@@ -544,6 +544,8 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                         self._boorus.AddPage( name, page, select = True )
                         
                     
+                    self._boorus.Select( name )
+                    
                     page = self._boorus.GetNamesToActivePages()[ name ]
                     
                     page.Update( booru )
@@ -2797,6 +2799,21 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._listbook = ClientGUICommon.ListBook( self )
             
+            # connection
+            
+            self._connection_page = wx.Panel( self._listbook )
+            self._connection_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._proxy_type = ClientGUICommon.BetterChoice( self._connection_page )
+            
+            self._proxy_address = wx.TextCtrl( self._connection_page )
+            self._proxy_port = wx.SpinCtrl( self._connection_page, min = 0, max = 65535 )
+            
+            self._proxy_username = wx.TextCtrl( self._connection_page )
+            self._proxy_password = wx.TextCtrl( self._connection_page )
+            
+            self._listbook.AddPage( 'connection', self._connection_page )
+            
             # files and thumbnails
             
             self._file_page = wx.Panel( self._listbook )
@@ -3039,6 +3056,36 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
+            self._proxy_type.Append( 'http', 'http' )
+            self._proxy_type.Append( 'socks4', 'socks4' )
+            self._proxy_type.Append( 'socks5', 'socks5' )
+            
+            if HC.options[ 'proxy' ] is not None:
+                
+                ( proxytype, host, port, username, password ) = HC.options[ 'proxy' ]
+                
+                self._proxy_type.SelectClientData( proxytype )
+                
+                self._proxy_address.SetValue( host )
+                self._proxy_port.SetValue( port )
+                
+                if username is not None:
+                    
+                    self._proxy_username.SetValue( username )
+                    
+                
+                if password is not None:
+                    
+                    self._proxy_password.SetValue( password )
+                    
+                
+            else:
+                
+                self._proxy_type.Select( 0 )
+                
+            
+            #
+            
             if HC.options[ 'export_path' ] is not None:
                 
                 abs_path = HydrusData.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
@@ -3172,6 +3219,40 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
         
         def ArrangeControls():
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Proxy type: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_type, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Address: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_address, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Port: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_port, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Username (optional): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_username, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Password (optional): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_password, CC.FLAGS_MIXED )
+            
+            text = 'You have to restart the client for proxy settings to take effect.'
+            text += os.linesep
+            text += 'This is in a buggy prototype stage right now, pending a rewrite of the networking engine.'
+            text += os.linesep
+            text += 'Please send me your feedback.'
+            
+            vbox.AddF( wx.StaticText( self._connection_page, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            self._connection_page.SetSizer( vbox )
+            
+            #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -3648,6 +3729,26 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
     
     def EventOK( self, event ):
+        
+        if self._proxy_address.GetValue() == '':
+            
+            HC.options[ 'proxy' ] = None
+            
+        else:
+            
+            proxytype = self._proxy_type.GetChoice()
+            address = self._proxy_address.GetValue()
+            port = self._proxy_port.GetValue()
+            username = self._proxy_username.GetValue()
+            password = self._proxy_password.GetValue()
+            
+            if username == '': username = None
+            if password == '': password = None
+            
+            HC.options[ 'proxy' ] = ( proxytype, address, port, username, password )
+            
+        
+        #
         
         HC.options[ 'play_dumper_noises' ] = self._play_dumper_noises.GetValue()
         
@@ -4790,6 +4891,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                                 
                                 info[ 'colours' ] = ClientRatings.default_numerical_colours
                                 
+                                info[ 'allow_zero' ] = True
+                                
                             else:
                                 
                                 info[ 'colours' ] = ClientRatings.default_like_colours
@@ -5065,6 +5168,30 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         self._num_stars = wx.SpinCtrl( self._local_rating_panel, min = 1, max = 20 )
                         self._num_stars.SetValue( num_stars )
                         
+                        allow_zero = info[ 'allow_zero' ]
+                        
+                        self._allow_zero = wx.CheckBox( self._local_rating_panel )
+                        self._allow_zero.SetValue( allow_zero )
+                        
+                    
+                    self._shape = ClientGUICommon.BetterChoice( self._local_rating_panel )
+                    
+                    self._shape.Append( 'circle', ClientRatings.CIRCLE )
+                    self._shape.Append( 'square', ClientRatings.SQUARE )
+                    self._shape.Append( 'star', ClientRatings.STAR )
+                    
+                    self._colour_ctrls = {}
+                    
+                    for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
+                        
+                        border_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
+                        fill_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
+                        
+                        border_ctrl.SetMaxSize( ( 20, -1 ) )
+                        fill_ctrl.SetMaxSize( ( 20, -1 ) )
+                        
+                        self._colour_ctrls[ colour_type ] = ( border_ctrl, fill_ctrl )
+                        
                     
                 
                 if service_type in HC.TAG_SERVICES:
@@ -5083,7 +5210,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     self._archive_sync_remove = wx.Button( self._archive_panel, label = 'remove' )
                     self._archive_sync_remove.Bind( wx.EVT_BUTTON, self.EventArchiveRemove )
-                    
                     
                 
                 if service_type == HC.LOCAL_BOORU:
@@ -5120,6 +5246,23 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                     
                     self._UpdateArchiveButtons()
+                    
+                
+                if service_type in HC.RATINGS_SERVICES:
+                    
+                    self._shape.SelectClientData( info[ 'shape' ] )
+                    
+                    colours = info[ 'colours' ]
+                    
+                    for colour_type in colours:
+                        
+                        ( border_rgb, fill_rgb ) = colours[ colour_type ]
+                        
+                        ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
+                        
+                        border_ctrl.SetColour( wx.Colour( *border_rgb ) )
+                        fill_ctrl.SetColour( wx.Colour( *fill_rgb ) )
+                        
                     
                 
                 if service_type == HC.LOCAL_BOORU:
@@ -5178,12 +5321,30 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'number of \'stars\'' ), CC.FLAGS_MIXED )
                         gridbox.AddF( self._num_stars, CC.FLAGS_EXPAND_BOTH_WAYS )
                         
+                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'allow a zero rating' ), CC.FLAGS_MIXED )
+                        gridbox.AddF( self._allow_zero, CC.FLAGS_EXPAND_BOTH_WAYS )
+                        
                     
-                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'shape options will go here soon' ), CC.FLAGS_MIXED )
-                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = ':D' ), CC.FLAGS_EXPAND_BOTH_WAYS )
+                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'shape' ), CC.FLAGS_MIXED )
+                    gridbox.AddF( self._shape, CC.FLAGS_EXPAND_BOTH_WAYS )
                     
-                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'colour options will go here soon' ), CC.FLAGS_MIXED )
-                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = ':D' ), CC.FLAGS_EXPAND_BOTH_WAYS )
+                    for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
+                        
+                        ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
+                        
+                        hbox = wx.BoxSizer( wx.HORIZONTAL )
+                        
+                        hbox.AddF( border_ctrl, CC.FLAGS_MIXED )
+                        hbox.AddF( fill_ctrl, CC.FLAGS_MIXED )
+                        
+                        if colour_type == ClientRatings.LIKE: colour_text = 'liked'
+                        elif colour_type == ClientRatings.DISLIKE: colour_text = 'disliked'
+                        elif colour_type == ClientRatings.NULL: colour_text = 'not rated'
+                        elif colour_type == ClientRatings.MIXED: colour_text = 'a mixture of ratings'
+                        
+                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'border/fill for ' + colour_text ), CC.FLAGS_MIXED )
+                        gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                        
                     
                     self._local_rating_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                     
@@ -5435,9 +5596,34 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 info[ 'paused' ] = self._pause_synchronisation.GetValue()
                 
             
-            if service_type == HC.LOCAL_RATING_NUMERICAL:
+            if service_type in HC.RATINGS_SERVICES:
                 
-                info[ 'num_stars' ] = self._num_stars.GetValue()
+                if service_type == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    info[ 'num_stars' ] = self._num_stars.GetValue()
+                    info[ 'allow_zero' ] = self._allow_zero.GetValue()
+                    
+                
+                info[ 'shape' ] = self._shape.GetChoice()
+                
+                colours = {}
+                
+                for colour_type in self._colour_ctrls:
+                    
+                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
+                    
+                    border_colour = border_ctrl.GetColour()
+                    
+                    border_rgb = ( border_colour.Red(), border_colour.Green(), border_colour.Blue() )
+                    
+                    fill_colour = fill_ctrl.GetColour()
+                    
+                    fill_rgb = ( fill_colour.Red(), fill_colour.Green(), fill_colour.Blue() )
+                    
+                    colours[ colour_type ] = ( border_rgb, fill_rgb )
+                    
+                
+                info[ 'colours' ] = colours
                 
             
             if service_type in HC.TAG_SERVICES:

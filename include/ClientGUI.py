@@ -9,10 +9,14 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIPages
 import ClientDownloading
+import ClientSearch
+import HydrusData
 import HydrusExceptions
 import HydrusFileHandling
+import HydrusGlobals
 import HydrusImageHandling
 import HydrusNATPunch
+import HydrusNetworking
 import HydrusThreading
 import itertools
 import os
@@ -26,10 +30,6 @@ import traceback
 import webbrowser
 import wx
 import yaml
-import HydrusData
-import ClientSearch
-import HydrusNetworking
-import HydrusGlobals
 
 # timers
 
@@ -212,10 +212,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             try:
                 
-                connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, timeout = 20 )
-                
-                connection.connect()
-                
+                connection = HydrusNetworking.GetLocalConnection( port )
                 connection.close()
                 
                 already_running = True
@@ -262,9 +259,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         try:
                             
-                            connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, timeout = 20 )
-                            
-                            connection.connect()
+                            connection = HydrusNetworking.GetLocalConnection( port )
                             
                             connection.close()
                             
@@ -743,7 +738,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_key ), p( '&Upload' ), p( 'Upload ' + name + '\'s Pending and Petitions.' ) )
                     submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_key ), p( '&Forget' ), p( 'Clear ' + name + '\'s Pending and Petitions.' ) )
                     
-                    menu.AppendMenu( CC.ID_NULL, p( name + ' Pending (' + HydrusData.ConvertIntToPrettyString( num_pending ) + '/' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ')' ), submenu )
+                    menu.AppendMenu( CC.ID_NULL, p( name + ' Pending (' + HydrusData.ConvertValueRangeToPrettyString( num_pending, num_petitioned ) + ')' ), submenu )
                     
                 
                 total_num_pending += num_pending + num_petitioned
@@ -1710,7 +1705,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         if HydrusGlobals.shutdown: return
                         
                     
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HydrusData.ConvertIntToPrettyString( i + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( len( updates ) ) )
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( updates ) ) )
                     job_key.SetVariable( 'popup_message_gauge_1', ( i, len( updates ) ) )
                     
                     service.Request( HC.POST, 'content_update_package', { 'update' : update } )
@@ -1832,7 +1827,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'close_page': self._CloseCurrentPage()
             elif command == 'db_profile_mode':
                 
-                HydrusGlobals.db_profile_mode = True
+                HydrusGlobals.db_profile_mode = not HydrusGlobals.db_profile_mode
                 
             elif command == 'debug_garbage':
                 
@@ -1974,7 +1969,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
         
-        self._ClosePage( tab_index )
+        if tab_index != -1:
+            
+            self._ClosePage( tab_index )
+            
         
     
     def EventNotebookPageChanged( self, event ):
@@ -2618,7 +2616,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._bytes.SetRange( max_monthly_data )
                     self._bytes.SetValue( used_monthly_data )
                     
-                    self._bytes_text.SetLabel( 'used ' + HydrusData.ConvertIntToBytes( used_monthly_data ) + '/' + HydrusData.ConvertIntToBytes( max_monthly_data ) + monthly_requests_text + ' this month' )
+                    self._bytes_text.SetLabel( 'used ' + HydrusData.ConvertValueRangeToPrettyString( used_monthly_data, max_monthly_data ) + monthly_requests_text + ' this month' )
                     
                 
             
@@ -2714,7 +2712,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             self._thumbnails.SetRange( self._num_thumbs )
             self._thumbnails.SetValue( min( self._num_local_thumbs, self._num_thumbs ) )
             
-            self._thumbnails_text.SetLabel( HydrusData.ConvertIntToPrettyString( self._num_local_thumbs ) + '/' + HydrusData.ConvertIntToPrettyString( self._num_thumbs ) + ' thumbnails downloaded' )
+            self._thumbnails_text.SetLabel( HydrusData.ConvertValueRangeToPrettyString( self._num_local_thumbs, self._num_thumbs ) + ' thumbnails downloaded' )
             
         
         def _DisplayService( self ):

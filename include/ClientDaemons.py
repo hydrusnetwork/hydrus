@@ -533,7 +533,7 @@ def DAEMONSynchroniseRepositories():
                             gauge_range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                             gauge_value = ( ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                             
-                            update_index_string = 'update ' + HydrusData.ConvertIntToPrettyString( gauge_value ) + '/' + HydrusData.ConvertIntToPrettyString( gauge_range ) + ': '
+                            update_index_string = 'update ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range ) + ': '
                             
                         
                         subupdate_index_string = 'service update: '
@@ -553,7 +553,7 @@ def DAEMONSynchroniseRepositories():
                             
                             if not os.path.exists( path ):
                                 
-                                subupdate_index_string = 'content update ' + HydrusData.ConvertIntToPrettyString( subindex + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( subindex_count ) + ': '
+                                subupdate_index_string = 'content update ' + HydrusData.ConvertValueRangeToPrettyString( subindex + 1, subindex_count ) + ': '
                                 
                                 job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'downloading and parsing' )
                                 
@@ -647,7 +647,7 @@ def DAEMONSynchroniseRepositories():
                         if next_processing_timestamp == 0: gauge_value = 0
                         else: gauge_value = ( ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                         
-                        update_index_string = 'update ' + HydrusData.ConvertIntToPrettyString( gauge_value ) + '/' + HydrusData.ConvertIntToPrettyString( gauge_range ) + ': '
+                        update_index_string = 'update ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range ) + ': '
                         
                         subupdate_index_string = 'service update: '
                         
@@ -664,7 +664,7 @@ def DAEMONSynchroniseRepositories():
                         
                         for subindex in range( subindex_count ):
                             
-                            subupdate_index_string = 'content update ' + HydrusData.ConvertIntToPrettyString( subindex + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( subindex_count ) + ': '
+                            subupdate_index_string = 'content update ' + HydrusData.ConvertValueRangeToPrettyString( subindex + 1, subindex_count ) + ': '
                             
                             path = ClientFiles.GetExpectedContentUpdatePackagePath( service_key, next_processing_timestamp, subindex )
                             
@@ -678,9 +678,11 @@ def DAEMONSynchroniseRepositories():
                             
                             job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'processing' )
                             
-                            num_content_updates = content_update_package.GetNumContentUpdates()
                             content_updates = []
                             current_weight = 0
+                            num_rows = content_update_package.GetNumRows()
+                            total_weight_processed = 0
+                            wait_begin_precise = HydrusData.GetNowPrecise()
                             
                             for ( i, content_update ) in enumerate( content_update_package.IterateContentUpdates() ):
                                 
@@ -719,46 +721,44 @@ def DAEMONSynchroniseRepositories():
                                         
                                     
                                 
-                                content_update_index_string = 'content part ' + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + ': '
-                                
-                                job_key.SetVariable( 'popup_message_gauge_2', ( i, num_content_updates ) )
-                                
                                 content_updates.append( content_update )
                                 
-                                current_weight += len( content_update.GetHashes() )
+                                content_update_weight = len( content_update.GetHashes() )
+                                
+                                current_weight += content_update_weight
+                                
+                                total_weight_processed += content_update_weight
+                                
+                                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( total_weight_processed, num_rows ) + ': '
+                                
+                                job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' + update_speed_string )
+                                
+                                job_key.SetVariable( 'popup_message_gauge_2', ( total_weight_processed, num_rows ) )
                                 
                                 if current_weight > WEIGHT_THRESHOLD:
                                     
-                                    job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' + update_speed_string )
-                                    
                                     wx.GetApp().WaitUntilWXThreadIdle()
                                     
+                                    wait_end_precise = HydrusData.GetNowPrecise()
+                                    waiting_took = wait_end_precise - wait_begin_precise
                                     before_precise = HydrusData.GetNowPrecise()
                                     
                                     wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
                                     
                                     after_precise = HydrusData.GetNowPrecise()
+                                    wait_begin_precise = HydrusData.GetNowPrecise()
                                     
                                     if wx.GetApp().CurrentlyIdle(): ideal_packet_time = 10.0
                                     else: ideal_packet_time = 0.5
                                     
-                                    it_took = after_precise - before_precise
+                                    db_took = after_precise - before_precise
                                     
                                     too_long = ideal_packet_time * 1.5
                                     too_short = ideal_packet_time * 0.8
                                     really_too_long = ideal_packet_time * 10
                                     
-                                    if it_took > too_long: WEIGHT_THRESHOLD /= 1.5
-                                    elif it_took < too_short: WEIGHT_THRESHOLD *= 1.05
-                                    
-                                    if it_took > really_too_long or WEIGHT_THRESHOLD < 1.0:
-                                        
-                                        job_key.SetVariable( 'popup_message_text_2', 'taking a break' )
-                                        
-                                        time.sleep( 10 )
-                                        
-                                        WEIGHT_THRESHOLD = 1.0
-                                        
+                                    if db_took > too_long: WEIGHT_THRESHOLD = max( 10.0, WEIGHT_THRESHOLD / 1.5 )
+                                    elif db_took < too_short: WEIGHT_THRESHOLD *= 1.05
                                     
                                     total_content_weight_processed += current_weight
                                     
@@ -766,18 +766,18 @@ def DAEMONSynchroniseRepositories():
                                     
                                     if len( update_time_tracker ) > 10:
                                         
-                                        update_time_tracker.pop()
+                                        update_time_tracker.pop( 0 )
                                         
                                     
-                                    update_time_tracker.append( ( current_weight, it_took ) )
+                                    update_time_tracker.append( ( current_weight, db_took + waiting_took ) )
                                     
                                     recent_total_weight = 0
                                     recent_total_time = 0.0
                                     
-                                    for ( weight, took ) in update_time_tracker:
+                                    for ( weight, it_took ) in update_time_tracker:
                                         
                                         recent_total_weight += weight
-                                        recent_total_time += took
+                                        recent_total_time += it_took
                                         
                                         recent_speed = int( recent_total_weight / recent_total_time )
                                         
@@ -793,7 +793,7 @@ def DAEMONSynchroniseRepositories():
                             
                             if len( content_updates ) > 0:
                                 
-                                content_update_index_string = 'content part ' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + '/' + HydrusData.ConvertIntToPrettyString( num_content_updates ) + ': '
+                                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( num_rows, num_rows ) + ': '
                                 
                                 job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' + update_speed_string )
                                 
@@ -893,7 +893,7 @@ def DAEMONSynchroniseRepositories():
                         
                         for ( i, hash ) in enumerate( thumbnail_hashes_i_need ):
                             
-                            job_key.SetVariable( 'popup_message_text_1', 'downloading thumbnail ' + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( len( thumbnail_hashes_i_need ) ) )
+                            job_key.SetVariable( 'popup_message_text_1', 'downloading thumbnail ' + HydrusData.ConvertValueRangeToPrettyString( i, len( thumbnail_hashes_i_need ) ) )
                             job_key.SetVariable( 'popup_message_gauge_1', ( i, len( thumbnail_hashes_i_need ) ) )
                             
                             request_args = { 'hash' : hash.encode( 'hex' ) }
@@ -1188,7 +1188,7 @@ def DAEMONSynchroniseSubscriptions():
                             
                             url_cache.add( url )
                             
-                            x_out_of_y = 'file ' + HydrusData.ConvertIntToPrettyString( i ) + '/' + HydrusData.ConvertIntToPrettyString( len( all_urls ) ) + ': '
+                            x_out_of_y = 'file ' + HydrusData.ConvertValueRangeToPrettyString( i, len( all_urls ) ) + ': '
                             
                             job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'checking url status' )
                             job_key.SetVariable( 'popup_message_gauge_1', ( i, len( all_urls ) ) )

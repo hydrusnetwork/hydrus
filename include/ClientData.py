@@ -1160,7 +1160,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             num_updates_processed = ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION
             
         
-        downloaded_text = HydrusData.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HydrusData.ConvertIntToPrettyString( num_updates )
+        downloaded_text = HydrusData.ConvertValueRangeToPrettyString( num_updates_downloaded, num_updates )
         
         if not self._info[ 'account' ].HasPermission( HC.GET_DATA ): status = 'updates on hold'
         else:

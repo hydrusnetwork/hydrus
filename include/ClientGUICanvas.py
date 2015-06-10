@@ -378,7 +378,7 @@ class AnimationBar( wx.Window ):
         
         dc.SetTextForeground( wx.BLACK )
         
-        s = HydrusData.ConvertIntToPrettyString( self._current_frame_index + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( self._num_frames )
+        s = HydrusData.ConvertValueRangeToPrettyString( self._current_frame_index + 1, self._num_frames )
         
         ( x, y ) = dc.GetTextExtent( s )
         
@@ -1050,9 +1050,7 @@ class CanvasWithDetails( Canvas ):
                 
                 rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_display_media, ), service_key )
                 
-                ( pen_colour, brush_colour ) = ClientRatings.GetPenAndBrushColours( service_key, rating_state )
-                
-                ClientRatings.DrawLike( dc, like_rating_current_x, current_y, pen_colour, brush_colour )
+                ClientRatings.DrawLike( dc, like_rating_current_x, current_y, service_key, rating_state )
                 
                 like_rating_current_x -= 16
                 
@@ -1068,11 +1066,9 @@ class CanvasWithDetails( Canvas ):
                 
                 ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_display_media, ), service_key )
                 
-                stars = ClientRatings.GetStars( service_key, rating_state, rating )
-                
                 numerical_width = ClientRatings.GetNumericalWidth( service_key )
                 
-                ClientRatings.DrawNumerical( dc, client_width - numerical_width, current_y, stars )
+                ClientRatings.DrawNumerical( dc, client_width - numerical_width, current_y, service_key, rating_state, rating )
                 
                 current_y += 20
                 
@@ -1315,7 +1311,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     
     def _GetIndexString( self ):
         
-        index_string = HydrusData.ConvertIntToPrettyString( self._sorted_media.index( self._current_media ) + 1 ) + '/' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) )
+        index_string = HydrusData.ConvertValueRangeToPrettyString( self._sorted_media.index( self._current_media ) + 1, len( self._sorted_media ) )
         
         return index_string
         
@@ -4251,6 +4247,8 @@ class EmbedButton( wx.Window ):
         wx.Window.__init__( self, parent, size = size )
         
         self._dirty = True
+        
+        self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )

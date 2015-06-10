@@ -1130,7 +1130,18 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 num_stars = service.GetInfo( 'num_stars' )
                 
-                self._ratings_numerical_slider.SetRange( 0, num_stars )
+                allow_zero = service.GetInfo( 'allow_zero' )
+                
+                if allow_zero:
+                    
+                    min = 0
+                    
+                else:
+                    
+                    min = 1
+                    
+                
+                self._ratings_numerical_slider.SetRange( min, num_stars )
                 
             
         
@@ -1188,11 +1199,21 @@ class DialogInputCustomFilterAction( Dialog ):
                 
             else:
                 
-                self._pretty_action = HydrusData.ToString( self._ratings_numerical_slider.GetValue() )
+                value = self._ratings_numerical_slider.GetValue()
+                
+                self._pretty_action = HydrusData.ToString( value )
                 
                 num_stars = self._current_ratings_numerical_service.GetInfo( 'num_stars' )
+                allow_zero = self._current_ratings_numerical_service.GetInfo( 'allow_zero' )
                 
-                self._action = float( self._pretty_action ) / num_stars
+                if allow_zero:
+                    
+                    self._action = float( value ) / num_stars
+                    
+                else:
+                    
+                    self._action = float( value - 1 ) / ( num_stars - 1 )
+                    
                 
             
             self.EndModal( wx.ID_OK )
@@ -1848,7 +1869,7 @@ class DialogInputLocalFiles( Dialog ):
             
             if i % 500 == 0: gc.collect()
             
-            wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Done ' + HydrusData.ToString( i ) + '/' + HydrusData.ToString( num_file_paths ) )
+            wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Done ' + HydrusData.ConvertValueRangeToPrettyString( i, num_file_paths ) )
             
             job_key.WaitOnPause()
             

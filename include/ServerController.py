@@ -3,6 +3,7 @@ import HydrusConstants as HC
 import HydrusController
 import HydrusData
 import HydrusGlobals
+import HydrusNetworking
 import HydrusServer
 import HydrusSessions
 import HydrusThreading
@@ -24,11 +25,9 @@ class Controller( HydrusController.HydrusController ):
     
     def _AlreadyRunning( self, port ):
         
-        connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 20 )
-        
         try:
             
-            connection.connect()
+            connection = HydrusNetworking.GetLocalConnection( port )
             connection.close()
             
             return True
@@ -50,11 +49,9 @@ class Controller( HydrusController.HydrusController ):
                     
                     port = options[ 'port' ]
                     
-                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-                    
                     try:
                         
-                        connection.connect()
+                        connection = HydrusNetworking.GetLocalConnection( port )
                         connection.close()
                         
                         raise Exception( 'Something was already bound to port ' + HydrusData.ToString( port ) )
@@ -70,11 +67,9 @@ class Controller( HydrusController.HydrusController ):
                         
                         self._services[ service_key ] = reactor.listenTCP( port, service_object )
                         
-                        connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-                        
                         try:
                             
-                            connection.connect()
+                            connection = HydrusNetworking.GetLocalConnection( port )
                             connection.close()
                             
                         except:
@@ -142,11 +137,9 @@ class Controller( HydrusController.HydrusController ):
             
             port = options[ 'port' ]
             
-            connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-            
             try:
                 
-                connection.connect()
+                connection = HydrusNetworking.GetLocalConnection( port )
                 connection.close()
                 
                 message = 'Something was already bound to port ' + HydrusData.ToString( port )

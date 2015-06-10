@@ -1469,7 +1469,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if page_index not in self._clean_canvas_pages:
                 
-                if len( self._dirty_canvas_pages ) > 0: bmp = self._dirty_canvas_pages.pop()
+                if len( self._dirty_canvas_pages ) > 0: bmp = self._dirty_canvas_pages.pop( 0 )
                 else:
                     
                     index_to_steal = potential_clean_indices_to_steal.pop()

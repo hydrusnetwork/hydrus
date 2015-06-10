@@ -488,6 +488,10 @@ def ConvertUnitToInt( unit ):
     elif unit == 'MB': return 1048576
     elif unit == 'GB': return 1073741824
     
+def ConvertValueRangeToPrettyString( value, range ):
+    
+    return ConvertIntToPrettyString( value ) + '/' + ConvertIntToPrettyString( range )
+    
 def ConvertZoomToPercentage( zoom ):
     
     zoom = zoom * 100.0
@@ -748,7 +752,7 @@ class Account( HydrusYAMLBase ):
         used_requests = self._info[ 'used_requests' ]
         
         if max_num_requests is None: return ConvertIntToPrettyString( used_requests ) + ' requests used this month'
-        else: return ConvertIntToPrettyString( used_requests ) + '/' + ConvertIntToPrettyString( max_num_requests ) + ' requests used this month'
+        else: return ConvertValueRangeToPrettyString( used_requests, max_num_requests ) + ' requests used this month'
         
     
     def GetUsedBytes( self ): return self._info[ 'used_bytes' ]
@@ -1522,6 +1526,30 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
             for action in self._content_data[ data_type ]:
                 
                 num += len( self._content_data[ data_type ][ action ] )
+                
+            
+        
+        return num
+        
+    
+    def GetNumRows( self ):
+        
+        num = 0
+        
+        for data_type in self._content_data:
+            
+            for action in self._content_data[ data_type ]:
+                
+                data = self._content_data[ data_type ][ action ]
+                
+                if data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+                    
+                    for ( tag, hash_ids ) in data:
+                        
+                        num += len( hash_ids )
+                        
+                    
+                else: num += len( data )
                 
             
         

@@ -633,7 +633,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
         else: initial = ''
         
-        initial += HydrusData.ToString( index + 1 ) + '/' + HydrusData.ToString( num_files )
+        initial += HydrusData.ConvertValueRangeToPrettyString( index + 1, num_files )
         
         advanced_tag_options = self._advanced_tag_options.GetInfo()
         
@@ -686,7 +686,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             index = self._sorted_media_hashes.index( self._current_hash )
             
-            self._post_info.SetLabel( HydrusData.ToString( index + 1 ) + '/' + HydrusData.ToString( num_files ) + ': ' + dump_status_string )
+            self._post_info.SetLabel( HydrusData.ConvertValueRangeToPrettyString( index + 1, num_files ) + ': ' + dump_status_string )
             
             for ( name, field_type, value ) in post_field_info:
                 
@@ -1981,7 +1981,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._thread_times_to_check.SetValue( times_to_check )
         self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
         
-        self._thread_check_period = wx.SpinCtrl( self._thread_panel, size = ( 100, -1 ), min = 30, max = 86400 )
+        self._thread_check_period = wx.SpinCtrl( self._thread_panel, size = ( 60, -1 ), min = 30, max = 86400 )
         self._thread_check_period.SetValue( check_period )
         self._thread_check_period.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
         

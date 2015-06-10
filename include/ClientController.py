@@ -241,6 +241,13 @@ class Controller( HydrusController.HydrusController ):
         self._caches[ 'preview' ] = ClientCaches.RenderedImageCache( 'preview' )
         self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache()
         
+        if HC.options[ 'proxy' ] is not None:
+            
+            ( proxytype, host, port, username, password ) = HC.options[ 'proxy' ]
+            
+            HydrusNetworking.SetProxy( proxytype, host, port, username, password )
+            
+        
         CC.GlobalBMPs.STATICInitialise()
         
         self._gui = ClientGUI.FrameGUI()
@@ -351,11 +358,9 @@ class Controller( HydrusController.HydrusController ):
                 
                 try:
                     
-                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-                    
                     try:
                         
-                        connection.connect()
+                        connection = HydrusNetworking.GetLocalConnection( port )
                         connection.close()
                         
                         text = 'The client\'s booru server could not start because something was already bound to port ' + HydrusData.ToString( port ) + '.'
@@ -370,16 +375,16 @@ class Controller( HydrusController.HydrusController ):
                         
                         self._booru_service = reactor.listenTCP( port, HydrusServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'This is the local booru.' ) )
                         
-                        connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-                        
                         try:
                             
-                            connection.connect()
+                            connection = HydrusNetworking.GetLocalConnection( port )
                             connection.close()
                             
-                        except:
+                        except Exception as e:
                             
-                            text = 'Tried to bind port ' + HydrusData.ToString( port ) + ' for the local booru, but it failed.'
+                            text = 'Tried to bind port ' + HydrusData.ToString( port ) + ' for the local booru, but it failed:'
+                            text += os.linesep * 2
+                            text += HydrusData.ToString( e )
                             
                             wx.CallLater( 1, HydrusData.ShowText, text )
                             
@@ -413,11 +418,9 @@ class Controller( HydrusController.HydrusController ):
                 
                 try:
                     
-                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-                    
                     try:
                         
-                        connection.connect()
+                        connection = HydrusNetworking.GetLocalConnection( port )
                         connection.close()
                         
                         text = 'The client\'s local server could not start because something was already bound to port ' + HydrusData.ToString( port ) + '.'
@@ -432,16 +435,16 @@ class Controller( HydrusController.HydrusController ):
                         
                         self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ) )
                         
-                        connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-                        
                         try:
                             
-                            connection.connect()
+                            connection = HydrusNetworking.GetLocalConnection( port )
                             connection.close()
                             
-                        except:
+                        except Exception as e:
                             
-                            text = 'Tried to bind port ' + HydrusData.ToString( port ) + ' for the local server, but it failed.'
+                            text = 'Tried to bind port ' + HydrusData.ToString( port ) + ' for the local server, but it failed:'
+                            text += os.linesep * 2
+                            text += HydrusData.ToString( e )
                             
                             wx.CallLater( 1, HydrusData.ShowText, text )
                             
