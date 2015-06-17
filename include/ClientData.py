@@ -168,6 +168,22 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
+def IsWXAncestor( child, ancestor ):
+    
+    parent = child
+    
+    while not isinstance( parent, wx.TopLevelWindow ):
+        
+        if parent == ancestor:
+            
+            return True
+            
+        
+        parent = parent.GetParent()
+        
+    
+    return False
+    
 def ParseExportPhrase( phrase ):
     
     try:
@@ -1102,7 +1118,14 @@ class Service( HydrusData.HydrusYAMLBase ):
         return not self.IsPaused() and self.CanDownload() and update_due
         
     
-    def CanProcessUpdate( self ): return self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
+    def CanProcessUpdate( self ):
+        
+        update_is_downloaded = self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
+        
+        it_is_time = self._info[ 'next_processing_timestamp' ] + HC.options[ 'processing_phase' ] < HydrusData.GetNow()
+        
+        return update_is_downloaded and it_is_time
+        
     
     def CanUpload( self ): return self._info[ 'account' ].HasPermission( HC.POST_DATA ) and not self.HasRecentError()
     

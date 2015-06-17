@@ -544,15 +544,14 @@ class HydrusResourceCommandAccessKeyVerification( HydrusResourceCommand ):
     
 class HydrusResourceCommandBooru( HydrusResourceCommand ):
     
-    RECORD_GET_DATA_USAGE = False
-    RECORD_POST_DATA_USAGE = False
-    
     def _recordDataUsage( self, request ):
         
-        p1 = request.method == 'GET' and self.RECORD_GET_DATA_USAGE
-        p2 = request.method == 'POST' and self.RECORD_POST_DATA_USAGE
+        path = request.path[1:] # /account -> account
         
-        if p1 or p2:
+        if request.method == 'GET': method = HC.GET
+        else: method = HC.POST
+        
+        if ( HC.LOCAL_BOORU, method, path ) in HC.BANDWIDTH_CONSUMING_REQUESTS:
             
             num_bytes = request.hydrus_request_data_usage
             
@@ -570,8 +569,6 @@ class HydrusResourceCommandBooru( HydrusResourceCommand ):
         
     
 class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
-    
-    RECORD_GET_DATA_USAGE = True
     
     def _threadDoGETJob( self, request ):
         
@@ -657,8 +654,6 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
     
 class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
     
-    RECORD_GET_DATA_USAGE = True
-    
     def _threadDoGETJob( self, request ):
         
         share_key = request.hydrus_args[ 'share_key' ]
@@ -676,8 +671,6 @@ class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
         
     
 class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
-    
-    RECORD_GET_DATA_USAGE = True
     
     def _threadDoGETJob( self, request ):
         
@@ -768,8 +761,6 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
     
 class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
     
-    RECORD_GET_DATA_USAGE = True
-    
     def _threadDoGETJob( self, request ):
         
         share_key = request.hydrus_args[ 'share_key' ]
@@ -859,8 +850,6 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
     
     GET_PERMISSION = HC.GENERAL_ADMIN
     POST_PERMISSION = HC.GENERAL_ADMIN
-    RECORD_GET_DATA_USAGE = False
-    RECORD_POST_DATA_USAGE = False
     
     def _callbackCheckRestrictions( self, request ):
         
@@ -880,6 +869,8 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
         account = request.hydrus_account
         
         method = request.method
+        
+        permission = None
         
         if method == 'GET': permission = self.GET_PERMISSION
         elif method == 'POST': permission = self.POST_PERMISSION
@@ -917,10 +908,12 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
     
     def _recordDataUsage( self, request ):
         
-        p1 = request.method == 'GET' and self.RECORD_GET_DATA_USAGE
-        p2 = request.method == 'POST' and self.RECORD_POST_DATA_USAGE
+        path = request.path[1:] # /account -> account
         
-        if p1 or p2:
+        if request.method == 'GET': method = HC.GET
+        else: method = HC.POST
+        
+        if ( self._service_type, method, path ) in HC.BANDWIDTH_CONSUMING_REQUESTS:
             
             account = request.hydrus_account
             
@@ -1124,8 +1117,6 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
     
     GET_PERMISSION = HC.GET_DATA
     POST_PERMISSION = HC.POST_DATA
-    RECORD_GET_DATA_USAGE = True
-    RECORD_POST_DATA_USAGE = True
     
     def _threadDoGETJob( self, request ):
         
@@ -1160,7 +1151,6 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
 class HydrusResourceCommandRestrictedRepositoryThumbnail( HydrusResourceCommandRestricted ):
     
     GET_PERMISSION = HC.GET_DATA
-    RECORD_GET_DATA_USAGE = True
     
     def _threadDoGETJob( self, request ):
         
@@ -1232,8 +1222,6 @@ class HydrusResourceCommandRestrictedContentUpdate( HydrusResourceCommandRestric
     
     GET_PERMISSION = HC.GET_DATA
     POST_PERMISSION = HC.POST_DATA
-    RECORD_GET_DATA_USAGE = True
-    RECORD_POST_DATA_USAGE = True
     
     def _threadDoGETJob( self, request ):
         
@@ -1265,7 +1253,6 @@ class HydrusResourceCommandRestrictedContentUpdate( HydrusResourceCommandRestric
 class HydrusResourceCommandRestrictedServiceUpdate( HydrusResourceCommandRestricted ):
     
     GET_PERMISSION = HC.GET_DATA
-    RECORD_GET_DATA_USAGE = True
     
     def _threadDoGETJob( self, request ):
         

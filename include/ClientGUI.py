@@ -7,6 +7,7 @@ import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
+import ClientGUIManagement
 import ClientGUIPages
 import ClientDownloading
 import ClientSearch
@@ -241,12 +242,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         if HC.PLATFORM_WINDOWS or HC.PLATFORM_OSX: python_bin = 'pythonw'
                         else: python_bin = 'python'
                         
-                        subprocess.Popen( python_bin + ' "' + HC.BASE_DIR + os.path.sep + 'server.pyw"', shell = True )
+                        subprocess.Popen( [ python_bin, HC.BASE_DIR + os.path.sep + 'server.pyw' ] )
                         
                     else:
                         
-                        if HC.PLATFORM_WINDOWS: subprocess.Popen( '"' + HC.BASE_DIR + os.path.sep + 'server.exe"', shell = True )
-                        else: subprocess.Popen( '"./' + HC.BASE_DIR + os.path.sep + 'server"', shell = True )
+                        if HC.PLATFORM_WINDOWS: subprocess.Popen( [ HC.BASE_DIR + os.path.sep + 'server.exe' ] )
+                        else: subprocess.Popen( [ './' + HC.BASE_DIR + os.path.sep + 'server' ] )
                         
                     
                     time_waited = 0
@@ -1787,20 +1788,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        try: splash = FrameSplash()
-        except:
-            
-            print( 'There was an error trying to start the splash screen!' )
-            
-            print( traceback.format_exc() )
-            
-            try: wx.CallAfter( splash.Destroy )
-            except: pass
-            
-        
-        exit_thread = threading.Thread( target = wx.GetApp().THREADExitEverything, name = 'Application Exit Thread' )
-        
-        wx.CallAfter( exit_thread.start )
+        self.Exit()
         
     
     def EventFocus( self, event ):
@@ -1989,6 +1977,29 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         event.Skip( True )
         
     
+    def Exit( self ):
+        
+        try: splash = FrameSplash()
+        except:
+            
+            print( 'There was an error trying to start the splash screen!' )
+            
+            print( traceback.format_exc() )
+            
+            try: wx.CallAfter( splash.Destroy )
+            except: pass
+            
+        
+        exit_thread = threading.Thread( target = wx.GetApp().THREADExitEverything, name = 'Application Exit Thread' )
+        
+        wx.CallAfter( exit_thread.start )
+        
+    
+    def GetCurrentPage( self ):
+        
+        return self._notebook.GetCurrentPage()
+        
+    
     def ImportFiles( self, paths ): self._ImportFiles( paths )
     '''
     def NewCompose( self, identity ):
@@ -2086,7 +2097,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshAcceleratorTable( self ):
         
-        interested_actions = [ 'archive', 'inbox', 'close_page', 'filter', 'ratings_filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'undo', 'redo' ]
+        interested_actions = [ 'archive', 'inbox', 'close_page', 'filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'undo', 'redo' ]
         
         entries = []
         

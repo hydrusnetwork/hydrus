@@ -12,9 +12,9 @@ import HydrusData
 
 # new stuff starts here
 
-if HC.PLATFORM_LINUX: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_linux"'
-elif HC.PLATFORM_OSX: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_osx"'
-elif HC.PLATFORM_WINDOWS: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_win32.exe"'
+if HC.PLATFORM_LINUX: upnpc_path = HC.BIN_DIR + os.path.sep + 'upnpc_linux'
+elif HC.PLATFORM_OSX: upnpc_path = HC.BIN_DIR + os.path.sep + 'upnpc_osx'
+elif HC.PLATFORM_WINDOWS: upnpc_path = HC.BIN_DIR + os.path.sep + 'upnpc_win32.exe'
 
 EXTERNAL_IP = {}
 EXTERNAL_IP[ 'ip' ] = None
@@ -26,9 +26,9 @@ def GetExternalIP():
         
         EXTERNAL_IP[ 'time' ] = HydrusData.GetNow()
         
-        command = upnpc_path + ' -l'
+        cmd = [ upnpc_path, ' -l' ]
         
-        p = subprocess.Popen( command, shell = True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE )
+        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
         
         p.wait()
         
@@ -123,9 +123,9 @@ def RemoveUPnPMapping( external_port, protocol ):
 
 def AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = 3600 ):
     
-    command = upnpc_path + ' -e "' + description + '" -a ' + internal_client + ' ' + str( internal_port ) + ' ' + str( external_port ) + ' ' + protocol + ' ' + str( duration )
+    cmd = [ upnpc_path, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
     
-    p = subprocess.Popen( command, shell = True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE )
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
     p.wait()
     
@@ -135,9 +135,9 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
 def GetUPnPMappings():
     
-    command = upnpc_path + ' -l'
+    cmd = [ upnpc_path, '-l' ]
     
-    p = subprocess.Popen( command, shell = True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE )
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
     p.wait()
     
@@ -208,9 +208,9 @@ def GetUPnPMappings():
     
 def RemoveUPnPMapping( external_port, protocol ):
     
-    command = upnpc_path + ' -d ' + str( external_port ) + ' ' + protocol
+    cmd = [ upnpc_path, '-d', str( external_port ), protocol ]
     
-    p = subprocess.Popen( command, shell = True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE )
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
     p.wait()
     

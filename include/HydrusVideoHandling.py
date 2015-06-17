@@ -3,6 +3,7 @@ import ClientFiles
 import cv2
 from flvlib import tags as flv_tags
 import HydrusConstants as HC
+import HydrusData
 import HydrusExceptions
 import HydrusImageHandling
 import HydrusThreading
@@ -15,11 +16,10 @@ import traceback
 import threading
 import time
 from wx import wx
-import HydrusData
 
-if HC.PLATFORM_LINUX: FFMPEG_PATH = '"' + HC.BIN_DIR + os.path.sep + 'ffmpeg"'
-elif HC.PLATFORM_OSX: FFMPEG_PATH = '"' + HC.BIN_DIR + os.path.sep + 'ffmpeg"'
-elif HC.PLATFORM_WINDOWS: FFMPEG_PATH = '"' + HC.BIN_DIR + os.path.sep + 'ffmpeg.exe"'
+if HC.PLATFORM_LINUX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
+elif HC.PLATFORM_OSX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
+elif HC.PLATFORM_WINDOWS: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg.exe'
 
 def GetCVVideoProperties( path ):
     
@@ -160,7 +160,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     
     # open the file in a pipe, provoke an error, read output
     
-    cmd = [FFMPEG_PATH, "-i", '"' + filename + '"']
+    cmd = [FFMPEG_PATH, "-i", filename ]
     
     is_GIF = filename.endswith('.gif')
     
@@ -168,7 +168,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
         if HC.PLATFORM_WINDOWS: cmd += ["-f", "null", "NUL"]
         else: cmd += ["-f", "null", "/dev/null"]
     
-    proc = subprocess.Popen( ' '.join( cmd ), shell = True, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+    proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
     infos = proc.stderr.read().decode('utf8')
     proc.terminate()
@@ -572,16 +572,17 @@ class VideoRendererFFMPEG( object ):
         
         ( w, h ) = self._target_resolution
         
-        cmd = ( [ FFMPEG_PATH,
+        cmd = [ FFMPEG_PATH,
             '-ss', "%.03f" % ss,
-            '-i', '"' + self._path + '"',
+            '-i', self._path,
             '-loglevel', 'quiet',
             '-f', 'image2pipe',
             "-pix_fmt", self.pix_fmt,
             "-s", str( w ) + 'x' + str( h ),
-            '-vcodec', 'rawvideo', '-' ] )
+            '-vcodec', 'rawvideo', '-' ]
+            
         
-        self.process = subprocess.Popen( ' '.join( cmd ), shell = True, bufsize= self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
         
         self.skip_frames( skip_frames )
         
@@ -657,9 +658,14 @@ class GIFRenderer( object ):
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         
-        self._cv_mode = True
-        
-        self._InitialiseCV()
+        if HC.PLATFORM_LINUX or HC.PLATFORM_OSX:
+            
+            self._InitialisePIL()
+            
+        else:
+            
+            self._InitialiseCV()
+            
         
     
     def _GetCurrentFrame( self ):
@@ -717,6 +723,8 @@ class GIFRenderer( object ):
     
     def _InitialiseCV( self ):
         
+        self._cv_mode = True
+        
         self._cv_video = cv2.VideoCapture( self._path )
         
         self._cv_video.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
@@ -726,6 +734,8 @@ class GIFRenderer( object ):
         
     
     def _InitialisePIL( self ):
+        
+        self._cv_mode = False
         
         self._pil_image = HydrusImageHandling.GeneratePILImage( self._path )
         
@@ -760,8 +770,6 @@ class GIFRenderer( object ):
             except HydrusExceptions.CantRenderWithCVException:
                 
                 if self._last_frame is None:
-                    
-                    self._cv_mode = False
                     
                     self._InitialisePIL()
                     

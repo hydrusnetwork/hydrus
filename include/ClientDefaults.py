@@ -97,7 +97,6 @@ def GetClientDefaultOptions():
     shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F4 ] = 'manage_ratings'
     shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F5 ] = 'refresh'
     shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F7 ] = 'archive'
-    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F11 ] = 'ratings_filter'
     shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F12 ] = 'filter'
     shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F9 ] = 'new_page'
     shortcuts[ wx.ACCEL_NORMAL ][ ord( 'F' ) ] = 'fullscreen_switch'
@@ -149,6 +148,8 @@ def GetClientDefaultOptions():
     options[ 'pause_import_folders_sync' ] = False
     options[ 'pause_repo_sync' ] = False
     options[ 'pause_subs_sync' ] = False
+    
+    options[ 'processing_phase' ] = 0
     
     client_size = {}
     
@@ -207,13 +208,13 @@ def GetDefaultBoorus():
     boorus[ 'safebooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'e621'
-    search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
+    search_url = 'https://e621.net/post/index/%index%/%tags%'
     search_separator = '%20'
     advance_by_page_num = True
     thumb_classname = 'thumb'
     image_id = None
     image_data = 'Download'
-    tag_classnames_to_namespaces = { 'tag-type-general categorized-tag' : '', 'tag-type-character categorized-tag' : 'character', 'tag-type-copyright categorized-tag' : 'series', 'tag-type-artist categorized-tag' : 'creator', 'tag-type-species categorized-tag' : 'species' }
+    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-species' : 'species' }
     
     boorus[ 'e621' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     

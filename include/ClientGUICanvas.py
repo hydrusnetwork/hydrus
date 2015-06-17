@@ -6,6 +6,7 @@ import ClientFiles
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
+import ClientGUIHoverFrames
 import ClientMedia
 import ClientRatings
 import collections
@@ -17,7 +18,6 @@ import os
 import Queue
 import random
 import shutil
-import subprocess
 import time
 import traceback
 import urllib
@@ -46,8 +46,6 @@ ZOOMOUTS = [ 20.0, 10.0, 5.0, 3.0, 2.0, 1.5, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.5, 
 
 NON_ZOOMABLE_MIMES = list( HC.AUDIO ) + [ HC.APPLICATION_PDF ]
 
-NON_LARGABLY_ZOOMABLE_MIMES = [ mime for mime in HC.VIDEO if mime != HC.VIDEO_WEBM ] + [ HC.APPLICATION_FLASH ]
-
 EMBED_BUTTON_MIMES = [ HC.VIDEO_FLV, HC.APPLICATION_FLASH ]
 
 def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
@@ -58,7 +56,11 @@ def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
     if ShouldHaveAnimationBar( media ): canvas_height -= ANIMATED_SCANBAR_HEIGHT
     
-    if media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: canvas_width -= 10
+    if media.GetMime() in EMBED_BUTTON_MIMES:
+        
+        canvas_height -= 10
+        canvas_width -= 10
+        
     
     width_zoom = canvas_width / float( media_width )
     
@@ -87,24 +89,15 @@ def CalculateMediaSize( media, zoom ):
     
     return ( media_width, media_height )
     
-def GetExtraDimensions( media ):
-    
-    extra_width = 0
-    extra_height = 0
-    
-    if ShouldHaveAnimationBar( media ): extra_height += ANIMATED_SCANBAR_HEIGHT
-    
-    return ( extra_width, extra_height )
-
 def ShouldHaveAnimationBar( media ):
     
     is_animated_gif = media.GetMime() == HC.IMAGE_GIF and media.HasDuration()
     
     is_animated_flash = media.GetMime() == HC.APPLICATION_FLASH and media.HasDuration()
     
-    is_webm = media.GetMime() == HC.VIDEO_WEBM
+    is_native_video = media.GetMime() in HC.NATIVE_VIDEO
     
-    return is_animated_gif or is_animated_flash or is_webm
+    return is_animated_gif or is_animated_flash or is_native_video
     
 class Animation( wx.Window ):
     
@@ -251,7 +244,7 @@ class Animation( wx.Window ):
                 if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
                 else: self._DrawWhite()
                 
-                self._timer_video.Start( 0, wx.TIMER_ONE_SHOT )
+                self._timer_video.Start( 1, wx.TIMER_ONE_SHOT )
                 
                 
             
@@ -271,7 +264,7 @@ class Animation( wx.Window ):
             if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
             else: self._DrawWhite()
             
-            self._timer_video.Start( 0, wx.TIMER_ONE_SHOT )
+            self._timer_video.Start( 1, wx.TIMER_ONE_SHOT )
             
         
         self._paused = True
@@ -281,7 +274,7 @@ class Animation( wx.Window ):
         
         self._paused = False
         
-        self._timer_video.Start( 0, wx.TIMER_ONE_SHOT )
+        self._timer_video.Start( 1, wx.TIMER_ONE_SHOT )
         
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
@@ -368,7 +361,7 @@ class AnimationBar( wx.Window ):
         
         #
         
-        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_SCROLLBAR ) ) )
+        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNSHADOW ) ) )
         
         dc.DrawRectangle( int( float( my_width - ANIMATED_SCANBAR_CARET_WIDTH ) * float( self._current_frame_index ) / float( self._num_frames - 1 ) ), 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
         
@@ -416,7 +409,7 @@ class AnimationBar( wx.Window ):
             
             self._media_window.GotoFrame( self._current_frame_index )
             
-        elif event.ButtonUp():
+        elif event.ButtonUp( wx.MOUSE_BTN_ANY ):
             
             if not self._currently_in_a_drag: self._media_window.Play()
             
@@ -623,7 +616,7 @@ class Canvas( object ):
     
     def _HydrusShouldNotProcessInput( self ):
         
-        if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
+        if self._current_display_media.GetMime() in EMBED_BUTTON_MIMES:
             
             if self.MouseIsOverMedia(): return True
             
@@ -718,7 +711,7 @@ class Canvas( object ):
                 
                 if self._current_zoom < zoom:
                     
-                    if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
+                    if self._current_display_media.GetMime() in EMBED_BUTTON_MIMES:
                         
                         # because of the event passing under mouse, we want to preserve whitespace around flash
                         
@@ -786,7 +779,7 @@ class Canvas( object ):
         
         ( media_width, media_height ) = self._current_display_media.GetResolution()
         
-        if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES:
+        if self._current_display_media.GetMime() not in EMBED_BUTTON_MIMES:
             
             if self._current_zoom == 1.0: new_zoom = self._canvas_zoom
             else: new_zoom = 1.0
@@ -946,12 +939,12 @@ class CanvasWithDetails( Canvas ):
         
         Canvas.__init__( self, *args, **kwargs )
         
-        self._hover_commands = FullscreenHoverFrameCommands( self, self._canvas_key )
-        self._hover_tags = FullscreenHoverFrameTags( self, self._canvas_key )
+        self._hover_commands = ClientGUIHoverFrames.FullscreenHoverFrameCommands( self, self._canvas_key )
+        self._hover_tags = ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self._canvas_key )
         
         ratings_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.RATINGS_SERVICES ) )
         
-        if len( ratings_services ) > 0: self._hover_ratings = FullscreenHoverFrameRatings( self, self._canvas_key )
+        if len( ratings_services ) > 0: self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameRatings( self, self._canvas_key )
         
     
     def _DrawBackgroundDetails( self, dc ):
@@ -1494,7 +1487,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         ( client_x, client_y ) = self.GetClientSize()
         
-        if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES: # to stop warping over flash
+        if self._current_display_media.GetMime() not in EMBED_BUTTON_MIMES: # to stop warping over flash
             
             if x < 20 or x > client_x - 20 or y < 20 or y > client_y -20:
                 
@@ -1858,7 +1851,7 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
     
     def Archive( self, canvas_key ):
         
-        if self._canvas_key == self._canvas_key:
+        if self._canvas_key == canvas_key:
             
             self._Archive()
             
@@ -1866,7 +1859,7 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
     
     def Delete( self, canvas_key ):
         
-        if self._canvas_key == self._canvas_key:
+        if self._canvas_key == canvas_key:
             
             self._Delete()
             
@@ -1894,7 +1887,7 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
     
     def Inbox( self, canvas_key ):
         
-        if self._canvas_key == self._canvas_key:
+        if self._canvas_key == canvas_key:
             
             self._Inbox()
             
@@ -2103,7 +2096,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         #
         
-        if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES + NON_ZOOMABLE_MIMES:
+        if self._current_display_media.GetMime() not in EMBED_BUTTON_MIMES + NON_ZOOMABLE_MIMES:
             
             ( my_width, my_height ) = self.GetClientSize()
             
@@ -2483,7 +2476,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         #
         
-        if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES + NON_ZOOMABLE_MIMES:
+        if self._current_display_media.GetMime() not in EMBED_BUTTON_MIMES + NON_ZOOMABLE_MIMES:
             
             ( my_width, my_height ) = self.GetClientSize()
             
@@ -2548,634 +2541,6 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         event.Skip()
         
     
-class FullscreenHoverFrame( wx.Frame ):
-    
-    def __init__( self, parent, canvas_key ):
-        
-        wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.NO_BORDER )
-        
-        self._canvas_key = canvas_key
-        self._current_media = None
-        
-        self.SetBackgroundColour( wx.WHITE )
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-        
-        tlp = self.GetParent().GetTopLevelParent()
-        
-        tlp.Bind( wx.EVT_SIZE, self.EventResize )
-        tlp.Bind( wx.EVT_MOVE, self.EventMove )
-        
-        self._timer_check_show = wx.Timer( self, id = ID_TIMER_HOVER_SHOW )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventCheckIfShouldShow, id = ID_TIMER_HOVER_SHOW )
-        
-        self._timer_check_show.Start( 100, wx.TIMER_CONTINUOUS )
-        
-        HydrusGlobals.pubsub.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
-        
-    
-    def _SizeAndPosition( self ):
-        
-        raise NotImplementedError()
-        
-    
-    def EventMove( self, event ):
-        
-        self._SizeAndPosition()
-        
-        event.Skip()
-        
-    
-    def EventResize( self, event ):
-        
-        self._SizeAndPosition()
-        
-        event.Skip()
-        
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_media = media
-            
-        
-    
-    def TIMEREventCheckIfShouldShow( self, event ):
-        
-        if self._current_media is None:
-            
-            self.Hide()
-            
-        else:
-            
-            ( mouse_x, mouse_y ) = wx.GetMousePosition()
-            
-            ( my_x, my_y ) = self.GetPosition()
-            
-            ( my_width, my_height ) = self.GetSize()
-            
-            in_x = my_x <= mouse_x and mouse_x <= my_x + my_width
-            in_y = my_y <= mouse_y and mouse_y <= my_y + my_height
-            
-            no_dialogs_open = True
-            
-            tlps = wx.GetTopLevelWindows()
-            
-            for tlp in tlps:
-                
-                if isinstance( tlp, wx.Dialog ): no_dialogs_open = False
-                
-            
-            mime = self._current_media.GetMime()
-            
-            in_position = in_x and in_y
-            
-            mouse_over_important_media = ( ShouldHaveAnimationBar( self._current_media ) or mime in HC.VIDEO or mime == HC.APPLICATION_FLASH ) and self.GetParent().MouseIsOverMedia()
-            
-            current_focus = wx.Window.FindFocus()
-            
-            tlp = wx.GetTopLevelParent( current_focus )
-            
-            my_parent_in_focus_tree = False
-            
-            while tlp is not None:
-                
-                if tlp == self.GetParent(): my_parent_in_focus_tree = True
-                
-                tlp = tlp.GetParent()
-                
-            
-            ready_to_show = in_position and not mouse_over_important_media and no_dialogs_open and my_parent_in_focus_tree
-            ready_to_hide = not in_position or not no_dialogs_open or not my_parent_in_focus_tree
-            
-            if ready_to_show: self.Show()
-            elif ready_to_hide: self.Hide()
-            
-        
-    
-class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
-    
-    def __init__( self, parent, canvas_key ):
-        
-        FullscreenHoverFrame.__init__( self, parent, canvas_key )
-        
-        self._always_archive = False
-        self._current_zoom = 1.0
-        self._current_index_string = ''
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._first_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'first.png' ) )
-        self._first_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_show_first', self._canvas_key ) )
-        self._first_button.SetToolTipString( 'first' )
-        
-        self._previous_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'previous.png' ) )
-        self._previous_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_show_previous', self._canvas_key ) )
-        self._previous_button.SetToolTipString( 'previous' )
-        
-        self._index_text = wx.StaticText( self, label = 'index' )
-        
-        self._next_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'next.png' ) )
-        self._next_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_show_next', self._canvas_key ) )
-        self._next_button.SetToolTipString( 'next' )
-        
-        self._last_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'last.png' ) )
-        self._last_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_show_last', self._canvas_key ) )
-        self._last_button.SetToolTipString( 'last' )
-        
-        self._archive_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'archive.png' ) )
-        self._archive_button.Bind( wx.EVT_BUTTON, self.EventArchiveButton )
-        
-        self._delete_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'delete.png' ) )
-        self._delete_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_delete', self._canvas_key ) )
-        self._delete_button.SetToolTipString( 'delete' )
-        
-        self._zoom_text = wx.StaticText( self, label = 'zoom' )
-        
-        zoom_in = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_in.png' ) )
-        zoom_in.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_zoom_in', self._canvas_key ) )
-        zoom_in.SetToolTipString( 'zoom in' )
-        
-        zoom_out = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_out.png' ) )
-        zoom_out.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_zoom_out', self._canvas_key ) )
-        zoom_out.SetToolTipString( 'zoom out' )
-        
-        zoom_switch = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_switch.png' ) )
-        zoom_switch.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_zoom_switch', self._canvas_key ) )
-        zoom_switch.SetToolTipString( 'zoom switch' )
-        
-        fullscreen_switch = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'fullscreen_switch.png' ) )
-        fullscreen_switch.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_fullscreen_switch', self._canvas_key ) )
-        fullscreen_switch.SetToolTipString( 'fullscreen switch' )
-        
-        close = wx.Button( self, label = 'X', style = wx.BU_EXACTFIT )
-        close.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_close', self._canvas_key ) )
-        close.SetToolTipString( 'close' )
-        
-        self._top_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        self._title_text = wx.StaticText( self, label = 'title' )
-        self._info_text = wx.StaticText( self, label = 'info' )
-        self._button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        self._top_hbox.AddF( self._first_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._previous_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._index_text, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._next_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._last_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._top_hbox.AddF( self._archive_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._delete_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._top_hbox.AddF( self._zoom_text, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( zoom_in, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( zoom_out, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( zoom_switch, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( fullscreen_switch, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( close, CC.FLAGS_MIXED )
-        
-        vbox.AddF( self._top_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._title_text, CC.FLAGS_CENTER )
-        vbox.AddF( self._info_text, CC.FLAGS_CENTER )
-        vbox.AddF( self._button_hbox, CC.FLAGS_CENTER )
-        
-        self.SetSizer( vbox )
-        
-        HydrusGlobals.pubsub.sub( self, 'SetCurrentZoom', 'canvas_new_zoom' )
-        HydrusGlobals.pubsub.sub( self, 'SetIndexString', 'canvas_new_index_string' )
-        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        
-    
-    def _ResetButtons( self ):
-        
-        if self._current_media is not None:
-            
-            if self._always_archive or self._current_media.HasInbox():
-                
-                self._archive_button.SetBitmapLabel( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'archive.png' ) )
-                self._archive_button.SetToolTipString( 'archive' )
-                
-            else:
-                
-                self._archive_button.SetBitmapLabel( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'to_inbox.png' ) )
-                self._archive_button.SetToolTipString( 'return to inbox' )
-                
-            
-        
-    
-    def _ResetText( self ):
-        
-        if self._current_media is None:
-            
-            self._title_text.Hide()
-            self._info_text.Hide()
-            
-        else:
-            
-            label = self._current_media.GetTitleString()
-            
-            if len( label ) > 0:
-                
-                self._title_text.SetLabel( label )
-                
-                self._title_text.Show()
-                
-            else: self._title_text.Hide()
-            
-            label = self._current_media.GetPrettyInfo() + ' | ' + self._current_media.GetPrettyAge()
-            
-            self._info_text.SetLabel( label )
-            
-            self._info_text.Show()
-            
-        
-        self._SizeAndPosition()
-        
-    
-    def _SizeAndPosition( self ):
-        
-        parent = self.GetParent()
-        
-        ( parent_width, parent_height ) = parent.GetClientSize()
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        my_ideal_width = int( parent_width * 0.6 )
-        
-        if my_height != parent_height or my_ideal_width != my_width:
-            
-            self.Fit()
-            
-            self.SetSize( ( my_ideal_width, -1 ) )
-            
-        
-        self.SetPosition( parent.ClientToScreenXY( int( parent_width * 0.2 ), 0 ) )
-        
-    
-    def AddCommand( self, label, callback ):
-        
-        command = wx.Button( self, label = label, style = wx.BU_EXACTFIT )
-        command.Bind( wx.EVT_BUTTON, callback )
-        
-        self._button_hbox.AddF( command, CC.FLAGS_MIXED )
-        
-    
-    def EventArchiveButton( self, event ):
-        
-        if self._always_archive or self._current_media.HasInbox():
-            
-            HydrusGlobals.pubsub.pub( 'canvas_archive', self._canvas_key )
-            
-        else:
-            
-            HydrusGlobals.pubsub.pub( 'canvas_inbox', self._canvas_key )
-            
-        
-    
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
-        
-        if self._current_media is not None:
-            
-            my_hash = self._current_media.GetHash()
-            
-            do_redraw = False
-            
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-                
-                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
-                    
-                    do_redraw = True
-                    
-                    break
-                    
-                
-            
-            if do_redraw:
-                
-                self._ResetButtons()
-                
-            
-        
-    
-    def SetAlwaysArchive( self, value ):
-        
-        self._always_archive = value
-        
-        self._ResetButtons()
-        
-    
-    def SetCurrentZoom( self, canvas_key, zoom ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_zoom = zoom
-            
-            label = HydrusData.ConvertZoomToPercentage( self._current_zoom )
-            
-            self._zoom_text.SetLabel( label )
-            
-            self._top_hbox.Layout()
-            
-        
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
-            
-            self._ResetButtons()
-            
-            self._ResetText()
-            
-        
-    
-    def SetIndexString( self, canvas_key, text ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_index_string = text
-            
-            self._index_text.SetLabel( self._current_index_string )
-            
-            self._top_hbox.Layout()
-            
-        
-    
-    def SetNavigable( self, value ):
-        
-        if value:
-            
-            self._first_button.Show()
-            self._last_button.Show()
-            
-            self._previous_button.SetToolTipString( 'previous' )
-            self._next_button.SetToolTipString( 'next' )
-            
-        else:
-            
-            self._first_button.Hide()
-            self._last_button.Hide()
-            
-            self._previous_button.SetToolTipString( 'back' )
-            self._next_button.SetToolTipString( 'skip' )
-            
-        
-    
-class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
-    
-    def __init__( self, parent, canvas_key ):
-        
-        FullscreenHoverFrame.__init__( self, parent, canvas_key )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._icon_panel = wx.Panel( self )
-        
-        self._icon_panel.SetBackgroundColour( wx.WHITE )
-        
-        self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.inbox_bmp )
-        
-        icon_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        icon_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        icon_hbox.AddF( self._inbox_icon, CC.FLAGS_MIXED )
-        
-        self._icon_panel.SetSizer( icon_hbox )
-        
-        # repo strings
-        
-        self._file_repos = wx.StaticText( self, label = '', style = wx.ALIGN_RIGHT )
-        
-        # likes
-        
-        like_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        like_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        like_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-        
-        for service in like_services:
-            
-            service_key = service.GetServiceKey()
-            
-            control = ClientGUICommon.RatingLikeCanvas( self, service_key, canvas_key )
-            
-            like_hbox.AddF( control, CC.FLAGS_NONE )
-            
-        
-        # each numerical one in turn
-        
-        vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        numerical_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
-        
-        for service in numerical_services:
-            
-            service_key = service.GetServiceKey()
-            
-            control = ClientGUICommon.RatingNumericalCanvas( self, service_key, canvas_key )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            hbox.AddF( control, CC.FLAGS_NONE )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-        
-        self.SetSizer( vbox )
-        
-        self._ResetData()
-        
-        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        
-    
-    def _ResetData( self ):
-        
-        if self._current_media is not None:
-            
-            if self._current_media.HasInbox():
-                
-                self._icon_panel.Show()
-                
-            else:
-                
-                self._icon_panel.Hide()
-                
-            
-            file_repo_strings = self._current_media.GetLocationsManager().GetFileRepositoryStrings()
-            
-            if len( file_repo_strings ) == 0:
-                
-                self._file_repos.Hide()
-                
-            else:
-                
-                file_repo_string = os.linesep.join( file_repo_strings )
-                
-                self._file_repos.SetLabel( file_repo_string )
-                
-                self._file_repos.Show()
-                
-            
-            self.Fit()
-            
-        
-        self._SizeAndPosition()
-        
-    
-    def _SizeAndPosition( self ):
-        
-        parent = self.GetParent()
-        
-        ( parent_width, parent_height ) = parent.GetClientSize()
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        my_ideal_width = int( parent_width * 0.2 )
-        
-        my_ideal_height = my_height
-        
-        if my_ideal_width != my_width or my_ideal_height != my_height:
-            
-            self.Fit()
-            
-            self.SetSize( ( my_ideal_width, -1 ) )
-            
-        
-        self.SetPosition( parent.ClientToScreenXY( int( parent_width * 0.8 ), 0 ) )
-        
-    
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
-        
-        if self._current_media is not None:
-            
-            my_hash = self._current_media.GetHash()
-            
-            do_redraw = False
-            
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-                
-                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
-                    
-                    do_redraw = True
-                    
-                    break
-                    
-                
-            
-            if do_redraw:
-                
-                self._ResetData()
-                
-            
-        
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
-            
-            self._ResetData()
-            
-        
-    
-class FullscreenHoverFrameTags( FullscreenHoverFrame ):
-    
-    def __init__( self, parent, canvas_key ):
-        
-        FullscreenHoverFrame.__init__( self, parent, canvas_key )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._tags = ClientGUICommon.ListBoxTags( self )
-        
-        vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        
-    
-    def _ResetTags( self ):
-        
-        if self._current_media is None: tags_i_want_to_display = []
-        else:
-            
-            tags_manager = self._current_media.GetTagsManager()
-            
-            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
-            
-            current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
-            pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
-            
-            tags_i_want_to_display = list( current.union( pending ) )
-            
-            tags_i_want_to_display.sort()
-            
-        
-        self._tags.SetTexts( tags_i_want_to_display )
-        
-    
-    def _SizeAndPosition( self ):
-        
-        parent = self.GetParent()
-        
-        ( parent_width, parent_height ) = parent.GetClientSize()
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        my_ideal_width = int( parent_width * 0.2 )
-        
-        my_ideal_height = parent_height
-        
-        if my_ideal_width != my_width or my_ideal_height != my_height:
-            
-            self.SetSize( ( my_ideal_width, my_ideal_height ) )
-            
-        
-        self.SetPosition( parent.ClientToScreenXY( 0, 0 ) )
-        
-    
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
-        
-        if self._current_media is not None:
-            
-            my_hash = self._current_media.GetHash()
-            
-            do_redraw = False
-            
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-                
-                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
-                    
-                    do_redraw = True
-                    
-                    break
-                    
-                
-            
-            if do_redraw:
-                
-                self._ResetTags()
-                
-            
-        
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
-            
-            self._ResetTags()
-            
-        
-    
 class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
     
     def __init__( self, my_parent, page_key, service_key, media_results ):
@@ -3231,862 +2596,6 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
             
         
     
-class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
-    
-    RATINGS_FILTER_INEQUALITY_FULL = 0
-    RATINGS_FILTER_INEQUALITY_HALF = 1
-    RATINGS_FILTER_INEQUALITY_QUARTER = 2
-    
-    RATINGS_FILTER_EQUALITY_FULL = 0
-    RATINGS_FILTER_EQUALITY_HALF = 1
-    RATINGS_FILTER_EQUALITY_QUARTER = 2
-    
-    def __init__( self, parent, page_key, service_key, media_results ):
-        
-        ClientGUICommon.FrameThatResizes.__init__( self, parent, resize_option_prefix = 'fs_', title = 'hydrus client ratings frame' )
-        
-        self._page_key = page_key
-        self._service_key = service_key
-        self._media_still_to_rate = { ClientMedia.MediaSingleton( media_result ) for media_result in media_results }
-        self._current_media_to_rate = None
-        
-        self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-        
-        self._file_query_result = ClientData.FileQueryResult( media_results )
-        
-        if self._service.GetServiceType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
-        else:
-            
-            num_stars = self._service.GetInfo( 'num_stars' )
-            
-            self._score_gap = 1.0 / num_stars
-            
-        
-        hashes_to_min_max = wx.GetApp().Read( 'ratings_filter', service_key, [ media_result.GetHash() for media_result in media_results ] )
-        
-        self._media_to_initial_scores_dict = { media : hashes_to_min_max[ media.GetHash() ] for media in self._media_still_to_rate }
-        
-        self._decision_log = []
-        
-        self._ReinitialiseCurrentScores()
-        
-        self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_FULL
-        self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_FULL
-        
-        self._statusbar = self.CreateStatusBar()
-        self._statusbar.SetFieldsCount( 3 )
-        self._statusbar.SetStatusWidths( [ -1, 500, -1 ] )
-        
-        self._splitter = wx.SplitterWindow( self )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._splitter, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-        self._splitter.SetMinimumPaneSize( 120 )
-        self._splitter.SetSashGravity( 0.5 ) # stay in the middle
-        
-        self.Show( True )
-        
-        wx.GetApp().SetTopWindow( self )
-        
-        self._left_window = self._Panel( self._splitter )
-        
-        self._right_window = self._Panel( self._splitter )
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        self._splitter.SplitVertically( self._left_window, self._right_window, my_width / 2 )
-        
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseDown )
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseDown )
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        self._ShowNewMedia()
-        
-        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
-        
-        HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, None )
-        
-    
-    def _FullscreenSwitch( self ):
-        
-        if self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
-        else: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
-        
-    
-    def _GoBack( self ):
-        
-        if len( self._decision_log ) > 0:
-            
-            ( action, entry ) = self._decision_log[-1]
-            
-            if action == 'external': ( min, max, self._current_media_to_rate, self._current_media_to_rate_against, self._unrated_is_on_the_left ) = entry
-            elif action == 'internal': ( min, max, self._current_media_to_rate, other_min, other_max, self._current_media_to_rate_against, self._unrated_is_on_the_left ) = entry
-            
-            if self._unrated_is_on_the_left:
-                
-                self._left_window.SetMedia( self._current_media_to_rate )
-                self._right_window.SetMedia( self._current_media_to_rate_against )
-                
-            else:
-                
-                self._left_window.SetMedia( self._current_media_to_rate_against )
-                self._right_window.SetMedia( self._current_media_to_rate )
-                
-            
-            self._decision_log = self._decision_log[:-1]
-            
-            self._ReinitialiseCurrentScores()
-            
-        
-        self._RefreshStatusBar()
-        
-    
-    def _RefreshStatusBar( self ):
-        
-        certain_ratings = [ ( media, ( min, max ) ) for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min < self._score_gap ]
-        uncertain_ratings = [ ( media, ( min, max ) ) for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min >= self._score_gap and self._media_to_current_scores_dict[ media ] != self._media_to_initial_scores_dict[ media ] ]
-        
-        service_type = self._service.GetServiceType()
-        
-        if service_type == HC.LOCAL_RATING_LIKE:
-            
-            current_string = 'uncertain'
-            
-            if self._current_media_to_rate_against in self._media_still_to_rate: against_string = 'uncertain'
-            else:
-                
-                against_string = 'already rated'
-                
-                if self._current_media_to_rate_against in self._media_to_current_scores_dict:
-                    
-                    ( other_min, other_max ) = self._media_to_current_scores_dict[ self._current_media_to_rate_against ]
-                    
-                    rating = other_min
-                    
-                else:
-                    
-                    ( local_ratings, remote_ratings ) = self._current_media_to_rate_against.GetRatings()
-                    
-                    rating = local_ratings.GetRating( self._service_key )
-                    
-                
-                if rating == 0.0: against_string += ' - dislike'
-                else: against_string += ' - like'
-                
-            
-            center_string = HydrusData.ToString( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + HydrusData.ToString( len( self._decision_log ) ) + ' decisions, ' + HydrusData.ToString( len( certain_ratings ) ) + ' are certain'
-            
-        elif service_type == HC.LOCAL_RATING_NUMERICAL:
-            
-            ( min, max ) = self._media_to_current_scores_dict[ self._current_media_to_rate ]
-            
-            current_string = 'between ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, min, out_of = False ) + ' and ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, max, out_of = False )
-            
-            if self._current_media_to_rate_against in self._media_still_to_rate:
-                
-                ( other_min, other_max ) = self._media_to_current_scores_dict[ self._current_media_to_rate_against ]
-                
-                against_string = 'between ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, other_min, out_of = False ) + ' and ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, other_max, out_of = False )
-                
-            else:
-                
-                against_string = 'already rated'
-                
-                if self._current_media_to_rate_against in self._media_to_current_scores_dict:
-                    
-                    ( other_min, other_max ) = self._media_to_current_scores_dict[ self._current_media_to_rate_against ]
-                    
-                    rating = ( other_min + other_max ) / 2.0
-                    
-                else:
-                    
-                    ( local_ratings, remote_ratings ) = self._current_media_to_rate_against.GetRatings()
-                    
-                    rating = local_ratings.GetRating( self._service_key )
-                    
-                
-                against_string += ' - ' + HydrusData.ConvertNumericalRatingToPrettyString( self._lower, self._upper, rating )
-                
-            
-            center_string = HydrusData.ToString( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + HydrusData.ToString( len( self._decision_log ) ) + ' decisions, ' + HydrusData.ToString( len( certain_ratings ) ) + ' are certain and ' + HydrusData.ToString( len( uncertain_ratings ) ) + ' are uncertain'
-            
-        
-        if self._unrated_is_on_the_left:
-            
-            left_string = current_string
-            right_string = against_string
-            
-        else:
-            
-            left_string = against_string
-            right_string = current_string
-            
-        
-        self._statusbar.SetStatusText( left_string, number = 0 )
-        self._statusbar.SetStatusText( center_string, number = 1 )
-        self._statusbar.SetStatusText( right_string, number = 2 )
-        
-    
-    def _ReinitialiseCurrentScores( self ):
-        
-        self._media_to_current_scores_dict = dict( self._media_to_initial_scores_dict )
-        
-        self._already_rated_pairs = collections.defaultdict( set )
-        
-        for ( action, entry ) in self._decision_log:
-            
-            if action == 'external': ( min, max, media_rated, media_rated_against, unrated_was_on_the_left ) = entry
-            elif action == 'internal':
-                
-                ( min, max, media_rated, other_min, other_max, media_rated_against, unrated_was_on_the_left ) = entry
-                
-                self._media_to_current_scores_dict[ media_rated_against ] = ( other_min, other_max )
-                
-            
-            self._media_to_current_scores_dict[ media_rated ] = ( min, max )
-            
-            self._already_rated_pairs[ media_rated ].add( media_rated_against )
-            self._already_rated_pairs[ media_rated_against ].add( media_rated )
-            
-        
-        self._media_still_to_rate = { media for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min >= self._score_gap }
-        
-    
-    def _ShowNewMedia( self ):
-        
-        if not ( self._compare_same and self._current_media_to_rate in self._media_still_to_rate ):
-            
-            ( self._current_media_to_rate, ) = random.sample( self._media_still_to_rate, 1 )
-            
-        
-        ( min, max ) = self._media_to_current_scores_dict[ self._current_media_to_rate ]
-        
-        media_result_to_rate_against = wx.GetApp().Read( 'ratings_media_result', self._service_key, min, max )
-        
-        if media_result_to_rate_against is not None:
-            
-            hash = media_result_to_rate_against.GetHash()
-            
-            if hash in self._file_query_result.GetHashes(): media_result_to_rate_against = self._file_query_result.GetMediaResult( hash )
-            else: self._file_query_result.AddMediaResults( ( media_result_to_rate_against, ) )
-            
-            media_to_rate_against = ClientMedia.MediaSingleton( media_result_to_rate_against )
-            
-        else: media_to_rate_against = None
-        
-        if media_to_rate_against in self._already_rated_pairs[ self._current_media_to_rate ]: media_to_rate_against = None
-        
-        if media_to_rate_against is None:
-            
-            internal_media = list( self._media_to_current_scores_dict.keys() )
-            
-            random.shuffle( internal_media )
-            
-            valid_internal_media = [ media for media in internal_media if media != self._current_media_to_rate and media not in self._already_rated_pairs[ self._current_media_to_rate ] and self._current_media_to_rate not in self._already_rated_pairs[ media ] ]
-            
-            best_media_first = Queue.PriorityQueue()
-            
-            for media in valid_internal_media:
-                
-                ( other_min, other_max ) = self._media_to_current_scores_dict[ media ]
-                
-                if not ( other_max < min or other_min > max ): # i.e. there is overlap in the two pairs of min,max
-                    
-                    # it is best when we have
-                    #
-                    #  #########
-                    #    ####
-                    #
-                    # and better when the gaps are large (increasing the uncertainty)
-                    
-                    # when we must choose
-                    #
-                    #  #####
-                    #    ######
-                    #
-                    # saying the second is better gives no change, so we want to minimise the gaps, to increase the likelyhood of a 50-50-ish situation (increasing the uncertainty)
-                    # better we move by self._score_gap half the time than 0 most of the time.
-                    
-                    # the square root stuff prioritises middle-of-the-road results. two fives is more useful than ten and zero
-                    # total gap value is in the range 0.0 - 1.0
-                    # we times by -1 to prioritise and simultaneously reverse the overlapping-on-both-ends results for the priority queue
-                    
-                    min_gap = abs( other_min - min )
-                    max_gap = abs( other_max - max )
-                    
-                    total_gap_value = ( min_gap ** 0.5 + max_gap ** 0.5 ) ** 2
-                    
-                    if ( other_min < min and other_max > max ) or ( other_min > min and other_max < max ): total_gap_value *= -1
-                    
-                    best_media_first.put( ( total_gap_value, media ) )
-                    
-                
-            
-            if not best_media_first.empty(): ( value, media_to_rate_against ) = best_media_first.get()
-            
-        
-        if media_to_rate_against is None:
-            
-            message = 'The client has run out of comparisons to show you, and still cannot deduce what ratings everything should have. Commit what decisions you have made, and then please either rate some more files manually, or ratings filter a larger group.'
-            
-            wx.MessageBox( message )
-            
-            self._Close()
-            
-        else:
-            
-            self._current_media_to_rate_against = media_to_rate_against
-            
-            if self._left_right == 'left': position = 0
-            elif self._left_right == 'random': position = random.randint( 0, 1 )
-            else: position = 1
-            
-            if position == 0:
-                
-                self._unrated_is_on_the_left = True
-                
-                self._left_window.SetMedia( self._current_media_to_rate )
-                self._right_window.SetMedia( self._current_media_to_rate_against )
-                
-            else:
-                
-                self._unrated_is_on_the_left = False
-                
-                self._left_window.SetMedia( self._current_media_to_rate_against )
-                self._right_window.SetMedia( self._current_media_to_rate )
-                
-            
-            self._RefreshStatusBar()
-            
-        
-    
-    def _Skip( self ):
-        
-        if len( self._media_still_to_rate ) == 0: self._Close()
-        else: self._ShowNewMedia()
-        
-    
-    def _ProcessAction( self, action ):
-        
-        ( min, max ) = self._media_to_current_scores_dict[ self._current_media_to_rate ]
-        
-        if self._current_media_to_rate_against in self._media_to_current_scores_dict:
-            
-            ( other_min, other_max ) = self._media_to_current_scores_dict[ self._current_media_to_rate_against ]
-            
-            rate_other = self._current_media_to_rate_against in self._media_still_to_rate
-            
-            if action in ( 'left', 'right' ):
-                
-                if self._inequal_accuracy == self.RATINGS_FILTER_INEQUALITY_FULL: adjustment = self._score_gap
-                if self._inequal_accuracy == self.RATINGS_FILTER_INEQUALITY_HALF: adjustment = 0
-                elif self._inequal_accuracy == self.RATINGS_FILTER_INEQUALITY_QUARTER: adjustment = -self._score_gap
-                
-                if ( self._unrated_is_on_the_left and action == 'left' ) or ( not self._unrated_is_on_the_left and action == 'right' ):
-                    
-                    # unrated is better
-                    
-                    if min <= other_min:
-                        
-                        if min < other_min + adjustment: min = other_min + adjustment
-                        else: min = other_min + self._score_gap / 2
-                        
-                    
-                    if other_max >= max:
-                        
-                        if other_max > max - adjustment: other_max = max - adjustment
-                        else: other_max = max - self._score_gap / 2
-                        
-                    
-                    if min >= max: min = max
-                    if other_max <= other_min: other_max = other_min
-                    
-                else:
-                    
-                    # unrated is worse
-                    
-                    if other_min <= min:
-                        
-                        if other_min < min + adjustment: other_min = min + adjustment
-                        else: other_min = min + self._score_gap / 2
-                        
-                    
-                    if max >= other_max:
-                        
-                        if max > other_max - adjustment: max = other_max - adjustment
-                        else: max = other_max - self._score_gap / 2
-                        
-                    
-                    if other_min >= other_max: other_min = other_max
-                    if max <= min: max = min
-                    
-                
-            elif action == 'equal':
-                
-                if self._equal_accuracy == self.RATINGS_FILTER_EQUALITY_FULL:
-                    
-                    if min < other_min: min = other_min
-                    else: other_min = min
-                    
-                    if max > other_max: max = other_max
-                    else: other_max = max
-                    
-                elif self._equal_accuracy == self.RATINGS_FILTER_EQUALITY_HALF:
-                    
-                    if min < other_min: min = ( min + other_min ) / 2
-                    else: other_min = ( min + other_min ) / 2
-                    
-                    if max > other_max: max = ( max + other_max ) / 2
-                    else: other_max = ( max + other_max ) / 2
-                    
-                elif self._equal_accuracy == self.RATINGS_FILTER_EQUALITY_QUARTER:
-                    
-                    if min < other_min: min = ( ( 3 * min ) + other_min ) / 4
-                    else: other_min = ( min + ( 3 * other_min ) ) / 4
-                    
-                    if max > other_max: max = ( ( 3 * max ) + other_max ) / 4
-                    else: other_max = ( max + ( 3 * other_max ) ) / 4
-                    
-                
-            
-            if min < 0.0: min = 0.0
-            if max > 1.0: max = 1.0
-            
-            if other_min < 0.0: other_min = 0.0
-            if other_max > 1.0: other_max = 1.0
-            
-            if max - min < self._score_gap: self._media_still_to_rate.discard( self._current_media_to_rate )
-            
-            if rate_other:
-                
-                if other_max - other_min < self._score_gap: self._media_still_to_rate.discard( self._current_media_to_rate_against )
-                
-                self._media_to_current_scores_dict[ self._current_media_to_rate_against ] = ( other_min, other_max )
-                
-            
-            decision = ( 'internal', ( min, max, self._current_media_to_rate, other_min, other_max, self._current_media_to_rate_against, self._unrated_is_on_the_left ) )
-            
-        else:
-            
-            ( local_ratings, remote_ratings ) = self._current_media_to_rate_against.GetRatings()
-            
-            rating = local_ratings.GetRating( self._service_key )
-            
-            if action in ( 'left', 'right' ):
-                
-                if self._inequal_accuracy == self.RATINGS_FILTER_INEQUALITY_FULL: adjustment = self._score_gap
-                if self._inequal_accuracy == self.RATINGS_FILTER_INEQUALITY_HALF: adjustment = 0
-                elif self._inequal_accuracy == self.RATINGS_FILTER_INEQUALITY_QUARTER: adjustment = -self._score_gap
-                
-                if ( self._unrated_is_on_the_left and action == 'left' ) or ( not self._unrated_is_on_the_left and action == 'right' ):
-                    
-                    # unrated is better, so set new min
-                    
-                    if min <= rating:
-                        
-                        if min < rating + adjustment: min = rating + adjustment
-                        else: min = rating + self._score_gap / 2
-                        
-                    
-                    if min > max: min = max
-                    
-                else:
-                    
-                    # unrated is worse, so set new max
-                    
-                    if max >= rating:
-                        
-                        if max > rating - adjustment: max = rating - adjustment
-                        else: max = rating - self._score_gap / 2
-                        
-                    
-                    if max < min: max = min
-                    
-                
-            elif action == 'equal':
-                
-                if self._equal_accuracy == self.RATINGS_FILTER_EQUALITY_FULL:
-                    
-                    min = rating
-                    max = rating
-                    
-                elif self._equal_accuracy == self.RATINGS_FILTER_EQUALITY_HALF:
-                    
-                    min = ( min + rating ) / 2
-                    max = ( max + rating ) / 2
-                    
-                elif self._equal_accuracy == self.RATINGS_FILTER_EQUALITY_QUARTER:
-                    
-                    min = ( ( 3 * min ) + rating ) / 4
-                    max = ( ( 3 * max ) + rating ) / 4
-                    
-                
-            
-            if min < 0.0: min = 0.0
-            if max > 1.0: max = 1.0
-            
-            decision = ( 'external', ( min, max, self._current_media_to_rate, self._current_media_to_rate_against, self._unrated_is_on_the_left ) )
-            
-        
-        self._decision_log.append( decision )
-        
-        self._already_rated_pairs[ self._current_media_to_rate ].add( self._current_media_to_rate_against )
-        self._already_rated_pairs[ self._current_media_to_rate_against ].add( self._current_media_to_rate )
-        
-        if max - min < self._score_gap: self._media_still_to_rate.discard( self._current_media_to_rate )
-        
-        self._media_to_current_scores_dict[ self._current_media_to_rate ] = ( min, max )
-        
-        if len( self._media_still_to_rate ) == 0: self._Close()
-        else: self._ShowNewMedia()
-        
-    
-    def EventButtonBack( self, event ): self._GoBack()
-    def EventButtonDone( self, event ): self._Close()
-    def EventButtonDontFilter( self, event ):
-        
-        self._media_still_to_rate.discard( self._current_media_to_rate )
-        
-        if len( self._media_still_to_rate ) == 0: self._Close()
-        else: self._ShowNewMedia()
-        
-    def EventButtonEqual( self, event ): self._ProcessAction( 'equal' )
-    def EventButtonLeft( self, event ): self._ProcessAction( 'right' )
-    def EventButtonRight( self, event ): self._ProcessAction( 'left' )
-    def EventButtonSkip( self, event ): self._Skip()
-    
-    def _Close( self ):
-        
-        if len( self._decision_log ) > 0:
-            
-            def normalise_rating( rating ): return round( rating / self._score_gap ) * self._score_gap
-            
-            certain_ratings = [ ( normalise_rating( ( min + max ) / 2 ), media.GetHash() ) for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min < self._score_gap ]
-            uncertain_ratings = [ ( min, max, media.GetHash() ) for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min >= self._score_gap and self._media_to_current_scores_dict[ media ] != self._media_to_initial_scores_dict[ media ] ]
-            
-            with ClientGUIDialogs.DialogFinishRatingFiltering( self, len( certain_ratings ), len( uncertain_ratings ) ) as dlg:
-                
-                modal = dlg.ShowModal()
-                
-                if modal == wx.ID_CANCEL:
-                    
-                    self._ShowNewMedia()
-                    
-                    return
-                    
-                elif modal == wx.ID_YES:
-                    
-                    content_updates = []
-                    
-                    content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, set( ( hash, ) ) ) ) for ( rating, hash ) in certain_ratings ] )
-                    content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_RATINGS_FILTER, ( min, max, set( ( hash, ) ) ) ) for ( min, max, hash ) in uncertain_ratings ] )
-                    
-                    wx.GetApp().Write( 'content_updates', { self._service_key : content_updates } )
-                    
-                
-            
-        
-        HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, self._current_media_to_rate )
-        
-        if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
-        
-        wx.CallAfter( self.Destroy )
-        
-    
-    def EventFullscreenSwitch( self, event ): self._FullscreenSwitch()
-    
-    def EventCharHook( self, event ):
-        
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
-        
-        if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Skip()
-        elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._ProcessAction( 'equal' )
-        elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT ): self._ProcessAction( 'left' )
-        elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ): self._ProcessAction( 'right' )
-        elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self._GoBack()
-        elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
-        elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-            with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
-        else:
-            
-            key_dict = HC.options[ 'shortcuts' ][ modifier ]
-            
-            if key in key_dict:
-                
-                action = key_dict[ key ]
-                
-                self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
-                
-            else: event.Skip()
-            
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'fullscreen_switch': self._FullscreenSwitch()
-            else: event.Skip()
-            
-        
-    
-    def EventMouseDown( self, event ):
-        
-        if event.ButtonDown( wx.MOUSE_BTN_LEFT ): self._ProcessAction( 'left' )
-        elif event.ButtonDown( wx.MOUSE_BTN_RIGHT ): self._ProcessAction( 'right' )
-        elif event.ButtonDown( wx.MOUSE_BTN_MIDDLE ): self._ProcessAction( 'equal' )
-        
-    
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
-        
-        redraw = False
-        
-        my_hashes = self._file_query_result.GetHashes()
-        
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-            
-            for content_update in content_updates:
-                
-                content_update_hashes = content_update.GetHashes()
-                
-                if len( my_hashes.intersection( content_update_hashes ) ) > 0:
-                    
-                    redraw = True
-                    
-                    break
-                    
-                
-            
-        
-        if redraw:
-            
-            self._left_window.RefreshBackground()
-            self._right_window.RefreshBackground()
-            
-        
-    
-    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
-        
-        self._left_window.RefreshBackground()
-        self._right_window.RefreshBackground()
-        
-    
-    def SetAccuracy( self, accuracy ):
-        
-        if accuracy == 0: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_FULL
-        elif accuracy <= 2: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_HALF
-        else: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_QUARTER
-        
-        if accuracy <= 1: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_FULL
-        elif accuracy <= 3: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_HALF
-        else: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_QUARTER
-        
-        HC.options[ 'ratings_filter_accuracy' ] = accuracy
-        
-        wx.GetApp().Write( 'save_options', HC.options )
-        
-    
-    def SetCompareSame( self, compare_same ):
-        
-        HC.options[ 'ratings_filter_compare_same' ] = compare_same
-        
-        wx.GetApp().Write( 'save_options', HC.options )
-        
-        self._compare_same = compare_same
-        
-    
-    def SetLeftRight( self, left_right ):
-        
-        HC.options[ 'ratings_filter_left_right' ] = left_right
-        
-        wx.GetApp().Write( 'save_options', HC.options )
-        
-        self._left_right = left_right
-        
-    
-    class _Panel( CanvasWithDetails, wx.Window ):
-        
-        def __init__( self, parent ):
-            
-            wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER | wx.WANTS_CHARS )
-            CanvasWithDetails.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, wx.GetApp().GetCache( 'fullscreen' ) )
-            
-            wx.CallAfter( self.Refresh )
-            
-            self.Bind( wx.EVT_MOTION, self.EventDrag )
-            self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
-            self.Bind( wx.EVT_RIGHT_DOWN, self.GetParent().GetParent().EventMouseDown )
-            self.Bind( wx.EVT_MIDDLE_DOWN, self.GetParent().GetParent().EventMouseDown )
-            self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
-            self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-            self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-            
-            self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
-            
-            self.Bind( wx.EVT_TIMER, self.TIMEREventCursorHide, id = ID_TIMER_CURSOR_HIDE )
-            
-            self.Bind( wx.EVT_MENU, self.EventMenu )
-            
-        
-        def EventDrag( self, event ):
-            
-            CC.CAN_HIDE_MOUSE = True
-            
-            if wx.Window.FindFocus() != self: self.SetFocus()
-            
-            if event.Dragging() and self._last_drag_coordinates is not None:
-                
-                ( old_x, old_y ) = self._last_drag_coordinates
-                
-                ( x, y ) = event.GetPosition()
-                
-                ( delta_x, delta_y ) = ( x - old_x, y - old_y )
-                
-                if HC.PLATFORM_WINDOWS: self.WarpPointer( old_x, old_y )
-                else: self._last_drag_coordinates = ( x, y )
-                
-                ( old_delta_x, old_delta_y ) = self._total_drag_delta
-                
-                self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
-                
-                self._DrawCurrentMedia()
-                
-            
-            self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-            
-            self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
-            
-        
-        def EventDragBegin( self, event ):
-            
-            if event.ShiftDown():
-                
-                ( x, y ) = event.GetPosition()
-                
-                ( client_x, client_y ) = self.GetClientSize()
-                
-                if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES: # to stop warping over flash
-                    
-                    if x < 20 or x > client_x - 20 or y < 20 or y > client_y -20:
-                        
-                        better_x = x
-                        better_y = y
-                        
-                        if x < 20: better_x = 20
-                        if y < 20: better_y = 20
-                        
-                        if x > client_x - 20: better_x = client_x - 20
-                        if y > client_y - 20: better_y = client_y - 20
-                        
-                        if HC.PLATFORM_WINDOWS:
-                            
-                            self.WarpPointer( better_x, better_y )
-                            
-                            x = better_x
-                            y = better_y
-                            
-                        
-                    
-                
-                self._last_drag_coordinates = ( x, y )
-                
-            else: self.GetParent().GetParent().ProcessEvent( event )
-            
-        
-        def EventDragEnd( self, event ):
-            
-            self._last_drag_coordinates = None
-            
-            event.Skip()
-            
-        
-        def EventCharHook( self, event ):
-            
-            if self._HydrusShouldNotProcessInput(): event.Skip()
-            else:
-                
-                keys_i_want_to_bump_up_regardless = [ wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN, wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT, wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT, wx.WXK_BACK, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ]
-                
-                ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
-                
-                key_dict = HC.options[ 'shortcuts' ][ modifier ]
-                
-                if key not in keys_i_want_to_bump_up_regardless and key in key_dict:
-                    
-                    action = key_dict[ key ]
-                    
-                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
-                    
-                else:
-                    
-                    if modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
-                    elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
-                    elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
-                    elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                        with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
-                    else: self.GetParent().ProcessEvent( event )
-                    
-            
-        
-        def EventMenu( self, event ):
-            
-            if self._HydrusShouldNotProcessInput(): event.Skip()
-            else:
-                
-                action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-                
-                if action is not None:
-                    
-                    ( command, data ) = action
-                    
-                    if command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
-                    elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
-                    elif command == 'manage_ratings': self._ManageRatings()
-                    elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
-                    elif command == 'zoom_in': self._ZoomIn()
-                    elif command == 'zoom_out': self._ZoomOut()
-                    else: event.Skip()
-                    
-                
-            
-        
-        def EventMouseWheel( self, event ):
-            
-            if self._HydrusShouldNotProcessInput(): event.Skip()
-            else:
-                
-                if event.CmdDown():
-                    
-                    if event.GetWheelRotation() > 0: self._ZoomIn()
-                    else: self._ZoomOut()
-                    
-                
-            
-        
-        def RefreshBackground( self ):
-            
-            self._SetDirty()
-            
-        
-        def TIMEREventCursorHide( self, event ):
-            
-            if not CC.CAN_HIDE_MOUSE: return
-            
-            self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
-            
-        
-    
 class MediaContainer( wx.Window ):
     
     def __init__( self, parent, image_cache, media, initial_size, initial_position ):
@@ -4131,7 +2640,7 @@ class MediaContainer( wx.Window ):
             if ShouldHaveAnimationBar( self._media ): self._media_window = Animation( self, self._media, media_initial_size, media_initial_position )
             else: self._media_window = self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
             
-        elif self._media.GetMime() == HC.VIDEO_WEBM: self._media_window = Animation( self, self._media, media_initial_size, media_initial_position )
+        elif self._media.GetMime() in HC.NATIVE_VIDEO: self._media_window = Animation( self, self._media, media_initial_size, media_initial_position )
         elif self._media.GetMime() == HC.APPLICATION_FLASH:
             
             self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
@@ -4158,7 +2667,6 @@ class MediaContainer( wx.Window ):
             
         elif self._media.GetMime() == HC.APPLICATION_PDF: self._media_window = PDFButton( self, self._media.GetHash(), media_initial_size )
         elif self._media.GetMime() in HC.AUDIO: self._media_window = EmbedWindowAudio( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
-        elif self._media.GetMime() in HC.VIDEO: self._media_window = EmbedWindowVideo( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
         
         if ShouldHaveAnimationBar( self._media ):
             
@@ -4336,53 +2844,6 @@ class EmbedButton( wx.Window ):
         
     
 class EmbedWindowAudio( wx.Window ):
-    
-    def __init__( self, parent, hash, mime, size ):
-        
-        wx.Window.__init__( self, parent, size = size )
-        
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-        
-        self._hash = hash
-        self._mime = mime
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        ( width, height ) = size
-        
-        media_height = height - 45
-        
-        self._media_ctrl = wx.media.MediaCtrl( self, size = ( width, media_height ) )
-        self._media_ctrl.Hide()
-        
-        self._embed_button = EmbedButton( self, size = ( width, media_height ) )
-        self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
-        
-        launch_button = wx.Button( self, label = 'launch ' + HC.mime_string_lookup[ mime ] + ' externally', size = ( width, 45 ), pos = ( 0, media_height ) )
-        launch_button.Bind( wx.EVT_BUTTON, self.EventLaunchButton )
-        
-    
-    def EventEmbedButton( self, event ):
-        
-        self._embed_button.Hide()
-        
-        self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
-        
-        path = ClientFiles.GetFilePath( self._hash, self._mime )
-        
-        self._media_ctrl.Load( path )
-        
-        self._media_ctrl.Show()
-        
-    
-    def EventLaunchButton( self, event ):
-        
-        path = ClientFiles.GetFilePath( self._hash, self._mime )
-        
-        HydrusFileHandling.LaunchFile( path )
-        
-    
-class EmbedWindowVideo( wx.Window ):
     
     def __init__( self, parent, hash, mime, size ):
         

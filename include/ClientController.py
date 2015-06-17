@@ -486,21 +486,25 @@ class Controller( HydrusController.HydrusController ):
                     
                     if dlg_yn.ShowModal() == wx.ID_YES:
                         
-                        self._gui.Hide()
+                        def THREADRestart():
+                            
+                            wx.CallAfter( self._gui.Exit )
+                            
+                            while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+                            
+                            self._db.RestoreBackup( path )
+                            
+                            cmd = [ sys.executable ]
+                            
+                            cmd.extend( sys.argv )
+                            
+                            subprocess.Popen( cmd )
+                            
                         
-                        self._gui.Close()
+                        restart_thread = threading.Thread( target = THREADRestart, name = 'Application Restart Thread' )
                         
-                        self._db.Shutdown()
+                        wx.CallAfter( restart_thread.start )
                         
-                        while not self._db.LoopIsFinished(): time.sleep( 0.1 )
-                        
-                        self._db.RestoreBackup( path )
-                        
-                        call_stuff = [ sys.executable ]
-                        
-                        call_stuff.extend( sys.argv )
-                        
-                        subprocess.Popen( call_stuff, shell = True )
                         
                     
                 
@@ -518,7 +522,7 @@ class Controller( HydrusController.HydrusController ):
         HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 )
-        HydrusThreading.DAEMONWorker( 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )
+        HydrusThreading.DAEMONWorker( 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_callable_wait = 6 )
         
         HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
         

@@ -1260,6 +1260,15 @@ class DB( HydrusDB.HydrusDB ):
         job_key.Finish()
         
     
+    def _CleanUpCaches( self ):
+        
+        self._subscriptions_cache = {}
+        self._service_cache = {}
+        
+        self._tag_archives = {}
+        
+    
+    
     def _ClearCombinedAutocompleteTags( self ): self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
     
     def _CopyFiles( self, hashes ):
@@ -1413,8 +1422,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE options ( options TEXT_YAML );', )
         
         self._c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
-        
-        self._c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
         
         self._c.execute( 'CREATE TABLE reasons ( reason_id INTEGER PRIMARY KEY, reason TEXT );' )
         self._c.execute( 'CREATE UNIQUE INDEX reasons_reason_index ON reasons ( reason );' )
@@ -2077,332 +2084,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetDownloads( self ): return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
     
-    def _GetFileQueryIds( self, search_context ):
-        
-        wx.GetApp().ResetIdleTimer()
-        
-        system_predicates = search_context.GetSystemPredicates()
-        
-        file_service_key = search_context.GetFileServiceKey()
-        tag_service_key = search_context.GetTagServiceKey()
-        
-        file_service_id = self._GetServiceId( file_service_key )
-        tag_service_id = self._GetServiceId( tag_service_key )
-        
-        file_service = self._GetService( file_service_id )
-        tag_service = self._GetService( tag_service_id )
-        
-        file_service_type = file_service.GetServiceType()
-        tag_service_type = tag_service.GetServiceType()
-        
-        tags_to_include = search_context.GetTagsToInclude()
-        tags_to_exclude = search_context.GetTagsToExclude()
-        
-        namespaces_to_include = search_context.GetNamespacesToInclude()
-        namespaces_to_exclude = search_context.GetNamespacesToExclude()
-        
-        wildcards_to_include = search_context.GetWildcardsToInclude()
-        wildcards_to_exclude = search_context.GetWildcardsToExclude()
-        
-        include_current_tags = search_context.IncludeCurrentTags()
-        include_pending_tags = search_context.IncludePendingTags()
-        
-        #
-        
-        sql_predicates = [ 'service_id = ' + HydrusData.ToString( file_service_id ) ]
-        
-        simple_preds = system_predicates.GetSimpleInfo()
-        
-        if 'min_size' in simple_preds: sql_predicates.append( 'size > ' + HydrusData.ToString( simple_preds[ 'min_size' ] ) )
-        if 'size' in simple_preds: sql_predicates.append( 'size = ' + HydrusData.ToString( simple_preds[ 'size' ] ) )
-        if 'max_size' in simple_preds: sql_predicates.append( 'size < ' + HydrusData.ToString( simple_preds[ 'max_size' ] ) )
-        
-        if 'mimes' in simple_preds:
-            
-            mimes = simple_preds[ 'mimes' ]
-            
-            if len( mimes ) == 1:
-                
-                ( mime, ) = mimes
-                
-                sql_predicates.append( 'mime = ' + HydrusData.ToString( mime ) )
-                
-            else: sql_predicates.append( 'mime IN ' + HydrusData.SplayListForDB( mimes ) )
-            
-        
-        if 'min_timestamp' in simple_preds: sql_predicates.append( 'timestamp >= ' + HydrusData.ToString( simple_preds[ 'min_timestamp' ] ) )
-        if 'max_timestamp' in simple_preds: sql_predicates.append( 'timestamp <= ' + HydrusData.ToString( simple_preds[ 'max_timestamp' ] ) )
-        
-        if 'min_width' in simple_preds: sql_predicates.append( 'width > ' + HydrusData.ToString( simple_preds[ 'min_width' ] ) )
-        if 'width' in simple_preds: sql_predicates.append( 'width = ' + HydrusData.ToString( simple_preds[ 'width' ] ) )
-        if 'max_width' in simple_preds: sql_predicates.append( 'width < ' + HydrusData.ToString( simple_preds[ 'max_width' ] ) )
-        
-        if 'min_height' in simple_preds: sql_predicates.append( 'height > ' + HydrusData.ToString( simple_preds[ 'min_height' ] ) )
-        if 'height' in simple_preds: sql_predicates.append( 'height = ' + HydrusData.ToString( simple_preds[ 'height' ] ) )
-        if 'max_height' in simple_preds: sql_predicates.append( 'height < ' + HydrusData.ToString( simple_preds[ 'max_height' ] ) )
-        
-        if 'min_num_pixels' in simple_preds: sql_predicates.append( 'width * height > ' + HydrusData.ToString( simple_preds[ 'min_num_pixels' ] ) )
-        if 'num_pixels' in simple_preds: sql_predicates.append( 'width * height = ' + HydrusData.ToString( simple_preds[ 'num_pixels' ] ) )
-        if 'max_num_pixels' in simple_preds: sql_predicates.append( 'width * height < ' + HydrusData.ToString( simple_preds[ 'max_num_pixels' ] ) )
-        
-        if 'min_ratio' in simple_preds:
-            
-            ( ratio_width, ratio_height ) = simple_preds[ 'min_ratio' ]
-            
-            sql_predicates.append( '( width * 1.0 ) / height > ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
-            
-        if 'ratio' in simple_preds:
-            
-            ( ratio_width, ratio_height ) = simple_preds[ 'ratio' ]
-            
-            sql_predicates.append( '( width * 1.0 ) / height = ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
-            
-        if 'max_ratio' in simple_preds:
-            
-            ( ratio_width, ratio_height ) = simple_preds[ 'max_ratio' ]
-            
-            sql_predicates.append( '( width * 1.0 ) / height < ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
-            
-        
-        if 'min_num_words' in simple_preds: sql_predicates.append( 'num_words > ' + HydrusData.ToString( simple_preds[ 'min_num_words' ] ) )
-        if 'num_words' in simple_preds:
-            
-            num_words = simple_preds[ 'num_words' ]
-            
-            if num_words == 0: sql_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
-            else: sql_predicates.append( 'num_words = ' + HydrusData.ToString( num_words ) )
-            
-        if 'max_num_words' in simple_preds:
-            
-            max_num_words = simple_preds[ 'max_num_words' ]
-            
-            if max_num_words == 0: sql_predicates.append( 'num_words < ' + HydrusData.ToString( max_num_words ) )
-            else: sql_predicates.append( '( num_words < ' + HydrusData.ToString( max_num_words ) + ' OR num_words IS NULL )' )
-            
-        
-        if 'min_duration' in simple_preds: sql_predicates.append( 'duration > ' + HydrusData.ToString( simple_preds[ 'min_duration' ] ) )
-        if 'duration' in simple_preds:
-            
-            duration = simple_preds[ 'duration' ]
-            
-            if duration == 0: sql_predicates.append( '( duration IS NULL OR duration = 0 )' )
-            else: sql_predicates.append( 'duration = ' + HydrusData.ToString( duration ) )
-            
-        if 'max_duration' in simple_preds:
-            
-            max_duration = simple_preds[ 'max_duration' ]
-            
-            if max_duration == 0: sql_predicates.append( 'duration < ' + HydrusData.ToString( max_duration ) )
-            else: sql_predicates.append( '( duration < ' + HydrusData.ToString( max_duration ) + ' OR duration IS NULL )' )
-            
-        
-        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
-            
-            query_hash_ids = None
-            
-            if len( tags_to_include ) > 0: query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
-            
-            if len( namespaces_to_include ) > 0:
-                
-                namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
-                
-                if query_hash_ids is None: query_hash_ids = namespace_query_hash_ids
-                else: query_hash_ids.intersection_update( namespace_query_hash_ids )
-                
-            
-            if len( wildcards_to_include ) > 0:
-                
-                wildcard_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) for wildcard in wildcards_to_include ) )
-                
-                if query_hash_ids is None: query_hash_ids = wildcard_query_hash_ids
-                else: query_hash_ids.intersection_update( wildcard_query_hash_ids )
-                
-            
-        else:
-            
-            if file_service_key != CC.COMBINED_FILE_SERVICE_KEY: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
-            elif tag_service_key != CC.COMBINED_TAG_SERVICE_KEY: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( tag_service_id, HC.CURRENT, HC.PENDING ) ) }
-            else: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
-            
-        
-        if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
-        
-        #
-        
-        num_tags_zero = False
-        num_tags_nonzero = False
-        
-        tag_predicates = []
-        
-        if 'min_num_tags' in simple_preds:
-            
-            min_num_tags = simple_preds[ 'min_num_tags' ]
-            
-            if min_num_tags == 0: num_tags_nonzero = True
-            else: tag_predicates.append( lambda x: x > min_num_tags )
-            
-        
-        if 'num_tags' in simple_preds:
-            
-            num_tags = simple_preds[ 'num_tags' ]
-            
-            if num_tags == 0: num_tags_zero = True
-            else: tag_predicates.append( lambda x: x == num_tags )
-            
-        
-        if 'max_num_tags' in simple_preds:
-            
-            max_num_tags = simple_preds[ 'max_num_tags' ]
-            
-            if max_num_tags == 1: num_tags_zero = True
-            else: tag_predicates.append( lambda x: x < max_num_tags )
-            
-        
-        statuses = []
-        
-        if include_current_tags: statuses.append( HC.CURRENT )
-        if include_pending_tags: statuses.append( HC.PENDING )
-        
-        if num_tags_zero or num_tags_nonzero:
-            
-            if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
-            else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
-            
-            nonzero_tag_query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + ';' ) }
-            
-            if num_tags_zero: query_hash_ids.difference_update( nonzero_tag_query_hash_ids )
-            elif num_tags_nonzero: query_hash_ids = nonzero_tag_query_hash_ids
-            
-        
-        if len( tag_predicates ) > 0:
-            
-            if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
-            else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
-            
-            query_hash_ids = { id for ( id, count ) in self._c.execute( 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + ' GROUP BY hash_id;' ) if False not in ( pred( count ) for pred in tag_predicates ) }
-            
-        
-        #
-        
-        if 'hash' in simple_preds:
-            
-            hash_id = self._GetHashId( simple_preds[ 'hash' ] )
-            
-            query_hash_ids.intersection_update( { hash_id } )
-            
-        
-        #
-        
-        exclude_query_hash_ids = set()
-        
-        for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) )
-        
-        for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) )
-        
-        for wildcard in wildcards_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) )
-        
-        query_hash_ids.difference_update( exclude_query_hash_ids )
-        
-        #
-        
-        ( file_services_to_include_current, file_services_to_include_pending, file_services_to_exclude_current, file_services_to_exclude_pending ) = system_predicates.GetFileServiceInfo()
-        
-        for service_key in file_services_to_include_current:
-            
-            service_id = self._GetServiceId( service_key )
-            
-            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-        
-        for service_key in file_services_to_include_pending:
-            
-            service_id = self._GetServiceId( service_key )
-            
-            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-        
-        for service_key in file_services_to_exclude_current:
-            
-            service_id = self._GetServiceId( service_key )
-            
-            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-        
-        for service_key in file_services_to_exclude_pending:
-            
-            service_id = self._GetServiceId( service_key )
-            
-            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-        
-        for ( service_key, operator, value ) in system_predicates.GetRatingsPredicates():
-            
-            service_id = self._GetServiceId( service_key )
-            
-            if value == 'rated': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
-            elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
-            elif value == 'uncertain': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ratings_filter WHERE service_id = ?;', ( service_id, ) ) ] )
-            else:
-                
-                if operator == u'\u2248': predicate = HydrusData.ToString( value * 0.95 ) + ' < rating AND rating < ' + HydrusData.ToString( value * 1.05 )
-                else: predicate = 'rating ' + operator + ' ' + HydrusData.ToString( value )
-                
-                query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
-                
-            
-        
-        #
-        
-        must_be_local = system_predicates.MustBeLocal() or system_predicates.MustBeArchive()
-        must_not_be_local = system_predicates.MustNotBeLocal()
-        must_be_inbox = system_predicates.MustBeInbox()
-        must_be_archive = system_predicates.MustBeArchive()
-        
-        if must_be_local or must_not_be_local:
-            
-            if file_service_id == self._local_file_service_id:
-                
-                if must_not_be_local: query_hash_ids = set()
-                
-            else:
-                
-                local_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
-                
-                if must_be_local: query_hash_ids.intersection_update( local_hash_ids )
-                else: query_hash_ids.difference_update( local_hash_ids )
-                
-            
-        
-        if must_be_inbox or must_be_archive:
-            
-            if must_be_inbox: query_hash_ids.intersection_update( self._inbox_hash_ids )
-            elif must_be_archive: query_hash_ids.difference_update( self._inbox_hash_ids )
-            
-        
-        #
-        
-        if system_predicates.HasSimilarTo():
-            
-            ( similar_to_hash, max_hamming ) = system_predicates.GetSimilarTo()
-            
-            hash_id = self._GetHashId( similar_to_hash )
-            
-            result = self._c.execute( 'SELECT phash FROM perceptual_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-            
-            if result is None: query_hash_ids = set()
-            else:
-                
-                ( phash, ) = result
-                
-                similar_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM perceptual_hashes WHERE hydrus_hamming( phash, ? ) <= ?;', ( sqlite3.Binary( phash ), max_hamming ) ) ]
-                
-                query_hash_ids.intersection_update( similar_hash_ids )
-                
-            
-        
-        return query_hash_ids
-        
-    
     def _GetFileSystemPredicates( self, service_key ):
         
         service_id = self._GetServiceId( service_key )
@@ -2564,6 +2245,354 @@ class DB( HydrusDB.HydrusDB ):
         hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM ' + table_phrase + ' WHERE ' + predicates_phrase + 'namespace_id = ?;', ( namespace_id, ) ) }
         
         return hash_ids
+        
+    
+    def _GetHashIdsFromQuery( self, search_context ):
+        
+        wx.GetApp().ResetIdleTimer()
+        
+        system_predicates = search_context.GetSystemPredicates()
+        
+        file_service_key = search_context.GetFileServiceKey()
+        tag_service_key = search_context.GetTagServiceKey()
+        
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_id = self._GetServiceId( tag_service_key )
+        
+        file_service = self._GetService( file_service_id )
+        tag_service = self._GetService( tag_service_id )
+        
+        file_service_type = file_service.GetServiceType()
+        tag_service_type = tag_service.GetServiceType()
+        
+        tags_to_include = search_context.GetTagsToInclude()
+        tags_to_exclude = search_context.GetTagsToExclude()
+        
+        namespaces_to_include = search_context.GetNamespacesToInclude()
+        namespaces_to_exclude = search_context.GetNamespacesToExclude()
+        
+        wildcards_to_include = search_context.GetWildcardsToInclude()
+        wildcards_to_exclude = search_context.GetWildcardsToExclude()
+        
+        include_current_tags = search_context.IncludeCurrentTags()
+        include_pending_tags = search_context.IncludePendingTags()
+        
+        #
+        
+        sql_predicates = [ 'service_id = ' + HydrusData.ToString( file_service_id ) ]
+        
+        simple_preds = system_predicates.GetSimpleInfo()
+        
+        if 'min_size' in simple_preds: sql_predicates.append( 'size > ' + HydrusData.ToString( simple_preds[ 'min_size' ] ) )
+        if 'size' in simple_preds: sql_predicates.append( 'size = ' + HydrusData.ToString( simple_preds[ 'size' ] ) )
+        if 'max_size' in simple_preds: sql_predicates.append( 'size < ' + HydrusData.ToString( simple_preds[ 'max_size' ] ) )
+        
+        if 'mimes' in simple_preds:
+            
+            mimes = simple_preds[ 'mimes' ]
+            
+            if len( mimes ) == 1:
+                
+                ( mime, ) = mimes
+                
+                sql_predicates.append( 'mime = ' + HydrusData.ToString( mime ) )
+                
+            else: sql_predicates.append( 'mime IN ' + HydrusData.SplayListForDB( mimes ) )
+            
+        
+        if 'min_timestamp' in simple_preds: sql_predicates.append( 'timestamp >= ' + HydrusData.ToString( simple_preds[ 'min_timestamp' ] ) )
+        if 'max_timestamp' in simple_preds: sql_predicates.append( 'timestamp <= ' + HydrusData.ToString( simple_preds[ 'max_timestamp' ] ) )
+        
+        if 'min_width' in simple_preds: sql_predicates.append( 'width > ' + HydrusData.ToString( simple_preds[ 'min_width' ] ) )
+        if 'width' in simple_preds: sql_predicates.append( 'width = ' + HydrusData.ToString( simple_preds[ 'width' ] ) )
+        if 'max_width' in simple_preds: sql_predicates.append( 'width < ' + HydrusData.ToString( simple_preds[ 'max_width' ] ) )
+        
+        if 'min_height' in simple_preds: sql_predicates.append( 'height > ' + HydrusData.ToString( simple_preds[ 'min_height' ] ) )
+        if 'height' in simple_preds: sql_predicates.append( 'height = ' + HydrusData.ToString( simple_preds[ 'height' ] ) )
+        if 'max_height' in simple_preds: sql_predicates.append( 'height < ' + HydrusData.ToString( simple_preds[ 'max_height' ] ) )
+        
+        if 'min_num_pixels' in simple_preds: sql_predicates.append( 'width * height > ' + HydrusData.ToString( simple_preds[ 'min_num_pixels' ] ) )
+        if 'num_pixels' in simple_preds: sql_predicates.append( 'width * height = ' + HydrusData.ToString( simple_preds[ 'num_pixels' ] ) )
+        if 'max_num_pixels' in simple_preds: sql_predicates.append( 'width * height < ' + HydrusData.ToString( simple_preds[ 'max_num_pixels' ] ) )
+        
+        if 'min_ratio' in simple_preds:
+            
+            ( ratio_width, ratio_height ) = simple_preds[ 'min_ratio' ]
+            
+            sql_predicates.append( '( width * 1.0 ) / height > ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
+            
+        if 'ratio' in simple_preds:
+            
+            ( ratio_width, ratio_height ) = simple_preds[ 'ratio' ]
+            
+            sql_predicates.append( '( width * 1.0 ) / height = ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
+            
+        if 'max_ratio' in simple_preds:
+            
+            ( ratio_width, ratio_height ) = simple_preds[ 'max_ratio' ]
+            
+            sql_predicates.append( '( width * 1.0 ) / height < ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
+            
+        
+        if 'min_num_words' in simple_preds: sql_predicates.append( 'num_words > ' + HydrusData.ToString( simple_preds[ 'min_num_words' ] ) )
+        if 'num_words' in simple_preds:
+            
+            num_words = simple_preds[ 'num_words' ]
+            
+            if num_words == 0: sql_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
+            else: sql_predicates.append( 'num_words = ' + HydrusData.ToString( num_words ) )
+            
+        if 'max_num_words' in simple_preds:
+            
+            max_num_words = simple_preds[ 'max_num_words' ]
+            
+            if max_num_words == 0: sql_predicates.append( 'num_words < ' + HydrusData.ToString( max_num_words ) )
+            else: sql_predicates.append( '( num_words < ' + HydrusData.ToString( max_num_words ) + ' OR num_words IS NULL )' )
+            
+        
+        if 'min_duration' in simple_preds: sql_predicates.append( 'duration > ' + HydrusData.ToString( simple_preds[ 'min_duration' ] ) )
+        if 'duration' in simple_preds:
+            
+            duration = simple_preds[ 'duration' ]
+            
+            if duration == 0: sql_predicates.append( '( duration IS NULL OR duration = 0 )' )
+            else: sql_predicates.append( 'duration = ' + HydrusData.ToString( duration ) )
+            
+        if 'max_duration' in simple_preds:
+            
+            max_duration = simple_preds[ 'max_duration' ]
+            
+            if max_duration == 0: sql_predicates.append( 'duration < ' + HydrusData.ToString( max_duration ) )
+            else: sql_predicates.append( '( duration < ' + HydrusData.ToString( max_duration ) + ' OR duration IS NULL )' )
+            
+        
+        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
+            
+            query_hash_ids = None
+            
+            if len( tags_to_include ) > 0: query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+            
+            if len( namespaces_to_include ) > 0:
+                
+                namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
+                
+                if query_hash_ids is None: query_hash_ids = namespace_query_hash_ids
+                else: query_hash_ids.intersection_update( namespace_query_hash_ids )
+                
+            
+            if len( wildcards_to_include ) > 0:
+                
+                wildcard_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) for wildcard in wildcards_to_include ) )
+                
+                if query_hash_ids is None: query_hash_ids = wildcard_query_hash_ids
+                else: query_hash_ids.intersection_update( wildcard_query_hash_ids )
+                
+            
+        else:
+            
+            if file_service_key != CC.COMBINED_FILE_SERVICE_KEY: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
+            elif tag_service_key != CC.COMBINED_TAG_SERVICE_KEY: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( tag_service_id, HC.CURRENT, HC.PENDING ) ) }
+            else: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
+            
+        
+        if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
+        
+        #
+        
+        include_zero_count_in_calculation = False
+        num_tags_zero = False
+        num_tags_nonzero = False
+        
+        tag_predicates = []
+        
+        if 'min_num_tags' in simple_preds:
+            
+            min_num_tags = simple_preds[ 'min_num_tags' ]
+            
+            if min_num_tags == 0: num_tags_nonzero = True
+            else: tag_predicates.append( lambda x: x > min_num_tags )
+            
+        
+        if 'num_tags' in simple_preds:
+            
+            num_tags = simple_preds[ 'num_tags' ]
+            
+            if num_tags == 0: num_tags_zero = True
+            else: tag_predicates.append( lambda x: x == num_tags )
+            
+        
+        if 'max_num_tags' in simple_preds:
+            
+            max_num_tags = simple_preds[ 'max_num_tags' ]
+            
+            if max_num_tags == 1: num_tags_zero = True
+            else:
+                
+                include_zero_count_in_calculation = True
+                
+                tag_predicates.append( lambda x: x < max_num_tags )
+                
+            
+        
+        statuses = []
+        
+        if include_current_tags: statuses.append( HC.CURRENT )
+        if include_pending_tags: statuses.append( HC.PENDING )
+        
+        if num_tags_zero or num_tags_nonzero:
+            
+            if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
+            else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
+            
+            nonzero_tag_query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + ';' ) }
+            
+            if num_tags_zero: query_hash_ids.difference_update( nonzero_tag_query_hash_ids )
+            elif num_tags_nonzero: query_hash_ids = nonzero_tag_query_hash_ids
+            
+        
+        if len( tag_predicates ) > 0:
+            
+            if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
+            else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
+            
+            nonzero_counts_query = 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + ' GROUP BY hash_id;'
+            
+            if include_zero_count_in_calculation:
+                
+                nonzero_counts = self._c.execute( nonzero_counts_query ).fetchall()
+                
+                zero_hash_ids = query_hash_ids.difference( ( id for ( id, count ) in nonzero_counts ) )
+                
+                zero_counts = ( ( id, 0 ) for id in zero_hash_ids )
+                
+                counts_iterable = itertools.chain( nonzero_counts, zero_counts )
+                
+            else:
+                
+                counts_iterable = self._c.execute( nonzero_counts_query )
+                
+            
+            query_hash_ids = { id for ( id, count ) in counts_iterable if False not in ( pred( count ) for pred in tag_predicates ) }
+            
+        
+        #
+        
+        if 'hash' in simple_preds:
+            
+            hash_id = self._GetHashId( simple_preds[ 'hash' ] )
+            
+            query_hash_ids.intersection_update( { hash_id } )
+            
+        
+        #
+        
+        exclude_query_hash_ids = set()
+        
+        for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) )
+        
+        for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) )
+        
+        for wildcard in wildcards_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) )
+        
+        query_hash_ids.difference_update( exclude_query_hash_ids )
+        
+        #
+        
+        ( file_services_to_include_current, file_services_to_include_pending, file_services_to_exclude_current, file_services_to_exclude_pending ) = system_predicates.GetFileServiceInfo()
+        
+        for service_key in file_services_to_include_current:
+            
+            service_id = self._GetServiceId( service_key )
+            
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_key in file_services_to_include_pending:
+            
+            service_id = self._GetServiceId( service_key )
+            
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_key in file_services_to_exclude_current:
+            
+            service_id = self._GetServiceId( service_key )
+            
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_key in file_services_to_exclude_pending:
+            
+            service_id = self._GetServiceId( service_key )
+            
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for ( service_key, operator, value ) in system_predicates.GetRatingsPredicates():
+            
+            service_id = self._GetServiceId( service_key )
+            
+            if value == 'rated': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+            elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+            else:
+                
+                if operator == u'\u2248': predicate = HydrusData.ToString( value * 0.95 ) + ' < rating AND rating < ' + HydrusData.ToString( value * 1.05 )
+                else: predicate = 'rating ' + operator + ' ' + HydrusData.ToString( value )
+                
+                query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
+                
+            
+        
+        #
+        
+        must_be_local = system_predicates.MustBeLocal() or system_predicates.MustBeArchive()
+        must_not_be_local = system_predicates.MustNotBeLocal()
+        must_be_inbox = system_predicates.MustBeInbox()
+        must_be_archive = system_predicates.MustBeArchive()
+        
+        if must_be_local or must_not_be_local:
+            
+            if file_service_id == self._local_file_service_id:
+                
+                if must_not_be_local: query_hash_ids = set()
+                
+            else:
+                
+                local_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
+                
+                if must_be_local: query_hash_ids.intersection_update( local_hash_ids )
+                else: query_hash_ids.difference_update( local_hash_ids )
+                
+            
+        
+        if must_be_inbox or must_be_archive:
+            
+            if must_be_inbox: query_hash_ids.intersection_update( self._inbox_hash_ids )
+            elif must_be_archive: query_hash_ids.difference_update( self._inbox_hash_ids )
+            
+        
+        #
+        
+        if system_predicates.HasSimilarTo():
+            
+            ( similar_to_hash, max_hamming ) = system_predicates.GetSimilarTo()
+            
+            hash_id = self._GetHashId( similar_to_hash )
+            
+            result = self._c.execute( 'SELECT phash FROM perceptual_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            
+            if result is None: query_hash_ids = set()
+            else:
+                
+                ( phash, ) = result
+                
+                similar_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM perceptual_hashes WHERE hydrus_hamming( phash, ? ) <= ?;', ( sqlite3.Binary( phash ), max_hamming ) ) ]
+                
+                query_hash_ids.intersection_update( similar_hash_ids )
+                
+            
+        
+        return query_hash_ids
         
     
     def _GetHashIdsFromTag( self, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ):
@@ -3268,21 +3297,6 @@ class DB( HydrusDB.HydrusDB ):
             
             return media_result
             
-        
-    
-    def _GetRatingsFilter( self, service_key, hashes ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        hash_ids = self._GetHashIds( hashes )
-        
-        empty_rating = lambda: ( 0.0, 1.0 )
-        
-        ratings_filter = collections.defaultdict( empty_rating )
-        
-        ratings_filter.update( ( ( hash, ( min, max ) ) for ( hash, min, max ) in self._c.execute( 'SELECT hash, min, max FROM ratings_filter, hashes USING ( hash_id ) WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ) )
-        
-        return ratings_filter
         
     
     def _GetService( self, service_id ):
@@ -4354,8 +4368,6 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if rating is not None:
                                 
-                                self._c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-                                
                                 self._c.executemany( 'INSERT INTO local_ratings ( service_id, hash_id, rating ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, rating ) for hash_id in hash_ids ] )
                                 
                                 ratings_added += self._GetRowCount()
@@ -4365,18 +4377,6 @@ class DB( HydrusDB.HydrusDB ):
                             
                             # and then do a thing here where it looks up remote services links and then pends/rescinds pends appropriately
                             
-                        
-                    elif action == HC.CONTENT_UPDATE_RATINGS_FILTER:
-                        
-                        ( min, max, hashes ) = row
-                        
-                        hash_ids = self._GetHashIds( hashes )
-                        
-                        splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
-                        
-                        self._c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-                        
-                        self._c.executemany( 'INSERT INTO ratings_filter ( service_id, hash_id, min, max ) VALUES ( ?, ?, ?, ? );', [ ( service_id, hash_id, min, max ) for hash_id in hash_ids ] )
                         
                     
                 
@@ -4554,7 +4554,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
         elif action == 'export_folders': result = self._GetYAMLDump( YAML_DUMP_ID_EXPORT_FOLDER )
-        elif action == 'file_query_ids': result = self._GetFileQueryIds( *args, **kwargs )
+        elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
         elif action == 'gui_sessions': result = self._GetYAMLDump( YAML_DUMP_ID_GUI_SESSION )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
@@ -4571,7 +4571,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
         elif action == 'pixiv_account': result = self._GetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account' )
-        elif action == 'ratings_filter': result = self._GetRatingsFilter( *args, **kwargs )
         elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( *args, **kwargs )
         elif action == 'remote_booru': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'remote_boorus': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU )
@@ -4861,21 +4860,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
-        
-        if version == 110:
-            
-            all_services = self._c.execute( 'SELECT service_id, service_type, info FROM services;' ).fetchall()
-            
-            for ( service_id, service_type, info ) in all_services:
-                
-                if service_type in HC.REPOSITORIES:
-                    
-                    info[ 'paused' ] = False
-                    
-                    self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                    
-                
-            
         
         if version == 114:
             
@@ -5389,6 +5373,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                 
+            
+        
+        if version == 160:
+            
+            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'e621', ClientDefaults.GetDefaultBoorus()[ 'e621' ] ) )
+            
+            self._c.execute( 'DROP TABLE ratings_filter;' )
             
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

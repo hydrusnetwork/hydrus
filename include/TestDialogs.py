@@ -110,36 +110,6 @@ class TestNonDBDialogs( unittest.TestCase ):
             
         
     
-    def test_dialog_finish_rating_filtering( self ):
-        
-        with ClientGUIDialogs.DialogFinishRatingFiltering( None, 3, 5 ) as dlg:
-            
-            HitButton( dlg._back )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_CANCEL )
-            
-        
-        with ClientGUIDialogs.DialogFinishRatingFiltering( None, 3, 5 ) as dlg:
-            
-            HitButton( dlg._commit )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_YES )
-            
-        
-        with ClientGUIDialogs.DialogFinishRatingFiltering( None, 3, 5 ) as dlg:
-            
-            HitButton( dlg._forget )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_NO )
-            
-        
-    
     def test_dialog_first_start( self ):
         
         with ClientGUIDialogs.DialogFirstStart( None ) as dlg:

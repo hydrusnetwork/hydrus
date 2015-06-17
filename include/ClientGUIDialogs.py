@@ -24,7 +24,6 @@ import re
 import shutil
 import stat
 import string
-import subprocess
 import threading
 import time
 import traceback
@@ -595,48 +594,6 @@ class DialogFinishFiltering( Dialog ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         label = keep + ' ' + HydrusData.ConvertIntToPrettyString( num_kept ) + ' and ' + delete + ' ' + HydrusData.ConvertIntToPrettyString( num_deleted ) + ' files?'
-        
-        vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        wx.CallAfter( self._commit.SetFocus )
-        
-    
-class DialogFinishRatingFiltering( Dialog ):
-    
-    def __init__( self, parent, num_certain_ratings, num_uncertain_ratings ):
-        
-        Dialog.__init__( self, parent, 'are you sure?', position = 'center' )
-        
-        self._commit = wx.Button( self, id = wx.ID_YES, label = 'commit' )
-        self._commit.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._forget = wx.Button( self, id = wx.ID_NO, label = 'forget' )
-        self._forget.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        self._back = wx.Button( self, id = wx.ID_CANCEL, label = 'back to filtering' )
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.AddF( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        info_strings = []
-        
-        if num_certain_ratings > 0: info_strings.append( HydrusData.ConvertIntToPrettyString( num_certain_ratings ) + ' ratings' )
-        if num_uncertain_ratings > 0: info_strings.append( HydrusData.ConvertIntToPrettyString( num_uncertain_ratings ) + ' uncertain changes' )
-        
-        label = 'Apply ' + ' and '.join( info_strings ) + '?'
         
         vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2628,7 +2585,7 @@ class DialogInputShortcut( Dialog ):
             
             self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
             
-            self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'ratings_filter', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally' ] )
+            self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally' ] )
             
             self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -4012,7 +3969,12 @@ class DialogSelectBooru( Dialog ):
             
             boorus = wx.GetApp().Read( 'remote_boorus' )
             
-            for ( name, booru ) in boorus.items(): self._boorus.Append( name, booru )
+            for ( name, booru ) in boorus.items():
+                
+                self._boorus.Append( name )
+                
+                self._names_to_boorus[ name ] = booru
+                
             
         
         def ArrangeControls():
@@ -4032,6 +3994,8 @@ class DialogSelectBooru( Dialog ):
         
         Dialog.__init__( self, parent, 'select booru' )
         
+        self._names_to_boorus = {}
+        
         InitialiseControls()
         
         PopulateControls()
@@ -4050,7 +4014,12 @@ class DialogSelectBooru( Dialog ):
         if selection != wx.NOT_FOUND: self.EndModal( wx.ID_OK )
         
     
-    def GetBooru( self ): return self._boorus.GetClientData( self._boorus.GetSelection() )
+    def GetBooru( self ):
+        
+        name = self._boorus.GetString( self._boorus.GetSelection() )
+        
+        return self._names_to_boorus[ name ]
+        
     
 class DialogSelectImageboard( Dialog ):
     

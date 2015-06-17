@@ -912,18 +912,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertTrue( result, ( pixiv_id, password ) )
         
     
-    def test_ratings_filter( self ):
-        
-        # add ratings servicess
-        # fetch no half-ratings
-        # then add some half-ratings to files
-        # fetch them
-        # apply some full ratings
-        # fetch them, check the difference
-        
-        pass
-        
-    
     def test_ratings_media_result( self ):
         
         # add some ratings, slice different media results?

@@ -111,6 +111,8 @@ class DAEMONWorker( DAEMON ):
             
             time.sleep( self._pre_callable_wait )
             
+            if HydrusGlobals.shutdown: return
+            
             while wx.GetApp().JustWokeFromSleep():
                 
                 if HydrusGlobals.shutdown: return

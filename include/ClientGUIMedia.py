@@ -16,7 +16,6 @@ import HydrusThreading
 import itertools
 import os
 import random
-import subprocess
 import threading
 import time
 import traceback
@@ -71,8 +70,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self.SetBackgroundColour( wx.WHITE )
-        
-        #self.SetDoubleBuffered( True )
         
         self.SetScrollRate( 0, 50 )
         
@@ -523,7 +520,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
                 
                 if service.GetServiceType() == HC.LOCAL_RATING_LIKE: ClientGUICanvas.RatingsFilterFrameLike( self.GetTopLevelParent(), self._page_key, service_key, media_results )
-                elif service.GetServiceType() == HC.LOCAL_RATING_NUMERICAL: ClientGUICanvas.RatingsFilterFrameNumerical( self.GetTopLevelParent(), self._page_key, service_key, media_results )
                 
             except: wx.MessageBox( traceback.format_exc() )
             
@@ -1398,7 +1394,6 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'new_thread_dumper': self._NewThreadDumper()
             elif command == 'open_externally': self._OpenExternally()
             elif command == 'petition': self._PetitionFiles( data )
-            elif command == 'ratings_filter': self._RatingsFilter( data )
             elif command == 'remove': self._Remove()
             elif command == 'rescind_petition': self._RescindPetitionFiles( data )
             elif command == 'rescind_upload': self._RescindUploadFiles( data )

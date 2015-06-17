@@ -7,6 +7,7 @@ import HydrusSerialisable
 import locale
 import os
 import sqlite3
+import subprocess
 import sys
 import threading
 import time
@@ -548,6 +549,23 @@ def GetNowPrecise():
     if HC.PLATFORM_WINDOWS: return time.clock()
     else: return time.time()
     
+def GetSubprocessStartupInfo():
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        # This suppresses the terminal window that tends to pop up when calling ffmpeg or whatever
+        
+        startupinfo = subprocess.STARTUPINFO()
+        
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        
+    else:
+        
+        startupinfo = None
+        
+    
+    return startupinfo
+    
 def IntelligentMassIntersect( sets_to_reduce ):
     
     answer = None
@@ -1066,7 +1084,6 @@ class ContentUpdate( object ):
         elif self._data_type == HC.CONTENT_DATA_TYPE_RATINGS:
             
             if self._action == HC.CONTENT_UPDATE_ADD: ( rating, hashes ) = self._row
-            elif self._action == HC.CONTENT_UPDATE_RATINGS_FILTER: ( min, max, hashes ) = self._row
             
         
         if type( hashes ) != set: hashes = set( hashes )
@@ -1305,7 +1322,16 @@ class JobKey( object ):
             if 'popup_message_db_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_message_db_traceback' ] )
             
         
-        return os.linesep.join( stuff_to_print )
+        try:
+            
+            return os.linesep.join( stuff_to_print )
+            
+        except UnicodeEncodeError:
+            
+            stuff_to_print = [ ToString( s ) for s in stuff_to_print ]
+            
+            return os.linesep.join( stuff_to_print )
+            
         
     
     def WaitOnPause( self ):

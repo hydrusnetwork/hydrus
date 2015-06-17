@@ -562,7 +562,7 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
         self._service_numerical = wx.Choice( self )
         self._service_numerical.Bind( wx.EVT_CHOICE, self.EventRatingsService )
         
-        self._sign_numerical = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248', '=rated', '=not rated', '=uncertain' ] )
+        self._sign_numerical = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248', '=rated', '=not rated' ] )
         
         self._value_numerical = wx.SpinCtrl( self, min = 0, max = 50000, size = ( 60, -1 ) ) # set bounds based on current service
         
@@ -605,7 +605,7 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
         
         operator = self._sign_numerical.GetStringSelection()
         
-        if operator in ( '=rated', '=not rated', '=uncertain' ):
+        if operator in ( '=rated', '=not rated' ):
             
             value = operator[1:]
             

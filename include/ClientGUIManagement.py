@@ -5,6 +5,7 @@ import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import HydrusNetworking
+import HydrusSerialisable
 import HydrusThreading
 import ClientConstants as CC
 import ClientData
@@ -338,6 +339,109 @@ class Comment( wx.Panel ):
         event.Skip()
         
     
+class ManagementController( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._panel_type_name = None
+        
+        self._keys = {}
+        self._simples = {}
+        self._serialisables = {}
+        
+        self._simples[ 'paused' ] = False
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._panel_type_name, { name : value.encode( 'hex' ) for ( name, value ) in self._keys }, self._simples, { name : HydrusSerialisable.DumpToTuple( value ) for ( name, value ) in self._serialisables.items() } )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._panel_type_name, file_service_key, self._simples, serialisables ) = serialisable_info
+        
+        self._file_service_key = file_service_key.decode( 'hex' )
+        
+        self._serialisables = { name : HydrusSerialisable.CreateFromTuple( value ) for ( name, value ) in serialisables }
+        
+    
+    def GetFileServiceKey( self ):
+        
+        return self._keys[ 'file_service' ]
+        
+    
+    def GetPageKey( self ):
+        
+        return self._keys[ 'page' ]
+        
+    
+    def GetPanelName( self ):
+        
+        return self._panel_type_name
+        
+    
+    def GetVariable( self, name, value ):
+        
+        if name in self._simples:
+            
+            return self._simples[ name ]
+            
+        else:
+            
+            return self._serialisables[ name ]
+            
+        
+    
+    def IsPaused( self ):
+        
+        return self._simples[ 'paused' ]
+        
+    
+    def Pause( self ):
+        
+        self._simples[ 'paused' ] = True
+        
+    
+    def Resume( self ):
+        
+        self._simples[ 'paused' ] = False
+        
+    
+    def SetFileServiceKey( self, file_service_key ):
+        
+        self._keys[ 'file_service' ] = file_service_key
+        
+    
+    def SetPageKey( self, page_key ):
+        
+        self._keys[ 'page' ] = page_key
+        
+    
+    def SetPanelName( self, name ):
+        
+        self._panel_type_name = name
+        
+    
+    def SetVariable( self, name, value ):
+        
+        if isinstance( value, HydrusSerialisable.SerialisableBase ):
+            
+            self._serialisables[ name ] = value
+            
+        else:
+            
+            self._simples[ name ] = value
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER ] = ManagementController
+
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def __init__( self, parent, page, page_key, file_service_key = CC.LOCAL_FILE_SERVICE_KEY, starting_from_session = False ):
@@ -346,16 +450,17 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self.SetupScrolling()
         
-        #self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         self.SetBackgroundColour( wx.WHITE )
+        
+        self._controller = ManagementController()
+        
+        self._controller.SetFileServiceKey( file_service_key )
+        self._controller.SetPageKey( page_key )
         
         self._page = page
         self._page_key = page_key
-        self._file_service_key = file_service_key
         self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
         self._starting_from_session = starting_from_session
-        
-        self._paused = False
         
         HydrusGlobals.pubsub.sub( self, 'SetSearchFocus', 'set_search_focus' )
         HydrusGlobals.pubsub.sub( self, 'Pause', 'pause' )
@@ -391,12 +496,18 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def Pause( self, page_key ):
         
-        if page_key == self._page_key: self._paused = True
+        if page_key == self._page_key:
+            
+            self._controller.Pause()
+            
         
     
     def Resume( self, page_key ):
         
-        if page_key == self._page_key: self._paused = False
+        if page_key == self._page_key:
+            
+            self._controller.Resume()
+            
         
     
     def SetSearchFocus( self, page_key ): pass
@@ -1027,7 +1138,7 @@ class ManagementPanelDumper( ManagementPanel ):
     
     def TIMEREvent( self, event ):
         
-        if self._paused: return
+        if self._controller.IsPaused(): return
         
         if self._actually_dumping: return
         
@@ -1468,16 +1579,15 @@ class ManagementPanelImports( ManagementPanelImport ):
         queue_hbox.AddF( self._pending_import_queues_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_MIXED )
         
+        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._pending_import_queues_panel )
+        
         self._pending_import_queues_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._pending_import_queues_panel.AddF( self._new_queue_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_import_queues_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_CENTER )
         self._pending_import_queues_panel.AddF( self._file_limit, CC.FLAGS_CENTER )
+        self._pending_import_queues_panel.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.AddF( self._pending_import_queues_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
-        
-        vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         wx.CallAfter( self._new_queue_input.SelectAll )
         
@@ -1851,17 +1961,17 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
         
         #
         
-        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces )
+        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._pending_import_queues_panel, namespaces )
         self._advanced_tag_options.SetInfo( ato )
+        
+        self._pending_import_queues_panel.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if self._site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
             
-            self._advanced_hentai_foundry_options = ClientGUICollapsible.CollapsibleOptionsHentaiFoundry( self )
+            self._advanced_hentai_foundry_options = ClientGUICollapsible.CollapsibleOptionsHentaiFoundry( self._pending_import_queues_panel )
             
-            vbox.AddF( self._advanced_hentai_foundry_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._pending_import_queues_panel.AddF( self._advanced_hentai_foundry_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-        
-        vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def GetAdvancedHentaiFoundryOptions( self ): return self._advanced_hentai_foundry_options.GetInfo()
@@ -2007,22 +2117,20 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         button_box.AddF( self._thread_pause_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         button_box.AddF( self._thread_manual_refresh_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._thread_panel )
+        
+        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_panel, namespaces = [ 'filename' ] )
+        
         self._thread_panel.AddF( self._thread_info, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._thread_panel.AddF( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._thread_panel.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_panel.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.AddF( self._thread_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._thread_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
-        
-        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = [ 'filename' ] )
-        
-        vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
-        
-        vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def _SetThreadVariables( self ):
@@ -2292,6 +2400,8 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _DrawCurrentPetition( self ):
         
+        file_service_key = self._controller.GetFileServiceKey()
+        
         if self._current_petition is None:
             
             self._petition_info_text_ctrl.SetValue( '' )
@@ -2300,7 +2410,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._can_ban: self._modify_petitioner.Disable()
             
-            panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, self._file_service_key )
+            panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, file_service_key )
             
         else:
             
@@ -2310,9 +2420,9 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._can_ban: self._modify_petitioner.Enable()
             
-            with wx.BusyCursor(): media_results = wx.GetApp().Read( 'media_results', self._file_service_key, self._current_petition.GetHashes() )
+            with wx.BusyCursor(): media_results = wx.GetApp().Read( 'media_results', file_service_key, self._current_petition.GetHashes() )
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_key, media_results )
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
             
             panel.Collect( self._page_key, self._collect_by.GetChoice() )
             
@@ -2429,7 +2539,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._current_predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._search_panel, self._page_key, initial_predicates )
             
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_key, CC.COMBINED_TAG_SERVICE_KEY, self._page.GetMedia )
+            file_service_key = self._controller.GetFileServiceKey()
+            
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_service_key, CC.COMBINED_TAG_SERVICE_KEY, self._page.GetMedia )
             
             self._search_panel.AddF( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._search_panel.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2472,18 +2584,20 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
+                file_service_key = self._controller.GetFileServiceKey()
+                
                 if len( current_predicates ) > 0:
                     
                     include_current = self._include_current_tags
                     include_pending = self._include_pending_tags
                     
-                    search_context = ClientData.FileSearchContext( self._file_service_key, self._tag_service_key, include_current, include_pending, current_predicates )
+                    search_context = ClientData.FileSearchContext( file_service_key, self._tag_service_key, include_current, include_pending, current_predicates )
                     
                     wx.GetApp().StartFileQuery( self._query_key, search_context )
                     
-                    panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, self._file_service_key )
+                    panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
                     
-                else: panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, self._file_service_key )
+                else: panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, file_service_key )
                 
                 HydrusGlobals.pubsub.pub( 'swap_media_panel', self._page_key, panel )
                 
@@ -2531,7 +2645,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._file_service_key = service_key
+            self._controller.SetFileServiceKey( service_key )
             
             self._DoQuery()
             
@@ -2625,7 +2739,9 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_key, media_results )
+                file_service_key = self._controller.GetFileServiceKey()
+                
+                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
                 
                 panel.Collect( self._page_key, self._collect_by.GetChoice() )
                 

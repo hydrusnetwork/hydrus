@@ -251,21 +251,33 @@ def IsImage( mime ): return mime in ( HC.IMAGE_JPEG, HC.IMAGE_GIF, HC.IMAGE_PNG,
 
 def LaunchDirectory( path ):
     
-    if HC.PLATFORM_WINDOWS: launch_phrase = 'explorer '
-    elif HC.PLATFORM_OSX: launch_phrase = 'open '
-    elif HC.PLATFORM_LINUX: launch_phrase = 'xdg-open '
-    
-    subprocess.Popen( launch_phrase + '"' + path + '"', shell = True )
+    if HC.PLATFORM_WINDOWS:
+        
+        os.startfile( path )
+        
+    else:
+        
+        if HC.PLATFORM_OSX: cmd = [ 'open' ]
+        elif HC.PLATFORM_LINUX: cmd = [ 'xdg-open' ]
+        
+        cmd.append( path )
+        
+        subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+        
     
 def LaunchFile( path ):
     
-    # Don't even think about omitting the double quotes on start
-    
-    if HC.PLATFORM_WINDOWS: launch_phrase = 'start "" '
-    elif HC.PLATFORM_OSX: launch_phrase = 'open '
-    elif HC.PLATFORM_LINUX: launch_phrase = 'xdg-open '
-    
-    subprocess.Popen( launch_phrase + '"' + path + '"', shell = True )
-    
+    if HC.PLATFORM_WINDOWS:
+        
+        os.startfile( path )
+        
+    else:
+        
+        if HC.PLATFORM_OSX: cmd = [ 'open' ]
+        elif HC.PLATFORM_LINUX: cmd = [ 'xdg-open' ]
+        
+        cmd.append( path )
+        
+        subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
         
     

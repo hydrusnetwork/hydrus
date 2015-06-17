@@ -599,7 +599,7 @@ def DAEMONSynchroniseRepositories():
                     
                     job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - processing' )
                     
-                    WEIGHT_THRESHOLD = 50.0
+                    WEIGHT_THRESHOLD = 200.0
                     
                     while service.CanProcessUpdate():
                         
@@ -637,6 +637,8 @@ def DAEMONSynchroniseRepositories():
                                 return
                                 
                             
+                            precise_timestamp = HydrusData.GetNowPrecise()
+                            
                         
                         now = HydrusData.GetNow()
                         
@@ -662,6 +664,9 @@ def DAEMONSynchroniseRepositories():
                         
                         subindex_count = service_update_package.GetSubindexCount()
                         
+                        pending_content_updates = []
+                        pending_weight = 0
+                        
                         for subindex in range( subindex_count ):
                             
                             subupdate_index_string = 'content update ' + HydrusData.ConvertValueRangeToPrettyString( subindex + 1, subindex_count ) + ': '
@@ -678,13 +683,11 @@ def DAEMONSynchroniseRepositories():
                             
                             job_key.SetVariable( 'popup_message_text_1', update_index_string + subupdate_index_string + 'processing' )
                             
-                            content_updates = []
-                            current_weight = 0
-                            num_rows = content_update_package.GetNumRows()
-                            total_weight_processed = 0
-                            wait_begin_precise = HydrusData.GetNowPrecise()
+                            c_u_p_num_rows = content_update_package.GetNumRows()
+                            c_u_p_total_weight_processed = 0
+                            precise_timestamp = HydrusData.GetNowPrecise()
                             
-                            for ( i, content_update ) in enumerate( content_update_package.IterateContentUpdates() ):
+                            for content_update in content_update_package.IterateContentUpdates():
                                 
                                 while job_key.IsPaused() or job_key.IsCancelled() or options[ 'pause_repo_sync' ] or HydrusGlobals.shutdown:
                                     
@@ -720,47 +723,39 @@ def DAEMONSynchroniseRepositories():
                                         return
                                         
                                     
+                                    precise_timestamp = HydrusData.GetNowPrecise()
+                                    
                                 
-                                content_updates.append( content_update )
+                                pending_content_updates.append( content_update )
                                 
                                 content_update_weight = len( content_update.GetHashes() )
                                 
-                                current_weight += content_update_weight
+                                pending_weight += content_update_weight
                                 
-                                total_weight_processed += content_update_weight
+                                c_u_p_total_weight_processed += content_update_weight
                                 
-                                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( total_weight_processed, num_rows ) + ': '
+                                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                                 
                                 job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' + update_speed_string )
                                 
-                                job_key.SetVariable( 'popup_message_gauge_2', ( total_weight_processed, num_rows ) )
+                                job_key.SetVariable( 'popup_message_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
                                 
-                                if current_weight > WEIGHT_THRESHOLD:
+                                if pending_weight > WEIGHT_THRESHOLD:
                                     
                                     wx.GetApp().WaitUntilWXThreadIdle()
                                     
-                                    wait_end_precise = HydrusData.GetNowPrecise()
-                                    waiting_took = wait_end_precise - wait_begin_precise
-                                    before_precise = HydrusData.GetNowPrecise()
+                                    wx.GetApp().WriteSynchronous( 'content_updates', { service_key : pending_content_updates } )
                                     
-                                    wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
+                                    it_took = HydrusData.GetNowPrecise() - precise_timestamp
                                     
-                                    after_precise = HydrusData.GetNowPrecise()
-                                    wait_begin_precise = HydrusData.GetNowPrecise()
+                                    precise_timestamp = HydrusData.GetNowPrecise()
                                     
                                     if wx.GetApp().CurrentlyIdle(): ideal_packet_time = 10.0
                                     else: ideal_packet_time = 0.5
                                     
-                                    db_took = after_precise - before_precise
+                                    WEIGHT_THRESHOLD = max( 200.0, WEIGHT_THRESHOLD * ideal_packet_time / it_took )
                                     
-                                    too_long = ideal_packet_time * 1.5
-                                    too_short = ideal_packet_time * 0.8
-                                    really_too_long = ideal_packet_time * 10
-                                    
-                                    if db_took > too_long: WEIGHT_THRESHOLD = max( 10.0, WEIGHT_THRESHOLD / 1.5 )
-                                    elif db_took < too_short: WEIGHT_THRESHOLD *= 1.05
-                                    
-                                    total_content_weight_processed += current_weight
+                                    total_content_weight_processed += pending_weight
                                     
                                     #
                                     
@@ -769,7 +764,7 @@ def DAEMONSynchroniseRepositories():
                                         update_time_tracker.pop( 0 )
                                         
                                     
-                                    update_time_tracker.append( ( current_weight, db_took + waiting_took ) )
+                                    update_time_tracker.append( ( pending_weight, it_took ) )
                                     
                                     recent_total_weight = 0
                                     recent_total_time = 0.0
@@ -786,21 +781,21 @@ def DAEMONSynchroniseRepositories():
                                     
                                     #
                                     
-                                    content_updates = []
-                                    current_weight = 0
+                                    pending_content_updates = []
+                                    pending_weight = 0
                                     
                                 
                             
-                            if len( content_updates ) > 0:
-                                
-                                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( num_rows, num_rows ) + ': '
-                                
-                                job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' + update_speed_string )
-                                
-                                wx.GetApp().WriteSynchronous( 'content_updates', { service_key : content_updates } )
-                                
-                                total_content_weight_processed += current_weight
-                                
+                        
+                        if len( pending_content_updates ) > 0:
+                            
+                            wx.GetApp().WaitUntilWXThreadIdle()
+                            
+                            wx.GetApp().WriteSynchronous( 'content_updates', { service_key : pending_content_updates } )
+                            
+                            WEIGHT_THRESHOLD = 200.0
+                            
+                            total_content_weight_processed += pending_weight
                             
                         
                         job_key.SetVariable( 'popup_message_text_2', 'committing service updates' )

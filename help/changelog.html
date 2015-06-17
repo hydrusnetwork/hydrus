@@ -8,6 +8,55 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 161</h3></li>
+				<ul>
+					<li>updated windows python, sqlite and ffmpeg</li>
+					<li>added linux ffmpeg binary to the executable build</li>
+					<li>updated os x ffmpeg binary</li>
+					<li>animation is generally working for linux and os x</li>
+					<li>fixed some linux/os x ffmpeg calls</li>
+					<li>fixed webm import for linux/os x</li>
+					<li>webms work great</li>
+					<li>moved to rendering gifs with PIL by default on linux and os x, which has bad palette support but renders more reliably</li>
+					<li>the animation scanbar position caret is now visible on linux and os x</li>
+					<li>fixed some timing/resume issues the animation scanbar on os x</li>
+					<li>the old mediactrl video embed is removed</li>
+					<li>mp4, wmv, mkv are added to native rendering control, no audio yet (just like webm)</li>
+					<li>flv and flash will now have a little vertical padding on max zoom to make vertical hover windows easier to access</li>
+					<li>changed database to a faster synchronisation mode</li>
+					<li>tuned update processing daemon for more accurate time calculations and faster baseline speed, even if that knocks gui latency a bit</li>
+					<li>fixed rows/s being thrown wildly off by long pauses</li>
+					<li>made update processing daemon more reactive</li>
+					<li>improved some of the flow and generally cleaned the update processing daemon</li>
+					<li>added processing phase option to regular delay to processing of updates (this is useful if you run multiple clients and don't want them to process at the same time)</li>
+					<li>fixed e621 tag parsing</li>
+					<li>completely rewrote the focus engine behind the autocomplete dropdown</li>
+					<li>fixed a bunch of autocomplete dropdown's generally buggy behaviour for linux and os x</li>
+					<li>fixed autocomplete dropdown's display, sizing, and positioning for linux and os x</li>
+					<li>fixed autocomplete dropdown selecting system predicates with the keyboard</li>
+					<li>fixed autocomplete dropdown show status in linux with multiple pages open</li>
+					<li>improved all subprocess calls, removing interim shell step and parameterising passed arguments</li>
+					<li>improved how files and directories are launched in windows</li>
+					<li>upnp is fixed for linux</li>
+					<li>fixed hover window archive/inbox/delete icon buttons, which were spamming their commands to all open media viewers, not just their own</li>
+					<li>added a simple raised border to hover windows to better delineate them from the canvas background</li>
+					<li>updated the hover window size and position code to be a bit more reliable (still seems to bug out a bit on linux)</li>
+					<li>tags hover window should now expand sideways more reliably</li>
+					<li>it is now not possible to create nested export folders</li>
+					<li>searching for numtags < x will now include files with no tags</li>
+					<li>fixed manage boorus dialog OK in linux</li>
+					<li>fixed booru selection mini-dialog in linux</li>
+					<li>generally improved restoring database code</li>
+					<li>fixed restoring a database when you have tag archives in existing database</li>
+					<li>fixed a unicode encoding error when converting certain jobs to text (this was throwing errors in deviant art downloads/subscriptions--we'll see what was actually going on now, whether this is an error not being formatted right or something else)</li>
+					<li>started some great rewrite of management panel gui code</li>
+					<li>rearranged the download panel gui hierarchy slightly</li>
+					<li>improved collapsible panel collapse/expand layout code</li>
+					<li>removed code and database table for the old numerical ratings filter</li>
+					<li>some general code refactoring and cleanup</li>
+					<li>improved client upnp daemon timing</li>
+					<li>harmonised how the client and server check requests for bandwidth-tracking eligibility</li>
+				</ul>
 				<li><h3>version 160</h3></li>
 				<ul>
 					<li>added options for http, socks4, socks5 proxying</li>

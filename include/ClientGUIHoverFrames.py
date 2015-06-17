@@ -1,0 +1,658 @@
+import ClientConstants as CC
+import ClientGUICanvas
+import ClientGUICommon
+import HydrusConstants as HC
+import HydrusData
+import HydrusGlobals
+import os
+import wx
+
+class FullscreenHoverFrame( wx.Frame ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            border_style = wx.BORDER_RAISED
+            
+        else:
+            
+            border_style = wx.BORDER_SIMPLE
+            
+        
+        wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | border_style )
+        
+        self._canvas_key = canvas_key
+        self._current_media = None
+        
+        self._last_ideal_size_and_position = None
+        
+        self.SetBackgroundColour( wx.WHITE )
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        
+        tlp = self.GetParent().GetTopLevelParent()
+        
+        self._timer_check_show = wx.Timer( self, id = ClientGUICanvas.ID_TIMER_HOVER_SHOW )
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREventCheckIfShouldShow, id = ClientGUICanvas.ID_TIMER_HOVER_SHOW )
+        
+        self._timer_check_show.Start( 100, wx.TIMER_CONTINUOUS )
+        
+        HydrusGlobals.pubsub.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        
+    
+    def _GetIdealSizeAndPosition( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _SizeAndPosition( self ):
+        
+        ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
+        
+        if should_resize or ( my_ideal_size, my_ideal_position ) != self._last_ideal_size_and_position:
+            
+            self._last_ideal_size_and_position = ( my_ideal_size, my_ideal_position )
+            
+            if should_resize:
+                
+                self.Fit()
+                
+                self.SetSize( my_ideal_size )
+                
+            
+            self.SetPosition( my_ideal_position )
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = media
+            
+        
+    
+    def TIMEREventCheckIfShouldShow( self, event ):
+        
+        if self._current_media is None:
+            
+            self.Hide()
+            
+        else:
+            
+            ( mouse_x, mouse_y ) = wx.GetMousePosition()
+            
+            ( my_width, my_height ) = self.GetSize()
+            ( my_x, my_y ) = self.GetPosition()
+            
+            ( should_resize, ( my_ideal_width, my_ideal_height ), ( my_ideal_x, my_ideal_y ) ) = self._GetIdealSizeAndPosition()
+            
+            if my_ideal_width == -1: my_ideal_width = my_width
+            if my_ideal_height == -1: my_ideal_height = my_height
+            
+            in_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
+            in_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
+            
+            no_dialogs_open = True
+            
+            tlps = wx.GetTopLevelWindows()
+            
+            for tlp in tlps:
+                
+                if isinstance( tlp, wx.Dialog ): no_dialogs_open = False
+                
+            
+            mime = self._current_media.GetMime()
+            
+            in_position = in_x and in_y
+            
+            mouse_over_important_media = ( ClientGUICanvas.ShouldHaveAnimationBar( self._current_media ) or mime in HC.VIDEO or mime == HC.APPLICATION_FLASH ) and self.GetParent().MouseIsOverMedia()
+            
+            current_focus = wx.Window.FindFocus()
+            
+            tlp = wx.GetTopLevelParent( current_focus )
+            
+            my_parent_in_focus_tree = False
+            
+            while tlp is not None:
+                
+                if tlp == self.GetParent(): my_parent_in_focus_tree = True
+                
+                tlp = tlp.GetParent()
+                
+            
+            ready_to_show = in_position and not mouse_over_important_media and no_dialogs_open and my_parent_in_focus_tree
+            ready_to_hide = not in_position or not no_dialogs_open or not my_parent_in_focus_tree
+            
+            if ready_to_show:
+                
+                self._SizeAndPosition()
+                
+                self.Show()
+                
+            elif ready_to_hide: self.Hide()
+            
+        
+
+class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        
+        self._always_archive = False
+        self._current_zoom = 1.0
+        self._current_index_string = ''
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._first_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'first.png' ) )
+        self._first_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_show_first', self._canvas_key ) )
+        self._first_button.SetToolTipString( 'first' )
+        
+        self._previous_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'previous.png' ) )
+        self._previous_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_show_previous', self._canvas_key ) )
+        self._previous_button.SetToolTipString( 'previous' )
+        
+        self._index_text = wx.StaticText( self, label = 'index' )
+        
+        self._next_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'next.png' ) )
+        self._next_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_show_next', self._canvas_key ) )
+        self._next_button.SetToolTipString( 'next' )
+        
+        self._last_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'last.png' ) )
+        self._last_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_show_last', self._canvas_key ) )
+        self._last_button.SetToolTipString( 'last' )
+        
+        self._archive_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'archive.png' ) )
+        self._archive_button.Bind( wx.EVT_BUTTON, self.EventArchiveButton )
+        
+        self._delete_button = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'delete.png' ) )
+        self._delete_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_delete', self._canvas_key ) )
+        self._delete_button.SetToolTipString( 'delete' )
+        
+        self._zoom_text = wx.StaticText( self, label = 'zoom' )
+        
+        zoom_in = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_in.png' ) )
+        zoom_in.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_zoom_in', self._canvas_key ) )
+        zoom_in.SetToolTipString( 'zoom in' )
+        
+        zoom_out = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_out.png' ) )
+        zoom_out.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_zoom_out', self._canvas_key ) )
+        zoom_out.SetToolTipString( 'zoom out' )
+        
+        zoom_switch = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_switch.png' ) )
+        zoom_switch.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_zoom_switch', self._canvas_key ) )
+        zoom_switch.SetToolTipString( 'zoom switch' )
+        
+        fullscreen_switch = wx.BitmapButton( self, bitmap = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'fullscreen_switch.png' ) )
+        fullscreen_switch.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_fullscreen_switch', self._canvas_key ) )
+        fullscreen_switch.SetToolTipString( 'fullscreen switch' )
+        
+        close = wx.Button( self, label = 'X', style = wx.BU_EXACTFIT )
+        close.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_close', self._canvas_key ) )
+        close.SetToolTipString( 'close' )
+        
+        self._top_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        self._title_text = wx.StaticText( self, label = 'title' )
+        self._info_text = wx.StaticText( self, label = 'info' )
+        self._button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        self._top_hbox.AddF( self._first_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._previous_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._index_text, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._next_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._last_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._top_hbox.AddF( self._archive_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._delete_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._top_hbox.AddF( self._zoom_text, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( zoom_in, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( zoom_out, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( zoom_switch, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( fullscreen_switch, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( close, CC.FLAGS_MIXED )
+        
+        vbox.AddF( self._top_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._title_text, CC.FLAGS_CENTER )
+        vbox.AddF( self._info_text, CC.FLAGS_CENTER )
+        vbox.AddF( self._button_hbox, CC.FLAGS_CENTER )
+        
+        self.SetSizer( vbox )
+        
+        HydrusGlobals.pubsub.sub( self, 'SetCurrentZoom', 'canvas_new_zoom' )
+        HydrusGlobals.pubsub.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        
+    
+    def _GetIdealSizeAndPosition( self ):
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetSize()
+        
+        my_ideal_width = int( parent_width * 0.6 )
+        
+        should_resize = my_ideal_width != my_width
+        
+        ideal_size = ( my_ideal_width, -1 )
+        ideal_position = parent.ClientToScreenXY( int( parent_width * 0.2 ), 0 )
+        
+        return ( should_resize, ideal_size, ideal_position )
+        
+    
+    def _ResetButtons( self ):
+        
+        if self._current_media is not None:
+            
+            if self._always_archive or self._current_media.HasInbox():
+                
+                self._archive_button.SetBitmapLabel( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'archive.png' ) )
+                self._archive_button.SetToolTipString( 'archive' )
+                
+            else:
+                
+                self._archive_button.SetBitmapLabel( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'to_inbox.png' ) )
+                self._archive_button.SetToolTipString( 'return to inbox' )
+                
+            
+        
+    
+    def _ResetText( self ):
+        
+        if self._current_media is None:
+            
+            self._title_text.Hide()
+            self._info_text.Hide()
+            
+        else:
+            
+            label = self._current_media.GetTitleString()
+            
+            if len( label ) > 0:
+                
+                self._title_text.SetLabel( label )
+                
+                self._title_text.Show()
+                
+            else: self._title_text.Hide()
+            
+            label = self._current_media.GetPrettyInfo() + ' | ' + self._current_media.GetPrettyAge()
+            
+            self._info_text.SetLabel( label )
+            
+            self._info_text.Show()
+            
+        
+        self._SizeAndPosition()
+        
+    
+    def AddCommand( self, label, callback ):
+        
+        command = wx.Button( self, label = label, style = wx.BU_EXACTFIT )
+        command.Bind( wx.EVT_BUTTON, callback )
+        
+        self._button_hbox.AddF( command, CC.FLAGS_MIXED )
+        
+    
+    def EventArchiveButton( self, event ):
+        
+        if self._always_archive or self._current_media.HasInbox():
+            
+            HydrusGlobals.pubsub.pub( 'canvas_archive', self._canvas_key )
+            
+        else:
+            
+            HydrusGlobals.pubsub.pub( 'canvas_inbox', self._canvas_key )
+            
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            my_hash = self._current_media.GetHash()
+            
+            do_redraw = False
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
+                    
+                    do_redraw = True
+                    
+                    break
+                    
+                
+            
+            if do_redraw:
+                
+                self._ResetButtons()
+                
+            
+        
+    
+    def SetAlwaysArchive( self, value ):
+        
+        self._always_archive = value
+        
+        self._ResetButtons()
+        
+    
+    def SetCurrentZoom( self, canvas_key, zoom ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_zoom = zoom
+            
+            label = HydrusData.ConvertZoomToPercentage( self._current_zoom )
+            
+            self._zoom_text.SetLabel( label )
+            
+            self._top_hbox.Layout()
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            
+            self._ResetButtons()
+            
+            self._ResetText()
+            
+        
+    
+    def SetIndexString( self, canvas_key, text ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_index_string = text
+            
+            self._index_text.SetLabel( self._current_index_string )
+            
+            self._top_hbox.Layout()
+            
+        
+    
+    def SetNavigable( self, value ):
+        
+        if value:
+            
+            self._first_button.Show()
+            self._last_button.Show()
+            
+            self._previous_button.SetToolTipString( 'previous' )
+            self._next_button.SetToolTipString( 'next' )
+            
+        else:
+            
+            self._first_button.Hide()
+            self._last_button.Hide()
+            
+            self._previous_button.SetToolTipString( 'back' )
+            self._next_button.SetToolTipString( 'skip' )
+
+class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._icon_panel = wx.Panel( self )
+        
+        self._icon_panel.SetBackgroundColour( wx.WHITE )
+        
+        self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.inbox_bmp )
+        
+        icon_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        icon_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        icon_hbox.AddF( self._inbox_icon, CC.FLAGS_MIXED )
+        
+        self._icon_panel.SetSizer( icon_hbox )
+        
+        # repo strings
+        
+        self._file_repos = wx.StaticText( self, label = '', style = wx.ALIGN_RIGHT )
+        
+        # likes
+        
+        like_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        like_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        like_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        
+        for service in like_services:
+            
+            service_key = service.GetServiceKey()
+            
+            control = ClientGUICommon.RatingLikeCanvas( self, service_key, canvas_key )
+            
+            like_hbox.AddF( control, CC.FLAGS_NONE )
+            
+        
+        # each numerical one in turn
+        
+        vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        numerical_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        
+        for service in numerical_services:
+            
+            service_key = service.GetServiceKey()
+            
+            control = ClientGUICommon.RatingNumericalCanvas( self, service_key, canvas_key )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.AddF( control, CC.FLAGS_NONE )
+            
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+        
+        self.SetSizer( vbox )
+        
+        self._ResetData()
+        
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        
+    
+    def _GetIdealSizeAndPosition( self ):
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetSize()
+        
+        my_ideal_width = int( parent_width * 0.2 )
+        
+        should_resize = my_ideal_width != my_width
+        
+        ideal_size = ( my_ideal_width, -1 )
+        ideal_position = parent.ClientToScreenXY( int( parent_width * 0.8 ), 0 )
+        
+        return ( should_resize, ideal_size, ideal_position )
+        
+    
+    def _ResetData( self ):
+        
+        if self._current_media is not None:
+            
+            if self._current_media.HasInbox():
+                
+                self._icon_panel.Show()
+                
+            else:
+                
+                self._icon_panel.Hide()
+                
+            
+            file_repo_strings = self._current_media.GetLocationsManager().GetFileRepositoryStrings()
+            
+            if len( file_repo_strings ) == 0:
+                
+                self._file_repos.Hide()
+                
+            else:
+                
+                file_repo_string = os.linesep.join( file_repo_strings )
+                
+                self._file_repos.SetLabel( file_repo_string )
+                
+                self._file_repos.Show()
+                
+            
+            self.Fit()
+            
+        
+        self._SizeAndPosition()
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            my_hash = self._current_media.GetHash()
+            
+            do_redraw = False
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
+                    
+                    do_redraw = True
+                    
+                    break
+                    
+                
+            
+            if do_redraw:
+                
+                self._ResetData()
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            
+            self._ResetData()
+
+class FullscreenHoverFrameTags( FullscreenHoverFrame ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._tags = ClientGUICommon.ListBoxTags( self )
+        
+        vbox.AddF( self._tags, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        
+    
+    def _GetIdealSizeAndPosition( self ):
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetSize()
+        
+        my_ideal_width = int( parent_width * 0.2 )
+        
+        my_ideal_height = parent_height
+        
+        should_resize = my_ideal_width != my_width or my_ideal_height != my_height
+        
+        ideal_size = ( my_ideal_width, my_ideal_height )
+        ideal_position = parent.ClientToScreenXY( 0, 0 )
+        
+        return ( should_resize, ideal_size, ideal_position )
+        
+    
+    def _ResetTags( self ):
+        
+        if self._current_media is None: tags_i_want_to_display = []
+        else:
+            
+            tags_manager = self._current_media.GetTagsManager()
+            
+            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+            
+            current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
+            pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
+            
+            tags_i_want_to_display = list( current.union( pending ) )
+            
+            tags_i_want_to_display.sort()
+            
+        
+        self._tags.SetTexts( tags_i_want_to_display )
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        if self._current_media is not None:
+            
+            my_hash = self._current_media.GetHash()
+            
+            do_redraw = False
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
+                    
+                    do_redraw = True
+                    
+                    break
+                    
+                
+            
+            if do_redraw:
+                
+                self._ResetTags()
+                
+            
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            
+            self._ResetTags()
+            
+        
+    
+            
+        
+    
+            
+        
+    
+            
+        
+    

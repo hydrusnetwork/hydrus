@@ -71,6 +71,11 @@ class HydrusDB( object ):
         self._CloseDBCursor()
         
     
+    def _CleanUpCaches( self ):
+        
+        pass
+        
+    
     def _CloseDBCursor( self ):
         
         self._c.close()
@@ -136,6 +141,7 @@ class HydrusDB( object ):
         
         self._c.execute( 'PRAGMA cache_size = 10000;' )
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
+        self._c.execute( 'PRAGMA synchronous = 1;' )
         
     
     def _ManageDBError( self, job, e ):
@@ -264,6 +270,9 @@ class HydrusDB( object ):
                 
             except Queue.Empty: pass # no jobs this second; let's see if we should shutdown
             
+            
+        
+        self._CleanUpCaches()
         
         self._CloseDBCursor()
         

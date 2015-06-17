@@ -97,6 +97,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._text_ctrl.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] ) )
         
+        self._last_attempted_dropdown_width = 0
+        self._last_attempted_dropdown_position = ( None, None )
+        
         if self._float_mode:
             
             self._text_ctrl.Bind( wx.EVT_SET_FOCUS, self.EventSetFocus )
@@ -161,6 +164,8 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._move_hide_timer = wx.Timer( self, id = ID_TIMER_DROPDOWN_HIDE )
             
+            self._move_hide_timer.Start( 1, wx.TIMER_ONE_SHOT )
+            
             tlp.Bind( wx.EVT_MOVE, self.EventMove )
             
             parent = self
@@ -203,9 +208,12 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _HideDropdown( self ):
         
-        self._dropdown_window.SetSize( ( 0, 0 ) )
-        
-        self._dropdown_hidden = True
+        if not self._dropdown_hidden:
+            
+            self._dropdown_window.SetSize( ( 0, 0 ) )
+            
+            self._dropdown_hidden = True
+            
         
     
     def _InitDropDownList( self ):
@@ -213,25 +221,92 @@ class AutoCompleteDropdown( wx.Panel ):
         raise NotImplementedError()
         
     
-    def _ShowDropdownIfFocussed( self ):
+    def _ShouldShow( self ):
         
-        if self.GetTopLevelParent().IsActive() and wx.Window.FindFocus() == self._text_ctrl:
+        tlp_active = self.GetTopLevelParent().IsActive() or self._dropdown_window.IsActive()
+        
+        if HC.PLATFORM_LINUX:
             
-            ( my_width, my_height ) = self._text_ctrl.GetSize()
+            tlp = self.GetTopLevelParent()
             
-            if self._dropdown_hidden:
+            if isinstance( tlp, wx.Dialog ):
                 
-                self._dropdown_window.Fit()
+                visible = True
                 
-                self._dropdown_window.SetSize( ( my_width, -1 ) )
+            else:
                 
-                self._dropdown_window.Layout()
+                # notebook on linux doesn't 'hide' things apparently, so isshownonscreen, which recursively tests parents' hide status, doesn't work!
                 
-                self._dropdown_hidden = False
+                gui = wx.GetApp().GetGUI()
+                
+                current_page = gui.GetCurrentPage()
+                
+                visible = ClientData.IsWXAncestor( self, current_page )
                 
             
-            self._dropdown_window.SetPosition( self._text_ctrl.ClientToScreenXY( -2, my_height - 2 ) )
+        else:
             
+            visible = self._text_ctrl.IsShownOnScreen()
+            
+        
+        focus_window = wx.Window.FindFocus()
+        
+        focus_remains_on_self_or_children = focus_window == self._dropdown_window or focus_window in self._dropdown_window.GetChildren() or focus_window == self._text_ctrl
+        
+        return tlp_active and visible and focus_remains_on_self_or_children
+        
+    
+    def _ShouldTakeResponsibilityForEnter( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _ShowDropdown( self ):
+        
+        ( text_width, text_height ) = self._text_ctrl.GetSize()
+        
+        desired_dropdown_position = self._text_ctrl.ClientToScreenXY( -2, text_height - 2 )
+        
+        if self._last_attempted_dropdown_position != desired_dropdown_position:
+            
+            self._dropdown_window.SetPosition( desired_dropdown_position )
+            
+            self._last_attempted_dropdown_position = desired_dropdown_position
+            
+        
+        #
+        
+        show_and_fit_needed = False
+        
+        if self._dropdown_hidden:
+            
+            show_and_fit_needed = True
+            
+        else:
+            
+            if text_width != self._last_attempted_dropdown_width:
+                
+                show_and_fit_needed = True
+                
+            
+        
+        if show_and_fit_needed:
+            
+            self._dropdown_window.Fit()
+            
+            self._dropdown_window.SetSize( ( text_width, -1 ) )
+            
+            self._dropdown_window.Layout()
+            
+            self._dropdown_hidden = False
+            
+            self._last_attempted_dropdown_width = text_width
+            
+        
+    
+    def _TakeResponsibilityForEnter( self ):
+        
+        raise NotImplementedError()
         
     
     def _UpdateList( self ):
@@ -251,18 +326,14 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._last_search_text == '':
+        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
             
-            if self._text_ctrl.GetValue() == '':
-                
-                self._BroadcastChoice( None )
-                
-            else:
-                
-                self._BroadcastCurrentText()
-                
+            self._TakeResponsibilityForEnter()
             
-        elif event.KeyCode == wx.WXK_ESCAPE: self.GetTopLevelParent().SetFocus()
+        elif event.KeyCode == wx.WXK_ESCAPE:
+            
+            self.GetTopLevelParent().SetFocus()
+            
         elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
             if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
@@ -286,18 +357,7 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventKillFocus( self, event ):
         
-        new_window = event.GetWindow()
-        
-        if new_window is None:
-            
-            self._HideDropdown()
-            
-        else:
-            
-            focus_remains_on_self_or_children = new_window == self._dropdown_window or new_window in self._dropdown_window.GetChildren() or new_window == self
-            
-            if not focus_remains_on_self_or_children: self._HideDropdown()
-            
+        self._move_hide_timer.Start( 1, wx.TIMER_ONE_SHOT )
         
         event.Skip()
         
@@ -348,12 +408,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         try:
             
-            try: self._HideDropdown()
-            except: pass
+            self._HideDropdown()
             
-            lag = 250
-            
-            self._move_hide_timer.Start( lag, wx.TIMER_ONE_SHOT )
+            self._move_hide_timer.Start( 250, wx.TIMER_ONE_SHOT )
             
         except wx.PyDeadObjectError: pass
         
@@ -362,7 +419,7 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventSetFocus( self, event ):
         
-        self._ShowDropdownIfFocussed()
+        self._move_hide_timer.Start( 1, wx.TIMER_ONE_SHOT )
         
         event.Skip()
         
@@ -380,67 +437,25 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def TIMEREventDropdownHide( self, event ):
         
-        try: self._ShowDropdownIfFocussed()
-        except: pass
+        try:
+            
+            should_show = self._ShouldShow()
+            
+            if should_show:
+                
+                self._ShowDropdown()
+                
+            else:
+                
+                self._HideDropdown()
+                
+            
+            self._move_hide_timer.Start( 250, wx.TIMER_ONE_SHOT )
+            
+        except wx.PyDeadObjectError: pass
         
     
     def TIMEREventLag( self, event ): self._UpdateList()
-    
-class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
-    
-    def __init__( self, parent, page_key, identity ):
-        
-        AutoCompleteDropdown.__init__( self, parent )
-        
-        self._page_key = page_key
-        self._identity = identity
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._dropdown_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._dropdown_window.SetSizer( vbox )
-        
-    
-    def _BroadcastChoice( self, predicate ):
-        
-        if self._text_ctrl.GetValue() != '':
-            
-            self._text_ctrl.SetValue( '' )
-            
-        
-        HydrusGlobals.pubsub.pub( 'add_predicate', self._page_key, predicate )
-        
-    
-    def _InitDropDownList( self ): return ListBoxMessagesActiveOnly( self._dropdown_window, self.BroadcastChoice )
-    
-    def _GenerateMatches( self ):
-        
-        entry = self._text_ctrl.GetValue()
-        
-        if entry.startswith( '-' ): search_term = entry[1:]
-        else: search_term = entry
-        
-        if search_term == '': matches = wx.GetApp().Read( 'message_system_predicates', self._identity )
-        else: matches = [ ( entry, None ) ]
-        
-        return matches
-        
-    
-    def _UpdateList( self ):
-        
-        self._last_search_text = self._text_ctrl.GetValue()
-        
-        matches = self._GenerateMatches()
-        
-        self._dropdown_list.SetTerms( matches )
-        
-        if self._float_mode:
-            
-            if len( matches ) > 0: self._ShowDropdownIfFocussed()
-            else: self._HideDropdown()
-            
-        
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
@@ -808,6 +823,18 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         return matches
         
     
+    def _ShouldTakeResponsibilityForEnter( self ):
+        
+        # when the user has quickly typed something in and the results are not yet in
+        
+        return self._text_ctrl.GetValue() != '' and self._last_search_text == ''
+        
+    
+    def _TakeResponsibilityForEnter( self ):
+        
+        self._BroadcastCurrentText()
+        
+    
     def IncludeCurrent( self, page_key, value ):
         
         if page_key == self._page_key: self._include_current = value
@@ -1029,6 +1056,31 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
         return matches
+        
+    
+    def _ShouldTakeResponsibilityForEnter( self ):
+        
+        # when the user has quickly typed something in and the results are not yet in
+        
+        p1 = self._text_ctrl.GetValue() != '' and self._last_search_text == ''
+        
+        # when the text ctrl is empty and we want to push a None to the parent dialog
+        
+        p2 = self._text_ctrl.GetValue() == ''
+        
+        return p1 or p2
+        
+    
+    def _TakeResponsibilityForEnter( self ):
+        
+        if self._text_ctrl.GetValue() == '':
+            
+            self._BroadcastChoice( None )
+            
+        else:
+            
+            self._BroadcastCurrentText()
+            
         
     
 class BufferedWindow( wx.Window ):
@@ -3264,9 +3316,9 @@ class NoneableSpinCtrl( wx.Panel ):
         self._checkbox = wx.CheckBox( self, label = none_phrase )
         self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
         
-        self._one = wx.SpinCtrl( self, min = min, max = max, size = ( 80, -1 ) )
+        self._one = wx.SpinCtrl( self, min = min, max = max, size = ( 60, -1 ) )
         
-        if num_dimensions == 2: self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max, size = ( 80, -1 ) )
+        if num_dimensions == 2: self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max, size = ( 60, -1 ) )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         

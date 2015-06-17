@@ -103,14 +103,20 @@ class CollapsiblePanel( wx.Panel ):
             self._expanded = True
             
         
-        parent_of_container = self.GetParent().GetParent()
+        parent = self
         
-        parent_of_container.Layout()
-        
-        if isinstance( parent_of_container, wx.ScrolledWindow ):
+        while not isinstance( parent, wx.ScrolledWindow ) and not isinstance( parent, wx.TopLevelWindow ):
             
-            # fitinside is like fit, but it does the virtual size!
-            parent_of_container.FitInside()
+            parent = parent.GetParent()
+            
+        
+        if isinstance( parent, wx.ScrolledWindow ):
+            
+            parent.FitInside()
+            
+        else:
+            
+            parent.Layout()
             
         
     

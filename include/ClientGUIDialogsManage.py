@@ -21,7 +21,6 @@ import os
 import random
 import re
 import string
-import subprocess
 import time
 import traceback
 import urllib
@@ -609,7 +608,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 
                 self._tag_panel = ClientGUICommon.StaticBox( self._booru_panel, 'tags' )
                 
-                self._tag_classnames_to_namespaces = wx.ListBox( self._tag_panel, style = wx.LB_SORT )
+                self._tag_classnames_to_namespaces = wx.ListBox( self._tag_panel )
                 self._tag_classnames_to_namespaces.Bind( wx.EVT_LEFT_DCLICK, self.EventRemove )
                 
                 self._tag_classname = wx.TextCtrl( self._tag_panel )
@@ -1465,23 +1464,43 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         all_existing_client_data = self._export_folders.GetClientData()
         
-        if path not in ( existing_path for ( existing_path, export_type, predicates, period, phrase ) in all_existing_client_data ):
+        for ( existing_path, export_type, predicates, period, phrase ) in all_existing_client_data:
             
-            export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
-            predicates = []
-            period = 15 * 60
-            phrase = '{hash}'
+            if path == existing_path: return
             
-            with DialogManageExportFoldersEdit( self, path, export_type, predicates, period, phrase ) as dlg:
+            if path.startswith( existing_path ):
                 
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( path, export_type, predicates, period, phrase ) = dlg.GetInfo()
-                    
-                    ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_type, predicates, period, phrase )
-                    
-                    self._export_folders.Append( ( path, pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ), ( path, export_type, predicates, period, phrase ) )
-                    
+                text = 'You have entered a subdirectory of an existing path, which is not permitted.'
+                
+                wx.MessageBox( text )
+                
+                return
+                
+            
+            if existing_path.startswith( path ):
+                
+                text = 'You have entered a parent directory of an existing path, which is not permitted.'
+                
+                wx.MessageBox( text )
+                
+                return
+                
+            
+        
+        export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
+        predicates = []
+        period = 15 * 60
+        phrase = '{hash}'
+        
+        with DialogManageExportFoldersEdit( self, path, export_type, predicates, period, phrase ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                ( path, export_type, predicates, period, phrase ) = dlg.GetInfo()
+                
+                ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_type, predicates, period, phrase )
+                
+                self._export_folders.Append( ( path, pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ), ( path, export_type, predicates, period, phrase ) )
                 
             
         
@@ -2867,6 +2886,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._autocomplete_short_wait = wx.SpinCtrl( self._maintenance_page, min = 0, max = 10000 )
             self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
             
+            self._processing_phase = wx.SpinCtrl( self._maintenance_page, min = 0, max = 100000 )
+            self._processing_phase.SetToolTipString( 'how long this client will delay processing updates after they are due. useful if you have multiple clients and do not want them to process at the same time' )
+            
             self._listbook.AddPage( 'maintenance and memory', self._maintenance_page )
             
             # media
@@ -3123,6 +3145,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._autocomplete_short_wait.SetValue( short_wait )
             
+            self._processing_phase.SetValue( HC.options[ 'processing_phase' ] )
+            
             #
             
             self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
@@ -3329,6 +3353,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_short_wait, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Delay update processing by (s): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._processing_phase, CC.FLAGS_MIXED )
             
             self._maintenance_page.SetSizer( gridbox )
             
@@ -3794,6 +3821,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         short_wait = self._autocomplete_short_wait.GetValue()
         
         HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
+        
+        HC.options[ 'processing_phase' ] = self._processing_phase.GetValue()
         
         HC.options[ 'fit_to_canvas' ] = self._fit_to_canvas.GetValue()
         
