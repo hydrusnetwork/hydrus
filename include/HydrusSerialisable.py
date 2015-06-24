@@ -14,6 +14,10 @@ SERIALISABLE_TYPE_HDD_IMPORT = 9
 SERIALISABLE_TYPE_SERVER_TO_CLIENT_CONTENT_UPDATE_PACKAGE = 10
 SERIALISABLE_TYPE_SERVER_TO_CLIENT_SERVICE_UPDATE_PACKAGE = 11
 SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER = 12
+SERIALISABLE_TYPE_GUI_SESSION = 13
+SERIALISABLE_TYPE_PREDICATE = 14
+SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT = 15
+SERIALISABLE_TYPE_EXPORT_FOLDER = 16
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -27,24 +31,24 @@ def CreateFromString( obj_string ):
     
     obj_tuple = json.loads( obj_string )
     
-    return CreateFromTuple( obj_tuple )
+    return CreateFromSerialisableTuple( obj_tuple )
     
-def CreateFromTuple( obj_tuple ):
+def CreateFromSerialisableTuple( obj_tuple ):
     
     if len( obj_tuple ) == 3:
         
-        ( serialisable_type, version, serialised_info ) = obj_tuple
+        ( serialisable_type, version, serialisable_info ) = obj_tuple
         
         obj = SERIALISABLE_TYPES_TO_OBJECT_TYPES[ serialisable_type ]()
         
     else:
         
-        ( serialisable_type, name, version, serialised_info ) = obj_tuple
+        ( serialisable_type, name, version, serialisable_info ) = obj_tuple
         
         obj = SERIALISABLE_TYPES_TO_OBJECT_TYPES[ serialisable_type ]( name )
         
     
-    obj.InitialiseFromSerialisedInfo( version, serialised_info )
+    obj.InitialiseFromSerialisableInfo( version, serialisable_info )
     
     return obj
     
@@ -56,19 +60,19 @@ def DumpToNetworkString( obj ):
     
 def DumpToString( obj ):
     
-    obj_tuple = DumpToTuple( obj )
+    obj_tuple = GetSerialisableTuple( obj )
     
     return json.dumps( obj_tuple )
     
-def DumpToTuple( obj ):
+def GetSerialisableTuple( obj ):
     
     if isinstance( obj, SerialisableBaseNamed ):
         
-        return ( obj.SERIALISABLE_TYPE, obj.GetName(), obj.SERIALISABLE_VERSION, obj.GetSerialisedInfo() )
+        return ( obj.SERIALISABLE_TYPE, obj.GetName(), obj.SERIALISABLE_VERSION, obj.GetSerialisableInfo() )
         
     else:
         
-        return ( obj.SERIALISABLE_TYPE, obj.SERIALISABLE_VERSION, obj.GetSerialisedInfo() )
+        return ( obj.SERIALISABLE_TYPE, obj.SERIALISABLE_VERSION, obj.GetSerialisableInfo() )
         
     
 class SerialisableBase( object ):
@@ -91,13 +95,11 @@ class SerialisableBase( object ):
         return old_info
         
     
-    def GetSerialisedInfo( self ):
+    def GetSerialisableInfo( self ):
         
         serialisable_info = self._GetSerialisableInfo()
         
-        serialised_info = json.dumps( serialisable_info )
-        
-        return serialised_info
+        return serialisable_info
         
     
     def GetTypeAndVersion( self ):
@@ -105,9 +107,7 @@ class SerialisableBase( object ):
         return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION )
         
     
-    def InitialiseFromSerialisedInfo( self, version, serialised_info ):
-        
-        serialisable_info = json.loads( serialised_info )
+    def InitialiseFromSerialisableInfo( self, version, serialisable_info ):
         
         if version != self.SERIALISABLE_VERSION:
             

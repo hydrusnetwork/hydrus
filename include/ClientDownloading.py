@@ -1961,9 +1961,9 @@ class ImportQueueBuilderThread( ImportQueueBuilder ):
                 
                 manual_refresh = self._job_key.GetVariable( 'manual_refresh' )
                 
-                not_too_soon_for_manual_refresh = HydrusData.GetNow() - last_thread_check > 10
+                not_too_soon_for_manual_refresh = HydrusData.TimeHasPassed( last_thread_check + 10 )
                 
-                if ( manual_refresh and not_too_soon_for_manual_refresh ) or next_thread_check < HydrusData.GetNow():
+                if ( manual_refresh and not_too_soon_for_manual_refresh ) or HydrusData.TimeHasPassed( next_thread_check ):
                     
                     self._job_key.SetVariable( 'status', 'checking thread' )
                     

@@ -26,8 +26,7 @@ class HydrusController( wx.App ):
         
         if last_maintenance_time == 0: return False
         
-        # this tests if we probably just woke up from a sleep
-        if HydrusData.GetNow() - last_maintenance_time > MAINTENANCE_PERIOD + ( 5 * 60 ): self._just_woke_from_sleep = True
+        if HydrusData.TimeHasPassed( last_maintenance_time + MAINTENANCE_PERIOD + ( 5 * 60 ) ): self._just_woke_from_sleep = True
         else: self._just_woke_from_sleep = False
         
     

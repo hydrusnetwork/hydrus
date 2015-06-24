@@ -1164,13 +1164,19 @@ class CanvasPanel( Canvas, wx.Window ):
             
             menu.AppendSeparator()
             
-            manage_menu = wx.Menu()
-            
-            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
-            
-            if i_can_post_ratings: manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
-            
-            menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+            if i_can_post_ratings:
+                
+                manage_menu = wx.Menu()
+                
+                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
+                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+                
+                menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+                
+            else:
+                
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'manage tags' )
+                
             
             menu.AppendSeparator()
             
@@ -2113,13 +2119,19 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         menu.AppendSeparator()
         
-        manage_menu = wx.Menu()
-        
-        manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
-        
-        if i_can_post_ratings: manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
-        
-        menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+        if i_can_post_ratings:
+            
+            manage_menu = wx.Menu()
+            
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+            
+            menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+            
+        else:
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'manage tags' )
+            
         
         menu.AppendSeparator()
         
@@ -2493,13 +2505,19 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu.AppendSeparator()
         
-        manage_menu = wx.Menu()
-        
-        manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
-        
-        if i_can_post_ratings: manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
-        
-        menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+        if i_can_post_ratings:
+            
+            manage_menu = wx.Menu()
+            
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+            
+            menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+            
+        else:
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'manage tags' )
+            
         
         menu.AppendSeparator()
         

@@ -8,6 +8,7 @@ import dircache
 import hashlib
 import httplib
 import itertools
+import json
 import HydrusConstants as HC
 import HydrusDB
 import ClientDownloading
@@ -2094,16 +2095,16 @@ class DB( HydrusDB.HydrusDB ):
         
         predicates = []
         
-        if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ): predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
+        if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ): predicates.extend( [ HydrusData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
         elif service_type in ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
             
             service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : num_everything } ) )
+            predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
             
-            predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
+            predicates.extend( [ HydrusData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
             
         elif service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
             
@@ -2122,27 +2123,27 @@ class DB( HydrusDB.HydrusDB ):
                 num_archive = num_local - num_inbox
                 
             
-            predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : num_everything } ) )
+            predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
             
             if num_inbox > 0:
                 
-                predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : num_inbox } ) )
-                predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : num_archive } ) )
+                predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : num_inbox } ) )
+                predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : num_archive } ) )
                 
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), counts = { HC.CURRENT : num_local } ) )
-                predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), counts = { HC.CURRENT : num_not_local } ) )
+                predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, counts = { HC.CURRENT : num_local } ) )
+                predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : num_not_local } ) )
                 
             
-            predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME ] ] )
+            predicates.extend( [ HydrusData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             ratings_service_ids = self._GetServiceIds( HC.RATINGS_SERVICES )
             
-            if len( ratings_service_ids ) > 0: predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATING, None ) ) )
+            if len( ratings_service_ids ) > 0: predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, None ) )
             
-            predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
+            predicates.extend( [ HydrusData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
             
         
         return predicates
@@ -2528,7 +2529,7 @@ class DB( HydrusDB.HydrusDB ):
             query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
-        for ( service_key, operator, value ) in system_predicates.GetRatingsPredicates():
+        for ( operator, value, service_key ) in system_predicates.GetRatingsPredicates():
             
             service_id = self._GetServiceId( service_key )
             
@@ -2776,7 +2777,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
         
-        return HydrusSerialisable.CreateFromTuple( ( dump_type, version, dump ) )
+        serialisable_info = json.loads( dump )
+        
+        return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
         
     
     
@@ -2790,7 +2793,9 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( dump_name, version, dump ) in results:
                 
-                objs.append( HydrusSerialisable.CreateFromTuple( ( dump_type, dump_name, version, dump ) ) )
+                serialisable_info = json.loads( dump )
+                
+                objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) ) )
                 
             
             return objs
@@ -2799,8 +2804,17 @@ class DB( HydrusDB.HydrusDB ):
             
             ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
             
-            return HydrusSerialisable.CreateFromTuple( ( dump_type, dump_name, version, dump ) )
+            serialisable_info = json.loads( dump )
             
+            return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) )
+            
+        
+    
+    def _GetJSONDumpNames( self, dump_type ):
+        
+        names = [ name for ( name, ) in self._c.execute( 'SELECT dump_name FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) ) ]
+        
+        return names
         
     
     def _GetMD5Status( self, md5 ):
@@ -4462,7 +4476,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     for ( post, timestamp ) in news_rows:
                         
-                        if now - timestamp < 86400 * 7:
+                        if not HydrusData.TimeHasPassed( timestamp + 86400 * 7 ):
                             
                             text = name + ' at ' + time.ctime( timestamp ) + ':' + os.linesep * 2 + post
                             
@@ -4553,10 +4567,11 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'tag_archive_tags': result = self._GetTagArchiveTags( *args, **kwargs )
         elif action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
-        elif action == 'export_folders': result = self._GetYAMLDump( YAML_DUMP_ID_EXPORT_FOLDER )
+        elif action == 'export_folders': result = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
-        elif action == 'gui_sessions': result = self._GetYAMLDump( YAML_DUMP_ID_GUI_SESSION )
+        elif action == 'gui_session_names': result = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+        elif action == 'gui_sessions': result = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_folders': result = self._GetYAMLDump( YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
@@ -4678,7 +4693,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if isinstance( obj, HydrusSerialisable.SerialisableBaseNamed ):
             
-            ( dump_type, dump_name, version, dump ) = HydrusSerialisable.DumpToTuple( obj )
+            ( dump_type, dump_name, version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( obj )
+            
+            dump = json.dumps( serialisable_info )
             
             self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
             
@@ -4686,7 +4703,9 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            ( dump_type, version, dump ) = HydrusSerialisable.DumpToTuple( obj )
+            ( dump_type, version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( obj )
+            
+            dump = json.dumps( serialisable_info )
             
             self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
             
@@ -5245,7 +5264,9 @@ class DB( HydrusDB.HydrusDB ):
             
             for obj in objs:
                 
-                ( dump_type, dump_name, dump_version, dump ) = HydrusSerialisable.DumpToTuple( obj )
+                ( dump_type, dump_name, dump_version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( obj )
+                
+                dump = json.dumps( serialisable_info )
                 
                 self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, dump ) VALUES ( ?, ?, ?, ? );', ( dump_type, dump_name, dump_version, sqlite3.Binary( dump ) ) )
                 
@@ -5259,9 +5280,16 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( dump_type, dump_name, dump ) in results:
                 
-                dump = lz4.loads( dump )
-                
-                self._c.execute( 'UPDATE json_dumps_named SET dump = ? WHERE dump_type = ? AND dump_name = ?;', ( sqlite3.Binary( dump ), dump_type, dump_name ) )
+                try:
+                    
+                    dump = lz4.loads( dump )
+                    
+                    self._c.execute( 'UPDATE json_dumps_named SET dump = ? WHERE dump_type = ? AND dump_name = ?;', ( sqlite3.Binary( dump ), dump_type, dump_name ) )
+                    
+                except:
+                    
+                    continue
+                    
                 
             
         
@@ -5380,6 +5408,42 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'e621', ClientDefaults.GetDefaultBoorus()[ 'e621' ] ) )
             
             self._c.execute( 'DROP TABLE ratings_filter;' )
+            
+        
+        if version == 161:
+            
+            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
+            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_EXPORT_FOLDER, ) )
+            
+            #
+            
+            for filename in dircache.listdir( HC.CLIENT_UPDATES_DIR ):
+                
+                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                
+                with open( path, 'rb' ) as f:
+                    
+                    inefficient_string = f.read()
+                    
+                
+                try:
+                    
+                    ( dump_type, dump_version, dump ) = json.loads( inefficient_string )
+                    
+                    serialisable_info = json.loads( dump )
+                    
+                    better_string = json.dumps( ( dump_type, dump_version, serialisable_info ) )
+                    
+                    with open( path, 'wb' ) as f:
+                        
+                        f.write( better_string )
+                        
+                    
+                except:
+                    
+                    continue
+                    
+                
             
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -5924,8 +5988,8 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'backup': result = self._Backup( *args, **kwargs )
         elif action == 'content_updates':result = self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'copy_files': result = self._CopyFiles( *args, **kwargs )
-        elif action == 'delete_export_folder': result = self._DeleteYAMLDump( YAML_DUMP_ID_EXPORT_FOLDER, *args, **kwargs )
-        elif action == 'delete_gui_session': result = self._DeleteYAMLDump( YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
+        elif action == 'delete_export_folder': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, *args, **kwargs )
+        elif action == 'delete_gui_session': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, *args, **kwargs )
         elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )
         elif action == 'delete_imageboard': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'delete_import_folder': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
@@ -5936,11 +6000,11 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_service_info': result = self._DeleteServiceInfo( *args, **kwargs )
         elif action == 'delete_shortcuts': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, *args, **kwargs )
         elif action == 'delete_subscription': result = self._DeleteYAMLDump( YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
-        elif action == 'export_folder': result = self._SetYAMLDump( YAML_DUMP_ID_EXPORT_FOLDER, *args, **kwargs )
+        elif action == 'export_folder': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'export_mappings': result = self._ExportToTagArchive( *args, **kwargs )
         elif action == 'fatten_autocomplete_cache': result = self._FattenAutocompleteCache( *args, **kwargs )
         elif action == 'file_integrity': result = self._CheckFileIntegrity( *args, **kwargs )
-        elif action == 'gui_session': result = self._SetYAMLDump( YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
+        elif action == 'gui_session': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'hydrus_session': result = self._AddHydrusSession( *args, **kwargs )
         elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )

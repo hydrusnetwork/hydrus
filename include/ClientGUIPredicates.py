@@ -6,7 +6,7 @@ import wx
 
 class PanelPredicateSystem( wx.Panel ):
     
-    SYSTEM_PREDICATE_TYPE = None
+    PREDICATE_TYPE = None
     
     def GetInfo( self ):
         
@@ -17,14 +17,14 @@ class PanelPredicateSystem( wx.Panel ):
         
         info = self.GetInfo()
         
-        predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self.SYSTEM_PREDICATE_TYPE, info ) )
+        predicate = HydrusData.Predicate( self.PREDICATE_TYPE, info )
         
         return predicate
         
     
 class PanelPredicateSystemAge( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_AGE
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_AGE
     
     def __init__( self, parent ):
         
@@ -75,7 +75,7 @@ class PanelPredicateSystemAge( PanelPredicateSystem ):
     
 class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_DURATION
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_DURATION
     
     def __init__( self, parent ):
         
@@ -122,7 +122,7 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
 class PanelPredicateSystemFileService( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE
     
     def __init__( self, parent ):
         
@@ -166,7 +166,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
     
 class PanelPredicateSystemHash( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_HASH
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_HASH
     
     def __init__( self, parent ):
         
@@ -201,7 +201,7 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
     
 class PanelPredicateSystemHeight( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_HEIGHT
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_HEIGHT
     
     def __init__( self, parent ):
         
@@ -239,7 +239,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
     
 class PanelPredicateSystemLimit( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_LIMIT
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_LIMIT
     
     def __init__( self, parent ):
         
@@ -272,7 +272,7 @@ class PanelPredicateSystemLimit( PanelPredicateSystem ):
     
 class PanelPredicateSystemMime( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_MIME
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_MIME
     
     def __init__( self, parent ):
         
@@ -384,7 +384,7 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_NUM_PIXELS
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_NUM_PIXELS
     
     def __init__( self, parent ):
         
@@ -427,7 +427,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumTags( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS
     
     def __init__( self, parent ):
         
@@ -465,7 +465,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
     
 class PanelPredicateSystemNumWords( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS
     
     def __init__( self, parent ):
         
@@ -503,7 +503,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
     
 class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_RATING
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_RATING
     
     def __init__( self, parent ):
         
@@ -546,14 +546,14 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
         elif selection == 2: value = 'rated'
         elif selection == 3: value = 'not rated'
         
-        info = ( service_key, operator, value )
+        info = ( operator, value, service_key )
         
         return info
         
     
 class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_RATING
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_RATING
     
     def __init__( self, parent ):
         
@@ -622,14 +622,14 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
         
         service_key = service.GetServiceKey()
         
-        info = ( service_key, operator, value )
+        info = ( operator, value, service_key )
         
         return info
         
     
 class PanelPredicateSystemRatio( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_RATIO
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_RATIO
     
     def __init__( self, parent ):
         
@@ -673,7 +673,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
     
 class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO
     
     def __init__( self, parent ):
         
@@ -719,7 +719,7 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
     
 class PanelPredicateSystemSize( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_SIZE
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_SIZE
     
     def __init__( self, parent ):
         
@@ -762,7 +762,7 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
     
 class PanelPredicateSystemWidth( PanelPredicateSystem ):
     
-    SYSTEM_PREDICATE_TYPE = HC.SYSTEM_PREDICATE_TYPE_WIDTH
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_WIDTH
     
     def __init__( self, parent ):
         

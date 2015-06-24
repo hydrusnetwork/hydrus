@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import collections
 import datetime
+import dircache
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetworking
@@ -8,7 +9,10 @@ import HydrusSerialisable
 import threading
 import traceback
 import os
+import random
+import shutil
 import sqlite3
+import stat
 import sys
 import time
 import wx
@@ -74,73 +78,6 @@ def CatchExceptionClient( etype, value, tb ):
         
         HydrusData.ShowText( text )
     
-def GenerateExportFilename( media, terms ):
-
-    filename = ''
-    
-    for ( term_type, term ) in terms:
-        
-        tags_manager = media.GetTagsManager()
-        
-        if term_type == 'string': filename += term
-        elif term_type == 'namespace':
-            
-            tags = tags_manager.GetNamespaceSlice( ( term, ), collapse_siblings = True )
-            
-            filename += ', '.join( [ tag.split( ':' )[1] for tag in tags ] )
-            
-        elif term_type == 'predicate':
-            
-            if term in ( 'tags', 'nn tags' ):
-                
-                current = tags_manager.GetCurrent()
-                pending = tags_manager.GetPending()
-                
-                tags = list( current.union( pending ) )
-                
-                if term == 'nn tags': tags = [ tag for tag in tags if ':' not in tag ]
-                else: tags = [ tag if ':' not in tag else tag.split( ':' )[1] for tag in tags ]
-                
-                tags.sort()
-                
-                filename += ', '.join( tags )
-                
-            elif term == 'hash':
-                
-                hash = media.GetHash()
-                
-                filename += hash.encode( 'hex' )
-                
-            
-        elif term_type == 'tag':
-            
-            if ':' in term: term = term.split( ':' )[1]
-            
-            if tags_manager.HasTag( term ): filename += term
-            
-        
-    
-    return filename
-    
-def GetExportPath():
-    
-    options = wx.GetApp().GetOptions()
-    
-    path = options[ 'export_path' ]
-    
-    if path is None:
-        
-        path = os.path.expanduser( '~' ) + os.path.sep + 'hydrus_export'
-        
-        if not os.path.exists( path ): os.mkdir( path )
-        
-    
-    path = os.path.normpath( path ) # converts slashes to backslashes for windows
-    
-    path = HydrusData.ConvertPortablePathToAbsPath( path )
-    
-    return path
-    
 def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
     
     tags_managers = []
@@ -183,82 +120,6 @@ def IsWXAncestor( child, ancestor ):
         
     
     return False
-    
-def ParseExportPhrase( phrase ):
-    
-    try:
-        
-        terms = [ ( 'string', phrase ) ]
-        
-        new_terms = []
-        
-        for ( term_type, term ) in terms:
-            
-            if term_type == 'string':
-                
-                while '[' in term:
-                    
-                    ( pre, term ) = term.split( '[', 1 )
-                    
-                    ( namespace, term ) = term.split( ']', 1 )
-                    
-                    new_terms.append( ( 'string', pre ) )
-                    new_terms.append( ( 'namespace', namespace ) )
-                    
-                
-            
-            new_terms.append( ( term_type, term ) )
-            
-        
-        terms = new_terms
-        
-        new_terms = []
-        
-        for ( term_type, term ) in terms:
-            
-            if term_type == 'string':
-                
-                while '{' in term:
-                    
-                    ( pre, term ) = term.split( '{', 1 )
-                    
-                    ( predicate, term ) = term.split( '}', 1 )
-                    
-                    new_terms.append( ( 'string', pre ) )
-                    new_terms.append( ( 'predicate', predicate ) )
-                    
-                
-            
-            new_terms.append( ( term_type, term ) )
-            
-        
-        terms = new_terms
-        
-        new_terms = []
-        
-        for ( term_type, term ) in terms:
-            
-            if term_type == 'string':
-                
-                while '(' in term:
-                    
-                    ( pre, term ) = term.split( '(', 1 )
-                    
-                    ( tag, term ) = term.split( ')', 1 )
-                    
-                    new_terms.append( ( 'string', pre ) )
-                    new_terms.append( ( 'tag', tag ) )
-                    
-                
-            
-            new_terms.append( ( term_type, term ) )
-            
-        
-        terms = new_terms
-        
-    except: raise Exception( 'Could not parse that phrase!' )
-    
-    return terms
     
 def ShowExceptionClient( e ):
     
@@ -390,7 +251,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
     def HasAccessKey( self ): return self._access_key is not None and self._access_key is not ''
     
     def SetAccessKey( self, access_key ): self._access_key = access_key
-    
+
 class FileQueryResult( object ):
     
     def __init__( self, media_results ):
@@ -488,7 +349,10 @@ class FileQueryResult( object ):
             
         
     
-class FileSearchContext( object ):
+class FileSearchContext( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT
+    SERIALISABLE_VERSION = 1
     
     def __init__( self, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = None ):
         
@@ -502,11 +366,37 @@ class FileSearchContext( object ):
         
         self._predicates = predicates
         
-        system_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_SYSTEM ]
+        self._search_complete = False
+        
+        self._InitialiseTemporaryVariables()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_predicates = [ HydrusSerialisable.GetSerialisableTuple( predicate ) for predicate in self._predicates ]
+        
+        return ( self._file_service_key.encode( 'hex' ), self._tag_service_key.encode( 'hex' ), self._include_current_tags, self._include_pending_tags, serialisable_predicates, self._search_complete )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( file_service_key, tag_service_key, self._include_current_tags, self._include_pending_tags, serialisable_predicates, self._search_complete ) = serialisable_info
+        
+        self._file_service_key = file_service_key.decode( 'hex' )
+        self._tag_service_key = tag_service_key.decode( 'hex' )
+        
+        self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
+        
+        self._InitialiseTemporaryVariables()
+        
+    
+    def _InitialiseTemporaryVariables( self ):
+        
+        system_predicates = [ predicate for predicate in self._predicates if predicate.GetType() in HC.SYSTEM_PREDICATES ]
         
         self._system_predicates = FileSystemPredicates( system_predicates )
         
-        tag_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG ]
+        tag_predicates = [ predicate for predicate in self._predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG ]
         
         self._tags_to_include = []
         self._tags_to_exclude = []
@@ -519,7 +409,7 @@ class FileSearchContext( object ):
             else: self._tags_to_exclude.append( tag )
             
         
-        namespace_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_NAMESPACE ]
+        namespace_predicates = [ predicate for predicate in self._predicates if predicate.GetType() == HC.PREDICATE_TYPE_NAMESPACE ]
         
         self._namespaces_to_include = []
         self._namespaces_to_exclude = []
@@ -532,7 +422,7 @@ class FileSearchContext( object ):
             else: self._namespaces_to_exclude.append( namespace )
             
         
-        wildcard_predicates =  [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_WILDCARD ]
+        wildcard_predicates =  [ predicate for predicate in self._predicates if predicate.GetType() == HC.PREDICATE_TYPE_WILDCARD ]
         
         self._wildcards_to_include = []
         self._wildcards_to_exclude = []
@@ -558,7 +448,18 @@ class FileSearchContext( object ):
     def GetWildcardsToInclude( self ): return self._wildcards_to_include
     def IncludeCurrentTags( self ): return self._include_current_tags
     def IncludePendingTags( self ): return self._include_pending_tags
+    def IsComplete( self ): return self._search_complete
+    def SetComplete( self ): self._search_complete = True
     
+    def SetPredicates( self, predicates ):
+        
+        self._predicates = predicates
+        
+        self._InitialiseTemporaryVariables()
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
+
 class FileSystemPredicates( object ):
     
     def __init__( self, system_predicates ):
@@ -582,23 +483,24 @@ class FileSystemPredicates( object ):
         
         for predicate in system_predicates:
             
-            ( system_predicate_type, info ) = predicate.GetValue()
+            predicate_type = predicate.GetType()
+            value = predicate.GetValue()
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_INBOX: self._inbox = True
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_ARCHIVE: self._archive = True
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_LOCAL: self._local = True
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL: self._not_local = True
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_INBOX: self._inbox = True
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_ARCHIVE: self._archive = True
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: self._local = True
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: self._not_local = True
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_HASH:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
                 
-                hash = info
+                hash = value
                 
                 self._common_info[ 'hash' ] = hash
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_AGE:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
                 
-                ( operator, years, months, days, hours ) = info
+                ( operator, years, months, days, hours ) = value
                 
                 age = ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
                 
@@ -615,18 +517,18 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_MIME:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
                 
-                mimes = info
+                mimes = value
                 
                 if type( mimes ) == int: mimes = ( mimes, )
                 
                 self._common_info[ 'mimes' ] = mimes
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_DURATION:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION:
                 
-                ( operator, duration ) = info
+                ( operator, duration ) = value
                 
                 if operator == '<': self._common_info[ 'max_duration' ] = duration
                 elif operator == '>': self._common_info[ 'min_duration' ] = duration
@@ -642,16 +544,16 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATING:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
                 
-                ( service_key, operator, value ) = info
+                ( operator, value, service_key ) = value
                 
-                self._ratings_predicates.append( ( service_key, operator, value ) )
+                self._ratings_predicates.append( ( operator, value, service_key ) )
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATIO:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATIO:
                 
-                ( operator, ratio_width, ratio_height ) = info
+                ( operator, ratio_width, ratio_height ) = value
                 
                 if operator == '=': self._common_info[ 'ratio' ] = ( ratio_width, ratio_height )
                 elif operator == u'\u2248':
@@ -661,9 +563,9 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIZE:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
                 
-                ( operator, size, unit ) = info
+                ( operator, size, unit ) = value
                 
                 size = size * unit
                 
@@ -677,18 +579,18 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
                 
-                ( operator, num_tags ) = info
+                ( operator, num_tags ) = value
                 
                 if operator == '<': self._common_info[ 'max_num_tags' ] = num_tags
                 elif operator == '=': self._common_info[ 'num_tags' ] = num_tags
                 elif operator == '>': self._common_info[ 'min_num_tags' ] = num_tags
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_WIDTH:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH:
                 
-                ( operator, width ) = info
+                ( operator, width ) = value
                 
                 if operator == '<': self._common_info[ 'max_width' ] = width
                 elif operator == '>': self._common_info[ 'min_width' ] = width
@@ -704,9 +606,9 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_PIXELS:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
                 
-                ( operator, num_pixels, unit ) = info
+                ( operator, num_pixels, unit ) = value
                 
                 num_pixels = num_pixels * unit
                 
@@ -720,9 +622,9 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_HEIGHT:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_HEIGHT:
                 
-                ( operator, height ) = info
+                ( operator, height ) = value
                 
                 if operator == '<': self._common_info[ 'max_height' ] = height
                 elif operator == '>': self._common_info[ 'min_height' ] = height
@@ -738,9 +640,9 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
                 
-                ( operator, num_words ) = info
+                ( operator, num_words ) = value
                 
                 if operator == '<': self._common_info[ 'max_num_words' ] = num_words
                 elif operator == '>': self._common_info[ 'min_num_words' ] = num_words
@@ -756,16 +658,16 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_LIMIT:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
                 
-                limit = info
+                limit = value
                 
                 self._limit = limit
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
                 
-                ( operator, current_or_pending, service_key ) = info
+                ( operator, current_or_pending, service_key ) = value
                 
                 if operator == True:
                     
@@ -779,9 +681,9 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
                 
-                ( hash, max_hamming ) = info
+                ( hash, max_hamming ) = value
                 
                 self._similar_to = ( hash, max_hamming )
                 
@@ -1025,7 +927,7 @@ class Periodic( HydrusSerialisable.SerialisableBase ):
     
     def IsDue( self ):
         
-        return HydrusData.GetNow() > self.GetDue()
+        return HydrusData.TimeHasPassed( self.GetDue() )
         
     
     def IsFailureDelaying( self ):
@@ -1036,7 +938,7 @@ class Periodic( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            return HydrusData.GetNow() > self._failure_delay_timestamp
+            return HydrusData.TimeHasPassed( self._failure_delay_timestamp )
             
         
     
@@ -1113,7 +1015,7 @@ class Service( HydrusData.HydrusYAMLBase ):
     
     def CanDownloadUpdate( self ):
         
-        update_due = self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 < HydrusData.GetNow()
+        update_due = HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
         
         return not self.IsPaused() and self.CanDownload() and update_due
         
@@ -1122,7 +1024,7 @@ class Service( HydrusData.HydrusYAMLBase ):
         
         update_is_downloaded = self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
         
-        it_is_time = self._info[ 'next_processing_timestamp' ] + HC.options[ 'processing_phase' ] < HydrusData.GetNow()
+        it_is_time = HydrusData.TimeHasPassed( self._info[ 'next_processing_timestamp' ] + HC.options[ 'processing_phase' ] )
         
         return update_is_downloaded and it_is_time
         

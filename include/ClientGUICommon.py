@@ -584,22 +584,22 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, page_key, file_service_key, tag_service_key, media_callable = None ):
+    def __init__( self, parent, page_key, file_service_key, tag_service_key, media_callable = None, include_current = True, include_pending = True, synchronised = True ):
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
         
         self._media_callable = media_callable
         self._page_key = page_key
         
-        self._include_current = True
-        self._include_pending = True
+        self._include_current = include_current
+        self._include_pending = include_pending
         
-        self._include_current_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_current', on_label = 'include current tags', off_label = 'exclude current tags' )
+        self._include_current_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_current', on_label = 'include current tags', off_label = 'exclude current tags', start_on = self._include_current )
         self._include_current_tags.SetToolTipString( 'select whether to include current tags in the search' )
-        self._include_pending_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_pending', on_label = 'include pending tags', off_label = 'exclude pending tags' )
+        self._include_pending_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_pending', on_label = 'include pending tags', off_label = 'exclude pending tags', start_on = self._include_pending )
         self._include_pending_tags.SetToolTipString( 'select whether to include pending tags in the search' )
         
-        self._synchronised = OnOffButton( self._dropdown_window, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- tag counts may be inaccurate' )
+        self._synchronised = OnOffButton( self._dropdown_window, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- tag counts may be inaccurate', start_on = synchronised )
         self._synchronised.SetToolTipString( 'select whether to renew the search as soon as a new predicate is entered' )
         
         button_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
@@ -740,7 +740,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     media = self._media_callable()
                     
-                    if media is not None and self._synchronised.IsOn(): fetch_from_db = False
+                    can_fetch_from_media = media is not None and len( media ) > 0
+                    
+                    if can_fetch_from_media and self._synchronised.IsOn(): fetch_from_db = False
                     
                 
                 if fetch_from_db:
@@ -817,7 +819,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         for match in matches:
             
-            if match.GetPredicateType() == HC.PREDICATE_TYPE_TAG: match.SetInclusive( inclusive )
+            if match.GetType() == HC.PREDICATE_TYPE_TAG: match.SetInclusive( inclusive )
             
         
         return matches
@@ -833,6 +835,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     def _TakeResponsibilityForEnter( self ):
         
         self._BroadcastCurrentText()
+        
+    
+    def GetFileSearchContext( self ):
+        
+        return ClientData.FileSearchContext( file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, include_current_tags = self._include_current, include_pending_tags = self._include_pending )
         
     
     def IncludeCurrent( self, page_key, value ):
@@ -1024,7 +1031,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     matches.remove( predicate )
                     
-                    while matches[ index ].GetPredicateType() == HC.PREDICATE_TYPE_PARENT:
+                    while matches[ index ].GetType() == HC.PREDICATE_TYPE_PARENT:
                         
                         parent = matches[ index ]
                         
@@ -1035,7 +1042,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                 except:
                     
-                    if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG:
+                    if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
                         
                         tag = predicate.GetValue()
                         
@@ -2679,7 +2686,7 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
             
             new_term = self._strings_to_terms[ s ]
             
-            while new_term.GetPredicateType() == HC.PREDICATE_TYPE_PARENT:
+            while new_term.GetType() == HC.PREDICATE_TYPE_PARENT:
                 
                 index += direction
                 
@@ -4663,7 +4670,7 @@ class RegexButton( wx.Button ):
     
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
-    def __init__( self, parent, height, columns, delete_key_callback = None ):
+    def __init__( self, parent, height, columns, delete_key_callback = None, use_display_tuple_for_sort = False ):
         
         num_columns = len( columns )
         
@@ -4673,6 +4680,8 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
         self.itemDataMap = {}
         self._next_data_index = 0
+        self._use_display_tuple_for_sort = use_display_tuple_for_sort
+        self._custom_client_data = {}
         
         resize_column = 1
         
@@ -4692,13 +4701,22 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
     
-    def Append( self, display_tuple, data_tuple ):
+    def Append( self, display_tuple, client_data ):
         
         index = wx.ListCtrl.Append( self, display_tuple )
         
         self.SetItemData( index, self._next_data_index )
         
-        self.itemDataMap[ self._next_data_index ] = list( data_tuple )
+        if self._use_display_tuple_for_sort:
+            
+            self.itemDataMap[ self._next_data_index ] = list( display_tuple )
+            
+            self._custom_client_data[ self._next_data_index ] = client_data
+            
+        else:
+            
+            self.itemDataMap[ self._next_data_index ] = list( client_data )
+            
         
         self._next_data_index += 1
         
@@ -4734,7 +4752,14 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
             data_indicies = [ self.GetItemData( index ) for index in range( self.GetItemCount() ) ]
             
-            datas = [ tuple( self.itemDataMap[ data_index ] ) for data_index in data_indicies ]
+            if self._use_display_tuple_for_sort:
+                
+                datas = [ self._custom_client_data[ data_index ] for data_index in data_indicies ]
+                
+            else:
+                
+                datas = [ tuple( self.itemDataMap[ data_index ] ) for data_index in data_indicies ]
+                
             
             return datas
             
@@ -4742,7 +4767,14 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
             data_index = self.GetItemData( index )
             
-            return tuple( self.itemDataMap[ data_index ] )
+            if self._use_display_tuple_for_sort:
+                
+                return self._custom_client_data[ data_index ]
+                
+            else:
+                
+                return tuple( self.itemDataMap[ data_index ] )
+                
             
         
     
@@ -4790,7 +4822,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         self.itemDataMap[ data_index ][ column ] = data_value
         
     
-    def UpdateRow( self, index, display_tuple, data_tuple ):
+    def UpdateRow( self, index, display_tuple, client_data ):
         
         column = 0
         
@@ -4803,7 +4835,16 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
         data_index = self.GetItemData( index )
         
-        self.itemDataMap[ data_index ] = data_tuple
+        if self._use_display_tuple_for_sort:
+            
+            self.itemDataMap[ data_index ] = list( display_tuple )
+            
+            self._custom_client_data[ data_index ] = client_data
+            
+        else:
+            
+            self.itemDataMap[ data_index ] = list( client_data )
+            
         
     
 class Shortcut( wx.TextCtrl ):

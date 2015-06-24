@@ -651,7 +651,7 @@ class TagParentsManager( object ):
                 
                 results.append( predicate )
                 
-                if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG:
+                if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
                     
                     tag = predicate.GetValue()
                     
@@ -808,11 +808,11 @@ class TagSiblingsManager( object ):
         
         with self._lock:
             
-            results = [ predicate for predicate in predicates if predicate.GetPredicateType() != HC.PREDICATE_TYPE_TAG ]
+            results = [ predicate for predicate in predicates if predicate.GetType() != HC.PREDICATE_TYPE_TAG ]
             
-            tag_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG ]
+            tag_predicates = [ predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG ]
             
-            tags_to_predicates = { predicate.GetValue() : predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG }
+            tags_to_predicates = { predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG }
             
             tags = tags_to_predicates.keys()
             

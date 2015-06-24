@@ -514,9 +514,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             menu.AppendSeparator()
             
-            gui_sessions = wx.GetApp().Read( 'gui_sessions' )
-            
-            gui_session_names = gui_sessions.keys()
+            gui_session_names = wx.GetApp().Read( 'gui_session_names' )
             
             sessions = wx.Menu()
             
@@ -976,48 +974,52 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _LoadGUISession( self, name ):
         
-        names_to_info = wx.GetApp().Read( 'gui_sessions' )
+        try:
+            
+            session = wx.GetApp().Read( 'gui_sessions', name )
+            
+        except:
+            
+            self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            
+            return
+            
         
-        if name not in names_to_info: self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
-        else:
+        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
             
-            info = names_to_info[ name ]
+            try: page.TestAbleToClose()
+            except: return
             
-            for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
-                
-                try: page.TestAbleToClose()
-                except: return
-                
+        
+        while self._notebook.GetPageCount() > 0:
             
-            while self._notebook.GetPageCount() > 0:
-                
-                self._CloseCurrentPage( polite = False )
-                
+            self._CloseCurrentPage( polite = False )
             
-            for ( page_name, c_text, args, kwargs ) in info:
+        
+        for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
+            
+            try:
                 
-                try:
+                if len( initial_hashes ) > 0:
                     
-                    c = ClientGUIPages.text_to_class[ c_text ]
+                    file_service_key = management_controller.GetKey( 'file_service' )
                     
-                    kwargs[ 'starting_from_session' ] = True
+                    initial_media_results = wx.GetApp().Read( 'media_results', file_service_key, initial_hashes )
                     
-                    new_page = c( self._notebook, *args, **kwargs )
+                else:
                     
-                    self._notebook.AddPage( new_page, page_name, select = True )
-                    
-                    self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-                    
-                    new_page.SetSearchFocus()
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
+                    initial_media_results = []
                     
                 
+                self._NewPage( page_name, management_controller, initial_media_results = initial_media_results )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
             
-            if HC.PLATFORM_OSX: self._ClosePage( 0 )
-            
+        
+        if HC.PLATFORM_OSX: self._ClosePage( 0 )
         
     
     def _Manage4chanPass( self ):
@@ -1134,6 +1136,20 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
+    def _NewPage( self, page_name, management_controller, initial_media_results = None ):
+        
+        if initial_media_results is None:
+            
+            initial_media_results = []
+            
+        
+        page = ClientGUIPages.Page( self._notebook, management_controller, initial_media_results )
+        
+        self._notebook.AddPage( page, page_name, select = True )
+        
+        wx.CallAfter( page.SetSearchFocus )
+        
+    
     def _NewPageImportBooru( self ):
 
         with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
@@ -1149,37 +1165,25 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _NewPageImportGallery( self, site_type, gallery_type ):
         
-        new_page = ClientGUIPages.PageImportGallery( self._notebook, site_type, gallery_type )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( site_type, gallery_type )
         
         page_name = HydrusData.ConvertSiteTypeGalleryTypeToPrettyString( site_type, gallery_type )
         
-        self._notebook.AddPage( new_page, page_name, select = True )
-        
-        self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-        
-        new_page.SetSearchFocus()
+        self._NewPage( page_name, management_controller )
         
     
     def _NewPageImportThreadWatcher( self ):
         
-        new_page = ClientGUIPages.PageImportThreadWatcher( self._notebook )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher()
         
-        self._notebook.AddPage( new_page, 'thread watcher', select = True )
-        
-        self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-        
-        new_page.SetSearchFocus()
+        self._NewPage( 'thread watcher', management_controller )
         
     
     def _NewPageImportURL( self ):
         
-        new_page = ClientGUIPages.PageImportURL( self._notebook )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportURL()
         
-        self._notebook.AddPage( new_page, 'download', select = True )
-        
-        self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-        
-        new_page.SetSearchFocus()
+        self._NewPage( 'download', management_controller )
         
     
     def _NewPagePetitions( self, service_key = None ):
@@ -1188,31 +1192,28 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if service_key is not None:
             
+            management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
+            
             service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
             
-            account = service.GetInfo( 'account' )
+            page_name = service.GetName() + ' petitions'
             
-            if not account.HasPermission( HC.RESOLVE_PETITIONS ): return
-            
-            self._notebook.AddPage( ClientGUIPages.PagePetitions( self._notebook, service_key ), service.GetName() + ' petitions', select = True )
+            self._NewPage( page_name, management_controller )
             
         
     
-    def _NewPageQuery( self, service_key, initial_media_results = None, initial_predicates = None ):
+    def _NewPageQuery( self, file_service_key, initial_media_results = None, initial_predicates = None ):
         
         if initial_media_results is None: initial_media_results = []
         if initial_predicates is None: initial_predicates = []
         
-        if service_key is None: service_key = ClientGUIDialogs.SelectServiceKey( service_types = ( HC.FILE_REPOSITORY, ) )
+        search_enabled = len( initial_media_results ) == 0
         
-        if service_key is not None:
-            
-            new_page = ClientGUIPages.PageQuery( self._notebook, service_key, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
-            
-            self._notebook.AddPage( new_page, 'files', select = True )
-            
-            wx.CallAfter( new_page.SetSearchFocus )
-            
+        file_search_context = ClientData.FileSearchContext( file_service_key = file_service_key, predicates = initial_predicates )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( file_service_key, file_search_context, search_enabled )
+        
+        self._NewPage( 'files', management_controller, initial_media_results = initial_media_results )
         
     
     def _News( self, service_key ):
@@ -1222,7 +1223,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _OpenExportFolder( self ):
         
-        export_path = ClientData.GetExportPath()
+        export_path = ClientFiles.GetExportPath()
         
         HydrusFileHandling.LaunchDirectory( export_path )
         
@@ -1426,33 +1427,42 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             wx.MessageBox( 'Sorry, you cannot have that name! Try another.' )
                             
-                        else: break
+                        else:
+                            
+                            break
+                            
                         
-                    else: return
+                    else:
+                        
+                        return
+                        
                     
                 
             
         
-        info = []
+        session = ClientGUIPages.GUISession( name )
         
         for i in range( self._notebook.GetPageCount() ):
             
             page = self._notebook.GetPage( i )
             
-            if not page.IsStorable(): continue
-            
             page_name = self._notebook.GetPageText( i )
             
-            c = type( page )
+            management_controller = page.GetManagementController()
             
-            c_text = ClientGUIPages.class_to_text[ c ]
+            # this bit could obviously be 'getmediaresultsobject' or whatever, with sort/collect/selection/view status
+            media = page.GetMedia()
             
-            ( args, kwargs ) = page.GetSessionArgs()
+            hashes = set()
             
-            info.append( ( page_name, c_text, args, kwargs ) )
+            for m in media: hashes.update( m.GetHashes() )
+            
+            hashes = list( hashes )
+            
+            session.AddPage( page_name, management_controller, hashes )
             
         
-        wx.GetApp().Write( 'gui_session', name, info )
+        wx.GetApp().Write( 'gui_session', session )
         
         HydrusGlobals.pubsub.pub( 'notify_new_sessions' )
         
@@ -2001,32 +2011,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def ImportFiles( self, paths ): self._ImportFiles( paths )
-    '''
-    def NewCompose( self, identity ):
-        
-        draft_key = os.urandom( 32 )
-        conversation_key = draft_key
-        subject = ''
-        contact_from = identity
-        contacts_to = []
-        recipients_visible = False
-        body = ''
-        attachments = []
-        
-        empty_draft_message = ClientConstantsMessages.DraftMessage( draft_key, conversation_key, subject, contact_from, contacts_to, recipients_visible, body, attachments, is_new = True )
-        
-        FrameComposeMessage( empty_draft_message )
-        
-    '''
-    def NewPageImportGallery( self, site_type, gallery_type ): self._NewPageImportGallery( site_type, gallery_type )
     
-    def NewPageImportHDD( self, paths_info, advanced_import_options = None, paths_to_tags = None, delete_after_success = False ):
+    def NewPageImportGallery( self, site_type, gallery_type ):
         
-        new_page = ClientGUIPages.PageImportHDD( self._notebook, paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+        self._NewPageImportGallery( site_type, gallery_type )
         
-        self._notebook.AddPage( new_page, 'import', select = True )
+    
+    def NewPageImportHDD( self, paths_info, advanced_import_options, paths_to_tags, delete_after_success ):
         
-        self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths_info, advanced_import_options, paths_to_tags, delete_after_success )
+        
+        self._NewPage( 'import', management_controller )
         
     
     def NewPageImportThreadWatcher( self ): self._NewPageImportThreadWatcher()
@@ -2051,11 +2046,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 imageboard = dlg.GetImageboard()
                 
-                new_page = ClientGUIPages.PageThreadDumper( self._notebook, imageboard, hashes )
-                
-                self._notebook.AddPage( new_page, 'imageboard dumper', select = True )
-                
-                new_page.SetSearchFocus()
+                pass
                 
             
         
@@ -2064,7 +2055,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         hamming_distance = HC.options[ 'file_system_predicates' ][ 'hamming_distance' ]
         
-        initial_predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, hamming_distance ) ) ) ]
+        initial_predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, hamming_distance ) ) ]
         
         self._NewPageQuery( file_service_key, initial_predicates = initial_predicates )
         
@@ -2158,6 +2149,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def Shutdown( self ):
         
+        self._SaveGUISession( 'last session' )
+        
         try:
             
             self._message_manager.Hide()
@@ -2178,8 +2171,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         wx.GetApp().Write( 'save_options', HC.options )
-        
-        self._SaveGUISession( 'last session' )
         
         wx.CallAfter( self.Destroy )
         

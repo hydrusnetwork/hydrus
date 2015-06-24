@@ -47,9 +47,9 @@ class ImportController( HydrusSerialisable.SerialisableBase ):
         
         # collapse file status counts into a list because of stupid int dict json thing
         
-        serialisable_url_cache = HydrusSerialisable.DumpToTuple( self._url_cache )
+        serialisable_url_cache = HydrusSerialisable.GetSerialisableTuple( self._url_cache )
         
-        serialisable_options = { name : HydrusSerialisable.DumpToTuple( options ) for ( name, options ) in self._options.items() }
+        serialisable_options = { name : HydrusSerialisable.GetSerialisableTuple( options ) for ( name, options ) in self._options.items() }
         
         return ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, serialisable_url_cache, serialisable_options )
         
@@ -58,9 +58,9 @@ class ImportController( HydrusSerialisable.SerialisableBase ):
         
         ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, serialisable_url_cache_tuple, serialisable_options_tuple ) = serialisable_info
         
-        self._url_cache = HydrusSerialisable.CreateFromTuple( serialisable_url_cache_tuple )
+        self._url_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache_tuple )
         
-        self._options = { name : HydrusSerialisable.CreateFromTuple( serialisable_suboptions_tuple ) for ( name, serialisable_suboptions_tuple ) in serialisable_options_tuple.items() }
+        self._options = { name : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_suboptions_tuple ) for ( name, serialisable_suboptions_tuple ) in serialisable_options_tuple.items() }
         
     
     def _ProcessImportSeed( self, seed, seed_info ):
@@ -196,9 +196,9 @@ class ImportControllerHDD( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_url_cache = HydrusSerialisable.DumpToTuple( self._url_cache )
+        serialisable_url_cache = HydrusSerialisable.GetSerialisableTuple( self._url_cache )
         
-        serialisable_options = { name : HydrusSerialisable.DumpToTuple( options ) for ( name, options ) in self._options.items() }
+        serialisable_options = { name : HydrusSerialisable.GetSerialisableTuple( options ) for ( name, options ) in self._options.items() }
         
         return ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, serialisable_url_cache, serialisable_options )
         
@@ -207,9 +207,9 @@ class ImportControllerHDD( HydrusSerialisable.SerialisableBase ):
         
         ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, serialisable_url_cache_tuple, serialisable_options_tuple ) = serialisable_info
         
-        self._url_cache = HydrusSerialisable.CreateFromTuple( serialisable_url_cache_tuple )
+        self._url_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache_tuple )
         
-        self._options = { name : HydrusSerialisable.CreateFromTuple( serialisable_suboptions_tuple ) for ( name, serialisable_suboptions_tuple ) in serialisable_options_tuple.items() }
+        self._options = { name : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_suboptions_tuple ) for ( name, serialisable_suboptions_tuple ) in serialisable_options_tuple.items() }
         
     
     def GetImportStatus( self ):
@@ -232,6 +232,11 @@ class ImportControllerHDD( HydrusSerialisable.SerialisableBase ):
             
             pass
             
+        
+    
+    def GetTuple( self ):
+        
+        return ( self._paths_info, self._paths_to_tags, self._delete_file_after_import, self._import_file_options )
         
     
     def MainLoop( self ):
@@ -300,9 +305,9 @@ class GalleryQuery( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_url_cache = HydrusSerialisable.DumpToTuple( self._url_cache )
+        serialisable_url_cache = HydrusSerialisable.GetSerialisableTuple( self._url_cache )
         
-        serialisable_options = { name : HydrusSerialisable.DumpToTuple( options ) for ( name, options ) in self._options.items() }
+        serialisable_options = { name : HydrusSerialisable.GetSerialisableTuple( options ) for ( name, options ) in self._options.items() }
         
         return ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, self._file_limit, serialisable_url_cache, serialisable_options )
         
@@ -311,9 +316,9 @@ class GalleryQuery( HydrusSerialisable.SerialisableBase ):
         
         ( self._site_type, self._query_type, self._query, self._get_tags_if_redundant, serialisable_url_cache_tuple, serialisable_options_tuple ) = serialisable_info
         
-        self._url_cache = HydrusSerialisable.CreateFromTuple( serialisable_url_cache_tuple )
+        self._url_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache_tuple )
         
-        self._options = { name : HydrusSerialisable.CreateFromTuple( serialisable_suboptions_tuple ) for ( name, serialisable_suboptions_tuple ) in serialisable_options_tuple.items() }
+        self._options = { name : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_suboptions_tuple ) for ( name, serialisable_suboptions_tuple ) in serialisable_options_tuple.items() }
         
     
     def GetQuery( self ):
@@ -356,16 +361,16 @@ class SubscriptionController( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        return ( HydrusSerialisable.DumpToTuple( self._gallery_query ), HydrusSerialisable.DumpToTuple( self._periodic ) )
+        return ( HydrusSerialisable.GetSerialisableTuple( self._gallery_query ), HydrusSerialisable.GetSerialisableTuple( self._periodic ) )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         ( serialised_gallery_query_tuple, serialised_periodic_tuple ) = serialisable_info
         
-        self._gallery_query = HydrusSerialisable.CreateFromTuple( serialised_gallery_query_tuple )
+        self._gallery_query = HydrusSerialisable.CreateFromSerialisableTuple( serialised_gallery_query_tuple )
         
-        self._periodic = HydrusSerialisable.CreateFromTuple( serialised_periodic_tuple )
+        self._periodic = HydrusSerialisable.CreateFromSerialisableTuple( serialised_periodic_tuple )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ] = Subscription

@@ -16,11 +16,9 @@ import HydrusGlobals
 
 class DataCache( object ):
     
-    def __init__( self, cache_size_key, decay_duration = 1200 ):
+    def __init__( self, cache_size_key ):
         
         self._cache_size_key = cache_size_key
-        
-        self._decay_duration = decay_duration
         
         self._keys_to_data = {}
         self._keys_fifo = []
@@ -30,6 +28,17 @@ class DataCache( object ):
         self._lock = threading.Lock()
         
         wx.CallLater( 60 * 1000, self.MaintainCache )
+        
+    
+    def _DeleteItem( self, index = 0 ):
+        
+        ( deletee_key, last_access_time ) = self._keys_fifo.pop( index )
+        
+        deletee_data = self._keys_to_data[ deletee_key ]
+        
+        self._total_estimated_memory_footprint -= deletee_data.GetEstimatedMemoryFootprint()
+        
+        del self._keys_to_data[ deletee_key ]
         
     
     def Clear( self ):
@@ -53,13 +62,7 @@ class DataCache( object ):
                 
                 while self._total_estimated_memory_footprint > options[ self._cache_size_key ]:
                     
-                    ( deletee_key, last_access_time ) = self._keys_fifo.pop( 0 )
-                    
-                    deletee_data = self._keys_to_data[ deletee_key ]
-                    
-                    self._total_estimated_memory_footprint -= deletee_data.GetEstimatedMemoryFootprint()
-                    
-                    del self._keys_to_data[ deletee_key ]
+                    self._DeleteItem()
                     
                 
                 self._keys_to_data[ key ] = data
@@ -77,9 +80,7 @@ class DataCache( object ):
             
             if key not in self._keys_to_data: raise Exception( 'Cache error! Looking for ' + HydrusData.ToString( key ) + ', but it was missing.' )
             
-            i = 0
-            
-            for ( fifo_key, last_access_time ) in self._keys_fifo:
+            for ( i, ( fifo_key, last_access_time ) ) in enumerate( self._keys_fifo ):
                 
                 if fifo_key == key:
                     
@@ -87,7 +88,6 @@ class DataCache( object ):
                     
                     break
                     
-                else: i += 1
                 
             
             self._keys_fifo.append( ( key, HydrusData.GetNow() ) )
@@ -103,8 +103,6 @@ class DataCache( object ):
     
     def MaintainCache( self ):
         
-        now = HydrusData.GetNow()
-        
         with self._lock:
             
             while True:
@@ -112,17 +110,13 @@ class DataCache( object ):
                 if len( self._keys_fifo ) == 0: break
                 else:
                     
-                    ( key, last_access_time ) = self._keys_fifo[ 0 ]
+                    oldest_index = 0
                     
-                    if now - last_access_time > self._decay_duration:
+                    ( key, last_access_time ) = self._keys_fifo[ oldest_index ]
+                    
+                    if HydrusData.TimeHasPassed( last_access_time + 1200 ):
                         
-                        del self._keys_fifo[ 0 ]
-                        
-                        data = self._keys_to_data[ key ]
-                        
-                        self._total_estimated_memory_footprint -= data.GetEstimatedMemoryFootprint()
-                        
-                        del self._keys_to_data[ key ]
+                        self._DeleteItem( oldest_index )
                         
                     else: break
                     
@@ -171,7 +165,7 @@ class LocalBooruCache( object ):
         
         timeout = info[ 'timeout' ]
         
-        if timeout is not None and HydrusData.GetNow() > timeout: raise HydrusExceptions.ForbiddenException( 'This share has expired.' )
+        if timeout is not None and HydrusData.TimeHasPassed( timeout ): raise HydrusExceptions.ForbiddenException( 'This share has expired.' )
         
     
     def _GetInfo( self, share_key ):

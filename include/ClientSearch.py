@@ -1,5 +1,5 @@
 import ClientData
-import HydrusConstants
+import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals
 import re
@@ -9,7 +9,7 @@ def SearchEntryMatchesPredicate( search_entry, predicate ):
     
     ( predicate_type, value, inclusive ) = predicate.GetInfo()
     
-    if predicate_type == HydrusConstants.PREDICATE_TYPE_TAG: return SearchEntryMatchesTag( search_entry, value, search_siblings = True )
+    if predicate_type == HC.PREDICATE_TYPE_TAG: return SearchEntryMatchesTag( search_entry, value, search_siblings = True )
     else: return False
 
 def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
@@ -97,13 +97,13 @@ def SortPredicates( predicates, collapse_siblings = False ):
     
     return predicates
 
-SYSTEM_PREDICATE_INBOX = HydrusData.Predicate( HydrusConstants.PREDICATE_TYPE_SYSTEM, ( HydrusConstants.SYSTEM_PREDICATE_TYPE_INBOX, None ) )
+SYSTEM_PREDICATE_INBOX = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None )
 
-SYSTEM_PREDICATE_ARCHIVE = HydrusData.Predicate( HydrusConstants.PREDICATE_TYPE_SYSTEM, ( HydrusConstants.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ) )
+SYSTEM_PREDICATE_ARCHIVE = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None )
 
-SYSTEM_PREDICATE_LOCAL = HydrusData.Predicate( HydrusConstants.PREDICATE_TYPE_SYSTEM, ( HydrusConstants.SYSTEM_PREDICATE_TYPE_LOCAL, None ) )
+SYSTEM_PREDICATE_LOCAL = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None )
 
-SYSTEM_PREDICATE_NOT_LOCAL = HydrusData.Predicate( HydrusConstants.PREDICATE_TYPE_SYSTEM, ( HydrusConstants.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ) )
+SYSTEM_PREDICATE_NOT_LOCAL = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None )
 
     
     

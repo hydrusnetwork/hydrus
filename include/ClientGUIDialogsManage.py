@@ -1,12 +1,9 @@
 import Crypto.PublicKey.RSA
-import HydrusConstants as HC
-import HydrusEncryption
-import HydrusExceptions
-import HydrusTags
 import ClientCaches
 import ClientConstants as CC
 import ClientData
 import ClientDefaults
+import ClientFiles
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
@@ -14,8 +11,15 @@ import ClientGUIPredicates
 import ClientMedia
 import ClientRatings
 import collections
+import HydrusConstants as HC
+import HydrusData
+import HydrusEncryption
+import HydrusExceptions
+import HydrusFileHandling
+import HydrusGlobals
 import HydrusNATPunch
 import HydrusNetworking
+import HydrusTags
 import itertools
 import os
 import random
@@ -26,10 +30,6 @@ import traceback
 import urllib
 import wx
 import yaml
-import HydrusData
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusGlobals
 
 # Option Enums
 
@@ -105,7 +105,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
     def _SetStatus( self ):
         
         if self._timeout == 0: label = 'not authenticated'
-        elif self._timeout < HydrusData.GetNow(): label = 'timed out'
+        elif HydrusData.TimeHasPassed( self._timeout ): label = 'timed out'
         else: label = 'authenticated - ' + HydrusData.ConvertTimestampToPrettyExpires( self._timeout )
         
         self._status.SetLabel( label )
@@ -1379,76 +1379,62 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete )
-            
-            self._add_button = wx.Button( self, label = 'add' )
-            self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
-            self._edit_button = wx.Button( self, label = 'edit' )
-            self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
-            
-            self._delete_button = wx.Button( self, label = 'delete' )
-            self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._original_paths_to_details = wx.GetApp().Read( 'export_folders' )
-            
-            for ( path, details ) in self._original_paths_to_details.items():
-                
-                export_type = details[ 'type' ]
-                predicates = details[ 'predicates' ]
-                period = details[ 'period' ]
-                phrase = details[ 'phrase' ]
-                
-                ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_type, predicates, period, phrase )
-                
-                self._export_folders.Append( ( path, pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ), ( path, export_type, predicates, period, phrase ) )
-                
-            
-        
-        def ArrangeControls():
-            
-            file_buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            file_buttons.AddF( self._add_button, CC.FLAGS_MIXED )
-            file_buttons.AddF( self._edit_button, CC.FLAGS_MIXED )
-            file_buttons.AddF( self._delete_button, CC.FLAGS_MIXED )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_MIXED )
-            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            intro = 'Here you can set the client to regularly export a certain query to a particular location.'
-            
-            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._export_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-        
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage export folders' )
         
-        InitialiseControls()
+        self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, use_display_tuple_for_sort = True )
         
-        PopulateControls()
+        export_folders = wx.GetApp().Read( 'export_folders' )
         
-        ArrangeControls()
+        self._original_paths = []
+        
+        for export_folder in export_folders:
+            
+            path = export_folder.GetName()
+            
+            self._original_paths.append( path )
+            
+            ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_folder )
+            
+            self._export_folders.Append( ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ), export_folder )
+            
+        
+        self._add_button = wx.Button( self, label = 'add' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        
+        self._edit_button = wx.Button( self, label = 'edit' )
+        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._delete_button = wx.Button( self, label = 'delete' )
+        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        file_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        file_buttons.AddF( self._add_button, CC.FLAGS_MIXED )
+        file_buttons.AddF( self._edit_button, CC.FLAGS_MIXED )
+        file_buttons.AddF( self._delete_button, CC.FLAGS_MIXED )
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_MIXED )
+        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = 'Here you can set the client to regularly export a certain query to a particular location.'
+        
+        vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._export_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
         
         ( x, y ) = self.GetEffectiveMinSize()
         
@@ -1462,15 +1448,24 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def _AddFolder( self, path ):
         
-        all_existing_client_data = self._export_folders.GetClientData()
+        export_folders = self._export_folders.GetClientData()
         
-        for ( existing_path, export_type, predicates, period, phrase ) in all_existing_client_data:
+        for export_folder in export_folders:
             
-            if path == existing_path: return
+            existing_path = export_folder.GetName()
+            
+            if path == existing_path:
+                
+                text = 'That directory already exists as an export folder--at current, there can only be one export folder per destination.'
+                
+                wx.MessageBox( text )
+                
+                return
+                
             
             if path.startswith( existing_path ):
                 
-                text = 'You have entered a subdirectory of an existing path, which is not permitted.'
+                text = 'You have entered a subdirectory of an existing path--at current, this is not permitted.'
                 
                 wx.MessageBox( text )
                 
@@ -1479,7 +1474,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             if existing_path.startswith( path ):
                 
-                text = 'You have entered a parent directory of an existing path, which is not permitted.'
+                text = 'You have entered a parent directory of an existing path--at current, this is not permitted.'
                 
                 wx.MessageBox( text )
                 
@@ -1488,24 +1483,28 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
         
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
-        predicates = []
+        file_search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
         period = 15 * 60
         phrase = '{hash}'
         
-        with DialogManageExportFoldersEdit( self, path, export_type, predicates, period, phrase ) as dlg:
+        export_folder = ClientFiles.ExportFolder( path, export_type = export_type, file_search_context = file_search_context, period = period, phrase = phrase )
+        
+        with DialogManageExportFoldersEdit( self, export_folder ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                ( path, export_type, predicates, period, phrase ) = dlg.GetInfo()
+                export_folder = dlg.GetInfo()
                 
-                ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_type, predicates, period, phrase )
+                ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_folder )
                 
-                self._export_folders.Append( ( path, pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ), ( path, export_type, predicates, period, phrase ) )
+                self._export_folders.Append( ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ), export_folder )
                 
             
         
     
-    def _GetPrettyVariables( self, export_type, predicates, period, phrase ):
+    def _GetPrettyVariables( self, export_folder ):
+        
+        ( path, export_type, file_search_context, period, phrase ) = export_folder.ToTuple()
         
         if export_type == HC.EXPORT_FOLDER_TYPE_REGULAR:
             
@@ -1516,13 +1515,13 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             pretty_export_type = 'synchronise'
             
         
-        pretty_predicates = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in predicates )
+        pretty_file_search_context = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in file_search_context.GetPredicates() )
         
         pretty_period = HydrusData.ToString( period / 60 ) + ' minutes'
         
         pretty_phrase = phrase
         
-        return ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase )
+        return ( path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase )
         
     
     def Delete( self ): self._export_folders.RemoveAllSelected()
@@ -1548,17 +1547,17 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for index in indices:
             
-            ( path, export_type, predicates, period, phrase ) = self._export_folders.GetClientData( index )
+            export_folder = self._export_folders.GetClientData( index )
             
-            with DialogManageExportFoldersEdit( self, path, export_type, predicates, period, phrase ) as dlg:
+            with DialogManageExportFoldersEdit( self, export_folder ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, export_type, predicates, period, phrase ) = dlg.GetInfo()
+                    export_folder = dlg.GetInfo()
                     
-                    ( pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_type, predicates, period, phrase )
+                    ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_folder )
                     
-                    self._export_folders.UpdateRow( index, ( path, pretty_export_type, pretty_predicates, pretty_period, pretty_phrase ), ( path, export_type, predicates, period, phrase ) )
+                    self._export_folders.UpdateRow( index, ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ), export_folder )
                     
                 
             
@@ -1570,24 +1569,18 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         export_folders = []
         
-        paths = set()
+        paths_set = set()
         
-        for ( path, export_type, predicates, period, phrase ) in client_data:
+        for export_folder in client_data:
             
-            if path in self._original_paths_to_details: details = self._original_paths_to_details[ path ]
-            else: details = { 'last_checked' : 0 }
+            wx.GetApp().Write( 'export_folder', export_folder )
             
-            details[ 'type' ] = export_type
-            details[ 'predicates' ] = predicates
-            details[ 'period' ] = period
-            details[ 'phrase' ] = phrase
+            path = export_folder.GetName()
             
-            wx.GetApp().Write( 'export_folder', path, details )
-            
-            paths.add( path )
+            paths_set.add( path )
             
         
-        deletees = set( self._original_paths_to_details.keys() ) - paths
+        deletees = set( self._original_paths ) - paths_set
         
         for deletee in deletees: wx.GetApp().Write( 'delete_export_folder', deletee )
         
@@ -1598,125 +1591,123 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
 class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, path, export_type, predicates, period, phrase ):
+    def __init__( self, parent, export_folder ):
         
-        def InitialiseControls():
-            
-            self._path_box = ClientGUICommon.StaticBox( self, 'export path' )
-            
-            self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
-            
-            #
-            
-            self._type_box = ClientGUICommon.StaticBox( self, 'type of export folder' )
-            
-            self._type = ClientGUICommon.BetterChoice( self._type_box )
-            self._type.Append( 'regular', HC.EXPORT_FOLDER_TYPE_REGULAR )
-            self._type.Append( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
-            
-            #
-            
-            self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
-            
-            self._page_key = os.urandom( 32 )
-            
-            self._predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._query_box, self._page_key, predicates )
-            
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
-            
-            #
-            
-            self._period_box = ClientGUICommon.StaticBox( self, 'export period (minutes)' )
-            
-            self._period = wx.SpinCtrl( self._period_box )
-            
-            #
-            
-            self._phrase_box = ClientGUICommon.StaticBox( self, 'filenames' )
-            
-            self._pattern = wx.TextCtrl( self._phrase_box )
-            
-            self._examples = ClientGUICommon.ExportPatternButton( self._phrase_box )
-            
-            #
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'edit export folder' )
         
-        def PopulateControls():
-            
-            self._type.SelectClientData( export_type )
-            
-            self._path.SetPath( path )
-            
-            self._period.SetRange( 3, 180 )
-            
-            self._period.SetValue( period / 60 )
-            
-            self._pattern.SetValue( phrase )
-            
+        self._export_folder = export_folder
         
-        def ArrangeControls():
-            
-            self._path_box.AddF( self._path, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            text = '''regular - try to export the files to the directory, overwriting if the filesize if different
+        ( path, export_type, file_search_context, period, phrase ) = self._export_folder.ToTuple()
+        
+        self._path_box = ClientGUICommon.StaticBox( self, 'export path' )
+        
+        self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._path.SetPath( path )
+        
+        #
+        
+        self._type_box = ClientGUICommon.StaticBox( self, 'type of export folder' )
+        
+        self._type = ClientGUICommon.BetterChoice( self._type_box )
+        self._type.Append( 'regular', HC.EXPORT_FOLDER_TYPE_REGULAR )
+        self._type.Append( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
+        
+        self._type.SelectClientData( export_type )
+        
+        #
+        
+        self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
+        
+        self._page_key = os.urandom( 32 )
+        
+        predicates = file_search_context.GetPredicates()
+        
+        self._predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._query_box, self._page_key, predicates )
+        
+        file_service_key = file_search_context.GetFileServiceKey()
+        tag_service_key = file_search_context.GetTagServiceKey()
+        include_current = file_search_context.IncludeCurrentTags()
+        include_pending = file_search_context.IncludePendingTags()
+        
+        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_service_key = file_service_key, tag_service_key = tag_service_key, include_current = include_current, include_pending = include_pending )
+        
+        #
+        
+        self._period_box = ClientGUICommon.StaticBox( self, 'export period (minutes)' )
+        
+        self._period = wx.SpinCtrl( self._period_box )
+        
+        self._period.SetRange( 3, 180 )
+        
+        self._period.SetValue( period / 60 )
+        
+        #
+        
+        self._phrase_box = ClientGUICommon.StaticBox( self, 'filenames' )
+        
+        self._pattern = wx.TextCtrl( self._phrase_box )
+        
+        self._pattern.SetValue( phrase )
+        
+        self._examples = ClientGUICommon.ExportPatternButton( self._phrase_box )
+        
+        #
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._path_box.AddF( self._path, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        text = '''regular - try to export the files to the directory, overwriting if the filesize if different
 
 synchronise - try to export the files to the directory, overwriting if the filesize if different, and delete anything else in the directory
 
 If you select synchronise, be careful!'''
-            
-            st = wx.StaticText( self._type_box, label = text )
-            st.Wrap( 480 )
-            
-            self._type_box.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._type_box.AddF( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._query_box.AddF( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._query_box.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._period_box.AddF( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            phrase_hbox.AddF( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-            phrase_hbox.AddF( self._examples, CC.FLAGS_MIXED )
-            
-            self._phrase_box.AddF( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_MIXED )
-            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( 480, y ) )
-            
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'edit export folder' )
+        st = wx.StaticText( self._type_box, label = text )
+        st.Wrap( 480 )
         
-        InitialiseControls()
+        self._type_box.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._type_box.AddF( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        PopulateControls()
+        self._query_box.AddF( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._query_box.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        ArrangeControls()
+        self._period_box.AddF( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        phrase_hbox.AddF( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        phrase_hbox.AddF( self._examples, CC.FLAGS_MIXED )
+        
+        self._phrase_box.AddF( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_MIXED )
+        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( 480, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -1737,7 +1728,7 @@ If you select synchronise, be careful!'''
         
         phrase = self._pattern.GetValue()
         
-        try: ClientData.ParseExportPhrase( phrase )
+        try: ClientFiles.ParseExportPhrase( phrase )
         except:
             
             wx.MessageBox( 'Could not parse that export phrase!' )
@@ -1754,13 +1745,19 @@ If you select synchronise, be careful!'''
         
         export_type = self._type.GetChoice()
         
+        file_search_context = self._searchbox.GetFileSearchContext()
+        
         predicates = self._predicates_box.GetPredicates()
+        
+        file_search_context.SetPredicates( predicates )
         
         period = self._period.GetValue() * 60
         
         phrase = self._pattern.GetValue()
         
-        return ( path, export_type, predicates, period, phrase )
+        self._export_folder.SetTuple( path, export_type, file_search_context, period, phrase )
+        
+        return self._export_folder
         
     
     def RemovePredicate( self, page_key, predicate ):
@@ -3153,9 +3150,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            gui_sessions = wx.GetApp().Read( 'gui_sessions' )
-            
-            gui_session_names = gui_sessions.keys()
+            gui_session_names = wx.GetApp().Read( 'gui_session_names' )
             
             if 'last session' not in gui_session_names: gui_session_names.insert( 0, 'last session' )
             

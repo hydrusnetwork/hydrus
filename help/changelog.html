@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 162</h3></li>
+				<ul>
+					<li>on update, all previous gui sessions are deleted!</li>
+					<li>on update, all export folders are deleted!</li>
+					<li>made an important efficiency improvement to the new serialisation protocol--network version is incremented as a result</li>
+					<li>finished extracting management data from management panel</li>
+					<li>management data is wrapped in management controller, a new JSONable class</li>
+					<li>pages collapsed to a single class</li>
+					<li>page and management panel instantiation completely rewritten for the new system</li>
+					<li>created new JSONable guisession class for better session management</li>
+					<li>db is updated to store all this stuff in JSON rather than YAML</li>
+					<li>session loading is much less bloaty for clients with many sessions</li>
+					<li>all page types are now serialisable and hence addable to a session</li>
+					<li>moved predicates to JSON</li>
+					<li>moved filesearchcontext to JSON</li>
+					<li>autocomplete dropdowns now remember their tag service, include current, include pending and synchronised status over sessions</li>
+					<li>export folders now remember their file and tag services, and also include current and pending status</li>
+					<li>some general improvements to export folder code</li>
+					<li>cleanup of export folder dialog code</li>
+					<li>added a test for export folders</li>
+					<li>some general refactoring</li>
+					<li>some general cleaning</li>
+					<li>significant refactoring of predicate variables</li>
+					<li>fixed a bug in multi-version update from before v154</li>
+					<li>if you do not have any ratings services, the 'manage->tags/ratings' submenu will now just be 'manage tags'</li>
+					<li>changed some thumbnail menu entries to say 'selected files' instead of 'all files', which is more accurate, see if you like it</li>
+				</ul>
 				<li><h3>version 161</h3></li>
 				<ul>
 					<li>updated windows python, sqlite and ffmpeg</li>

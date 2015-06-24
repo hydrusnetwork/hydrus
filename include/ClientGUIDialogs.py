@@ -1228,22 +1228,22 @@ class DialogInputFileSystemPredicate( Dialog ):
         
         pred_classes = []
         
-        if predicate_type == HC.SYSTEM_PREDICATE_TYPE_AGE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemAge )
-        if predicate_type == HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS:
+        if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemAge )
+        if predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemHeight )
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemWidth )
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatio )
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumPixels )
             
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_DURATION: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemDuration )
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemFileService )
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_HASH: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemHash )
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_LIMIT: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemLimit )
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_MIME: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemMime )
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumTags )
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumWords )
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATING:
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemDuration )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemFileService )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemHash )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemLimit )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemMime )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumTags )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumWords )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
             
             services_manager = wx.GetApp().GetManager( 'services' )
             
@@ -1253,8 +1253,8 @@ class DialogInputFileSystemPredicate( Dialog ):
             if len( ratings_like ) > 0: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatingLike )
             if len( ratings_numerical ) > 0: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatingNumerical )
             
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSimilarTo )
-        elif predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIZE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSize )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSimilarTo )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSize )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1738,9 +1738,11 @@ class DialogInputLocalFiles( Dialog ):
             
             advanced_import_options = self._advanced_import_options.GetInfo()
             
+            paths_to_tags = {}
+            
             delete_after_success = self._delete_after_success.GetValue()
             
-            HydrusGlobals.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, delete_after_success = delete_after_success )
+            HydrusGlobals.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options, paths_to_tags, delete_after_success )
             
             self.EndModal( wx.ID_OK )
             
@@ -1777,11 +1779,11 @@ class DialogInputLocalFiles( Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        delete_after_success = self._delete_after_success.GetValue()
-                        
                         paths_to_tags = dlg.GetInfo()
                         
-                        HydrusGlobals.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+                        delete_after_success = self._delete_after_success.GetValue()
+                        
+                        HydrusGlobals.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options, paths_to_tags, delete_after_success )
                         
                         self.EndModal( wx.ID_OK )
                         
@@ -4725,7 +4727,7 @@ class DialogSetupExport( Dialog ):
                 self._paths.Append( pretty_tuple, data_tuple )
                 
             
-            export_path = ClientData.GetExportPath()
+            export_path = ClientFiles.GetExportPath()
             
             self._directory_picker.SetPath( export_path )
             
@@ -4801,7 +4803,7 @@ class DialogSetupExport( Dialog ):
         
         directory = self._directory_picker.GetPath()
         
-        filename = ClientData.GenerateExportFilename( media, terms )
+        filename = ClientFiles.GenerateExportFilename( media, terms )
         
         if self._export_to_zip.GetValue() == True: zip_path = self._zip_name.GetValue() + os.path.sep
         else: zip_path = ''
@@ -4817,7 +4819,7 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        terms = ClientData.ParseExportPhrase( pattern )
+        terms = ClientFiles.ParseExportPhrase( pattern )
         
         all_paths = set()
         

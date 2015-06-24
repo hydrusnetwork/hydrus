@@ -45,9 +45,7 @@ class HydrusMessagingSessionManagerServer( object ):
                 
                 ( account, name, expires ) = self._service_keys_to_sessions[ service_key ][ session_key ]
                 
-                now = HydrusData.GetNow()
-                
-                if now > expires:
+                if HydrusData.TimeHasPassed( expires ):
                     
                     del self._service_keys_to_sessions[ service_key ][ session_key ]
                     
@@ -184,9 +182,7 @@ class HydrusSessionManagerServer( object ):
                 
                 ( account, expires ) = service_sessions[ session_key ]
                 
-                now = HydrusData.GetNow()
-                
-                if now > expires: del service_sessions[ session_key ]
+                if HydrusData.TimeHasPassed( expires ): del service_sessions[ session_key ]
                 else: return account
                 
             

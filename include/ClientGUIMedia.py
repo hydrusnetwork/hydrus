@@ -780,7 +780,7 @@ class MediaPanelNoQuery( MediaPanel ):
     
     def _GetPrettyStatus( self ): return 'No query'
     
-    def GetSortedMedia( self ): return None
+    def GetSortedMedia( self ): return []
     
 class MediaPanelLoading( MediaPanel ):
     
@@ -811,7 +811,7 @@ class MediaPanelLoading( MediaPanel ):
         return s
         
     
-    def GetSortedMedia( self ): return None
+    def GetSortedMedia( self ): return []
     
     def SetNumQueryResults( self, current, max ):
         
@@ -824,11 +824,9 @@ class MediaPanelLoading( MediaPanel ):
     
 class MediaPanelThumbnails( MediaPanel ):
     
-    def __init__( self, parent, page_key, file_service_key, media_results, refreshable = True ):
+    def __init__( self, parent, page_key, file_service_key, media_results ):
         
         MediaPanel.__init__( self, parent, page_key, file_service_key, media_results )
-        
-        self._refreshable = refreshable
         
         self._last_client_size = ( 0, 0 )
         self._num_columns = 1
@@ -1531,10 +1529,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if thumbnail is None:
             
-            if self._refreshable:
-                
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
-                
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
             
             if len( self._sorted_media ) > 0:
                 
@@ -1589,27 +1584,27 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if multiple_selected:
                     
-                    uploaded_phrase = 'all uploaded to'
-                    pending_phrase = 'all pending to'
-                    petitioned_phrase = 'all petitioned from'
-                    deleted_phrase = 'all deleted from'
+                    uploaded_phrase = 'selected uploaded to'
+                    pending_phrase = 'selected pending to'
+                    petitioned_phrase = 'selected petitioned from'
+                    deleted_phrase = 'selected deleted from'
                     
-                    download_phrase = 'download all possible'
-                    upload_phrase = 'upload all possible to'
-                    rescind_upload_phrase = 'rescind pending uploads to'
-                    petition_phrase = 'petition all possible for removal from'
-                    rescind_petition_phrase = 'rescind petitions for'
-                    remote_delete_phrase = 'delete all possible from'
-                    modify_account_phrase = 'modify the accounts that uploaded these to'
+                    download_phrase = 'download all possible selected'
+                    upload_phrase = 'upload all possible selected to'
+                    rescind_upload_phrase = 'rescind pending selected uploads to'
+                    petition_phrase = 'petition all possible selected for removal from'
+                    rescind_petition_phrase = 'rescind selected petitions for'
+                    remote_delete_phrase = 'delete all possible selected from'
+                    modify_account_phrase = 'modify the accounts that uploaded selected to'
                     
-                    manage_tags_phrase = 'files\' tags'
-                    manage_ratings_phrase = 'files\' ratings'
+                    manage_tags_phrase = 'selected files\' tags'
+                    manage_ratings_phrase = 'selected files\' ratings'
                     
-                    archive_phrase = 'archive all'
-                    inbox_phrase = 'return all to inbox'
-                    remove_phrase = 'remove all'
-                    local_delete_phrase = 'delete all'
-                    dump_phrase = 'dump all to 4chan'
+                    archive_phrase = 'archive selected'
+                    inbox_phrase = 'return selected to inbox'
+                    remove_phrase = 'remove selected'
+                    local_delete_phrase = 'delete selected'
+                    dump_phrase = 'dump selected to 4chan'
                     export_phrase = 'files'
                     copy_phrase = 'files'
                     
@@ -1776,13 +1771,28 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                manage_menu = wx.Menu()
-                
-                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), manage_tags_phrase )
-                
-                if i_can_post_ratings: manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), manage_ratings_phrase )
-                
-                menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+                if i_can_post_ratings:
+                    
+                    manage_menu = wx.Menu()
+                    
+                    manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), manage_tags_phrase )
+                    manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), manage_ratings_phrase )
+                    
+                    menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+                    
+                else:
+                    
+                    if multiple_selected:
+                        
+                        phrase = 'manage files\' tags'
+                        
+                    else:
+                        
+                        phrase = 'manage file\'s tags'
+                        
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), phrase )
+                    
                 
                 #
                 
@@ -1852,12 +1862,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                if self._refreshable:
-                    
-                    menu.AppendSeparator()
-                    
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
-                    
+                menu.AppendSeparator()
+                
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
+                
                 
                 if len( self._sorted_media ) > 0:
                     

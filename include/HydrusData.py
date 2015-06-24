@@ -601,6 +601,16 @@ def MergeKeyToListDicts( key_to_list_dicts ):
     
     return result
     
+def ReadFileLikeAsBlocks( f, block_size ):
+    
+    next_block = f.read( block_size )
+    
+    while next_block != '':
+        
+        yield next_block
+        
+        next_block = f.read( block_size )
+    
 def ShowExceptionDefault( e ):
     
     etype = type( e )
@@ -629,6 +639,10 @@ def SplayListForDB( xs ): return '("' + '","'.join( ( ToString( x ) for x in xs 
 def SplitListIntoChunks( xs, n ):
     
     for i in xrange( 0, len( xs ), n ): yield xs[ i : i + n ]
+    
+def TimeHasPassed( timestamp ):
+    
+    return GetNow() > timestamp
     
 def ToBytes( text_producing_object ):
     
@@ -687,7 +701,7 @@ class Account( HydrusYAMLBase ):
             ( reason, created, expires ) = self._info[ 'banned_info' ]
             
             if expires is None: return True
-            else: return GetNow() > expires
+            else: return not TimeHasPassed( expires )
             
         
     
@@ -705,7 +719,7 @@ class Account( HydrusYAMLBase ):
     def _IsExpired( self ):
         
         if self._info[ 'expires' ] is None: return False
-        else: return GetNow() > self._info[ 'expires' ]
+        else: return TimeHasPassed( self._info[ 'expires' ] )
         
     
     def _IsRequestsExceeded( self ):
@@ -1344,6 +1358,323 @@ class JobKey( object ):
             
         
     
+class Predicate( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, predicate_type = None, value = None, inclusive = True, counts = None ):
+        
+        if counts is None: counts = {}
+        
+        self._predicate_type = predicate_type
+        self._value = value
+        
+        self._inclusive = inclusive
+        self._counts = {}
+        
+        self._counts[ HC.CURRENT ] = 0
+        self._counts[ HC.PENDING ] = 0
+        
+        for ( current_or_pending, count ) in counts.items(): self.AddToCount( current_or_pending, count )
+        
+    
+    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    
+    def __hash__( self ): return ( self._predicate_type, self._value ).__hash__()
+    
+    def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def __repr__( self ): return 'Predicate: ' + ToString( ( self._predicate_type, self._value, self._counts ) )
+    
+    def _GetSerialisableInfo( self ):
+        
+        if self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ):
+            
+            ( operator, value, service_key ) = self._value
+            
+            serialisable_value = ( operator, value, service_key.encode( 'hex' ) )
+            
+        else:
+            
+            serialisable_value = self._value
+            
+        
+        return ( self._predicate_type, serialisable_value, self._inclusive )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._predicate_type, serialisable_value, self._inclusive ) = serialisable_info
+        
+        if self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ):
+            
+            ( operator, value, service_key ) = serialisable_value
+            
+            self._value = ( operator, value, service_key.decode( 'hex' ) )
+            
+        else:
+            
+            self._value = serialisable_value
+            
+        
+        if type( self._value ) == list:
+            
+            self._value = tuple( self._value )
+            
+        
+    
+    def AddToCount( self, current_or_pending, count ): self._counts[ current_or_pending ] += count
+    
+    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive, self._counts )
+    
+    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive )
+    
+    def GetCount( self, current_or_pending = None ):
+        
+        if current_or_pending is None: return sum( self._counts.values() )
+        else: return self._counts[ current_or_pending ]
+        
+    
+    def GetInclusive( self ):
+        
+        # patch from an upgrade mess-up ~v144
+        if not hasattr( self, '_inclusive' ):
+            
+            if self._predicate_type not in HC.SYSTEM_PREDICATES:
+                
+                ( operator, value ) = self._value
+                
+                self._value = value
+                
+                self._inclusive = operator == '+'
+                
+            else: self._inclusive = True
+            
+        
+        return self._inclusive
+        
+    
+    def GetInfo( self ): return ( self._predicate_type, self._value, self._inclusive )
+    
+    def GetType( self ): return self._predicate_type
+    
+    def GetUnicode( self, with_count = True ):
+        
+        count_text = u''
+        
+        if with_count:
+            
+            if self._counts[ HC.CURRENT ] > 0: count_text += u' (' + ConvertIntToPrettyString( self._counts[ HC.CURRENT ] ) + u')'
+            if self._counts[ HC.PENDING ] > 0: count_text += u' (+' + ConvertIntToPrettyString( self._counts[ HC.PENDING ] ) + u')'
+            
+        
+        if self._predicate_type in HC.SYSTEM_PREDICATES:
+            
+            if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_EVERYTHING: base = u'system:everything'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_INBOX: base = u'system:inbox'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_ARCHIVE: base = u'system:archive'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: base = u'system:untagged'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: base = u'system:local'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = u'system:not local'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = u'system:dimensions'
+            elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_WIDTH, HC.PREDICATE_TYPE_SYSTEM_HEIGHT, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
+                
+                if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: base = u'system:number of tags'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH: base = u'system:width'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HEIGHT: base = u'system:height'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION: base = u'system:duration'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: base = u'system:number of words'
+                
+                if self._value is not None:
+                    
+                    ( operator, value ) = self._value
+                    
+                    base += u' ' + operator + u' ' + ConvertIntToPrettyString( value )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATIO:
+                
+                base = u'system:ratio'
+                
+                if self._value is not None:
+                    
+                    ( operator, ratio_width, ratio_height ) = self._value
+                    
+                    base += u' ' + operator + u' ' + ToString( ratio_width ) + u':' + ToString( ratio_height )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
+                
+                base = u'system:size'
+                
+                if self._value is not None:
+                    
+                    ( operator, size, unit ) = self._value
+                    
+                    base += u' ' + operator + u' ' + ToString( size ) + ConvertIntToUnit( unit )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
+                
+                base = u'system:limit'
+                
+                if self._value is not None:
+                    
+                    value = self._value
+                    
+                    base += u' is ' + ConvertIntToPrettyString( value )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+                
+                base = u'system:age'
+                
+                if self._value is not None:
+                    
+                    ( operator, years, months, days, hours ) = self._value
+                    
+                    base += u' ' + operator + u' ' + ToString( years ) + u'y' + ToString( months ) + u'm' + ToString( days ) + u'd' + ToString( hours ) + u'h'
+                    
+                    
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
+                
+                base = u'system:num_pixels'
+                
+                if self._value is not None:
+                    
+                    ( operator, num_pixels, unit ) = self._value
+                    
+                    base += u' ' + operator + u' ' + ToString( num_pixels ) + ' ' + ConvertIntToPixels( unit )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+                
+                base = u'system:hash'
+                
+                if self._value is not None:
+                    
+                    hash = self._value
+                    
+                    base += u' is ' + hash.encode( 'hex' )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
+                
+                base = u'system:mime'
+                
+                if self._value is not None:
+                    
+                    mime = self._value
+                    
+                    base += u' is ' + HC.mime_string_lookup[ mime ]
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
+                
+                base = u'system:rating'
+                
+                if self._value is not None:
+                    
+                    ( operator, value, service_key ) = self._value
+                    
+                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                    
+                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + ToString( value )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+                
+                base = u'system:similar to'
+                
+                if self._value is not None:
+                    
+                    ( hash, max_hamming ) = self._value
+                    
+                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + ToString( max_hamming )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
+                
+                base = u'system:'
+                
+                if self._value is None:
+                    
+                    base += 'file service'
+                    
+                else:
+                    
+                    ( operator, current_or_pending, service_key ) = self._value
+                    
+                    if operator == True: base += u'is'
+                    else: base += u'is not'
+                    
+                    if current_or_pending == HC.PENDING: base += u' pending to '
+                    else: base += u' currently in '
+                    
+                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                    
+                    base += service.GetName()
+                    
+                
+            
+            base += count_text
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_TAG:
+            
+            tag = self._value
+            
+            if not self._inclusive: base = u'-'
+            else: base = u''
+            
+            base += tag
+            
+            base += count_text
+            
+            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: base += u' (will display as ' + sibling + ')'
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_PARENT:
+            
+            base = '    '
+            
+            tag = self._value
+            
+            base += tag
+            
+            base += count_text
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_NAMESPACE:
+            
+            namespace = self._value
+            
+            if not self._inclusive: base = u'-'
+            else: base = u''
+            
+            base += namespace + u':*'
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_WILDCARD:
+            
+            wildcard = self._value
+            
+            if not self._inclusive: base = u'-'
+            else: base = u''
+            
+            base += wildcard
+            
+        
+        return base
+        
+    
+    def GetValue( self ): return self._value
+    
+    def SetInclusive( self, inclusive ): self._inclusive = inclusive
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE ] = Predicate
+
 class ServerToClientPetition( HydrusYAMLBase ):
     
     yaml_tag = u'!ServerToClientPetition'
@@ -1700,293 +2031,4 @@ class ServiceUpdate( object ):
         
     
     def ToTuple( self ): return ( self._action, self._row )
-
-class Predicate( HydrusYAMLBase ):
-    
-    yaml_tag = u'!Predicate'
-    
-    def __init__( self, predicate_type, value, inclusive = True, counts = None ):
-        
-        if counts is None: counts = {}
-        
-        self._predicate_type = predicate_type
-        self._value = value
-        
-        self._inclusive = inclusive
-        self._counts = {}
-        
-        self._counts[ HC.CURRENT ] = 0
-        self._counts[ HC.PENDING ] = 0
-        
-        for ( current_or_pending, count ) in counts.items(): self.AddToCount( current_or_pending, count )
-        
-    
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
-    
-    def __hash__( self ): return ( self._predicate_type, self._value ).__hash__()
-    
-    def __ne__( self, other ): return self.__hash__() != other.__hash__()
-    
-    def __repr__( self ): return 'Predicate: ' + ToString( ( self._predicate_type, self._value, self._counts ) )
-    
-    def AddToCount( self, current_or_pending, count ): self._counts[ current_or_pending ] += count
-    
-    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive, self._counts )
-    
-    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive )
-    
-    def GetCount( self, current_or_pending = None ):
-        
-        if current_or_pending is None: return sum( self._counts.values() )
-        else: return self._counts[ current_or_pending ]
-        
-    
-    def GetInclusive( self ):
-        
-        # patch from an upgrade mess-up ~v144
-        if not hasattr( self, '_inclusive' ):
-            
-            if self._predicate_type != HC.PREDICATE_TYPE_SYSTEM:
-                
-                ( operator, value ) = self._value
-                
-                self._value = value
-                
-                self._inclusive = operator == '+'
-                
-            else: self._inclusive = True
-            
-        
-        return self._inclusive
-        
-    
-    def GetInfo( self ): return ( self._predicate_type, self._value, self._inclusive )
-    
-    def GetPredicateType( self ): return self._predicate_type
-    
-    def GetUnicode( self, with_count = True ):
-        
-        count_text = u''
-        
-        if with_count:
-            
-            if self._counts[ HC.CURRENT ] > 0: count_text += u' (' + ConvertIntToPrettyString( self._counts[ HC.CURRENT ] ) + u')'
-            if self._counts[ HC.PENDING ] > 0: count_text += u' (+' + ConvertIntToPrettyString( self._counts[ HC.PENDING ] ) + u')'
-            
-        
-        if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM:
-            
-            ( system_predicate_type, info ) = self._value
-            
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_EVERYTHING: base = u'system:everything'
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_INBOX: base = u'system:inbox'
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_ARCHIVE: base = u'system:archive'
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_UNTAGGED: base = u'system:untagged'
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_LOCAL: base = u'system:local'
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL: base = u'system:not local'
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS: base = u'system:dimensions'
-            elif system_predicate_type in ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS ):
-                
-                if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS: base = u'system:number of tags'
-                elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: base = u'system:width'
-                elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_HEIGHT: base = u'system:height'
-                elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_DURATION: base = u'system:duration'
-                elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: base = u'system:number of words'
-                
-                if info is not None:
-                    
-                    ( operator, value ) = info
-                    
-                    base += u' ' + operator + u' ' + ConvertIntToPrettyString( value )
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATIO:
-                
-                base = u'system:ratio'
-                
-                if info is not None:
-                    
-                    ( operator, ratio_width, ratio_height ) = info
-                    
-                    base += u' ' + operator + u' ' + ToString( ratio_width ) + u':' + ToString( ratio_height )
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIZE:
-                
-                base = u'system:size'
-                
-                if info is not None:
-                    
-                    ( operator, size, unit ) = info
-                    
-                    base += u' ' + operator + u' ' + ToString( size ) + ConvertIntToUnit( unit )
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_LIMIT:
-                
-                base = u'system:limit'
-                
-                if info is not None:
-                    
-                    value = info
-                    
-                    base += u' is ' + ConvertIntToPrettyString( value )
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_AGE:
-                
-                base = u'system:age'
-                
-                if info is not None:
-                    
-                    ( operator, years, months, days, hours ) = info
-                    
-                    base += u' ' + operator + u' ' + ToString( years ) + u'y' + ToString( months ) + u'm' + ToString( days ) + u'd' + ToString( hours ) + u'h'
-                    
-                    
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_PIXELS:
-                
-                base = u'system:num_pixels'
-                
-                if info is not None:
-                    
-                    ( operator, num_pixels, unit ) = info
-                    
-                    base += u' ' + operator + u' ' + ToString( num_pixels ) + ' ' + ConvertIntToPixels( unit )
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_HASH:
-                
-                base = u'system:hash'
-                
-                if info is not None:
-                    
-                    hash = info
-                    
-                    base += u' is ' + hash.encode( 'hex' )
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_MIME:
-                
-                base = u'system:mime'
-                
-                if info is not None:
-                    
-                    mime = info
-                    
-                    base += u' is ' + HC.mime_string_lookup[ mime ]
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATING:
-                
-                base = u'system:rating'
-                
-                if info is not None:
-                    
-                    ( service_key, operator, value ) = info
-                    
-                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-                    
-                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + ToString( value )
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
-                
-                base = u'system:similar to'
-                
-                if info is not None:
-                    
-                    ( hash, max_hamming ) = info
-                    
-                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + ToString( max_hamming )
-                    
-                
-            elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE:
-                
-                base = u'system:'
-                
-                if info is None:
-                    
-                    base += 'file service'
-                    
-                else:
-                    
-                    ( operator, current_or_pending, service_key ) = info
-                    
-                    if operator == True: base += u'is'
-                    else: base += u'is not'
-                    
-                    if current_or_pending == HC.PENDING: base += u' pending to '
-                    else: base += u' currently in '
-                    
-                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
-                    
-                    base += service.GetName()
-                    
-                
-            
-            base += count_text
-            
-        elif self._predicate_type == HC.PREDICATE_TYPE_TAG:
-            
-            tag = self._value
-            
-            if not self._inclusive: base = u'-'
-            else: base = u''
-            
-            base += tag
-            
-            base += count_text
-            
-            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
-            
-            sibling = siblings_manager.GetSibling( tag )
-            
-            if sibling is not None: base += u' (will display as ' + sibling + ')'
-            
-        elif self._predicate_type == HC.PREDICATE_TYPE_PARENT:
-            
-            base = '    '
-            
-            tag = self._value
-            
-            base += tag
-            
-            base += count_text
-            
-        elif self._predicate_type == HC.PREDICATE_TYPE_NAMESPACE:
-            
-            namespace = self._value
-            
-            if not self._inclusive: base = u'-'
-            else: base = u''
-            
-            base += namespace + u':*'
-            
-        elif self._predicate_type == HC.PREDICATE_TYPE_WILDCARD:
-            
-            wildcard = self._value
-            
-            if not self._inclusive: base = u'-'
-            else: base = u''
-            
-            base += wildcard
-            
-        
-        return base
-        
-    
-    def GetValue( self ): return self._value
-    
-    def SetInclusive( self, inclusive ): self._inclusive = inclusive
-
-def ReadFileLikeAsBlocks( f, block_size ):
-    
-    next_block = f.read( block_size )
-    
-    while next_block != '':
-        
-        yield next_block
-        
-        next_block = f.read( block_size )
     

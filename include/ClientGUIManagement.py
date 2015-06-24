@@ -36,6 +36,126 @@ ID_TIMER_CAPTCHA = wx.NewId()
 ID_TIMER_DUMP = wx.NewId()
 ID_TIMER_UPDATE = wx.NewId()
 
+MANAGEMENT_TYPE_DUMPER = 0
+MANAGEMENT_TYPE_IMPORT_GALLERY = 1
+MANAGEMENT_TYPE_IMPORT_URL = 2
+MANAGEMENT_TYPE_IMPORT_HDD = 3
+MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER = 4
+MANAGEMENT_TYPE_PETITIONS = 5
+MANAGEMENT_TYPE_QUERY = 6
+
+management_panel_types_to_classes = {}
+
+def CreateManagementController( management_type, file_service_key = None ):
+    
+    if file_service_key is None:
+        
+        file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+        
+    
+    management_controller = ManagementController()
+    
+    # sort
+    # collect
+    
+    management_controller.SetType( management_type )
+    management_controller.SetKey( 'file_service', file_service_key )
+    
+    return management_controller
+    
+def CreateManagementControllerDumper( imageboard, media_results ):
+    
+    # this stuff doesn't work yet because media_results and imageboard are still yaml things
+    
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_DUMPER )
+    
+    management_controller.SetVariable( 'imageboard', imageboard )
+    management_controller.SetVariable( 'media_results', media_results )
+    
+    self._current_hash = None
+    
+    self._dumping = False
+    self._actually_dumping = False
+    self._num_dumped = 0
+    self._next_dump_index = 0
+    self._next_dump_time = 0
+    
+    self._file_post_name = 'upfile'
+    
+    return management_controller
+    
+def CreateManagementControllerImportGallery( site_type, gallery_type ):
+    
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_GALLERY )
+    
+    management_controller.SetVariable( 'site_type', site_type )
+    management_controller.SetVariable( 'gallery_type', gallery_type )
+    
+    return management_controller
+    
+def CreateManagementControllerImportURL():
+    
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_URL )
+    
+    return management_controller
+    
+def CreateManagementControllerImportHDD( paths_info, advanced_import_options, paths_to_tags, delete_after_success ):
+    
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_HDD )
+    
+    management_controller.SetVariable( 'paths_info', paths_info )
+    management_controller.SetVariable( 'advanced_import_options', advanced_import_options )
+    management_controller.SetVariable( 'paths_to_tags', paths_to_tags )
+    management_controller.SetVariable( 'delete_after_success', delete_after_success )
+    
+    return management_controller
+    
+def CreateManagementControllerImportThreadWatcher():
+    
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER )
+    
+    return management_controller
+    
+def CreateManagementControllerPetitions( petition_service_key ):
+    
+    petition_service = wx.GetApp().GetManager( 'services' ).GetService( petition_service_key )
+    
+    petition_service_type = petition_service.GetServiceType()
+    
+    if petition_service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): file_service_key = petition_service_key
+    else: file_service_key = CC.COMBINED_FILE_SERVICE_KEY
+    
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_PETITIONS, file_service_key = file_service_key )
+    
+    management_controller.SetKey( 'petition_service', petition_service_key )
+    
+    return management_controller
+    
+def CreateManagementControllerQuery( file_service_key, file_search_context, search_enabled ):
+    
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_QUERY, file_service_key = file_service_key )
+    
+    management_controller.SetKey( 'tag_service', CC.COMBINED_TAG_SERVICE_KEY )
+    
+    management_controller.SetVariable( 'file_search_context', file_search_context )
+    management_controller.SetVariable( 'search_enabled', search_enabled )
+    
+    management_controller.SetVariable( 'synchronised', True )
+    management_controller.SetVariable( 'include_current', True )
+    management_controller.SetVariable( 'include_pending', True )
+    
+    return management_controller
+    
+def CreateManagementPanel( parent, page, management_controller ):
+    
+    management_type = management_controller.GetType()
+    
+    management_class = management_panel_types_to_classes[ management_type ]
+    
+    management_panel = management_class( parent, page, management_controller )
+    
+    return management_panel
+    
 class CaptchaControl( wx.Panel ):
     
     def __init__( self, parent, captcha_type, default ):
@@ -211,7 +331,7 @@ class CaptchaControl( wx.Panel ):
     
     def EnableWithValues( self, challenge, bitmap, captcha_runs_out, entry, ready ):
         
-        if HydrusData.GetNow() > captcha_runs_out: self.Enable()
+        if HydrusData.TimeHasPassed( captcha_runs_out ): self.Enable()
         else:
             
             self._captcha_challenge = challenge
@@ -271,7 +391,7 @@ class CaptchaControl( wx.Panel ):
     
     def TIMEREvent( self, event ):
         
-        if HydrusData.GetNow() > self._captcha_runs_out: self.Enable()
+        if HydrusData.TimeHasPassed( self._captcha_runs_out ): self.Enable()
         else: self._DrawMain()
         
     
@@ -348,7 +468,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self._panel_type_name = None
+        self._management_type = None
         
         self._keys = {}
         self._simples = {}
@@ -359,34 +479,69 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._panel_type_name, { name : value.encode( 'hex' ) for ( name, value ) in self._keys }, self._simples, { name : HydrusSerialisable.DumpToTuple( value ) for ( name, value ) in self._serialisables.items() } )
+        serialisable_keys = { name : value.encode( 'hex' ) for ( name, value ) in self._keys.items() }
+        
+        serialisable_simples = dict( self._simples )
+        
+        if 'paths_to_tags' in serialisable_simples:
+            
+            paths_to_tags = serialisable_simples[ 'paths_to_tags' ]
+            
+            serialisable_paths_to_tags = {}
+            
+            for ( path, service_keys_to_tags ) in paths_to_tags.items():
+                
+                serialisable_service_keys_to_tags = { service_key.encode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags.items() }
+                
+                serialisable_paths_to_tags[ path ] = serialisable_service_keys_to_tags
+                
+            
+            serialisable_simples[ 'paths_to_tags' ] = serialisable_paths_to_tags
+            
+        
+        serialisable_serialisables = { name : HydrusSerialisable.GetSerialisableTuple( value ) for ( name, value ) in self._serialisables.items() }
+        
+        return ( self._management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._panel_type_name, file_service_key, self._simples, serialisables ) = serialisable_info
+        ( self._management_type, serialisable_keys, serialisable_simples, serialisables ) = serialisable_info
         
-        self._file_service_key = file_service_key.decode( 'hex' )
+        self._keys = { name : key.decode( 'hex' ) for ( name, key ) in serialisable_keys.items() }
         
-        self._serialisables = { name : HydrusSerialisable.CreateFromTuple( value ) for ( name, value ) in serialisables }
+        self._simples = dict( serialisable_simples )
+        
+        if 'paths_to_tags' in self._simples:
+            
+            serialisable_paths_to_tags = self._simples[ 'paths_to_tags' ]
+            
+            paths_to_tags = {}
+            
+            for ( path, serialisable_service_keys_to_tags ) in paths_to_tags.items():
+                
+                service_keys_to_tags = { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in serialisable_service_keys_to_tags.items() }
+                
+                paths_to_tags[ path ] = service_keys_to_tags
+                
+            
+            self._simples[ 'paths_to_tags' ] = paths_to_tags
+            
+        
+        self._serialisables = { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in serialisables.items() }
         
     
-    def GetFileServiceKey( self ):
+    def GetKey( self, name ):
         
-        return self._keys[ 'file_service' ]
-        
-    
-    def GetPageKey( self ):
-        
-        return self._keys[ 'page' ]
+        return self._keys[ name ]
         
     
-    def GetPanelName( self ):
+    def GetType( self ):
         
-        return self._panel_type_name
+        return self._management_type
         
     
-    def GetVariable( self, name, value ):
+    def GetVariable( self, name ):
         
         if name in self._simples:
             
@@ -413,19 +568,14 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         self._simples[ 'paused' ] = False
         
     
-    def SetFileServiceKey( self, file_service_key ):
+    def SetKey( self, name, key ):
         
-        self._keys[ 'file_service' ] = file_service_key
-        
-    
-    def SetPageKey( self, page_key ):
-        
-        self._keys[ 'page' ] = page_key
+        self._keys[ name ] = key
         
     
-    def SetPanelName( self, name ):
+    def SetType( self, management_type ):
         
-        self._panel_type_name = name
+        self._management_type = management_type
         
     
     def SetVariable( self, name, value ):
@@ -444,7 +594,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_key = CC.LOCAL_FILE_SERVICE_KEY, starting_from_session = False ):
+    def __init__( self, parent, page, management_controller ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
@@ -452,15 +602,10 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self.SetBackgroundColour( wx.WHITE )
         
-        self._controller = ManagementController()
-        
-        self._controller.SetFileServiceKey( file_service_key )
-        self._controller.SetPageKey( page_key )
+        self._controller = management_controller
         
         self._page = page
-        self._page_key = page_key
-        self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
-        self._starting_from_session = starting_from_session
+        self._page_key = self._controller.GetKey( 'page' )
         
         HydrusGlobals.pubsub.sub( self, 'SetSearchFocus', 'set_search_focus' )
         HydrusGlobals.pubsub.sub( self, 'Pause', 'pause' )
@@ -516,25 +661,13 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
 class ManagementPanelDumper( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, imageboard, media_results, starting_from_session = False ):
+    def __init__( self, parent, page, management_controller ):
         
-        ManagementPanel.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        ManagementPanel.__init__( self, parent, page, management_controller )
         
         ( self._4chan_token, pin, timeout ) = wx.GetApp().Read( '4chan_pass' )
         
         self._have_4chan_pass = timeout > HydrusData.GetNow()
-        
-        self._imageboard = imageboard
-        
-        self._current_hash = None
-        
-        self._dumping = False
-        self._actually_dumping = False
-        self._num_dumped = 0
-        self._next_dump_index = 0
-        self._next_dump_time = 0
-        
-        self._file_post_name = 'upfile'
         
         self._timer = wx.Timer( self, ID_TIMER_DUMP )
         self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_DUMP )
@@ -1172,7 +1305,7 @@ class ManagementPanelDumper( ManagementPanel ):
                                 
                                 ( challenge, bitmap, captcha_runs_out, entry, ready ) = value
                                 
-                                if HydrusData.GetNow() > captcha_runs_out or not ready:
+                                if HydrusData.TimeHasPassed( captcha_runs_out ) or not ready:
                                     
                                     wait = True
                                     
@@ -1253,11 +1386,13 @@ class ManagementPanelDumper( ManagementPanel ):
             
         
     
+management_panel_types_to_classes[ MANAGEMENT_TYPE_DUMPER ] = ManagementPanelDumper
+
 class ManagementPanelImport( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
+    def __init__( self, parent, page, management_controller ):
         
-        ManagementPanel.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        ManagementPanel.__init__( self, parent, page, management_controller )
         
         self._InitController()
         
@@ -1763,12 +1898,12 @@ class ManagementPanelImports( ManagementPanelImport ):
     
 class ManagementPanelImportsGallery( ManagementPanelImports ):
     
-    def __init__( self, parent, page, page_key, site_type, gallery_type, starting_from_session = False ):
+    def __init__( self, parent, page, management_controller ):
         
-        self._site_type = site_type
-        self._gallery_type = gallery_type
+        self._site_type = management_controller.GetVariable( 'site_type' )
+        self._gallery_type = management_controller.GetVariable( 'gallery_type' )
         
-        ManagementPanelImports.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        ManagementPanelImports.__init__( self, parent, page, management_controller )
         
     
     def _GenerateImportArgsGeneratorFactory( self ):
@@ -1978,6 +2113,8 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
     
     def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
     
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_GALLERY ] = ManagementPanelImportsGallery
+
 class ManagementPanelImportsURL( ManagementPanelImports ):
     
     def _GenerateImportArgsGeneratorFactory( self ):
@@ -2012,16 +2149,18 @@ class ManagementPanelImportsURL( ManagementPanelImports ):
         self._file_limit.Hide()
         
     
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_URL ] = ManagementPanelImportsURL
+
 class ManagementPanelImportHDD( ManagementPanelImport ):
     
-    def __init__( self, parent, page, page_key, paths_info, advanced_import_options, paths_to_tags, delete_after_success, starting_from_session = False ):
+    def __init__( self, parent, page, management_controller ):
         
-        self._paths_info = paths_info
-        self._advanced_import_options = advanced_import_options
-        self._paths_to_tags = paths_to_tags
-        self._delete_after_success = delete_after_success
+        self._paths_info = management_controller.GetVariable( 'paths_info' )
+        self._advanced_import_options = management_controller.GetVariable( 'advanced_import_options' )
+        self._paths_to_tags = management_controller.GetVariable( 'paths_to_tags' )
+        self._delete_after_success = management_controller.GetVariable( 'delete_after_success' )
         
-        ManagementPanelImport.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        ManagementPanelImport.__init__( self, parent, page, management_controller )
         
         self._import_controller.PendImportQueueJob( self._paths_info )
         
@@ -2044,6 +2183,8 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
         self._import_cancel_button.Hide()
         
     
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_HDD ] = ManagementPanelImportHDD
+
 class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
     def _GenerateImportArgsGeneratorFactory( self ):
@@ -2320,13 +2461,15 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
         
     
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER ] = ManagementPanelImportThreadWatcher
+
 class ManagementPanelPetitions( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_key, petition_service_key, starting_from_session = False ):
+    def __init__( self, parent, page, management_controller ):
         
-        self._petition_service_key = petition_service_key
+        self._petition_service_key = management_controller.GetKey( 'petition_service' )
         
-        ManagementPanel.__init__( self, parent, page, page_key, file_service_key, starting_from_session = starting_from_session )
+        ManagementPanel.__init__( self, parent, page, management_controller )
         
         self._service = wx.GetApp().GetManager( 'services' ).GetService( self._petition_service_key )
         self._can_ban = self._service.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS )
@@ -2400,7 +2543,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _DrawCurrentPetition( self ):
         
-        file_service_key = self._controller.GetFileServiceKey()
+        file_service_key = self._controller.GetKey( 'file_service' )
         
         if self._current_petition is None:
             
@@ -2518,31 +2661,36 @@ class ManagementPanelPetitions( ManagementPanel ):
         if page_key == self._page_key: self._DrawCurrentPetition()
         
     
+management_panel_types_to_classes[ MANAGEMENT_TYPE_PETITIONS ] = ManagementPanelPetitions
+
 class ManagementPanelQuery( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_key, show_search = True, initial_predicates = None, starting_from_session = False ):
+    def __init__( self, parent, page, management_controller ):
         
-        if initial_predicates is None: initial_predicates = []
+        ManagementPanel.__init__( self, parent, page, management_controller )
         
-        ManagementPanel.__init__( self, parent, page, page_key, file_service_key, starting_from_session = starting_from_session )
+        file_search_context = self._controller.GetVariable( 'file_search_context' )
+        
+        search_enabled = self._controller.GetVariable( 'search_enabled' )
         
         self._query_key = HydrusData.JobKey( cancellable = True )
-        self._synchronised = True
-        self._include_current_tags = True
-        self._include_pending_tags = True
         
-        self._show_search = show_search
+        initial_predicates = file_search_context.GetPredicates()
         
-        if self._show_search:
+        if search_enabled:
             
             self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
             
             self._current_predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._search_panel, self._page_key, initial_predicates )
             
-            file_service_key = self._controller.GetFileServiceKey()
+            file_service_key = self._controller.GetKey( 'file_service' )
+            tag_service_key = self._controller.GetKey( 'tag_service' )
             
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_service_key, CC.COMBINED_TAG_SERVICE_KEY, self._page.GetMedia )
+            include_current = self._controller.GetVariable( 'include_current' )
+            include_pending = self._controller.GetVariable( 'include_pending' )
+            synchronised = self._controller.GetVariable( 'synchronised' )
             
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_service_key, tag_service_key, self._page.GetMedia, include_current = include_current, include_pending = include_pending, synchronised = synchronised )            
             self._search_panel.AddF( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._search_panel.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -2552,13 +2700,13 @@ class ManagementPanelQuery( ManagementPanel ):
         self._MakeSort( vbox )
         self._MakeCollect( vbox )
         
-        if self._show_search: vbox.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        if search_enabled: vbox.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
         self.SetSizer( vbox )
         
-        if len( initial_predicates ) > 0 and not starting_from_session: wx.CallAfter( self._DoQuery )
+        if len( initial_predicates ) > 0 and not file_search_context.IsComplete(): wx.CallAfter( self._DoQuery )
         
         HydrusGlobals.pubsub.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
         HydrusGlobals.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
@@ -2578,20 +2726,23 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._query_key = HydrusData.JobKey()
         
-        if self._show_search and self._synchronised:
+        if self._controller.GetVariable( 'search_enabled' ) and self._controller.GetVariable( 'synchronised' ):
             
             try:
                 
+                file_service_key = self._controller.GetKey( 'file_service' )
+                tag_service_key = self._controller.GetKey( 'tag_service' )
+            
+                include_current = self._controller.GetVariable( 'include_current' )
+                include_pending = self._controller.GetVariable( 'include_pending' )
+                
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                file_service_key = self._controller.GetFileServiceKey()
+                search_context = ClientData.FileSearchContext( file_service_key, tag_service_key, include_current, include_pending, current_predicates )
+                
+                self._controller.SetVariable( 'file_search_context', search_context )
                 
                 if len( current_predicates ) > 0:
-                    
-                    include_current = self._include_current_tags
-                    include_pending = self._include_pending_tags
-                    
-                    search_context = ClientData.FileSearchContext( file_service_key, self._tag_service_key, include_current, include_pending, current_predicates )
                     
                     wx.GetApp().StartFileQuery( self._query_key, search_context )
                     
@@ -2612,26 +2763,21 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def AddPredicate( self, page_key, predicate ): 
         
-        if self._show_search and page_key == self._page_key:
+        if self._controller.GetVariable( 'search_enabled' ) and page_key == self._page_key:
             
             if predicate is not None:
                 
                 ( predicate_type, value, inclusive ) = predicate.GetInfo()
                 
-                if predicate_type == HC.PREDICATE_TYPE_SYSTEM:
+                if predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
                     
-                    ( system_predicate_type, info ) = value
-                    
-                    if system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ]:
+                    with ClientGUIDialogs.DialogInputFileSystemPredicate( self, predicate_type ) as dlg:
                         
-                        with ClientGUIDialogs.DialogInputFileSystemPredicate( self, system_predicate_type ) as dlg:
-                            
-                            if dlg.ShowModal() == wx.ID_OK: predicate = dlg.GetPredicate()
-                            else: return
-                            
+                        if dlg.ShowModal() == wx.ID_OK: predicate = dlg.GetPredicate()
+                        else: return
                         
-                    elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_UNTAGGED: predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 0 ) ) )
                     
+                elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) )
                 
                 if self._current_predicates_box.HasPredicate( predicate ): self._current_predicates_box.RemovePredicate( predicate )
                 else: self._current_predicates_box.AddPredicate( predicate )
@@ -2645,7 +2791,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._controller.SetFileServiceKey( service_key )
+            self._controller.SetKey( 'file_service', service_key )
             
             self._DoQuery()
             
@@ -2655,7 +2801,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._tag_service_key = service_key
+            self._controller.SetKey( 'tag_service', service_key )
             
             self._DoQuery()
             
@@ -2678,7 +2824,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._include_current_tags = value
+            self._controller.SetVariable( 'include_current', value )
             
             self._DoQuery()
             
@@ -2688,7 +2834,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._include_pending_tags = value
+            self._controller.SetVariable( 'include_pending', value )
             
             self._DoQuery()
             
@@ -2716,7 +2862,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._synchronised = value
+            self._controller.SetVariable( 'synchronised', value )
             
             self._DoQuery()
             
@@ -2739,7 +2885,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                file_service_key = self._controller.GetFileServiceKey()
+                file_service_key = self._controller.GetKey( 'file_service' )
                 
                 panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
                 
@@ -2752,180 +2898,5 @@ class ManagementPanelQuery( ManagementPanel ):
             
         except: wx.MessageBox( traceback.format_exc() )
         
-    '''
-class ManagementPanelMessages( wx.ScrolledWindow ):
-    
-    def __init__( self, parent, page_key, identity, starting_from_session = False ):
-        
-        wx.ScrolledWindow.__init__( self, parent, style = wx.BORDER_NONE | wx.HSCROLL | wx.VSCROLL )
-        
-        self.SetScrollRate( 0, 20 )
-        
-        self._page_key = page_key
-        self._identity = identity
-        self._starting_from_session = starting_from_session
-        
-        self._query_key = HydrusData.JobKey( cancellable = True )
-        
-        # sort out push-refresh later
-        #self._refresh_inbox = wx.Button( self, label = 'refresh inbox' )
-        #self._refresh_inbox.Bind( wx.EVT_BUTTON, self.EventRefreshInbox )
-        #self._refresh_inbox.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._actions_panel = ClientGUICommon.StaticBox( self, 'actions' )
-        
-        self._compose = wx.Button( self._actions_panel, label = 'compose' )
-        self._compose.Bind( wx.EVT_BUTTON, self.EventCompose )
-        self._compose.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._actions_panel.AddF( self._compose, CC.FLAGS_EXPAND_PERPENDICULAR )
-        #vbox.AddF( self._refresh_inbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
-        
-        self._current_predicates_box = ClientGUICommon.ListBoxMessagesPredicates( self._search_panel, self._page_key, [ 'system:inbox' ] )
-        
-        self._synchronised = ClientGUICommon.OnOffButton( self._search_panel, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- counts may be inaccurate' )
-        self._synchronised.SetToolTipString( 'select whether to renew the search as soon as a new predicate is entered' )
-        
-        self._searchbox = ClientGUICommon.AutoCompleteDropdownMessageTerms( self._search_panel, self._page_key, self._identity )
-        
-        self._search_panel.AddF( self._current_predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._search_panel.AddF( self._synchronised, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._search_panel.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._actions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._search_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-        HydrusGlobals.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
-        HydrusGlobals.pubsub.sub( self, 'SearchImmediately', 'notify_search_immediately' )
-        HydrusGlobals.pubsub.sub( self, 'ShowQuery', 'message_query_done' )
-        HydrusGlobals.pubsub.sub( self, 'RefreshQuery', 'refresh_query' )
-        HydrusGlobals.pubsub.sub( self, 'RemovePredicate', 'remove_predicate' )
-        
-        wx.CallAfter( self._DoQuery )
-        
-    
-    def _DoQuery( self ):
-        
-        if self._synchronised.IsOn():
-            
-            try:
-                
-                current_predicates = self._current_predicates_box.GetPredicates()
-                
-                HydrusGlobals.pubsub.pub( 'set_conversations', self._page_key, [] )
-                
-                self._query_key.Cancel()
-                
-                self._query_key = HydrusData.JobKey( cancellable = True )
-                
-                if len( current_predicates ) > 0:
-                    
-                    search_context = ClientConstantsMessages.MessageSearchContext( self._identity, current_predicates )
-                    
-                    wx.GetApp().Read( 'do_message_query', self._query_key, search_context )
-                    
-                
-            except: wx.MessageBox( traceback.format_exc() )
-            
-        
-    
-    def AddPredicate( self, page_key, predicate ): 
-        
-        if page_key == self._page_key:
-            
-            if predicate is not None:
-                
-                if predicate in ( 'system:started_by', 'system:from', 'system:to', 'system:age', 'system:numattachments' ):
-                    
-                    with ClientGUIDialogs.DialogInputMessageSystemPredicate( self, predicate ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK: predicate = dlg.GetString()
-                        else: return
-                        
-                    
-                elif predicate == 'system:unread': predicate = 'system:status=unread'
-                elif predicate == 'system:drafts': predicate = 'system:draft'
-                
-                if self._current_predicates_box.HasPredicate( predicate ): self._current_predicates_box.RemovePredicate( predicate )
-                else:
-                    
-                    if predicate in ( 'system:inbox', 'system:archive' ):
-                        
-                        if predicate == 'system:inbox': removee = 'system:archive'
-                        elif predicate == 'system:archive': removee = 'system:inbox'
-                        
-                    else:
-                        
-                        if predicate.startswith( '-' ): removee = predicate[1:]
-                        else: removee = '-' + predicate
-                        
-                    
-                    if self._current_predicates_box.HasPredicate( removee ): self._current_predicates_box.RemovePredicate( removee )
-                    
-                    self._current_predicates_box.AddPredicate( predicate )
-                    
-                
-            
-            self._DoQuery()
-            
-        
-    
-    def EventCompose( self, event ): HydrusGlobals.pubsub.pub( 'new_compose_frame', self._identity )
-    
-    def EventRefreshInbox( self, event ):
-        
-        # tell db to do it, and that'll spam the appropriate pubsubs (which will tell this to just refresh query, I think is best)
-        
-        pass
-        
-    
-    def RefreshQuery( self, page_key ):
-        
-        if page_key == self._page_key: self._DoQuery()
-        
-    
-    def RemovePredicate( self, page_key, predicate ):
-        
-        if page_key == self._page_key:
-            
-            if self._current_predicates_box.HasPredicate( predicate ):
-                
-                self._current_predicates_box.RemovePredicate( predicate )
-                
-                self._DoQuery()
-                
-            
-        
-    
-    def SearchImmediately( self, page_key, value ):
-        
-        if page_key == self._page_key and value: self._DoQuery()
-        
-    
-    def SetSearchFocus( self, page_key ):
-        
-        if page_key == self._page_key: self._searchbox.SetFocus()
-        
-    
-    def ShowQuery( self, query_key, conversations ):
-        
-        try:
-            
-            if query_key == self._query_key: HydrusGlobals.pubsub.pub( 'set_conversations', self._page_key, conversations )
-            
-        except: wx.MessageBox( traceback.format_exc() )
-        
-    
-    def TestAbleToClose( self ):
-        
-        pass
-        
-        # if have a open draft, save it!
-        
-    '''
+
+management_panel_types_to_classes[ MANAGEMENT_TYPE_QUERY ] = ManagementPanelQuery

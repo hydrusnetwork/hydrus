@@ -119,7 +119,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 while not image_container.IsRendered():
                     
-                    if time.time() - start_time > 15: raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
+                    if HydrusData.TimeHasPassed( start_time + 15 ): raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
                     
                     time.sleep( 0.1 )
                     
@@ -556,6 +556,8 @@ class Controller( HydrusController.HydrusController ):
             self.WaitUntilWXThreadIdle()
             
         
+        search_context.SetComplete()
+        
         HydrusGlobals.pubsub.pub( 'file_query_done', query_key, media_results )
         
     
@@ -587,11 +589,12 @@ class Controller( HydrusController.HydrusController ):
             
             traceback.print_exc()
             
-            text = 'A serious error occured while trying to start the program. Its traceback has been written to client.log.'
+            text = 'A serious error occured while trying to start the program. Its traceback will be shown next. It should have also been written to client.log.'
             
             print( text )
             
             wx.CallAfter( wx.MessageBox, text )
+            wx.CallAfter( wx.MessageBox, traceback.format_exc() )
             
         finally:
             
@@ -623,7 +626,7 @@ class Controller( HydrusController.HydrusController ):
             
             traceback.print_exc()
             
-            text = 'A serious error occured while trying to exit the program. Its traceback has been written to client.log. You may need to quit the program from task manager.'
+            text = 'A serious error occured while trying to exit the program. Its traceback will be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
             
             print( text )
             

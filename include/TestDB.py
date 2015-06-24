@@ -2,6 +2,9 @@ import ClientConstants as CC
 import ClientData
 import ClientDB
 import ClientDefaults
+import ClientFiles
+import ClientGUIManagement
+import ClientGUIPages
 import ClientRatings
 import collections
 import HydrusConstants as HC
@@ -276,6 +279,19 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( result, set() )
         
     
+    def test_export_folders( self ):
+        
+        file_search_context = ClientData.FileSearchContext(file_service_key = os.urandom( 32 ), tag_service_key = os.urandom( 32 ), predicates = [ HydrusData.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'test' ) ] )
+        
+        export_folder = ClientFiles.ExportFolder( 'test path', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = file_search_context, period = 3600, phrase = '{hash}' )
+        
+        self._write( 'export_folder', export_folder )
+        
+        [ result ] = self._read( 'export_folders' )
+        
+        self.assertEqual( result.GetName(), export_folder.GetName() )
+        
+    
     def test_file_query_ids( self ):
         
         self._clear_db()
@@ -298,7 +314,7 @@ class TestClientDB( unittest.TestCase ):
             
             for ( predicate_type, info, result ) in tests:
                 
-                predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( predicate_type, info ) ) ]
+                predicates = [ HydrusData.Predicate( predicate_type, info ) ]
                 
                 search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
@@ -324,15 +340,15 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -350,110 +366,110 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '<', 1, 1, 1, 1, ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '<', 0, 0, 0, 0, ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( u'\u2248', 1, 1, 1, 1, ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( u'\u2248', 0, 0, 0, 0, ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '>', 1, 1, 1, 1, ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '>', 0, 0, 0, 0, ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 1, 1, 1, 1, ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 0, 0, 0, 0, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 1, 1, 1, 1, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 0, 0, 0, 0, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 1, 1, 1, 1, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 0, 0, 0, 0, ), 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '<', 100, ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '<', 0, ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( u'\u2248', 100, ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( u'\u2248', 0, ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '=', 100, ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '=', 0, ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '>', 100, ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '>', 0, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 100, ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 0, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( u'\u2248', 100, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( u'\u2248', 0, ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 100, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0, ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 100, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0, ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HASH, hash, 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HASH, ( '0123456789abcdef' * 4 ).decode( 'hex' ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, hash, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( '0123456789abcdef' * 4 ).decode( 'hex' ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '<', 201 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '<', 200 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( u'\u2248', 200 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( u'\u2248', 60 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( u'\u2248', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '=', 200 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '=', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '>', 200 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '>', 199 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 200 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( u'\u2248', 200 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( u'\u2248', 60 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( u'\u2248', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 200 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '>', 200 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '>', 199 ), 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.IMAGES, 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.IMAGE_PNG, 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.IMAGE_JPEG, 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.VIDEO, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGES, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGE_PNG, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGE_JPEG, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.VIDEO, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 1 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 0 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 1 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '>', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '>', 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 1 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 1 ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '<', 1 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( u'\u2248', 0 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( u'\u2248', 1 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '=', 0 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '=', 1 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '>', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '>', 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 1 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( u'\u2248', 0 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( u'\u2248', 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 0 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '>', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '>', 1 ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( '=', 1, 1 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( '=', 4, 3 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( u'\u2248', 1, 1 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( u'\u2248', 200, 201 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( u'\u2248', 4, 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 1, 1 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 4, 3 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( u'\u2248', 1, 1 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( u'\u2248', 200, 201 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( u'\u2248', 4, 1 ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( ( '0123456789abcdef' * 4 ).decode( 'hex' ), 5 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, 5 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( '0123456789abcdef' * 4 ).decode( 'hex' ), 5 ), 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '=', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( u'\u2248', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'KB' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'MB' ) ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'GB' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( u'\u2248', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( u'\u2248', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'KB' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'MB' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'GB' ) ), 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '<', 201 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '<', 200 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( u'\u2248', 200 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( u'\u2248', 60 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( u'\u2248', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '=', 200 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '=', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '>', 200 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '>', 199 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 201 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 200 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( u'\u2248', 200 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( u'\u2248', 60 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( u'\u2248', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 200 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '>', 200 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '>', 199 ), 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_LIMIT, 100, 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_LIMIT, 1, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 100, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 1, 1 ) )
         # limit is not applied in file_query_ids! we do it later!
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_LIMIT, 0, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 0, 1 ) )
         
         run_system_predicate_tests( tests )
         
@@ -470,17 +486,17 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 2 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 1 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 0 ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 1 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '>', 0 ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '>', 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 1 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 1 ), 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -549,15 +565,15 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, 0 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -578,10 +594,10 @@ class TestClientDB( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : 1 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : 1 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : 0 } ) )
-        predicates.extend( [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_DIMENSIONS, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 1 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1 } ) )
+        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 0 } ) )
+        predicates.extend( [ HydrusData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
         
         self.assertEqual( result, predicates )
         
@@ -590,17 +606,72 @@ class TestClientDB( unittest.TestCase ):
     
     def test_gui_sessions( self ):
         
-        info = []
+        session = ClientGUIPages.GUISession( 'test_session' )
         
-        info.append( ( 'blank', 'class_text', ( CC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [], 'initial_media_results' : [], 'initial_predicates' : [] } ) )
-        info.append( ( 'system', 'class_text', ( CC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 8 ) ], 'initial_media_results' : [], 'initial_predicates' : [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] } ) )
-        info.append( ( 'tags', 'class_text', ( CC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 4 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] } ) )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist' )
         
-        self._write( 'gui_session', 'normal', info )
+        session.AddPage( 'hf download page', management_controller, [] )
         
-        result = self._read( 'gui_sessions' )
+        service_keys_to_tags = { os.urandom( 32 ) : [ 'some', 'tags' ] }
         
-        self.assertEqual( result, { 'normal' : info } )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientData.ImportFileOptions(), { 'paths' : service_keys_to_tags }, True )
+        
+        session.AddPage( 'hdd download page', management_controller, [] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher()
+        
+        session.AddPage( 'thread watcher', management_controller, [] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerImportURL()
+        
+        session.AddPage( 'url download page', management_controller, [] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerPetitions( CC.LOCAL_TAG_SERVICE_KEY ) # local because the controller wants to look up the service
+        
+        session.AddPage( 'petition page', management_controller, [] )
+        
+        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), predicates = [] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, True )
+        
+        session.AddPage( 'files', management_controller, [] )
+        
+        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), tag_service_key = os.urandom( 32 ), predicates = [] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, False )
+        
+        session.AddPage( 'files', management_controller, [ os.urandom( 32 ) for i in range( 200 ) ] )
+        
+        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, True )
+        
+        session.AddPage( 'files', management_controller, [] )
+        
+        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, True )
+        
+        session.AddPage( 'files', management_controller, [] )
+        
+        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, os.urandom( 32 ) ) ), HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, os.urandom( 32 ) ) ) ] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, True )
+        
+        session.AddPage( 'files', management_controller, [] )
+        
+        self._write( 'gui_session', session )
+        
+        result = self._read( 'gui_sessions', 'test_session' )
+        
+        page_names = []
+        
+        for ( page_name, management_controller, initial_hashes ) in result.IteratePages():
+            
+            page_names.append( page_name )
+            
+        
+        self.assertEqual( page_names, [ 'hf download page', 'hdd download page', 'thread watcher', 'url download page', 'petition page', 'files', 'files', 'files', 'files', 'files' ] )
         
     
     def test_imageboard( self ):

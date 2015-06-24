@@ -9,6 +9,8 @@ import HydrusFileHandling
 import HydrusNATPunch
 import HydrusSerialisable
 import itertools
+import json
+import lz4
 import os
 import Queue
 import random
@@ -2340,6 +2342,47 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._CreateUpdate( service_key, 0, end )
                 
+            
+        
+        if version == 161:
+            
+            for filename in dircache.listdir( HC.SERVER_UPDATES_DIR ):
+                
+                path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
+                
+                with open( path, 'rb' ) as f:
+                    
+                    compressed_inefficient_string = f.read()
+                    
+                
+                try:
+                    
+                    inefficient_string = lz4.loads( compressed_inefficient_string )
+                    
+                    ( dump_type, dump_version, dump ) = json.loads( inefficient_string )
+                    
+                    if type( dump ) not in ( unicode, str ):
+                        
+                        continue
+                        
+                    
+                    serialisable_info = json.loads( dump )
+                    
+                except:
+                    
+                    continue
+                    
+                
+                better_string = json.dumps( ( dump_type, dump_version, serialisable_info ) )
+                
+                compressed_better_string = lz4.dumps( better_string )
+                
+                with open( path, 'wb' ) as f:
+                    
+                    f.write( compressed_better_string )
+                    
+                
+            
             
         
         print( 'The server has updated to version ' + str( version + 1 ) )

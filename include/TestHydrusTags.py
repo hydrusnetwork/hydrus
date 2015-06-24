@@ -418,99 +418,99 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '<', 1, 2, 3, 4 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 1, 2, 3, 4 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age < 1y2m3d4h' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( u'\u2248', 1, 2, 3, 4 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 1, 2, 3, 4 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age ' + u'\u2248' + ' 1y2m3d4h' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '>', 1, 2, 3, 4 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 1, 2, 3, 4 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age > 1y2m3d4h' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : 1000 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 1000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:archive (1,000)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '<', 1000 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 1000 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:duration < 1,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : 2000 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 2000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:everything (2,000)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.GetUnicode(), u'system:is currently in local files' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.GetUnicode(), u'system:is not pending to local files' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_HASH, 'abcd'.decode( 'hex' ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, 'abcd'.decode( 'hex' ) )
         
         self.assertEqual( p.GetUnicode(), u'system:hash is abcd' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '<', 2000 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:height < 2,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : 1000 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:inbox (1,000)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LIMIT, 2000 ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 2000 )
         
         self.assertEqual( p.GetUnicode(), u'system:limit is 2,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), counts = { HC.CURRENT : 100 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, counts = { HC.CURRENT : 100 } )
         
         self.assertEqual( p.GetUnicode(), u'system:local (100)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.IMAGES ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGES )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is image' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.VIDEO_WEBM ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.VIDEO_WEBM )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is video/webm' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), counts = { HC.CURRENT : 100 } )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : 100 } )
         
         self.assertEqual( p.GetUnicode(), u'system:not local (100)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 2 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:number of tags < 2' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '<', 5000 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:number of words < 5,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATING, ( CC.LOCAL_FILE_SERVICE_KEY, '>', 0.2 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.GetUnicode(), u'system:rating for local files > 0.2' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( '=', 16, 9 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:ratio = 16:9' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( 'abcd'.decode( 'hex' ), 5 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( 'abcd'.decode( 'hex' ), 5 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:similar to abcd using max hamming of 5' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5, 1048576 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5, 1048576 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:size > 5MB' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.IMAGES ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.IMAGES )
         
         self.assertEqual( p.GetUnicode(), u'system:untagged' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '=', 1920 ) ) )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:width = 1,920' )
         

@@ -42,121 +42,9 @@ def DAEMONCheckExportFolders():
         
         export_folders = wx.GetApp().Read( 'export_folders' )
         
-        for ( folder_path, details ) in export_folders.items():
+        for export_folder in export_folders:
             
-            now = HydrusData.GetNow()
-            
-            if now > details[ 'last_checked' ] + details[ 'period' ]:
-                
-                if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
-                    
-                    existing_filenames = dircache.listdir( folder_path )
-                    
-                    #
-                    
-                    predicates = details[ 'predicates' ]
-                    
-                    search_context = ClientData.FileSearchContext( CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = predicates )
-                    
-                    query_hash_ids = wx.GetApp().Read( 'file_query_ids', search_context )
-                    
-                    query_hash_ids = list( query_hash_ids )
-                    
-                    random.shuffle( query_hash_ids )
-                    
-                    limit = search_context.GetSystemPredicates().GetLimit()
-                    
-                    if limit is not None: query_hash_ids = query_hash_ids[ : limit ]
-                    
-                    media_results = []
-                    
-                    i = 0
-                    
-                    base = 256
-                    
-                    while i < len( query_hash_ids ):
-                        
-                        if options[ 'pause_export_folders_sync' ]: return
-                        
-                        if i == 0: ( last_i, i ) = ( 0, base )
-                        else: ( last_i, i ) = ( i, i + base )
-                        
-                        sub_query_hash_ids = query_hash_ids[ last_i : i ]
-                        
-                        more_media_results = wx.GetApp().Read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, sub_query_hash_ids )
-                        
-                        media_results.extend( more_media_results )
-                        
-                    
-                    #
-                    
-                    phrase = details[ 'phrase' ]
-                    
-                    terms = ClientData.ParseExportPhrase( phrase )
-                    
-                    filenames_used = set()
-                    
-                    for media_result in media_results:
-                        
-                        hash = media_result.GetHash()
-                        mime = media_result.GetMime()
-                        
-                        source_path = ClientFiles.GetFilePath( hash, mime )
-                        
-                        filename = ClientData.GenerateExportFilename( media_result, terms ) + HC.mime_ext_lookup[ mime ]
-                        
-                        dest_path = folder_path + os.path.sep + filename
-                        
-                        do_copy = True
-                        
-                        if filename in filenames_used:
-                            
-                            do_copy = False
-                            
-                        elif os.path.exists( dest_path ):
-                            
-                            source_info = os.lstat( source_path )
-                            
-                            source_size = source_info[6]
-                            
-                            dest_info = os.lstat( dest_path )
-                            
-                            dest_size = dest_info[6]
-                            
-                            if source_size == dest_size:
-                                
-                                do_copy = False
-                                
-                            
-                        
-                        if do_copy:
-                            
-                            shutil.copy( source_path, dest_path )
-                            shutil.copystat( source_path, dest_path )
-                            try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
-                            except: pass
-                            
-                        
-                        filenames_used.add( filename )
-                        
-                    
-                    if details[ 'type' ] == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
-                        
-                        all_filenames = dircache.listdir( folder_path )
-                        
-                        deletee_paths = { folder_path + os.path.sep + filename for filename in all_filenames if filename not in filenames_used }
-                        
-                        for deletee_path in deletee_paths:
-                            
-                            os.remove( deletee_path )
-                            
-                        
-                    
-                    details[ 'last_checked' ] = now
-                    
-                    wx.GetApp().WriteSynchronous( 'export_folder', folder_path, details )
-                    
-                
+            export_folder.DoWork()
             
         
     
@@ -170,9 +58,7 @@ def DAEMONCheckImportFolders():
         
         for ( folder_path, details ) in import_folders.items():
             
-            now = HydrusData.GetNow()
-            
-            if now > details[ 'last_checked' ] + details[ 'check_period' ]:
+            if HydrusData.TimeHasPassed( details[ 'last_checked' ] + details[ 'check_period' ] ):
                 
                 if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                     
@@ -279,7 +165,7 @@ def DAEMONCheckImportFolders():
                         HydrusGlobals.pubsub.pub( 'message', job_key )
                         
                     
-                    details[ 'last_checked' ] = now
+                    details[ 'last_checked' ] = HydrusData.GetNow()
                     
                     wx.GetApp().WriteSynchronous( 'import_folder', folder_path, details )
                     
