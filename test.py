@@ -73,7 +73,7 @@ class App( wx.App ):
         
         self._managers = {}
         
-        self._managers[ 'services' ] = ClientData.ServicesManager()
+        self._services_manager = ClientData.ServicesManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
@@ -128,6 +128,11 @@ class App( wx.App ):
         
     
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
+    
+    def GetServicesManager( self ):
+        
+        return self._services_manager
+        
     
     def GetWrite( self, name ):
         

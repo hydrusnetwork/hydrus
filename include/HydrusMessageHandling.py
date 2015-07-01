@@ -345,7 +345,7 @@ class IMMessageQuestion( IMMessage ):
     
     def __init__( self, job_key = None ):
         
-        if job_key is None: job_key = os.urandom( 32 )
+        if job_key is None: job_key = HydrusData.GenerateKey()
         
         self._job_key = job_key
         

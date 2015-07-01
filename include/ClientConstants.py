@@ -206,34 +206,58 @@ class GlobalBMPs( object ):
         
         # these have to be created after the wxApp is instantiated, for silly GDI reasons
         
-        GlobalBMPs.bold_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_bold.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.italic_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_italic.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.underline_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_underline.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
+        GlobalBMPs.bold = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_bold.png' )
+        GlobalBMPs.italic = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_italic.png' )
+        GlobalBMPs.underline = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_underline.png' )
         
-        GlobalBMPs.align_left_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_align_left.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.align_center_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_align_center.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.align_right_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_align_right.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.align_justify_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_align_justify.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
+        GlobalBMPs.align_left = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_align_left.png' )
+        GlobalBMPs.align_center = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_align_center.png' )
+        GlobalBMPs.align_right = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_align_right.png' )
+        GlobalBMPs.align_justify = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_align_justify.png' )
         
-        GlobalBMPs.indent_less_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_indent_remove.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.indent_more_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'text_indent.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
+        GlobalBMPs.indent_less = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_indent_remove.png' )
+        GlobalBMPs.indent_more = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'text_indent.png' )
         
-        GlobalBMPs.font_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'font.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.colour_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'color_swatch.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
+        GlobalBMPs.font = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'font.png' )
+        GlobalBMPs.colour = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'color_swatch.png' )
         
-        GlobalBMPs.link_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'link.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.link_break_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'silk icons' + os.path.sep + 'link_break.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
+        GlobalBMPs.link = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'link.png' )
+        GlobalBMPs.link_break = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'link_break.png' )
         
-        GlobalBMPs.transparent_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'transparent.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.downloading_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'downloading.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.file_repository_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'file_repository_small.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.file_repository_pending_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'file_repository_pending_small.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.file_repository_petitioned_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'file_repository_petitioned_small.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.inbox_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'inbox.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.collection_bmp = wx.Image( HC.STATIC_DIR + os.path.sep + 'collection.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.dump_ok = wx.Image( HC.STATIC_DIR + os.path.sep + 'dump_ok.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.dump_recoverable = wx.Image( HC.STATIC_DIR + os.path.sep + 'dump_recoverable.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
-        GlobalBMPs.dump_fail = wx.Image( HC.STATIC_DIR + os.path.sep + 'dump_fail.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
+        GlobalBMPs.transparent = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'transparent.png' )
+        GlobalBMPs.downloading = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'downloading.png' )
+        GlobalBMPs.file_repository = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'file_repository_small.png' )
+        GlobalBMPs.file_repository_pending = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'file_repository_pending_small.png' )
+        GlobalBMPs.file_repository_petitioned = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'file_repository_petitioned_small.png' )
+        
+        GlobalBMPs.collection = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'collection.png' )
+        GlobalBMPs.inbox = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'inbox.png' )
+        
+        GlobalBMPs.archive = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'archive.png' )
+        GlobalBMPs.to_inbox = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'to_inbox.png' )
+        GlobalBMPs.delete = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'delete.png' )
+        GlobalBMPs.zoom_in = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_in.png' )
+        GlobalBMPs.zoom_out = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_out.png' )
+        GlobalBMPs.zoom_switch = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_switch.png' )
+        GlobalBMPs.fullscreen_switch = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'fullscreen_switch.png' )
+        
+        GlobalBMPs.dump_ok = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'dump_ok.png' )
+        GlobalBMPs.dump_recoverable = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'dump_recoverable.png' )
+        GlobalBMPs.dump_fail = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'dump_fail.png' )
+        
+        GlobalBMPs.pause = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'pause.png' )
+        GlobalBMPs.play = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'play.png' )
+        GlobalBMPs.stop = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'stop.png' )
+        
+        GlobalBMPs.eight_chan = wx.Bitmap( HC.STATIC_DIR + os.path.sep + '8chan.png' )
+        GlobalBMPs.twitter = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'twitter.png' )
+        GlobalBMPs.tumblr = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'tumblr.png' )
+        
+        GlobalBMPs.first = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'first.png' )
+        GlobalBMPs.previous = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'previous.png' )
+        GlobalBMPs.next = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'next.png' )
+        GlobalBMPs.last = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'last.png' )
+        
 
 LOCAL_TAG_SERVICE_KEY = 'local tags'
 
@@ -244,6 +268,3 @@ LOCAL_BOORU_SERVICE_KEY = 'local booru'
 COMBINED_FILE_SERVICE_KEY = 'all known files'
 
 COMBINED_TAG_SERVICE_KEY = 'all known tags'
-
-        
-    

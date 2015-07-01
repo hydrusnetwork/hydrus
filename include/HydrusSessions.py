@@ -59,7 +59,7 @@ class HydrusMessagingSessionManagerServer( object ):
     
     def AddSession( self, service_key, access_key, name ):
         
-        session_key = os.urandom( 32 )
+        session_key = HydrusData.GenerateKey()
         
         account_key = wx.GetApp().Read( 'account_key_from_access_key', service_key, access_key )
         
@@ -113,7 +113,7 @@ class HydrusSessionManagerClient( object ):
             
             # session key expired or not found
             
-            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+            service = wx.GetApp().GetServicesManager().GetService( service_key )
             
             ( response, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
             
@@ -156,7 +156,7 @@ class HydrusSessionManagerServer( object ):
             
             account = self._account_keys_to_accounts[ account_key ]
             
-            session_key = os.urandom( 32 )
+            session_key = HydrusData.GenerateKey()
             
             self._account_keys_to_session_keys[ account_key ].add( session_key )
             

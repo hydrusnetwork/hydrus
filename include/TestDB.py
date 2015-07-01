@@ -281,7 +281,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_export_folders( self ):
         
-        file_search_context = ClientData.FileSearchContext(file_service_key = os.urandom( 32 ), tag_service_key = os.urandom( 32 ), predicates = [ HydrusData.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'test' ) ] )
+        file_search_context = ClientData.FileSearchContext(file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [ HydrusData.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'test' ) ] )
         
         export_folder = ClientFiles.ExportFolder( 'test path', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = file_search_context, period = 3600, phrase = '{hash}' )
         
@@ -612,7 +612,7 @@ class TestClientDB( unittest.TestCase ):
         
         session.AddPage( 'hf download page', management_controller, [] )
         
-        service_keys_to_tags = { os.urandom( 32 ) : [ 'some', 'tags' ] }
+        service_keys_to_tags = { HydrusData.GenerateKey() : [ 'some', 'tags' ] }
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientData.ImportFileOptions(), { 'paths' : service_keys_to_tags }, True )
         
@@ -630,33 +630,33 @@ class TestClientDB( unittest.TestCase ):
         
         session.AddPage( 'petition page', management_controller, [] )
         
-        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), predicates = [] )
+        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, True )
-        
-        session.AddPage( 'files', management_controller, [] )
-        
-        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), tag_service_key = os.urandom( 32 ), predicates = [] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, False )
-        
-        session.AddPage( 'files', management_controller, [ os.urandom( 32 ) for i in range( 200 ) ] )
-        
-        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, True )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
         
         session.AddPage( 'files', management_controller, [] )
         
-        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] )
+        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, True )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, False )
+        
+        session.AddPage( 'files', management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
+        
+        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
         
         session.AddPage( 'files', management_controller, [] )
         
-        fsc = ClientData.FileSearchContext( file_service_key = os.urandom( 32 ), predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, os.urandom( 32 ) ) ), HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, os.urandom( 32 ) ) ) ] )
+        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( os.urandom( 32 ), fsc, True )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
+        
+        session.AddPage( 'files', management_controller, [] )
+        
+        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, HydrusData.GenerateKey() ) ), HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, HydrusData.GenerateKey() ) ) ] )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
         
         session.AddPage( 'files', management_controller, [] )
         
@@ -1041,24 +1041,24 @@ class TestClientDB( unittest.TestCase ):
         
         info[ 'host' ] = 'example_host'
         info[ 'port' ] = 80
-        info[ 'access_key' ] = os.urandom( 32 ) 
+        info[ 'access_key' ] = HydrusData.GenerateKey() 
         
-        new_tag_repo = ( os.urandom( 32 ), HC.TAG_REPOSITORY, 'new tag repo', info )
+        new_tag_repo = ( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'new tag repo', info )
         
         info = {}
         
         info[ 'host' ] = 'example_host2'
         info[ 'port' ] = 80
-        info[ 'access_key' ] = os.urandom( 32 )
+        info[ 'access_key' ] = HydrusData.GenerateKey()
         
-        other_new_tag_repo = ( os.urandom( 32 ), HC.TAG_REPOSITORY, 'new tag repo2', info )
+        other_new_tag_repo = ( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'new tag repo2', info )
         
         info = {}
         
         info[ 'shape' ] = ClientRatings.CIRCLE
         info[ 'colours' ] = ClientRatings.default_like_colours
         
-        new_local_like = ( os.urandom( 32 ), HC.LOCAL_RATING_LIKE, 'new local rating', info )
+        new_local_like = ( HydrusData.GenerateKey(), HC.LOCAL_RATING_LIKE, 'new local rating', info )
         
         info = {}
         
@@ -1066,7 +1066,7 @@ class TestClientDB( unittest.TestCase ):
         info[ 'colours' ] = ClientRatings.default_numerical_colours
         info[ 'num_stars' ] = 5
         
-        new_local_numerical = ( os.urandom( 32 ), HC.LOCAL_RATING_NUMERICAL, 'new local numerical', info )
+        new_local_numerical = ( HydrusData.GenerateKey(), HC.LOCAL_RATING_NUMERICAL, 'new local numerical', info )
         
         edit_log = []
         
@@ -1091,7 +1091,7 @@ class TestClientDB( unittest.TestCase ):
         
         info[ 'host' ] = 'corrected host'
         info[ 'port' ] = 85
-        info[ 'access_key' ] = os.urandom( 32 )
+        info[ 'access_key' ] = HydrusData.GenerateKey()
         
         other_new_tag_repo_updated = ( service_key, service_type, name, info )
         
@@ -1125,7 +1125,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, [] )
         
-        session = ( CC.LOCAL_FILE_SERVICE_KEY, os.urandom( 32 ), HydrusData.GetNow() + 100000 )
+        session = ( CC.LOCAL_FILE_SERVICE_KEY, HydrusData.GenerateKey(), HydrusData.GetNow() + 100000 )
         
         self._write( 'hydrus_session', *session )
         
@@ -1158,7 +1158,7 @@ class TestClientDB( unittest.TestCase ):
         
         shortcuts = ClientData.Shortcuts( 'test' )
         
-        shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ( os.urandom( 32 ), 'action_data' ) )
+        shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ( HydrusData.GenerateKey(), 'action_data' ) )
         shortcuts.SetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END, ( None, 'other_action_data' ) )
         
         self._write( 'shortcuts', shortcuts )
@@ -1339,8 +1339,8 @@ class TestServerDB( unittest.TestCase ):
     
     def _test_service_creation( self ):
         
-        self._tag_service_key = os.urandom( 32 )
-        self._file_service_key = os.urandom( 32 )
+        self._tag_service_key = HydrusData.GenerateKey()
+        self._file_service_key = HydrusData.GenerateKey()
         
         edit_log = []
         

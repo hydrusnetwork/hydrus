@@ -501,9 +501,9 @@ class Canvas( object ):
         self._image_cache = image_cache
         self._claim_focus = claim_focus
         
-        self._file_service = wx.GetApp().GetManager( 'services' ).GetService( self._file_service_key )
+        self._file_service = wx.GetApp().GetServicesManager().GetService( self._file_service_key )
         
-        self._canvas_key = os.urandom( 32 )
+        self._canvas_key = HydrusData.GenerateKey()
         
         self._dirty = True
         self._closing = False
@@ -942,7 +942,7 @@ class CanvasWithDetails( Canvas ):
         self._hover_commands = ClientGUIHoverFrames.FullscreenHoverFrameCommands( self, self._canvas_key )
         self._hover_tags = ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self._canvas_key )
         
-        ratings_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.RATINGS_SERVICES ) )
+        ratings_services = wx.GetApp().GetServicesManager().GetServices( ( HC.RATINGS_SERVICES ) )
         
         if len( ratings_services ) > 0: self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameRatings( self, self._canvas_key )
         
@@ -1007,7 +1007,7 @@ class CanvasWithDetails( Canvas ):
             
             if self._current_media.HasInbox():
                 
-                dc.DrawBitmap( CC.GlobalBMPs.inbox_bmp, client_width - 18, 2 )
+                dc.DrawBitmap( CC.GlobalBMPs.inbox, client_width - 18, 2 )
                 
                 current_y += 18
                 
@@ -1029,7 +1029,7 @@ class CanvasWithDetails( Canvas ):
             
             ( local_ratings, remote_ratings ) = self._current_display_media.GetRatings()
             
-            services_manager = wx.GetApp().GetManager( 'services' )
+            services_manager = wx.GetApp().GetServicesManager()
             
             like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
             
@@ -1149,7 +1149,7 @@ class CanvasPanel( Canvas, wx.Window ):
         
         if self._current_display_media is not None:
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices()
+            services = wx.GetApp().GetServicesManager().GetServices()
             
             local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
             
@@ -2080,7 +2080,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     
     def EventShowMenu( self, event ):
         
-        services = wx.GetApp().GetManager( 'services' ).GetServices()
+        services = wx.GetApp().GetServicesManager().GetServices()
         
         local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         
@@ -2289,7 +2289,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                     
                 else:
                     
-                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                    service = wx.GetApp().GetServicesManager().GetService( service_key )
                     
                     service_type = service.GetServiceType()
                     
@@ -2464,7 +2464,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
     
     def EventShowMenu( self, event ):
         
-        services = wx.GetApp().GetManager( 'services' ).GetServices()
+        services = wx.GetApp().GetServicesManager().GetServices()
         
         local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         
@@ -2566,7 +2566,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
         CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._rating_service_key = service_key
-        self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        self._service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         self._hover_commands.SetNavigable( False )
         

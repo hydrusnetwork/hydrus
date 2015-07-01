@@ -32,7 +32,7 @@ ID_TIMER_ANIMATION = wx.NewId()
 
 def AddFileServiceKeysToMenu( menu, file_service_keys, phrase, action ):
     
-    services_manager = wx.GetApp().GetManager( 'services' )
+    services_manager = wx.GetApp().GetServicesManager()
     
     if len( file_service_keys ) == 1:
         
@@ -403,7 +403,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( self._selected_media ) > 0:
             
-            if len( wx.GetApp().GetManager( 'services' ).GetServices( HC.RATINGS_SERVICES ) ) > 0:
+            if len( wx.GetApp().GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
                 
                 flat_media = []
                 
@@ -472,7 +472,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            file_service = wx.GetApp().GetManager( 'services' ).GetService( file_service_key )
+            file_service = wx.GetApp().GetServicesManager().GetService( file_service_key )
             
             if len( hashes ) == 1: message = 'Enter a reason for this file to be removed from ' + file_service.GetName() + '.'
             else: message = 'Enter a reason for these ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files to be removed from ' + file_service.GetName() + '.'
@@ -517,7 +517,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             try:
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 if service.GetServiceType() == HC.LOCAL_RATING_LIKE: ClientGUICanvas.RatingsFilterFrameLike( self.GetTopLevelParent(), self._page_key, service_key, media_results )
                 
@@ -595,7 +595,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( self._selected_media ) > 0:
             
-            share_key = os.urandom( 32 )
+            share_key = HydrusData.GenerateKey()
             
             name = ''
             text = ''
@@ -773,14 +773,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         HydrusGlobals.pubsub.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
         
-    
-class MediaPanelNoQuery( MediaPanel ):
-    
-    def __init__( self, parent, page_key, file_service_key ): MediaPanel.__init__( self, parent, page_key, file_service_key, [] )
-    
-    def _GetPrettyStatus( self ): return 'No query'
-    
-    def GetSortedMedia( self ): return []
     
 class MediaPanelLoading( MediaPanel ):
     
@@ -1009,7 +1001,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( self._selected_media ) > 0:
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
+            services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
             
             service_keys = [ service.GetServiceKey() for service in services ]
             
@@ -1565,7 +1557,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 multiple_selected = num_selected > 1
                 
-                services = wx.GetApp().GetManager( 'services' ).GetServices()
+                services = wx.GetApp().GetServicesManager().GetServices()
                 
                 tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
                 
@@ -2333,8 +2325,8 @@ class Thumbnail( Selectable ):
         
         locations_manager = self.GetLocationsManager()
         
-        if inbox: dc.DrawBitmap( CC.GlobalBMPs.inbox_bmp, width - 18, 0 )
-        elif CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetPending(): dc.DrawBitmap( CC.GlobalBMPs.downloading_bmp, width - 18, 0 )
+        if inbox: dc.DrawBitmap( CC.GlobalBMPs.inbox, width - 18, 0 )
+        elif CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetPending(): dc.DrawBitmap( CC.GlobalBMPs.downloading, width - 18, 0 )
         
         if self._dump_status == CC.DUMPER_DUMPED_OK: dc.DrawBitmap( CC.GlobalBMPs.dump_ok, width - 18, 18 )
         elif self._dump_status == CC.DUMPER_RECOVERABLE_ERROR: dc.DrawBitmap( CC.GlobalBMPs.dump_recoverable, width - 18, 18 )
@@ -2342,7 +2334,7 @@ class Thumbnail( Selectable ):
         
         if self.IsCollection():
             
-            dc.DrawBitmap( CC.GlobalBMPs.collection_bmp, 1, height - 17 )
+            dc.DrawBitmap( CC.GlobalBMPs.collection, 1, height - 17 )
             
             num_files_str = HydrusData.ToString( len( self._hashes ) )
             
@@ -2371,21 +2363,21 @@ class Thumbnail( Selectable ):
         
         if num_current > num_petitioned:
             
-            dc.DrawBitmap( CC.GlobalBMPs.file_repository_bmp, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository, repo_icon_x, 0 )
             
             repo_icon_x += 20
             
         
         if num_pending > 0:
             
-            dc.DrawBitmap( CC.GlobalBMPs.file_repository_pending_bmp, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository_pending, repo_icon_x, 0 )
             
             repo_icon_x += 20
             
         
         if num_petitioned > 0:
             
-            dc.DrawBitmap( CC.GlobalBMPs.file_repository_petitioned_bmp, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository_petitioned, repo_icon_x, 0 )
             
             repo_icon_x += 20
             

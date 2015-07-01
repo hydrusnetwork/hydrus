@@ -118,7 +118,7 @@ def CreateManagementControllerImportThreadWatcher():
     
 def CreateManagementControllerPetitions( petition_service_key ):
     
-    petition_service = wx.GetApp().GetManager( 'services' ).GetService( petition_service_key )
+    petition_service = wx.GetApp().GetServicesManager().GetService( petition_service_key )
     
     petition_service_type = petition_service.GetServiceType()
     
@@ -885,7 +885,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             tags_manager = media.GetTagsManager()
             
-            try: service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+            try: service = wx.GetApp().GetServicesManager().GetService( service_key )
             except HydrusExceptions.NotFoundException: continue
             
             service_key = service.GetServiceKey()
@@ -1407,13 +1407,12 @@ class ManagementPanelImport( ManagementPanel ):
         self._import_queue_info = wx.StaticText( self._import_queue_panel )
         self._import_queue_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         
-        self._import_pause_button = wx.Button( self._import_queue_panel, label = 'pause' )
+        self._import_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._import_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseImportQueue )
         self._import_pause_button.Disable()
         
-        self._import_cancel_button = wx.Button( self._import_queue_panel, label = 'that\'s enough' )
+        self._import_cancel_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.stop )
         self._import_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelImportQueue )
-        self._import_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
         self._import_cancel_button.Disable()
         
         #
@@ -1435,7 +1434,7 @@ class ManagementPanelImport( ManagementPanel ):
         self._import_queue_panel.AddF( self._import_overall_info, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._import_queue_info, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._import_queue_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( c_p_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._import_queue_panel.AddF( c_p_hbox, CC.FLAGS_BUTTON_SIZER )
         
         vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1522,18 +1521,16 @@ class ManagementPanelImport( ManagementPanel ):
         
         if import_queue_job_key.IsPaused():
             
-            if self._import_pause_button.GetLabel() != 'resume':
+            if self._import_pause_button.GetBitmap() != CC.GlobalBMPs.play:
                 
-                self._import_pause_button.SetLabel( 'resume' )
-                self._import_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
+                self._import_pause_button.SetBitmap( CC.GlobalBMPs.play )
                 
             
         else:
             
-            if self._import_pause_button.GetLabel() != 'pause':
+            if self._import_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
                 
-                self._import_pause_button.SetLabel( 'pause' )
-                self._import_pause_button.SetForegroundColour( ( 0, 0, 0 ) )
+                self._import_pause_button.SetBitmap( CC.GlobalBMPs.pause )
                 
             
         
@@ -1659,11 +1656,11 @@ class ManagementPanelImports( ManagementPanelImport ):
         
         self._building_import_queue_info = wx.StaticText( self._building_import_queue_panel )
         
-        self._building_import_queue_pause_button = wx.Button( self._building_import_queue_panel, label = 'pause' )
+        self._building_import_queue_pause_button  = wx.BitmapButton( self._building_import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._building_import_queue_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseImportQueueBuilder )
         self._building_import_queue_pause_button.Disable()
         
-        self._building_import_queue_cancel_button = wx.Button( self._building_import_queue_panel, label = 'that\'s enough' )
+        self._building_import_queue_cancel_button = wx.BitmapButton( self._building_import_queue_panel, bitmap = CC.GlobalBMPs.stop )
         self._building_import_queue_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelImportQueueBuilder )
         self._building_import_queue_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
         self._building_import_queue_cancel_button.Disable()
@@ -1674,7 +1671,7 @@ class ManagementPanelImports( ManagementPanelImport ):
         queue_pause_buttons_hbox.AddF( self._building_import_queue_cancel_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._building_import_queue_panel.AddF( self._building_import_queue_info, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._building_import_queue_panel.AddF( queue_pause_buttons_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._building_import_queue_panel.AddF( queue_pause_buttons_hbox, CC.FLAGS_BUTTON_SIZER )
         
         vbox.AddF( self._building_import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1747,18 +1744,16 @@ class ManagementPanelImports( ManagementPanelImport ):
         
         if import_queue_builder_job_key.IsPaused():
             
-            if self._building_import_queue_pause_button.GetLabel() != 'resume':
+            if self._building_import_queue_pause_button.GetBitmap() != CC.GlobalBMPs.play:
                 
-                self._building_import_queue_pause_button.SetLabel( 'resume' )
-                self._building_import_queue_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
+                self._building_import_queue_pause_button.SetBitmap( CC.GlobalBMPs.play )
                 
             
         else:
             
-            if self._building_import_queue_pause_button.GetLabel() != 'pause':
+            if self._building_import_queue_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
                 
-                self._building_import_queue_pause_button.SetLabel( 'pause' )
-                self._building_import_queue_pause_button.SetForegroundColour( ( 0, 0, 0 ) )
+                self._building_import_queue_pause_button.SetBitmap( CC.GlobalBMPs.pause )
                 
             
         
@@ -2239,7 +2234,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._thread_input = wx.TextCtrl( self._thread_panel, style = wx.TE_PROCESS_ENTER )
         self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        self._thread_pause_button = wx.Button( self._thread_panel, label = 'pause' )
+        self._thread_pause_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.pause )
         self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseImportQueueBuilder )
         
         self._thread_manual_refresh_button = wx.Button( self._thread_panel, label = 'check now' )
@@ -2265,7 +2260,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._thread_panel.AddF( self._thread_info, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._thread_panel.AddF( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._thread_panel.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
         self._thread_panel.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2307,13 +2302,17 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
             if import_queue_builder_job_key.IsPaused():
                 
-                self._thread_pause_button.SetLabel( 'resume' )
-                self._thread_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
+                if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.play:
+                    
+                    self._thread_pause_button.SetBitmap( CC.GlobalBMPs.play )
+                    
                 
             else:
                 
-                self._thread_pause_button.SetLabel( 'pause' )
-                self._thread_pause_button.SetForegroundColour( ( 0, 0, 0 ) )
+                if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
+                    
+                    self._thread_pause_button.SetBitmap( CC.GlobalBMPs.pause )
+                    
                 
             
         else: self._thread_pause_button.Disable()
@@ -2471,7 +2470,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, management_controller )
         
-        self._service = wx.GetApp().GetManager( 'services' ).GetService( self._petition_service_key )
+        self._service = wx.GetApp().GetServicesManager().GetService( self._petition_service_key )
         self._can_ban = self._service.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS )
         
         self._num_petitions = None
@@ -2553,7 +2552,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._can_ban: self._modify_petitioner.Disable()
             
-            panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, file_service_key )
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
             
         else:
             
@@ -2748,7 +2747,10 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
                     
-                else: panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, file_service_key )
+                else:
+                    
+                    panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
+                    
                 
                 HydrusGlobals.pubsub.pub( 'swap_media_panel', self._page_key, panel )
                 
@@ -2771,16 +2773,23 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 if predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
                     
-                    with ClientGUIDialogs.DialogInputFileSystemPredicate( self, predicate_type ) as dlg:
+                    with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
                         
-                        if dlg.ShowModal() == wx.ID_OK: predicate = dlg.GetPredicate()
+                        if dlg.ShowModal() == wx.ID_OK: predicates = dlg.GetPredicates()
                         else: return
                         
                     
-                elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) )
+                elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: predicates = ( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), )
+                else:
+                    
+                    predicates = ( predicate, )
+                    
                 
-                if self._current_predicates_box.HasPredicate( predicate ): self._current_predicates_box.RemovePredicate( predicate )
-                else: self._current_predicates_box.AddPredicate( predicate )
+                for predicate in predicates:
+                    
+                    if self._current_predicates_box.HasPredicate( predicate ): self._current_predicates_box.RemovePredicate( predicate )
+                    else: self._current_predicates_box.AddPredicate( predicate )
+                    
                 
             
             self._DoQuery()

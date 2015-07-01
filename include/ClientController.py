@@ -173,6 +173,11 @@ class Controller( HydrusController.HydrusController ):
         return self._options
         
     
+    def GetServicesManager( self ):
+        
+        return self._services_manager
+        
+    
     def InitCheckPassword( self ):
         
         while True:
@@ -227,7 +232,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._managers = {}
         
-        self._managers[ 'services' ] = ClientData.ServicesManager()
+        self._services_manager = ClientData.ServicesManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
@@ -290,7 +295,7 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusGlobals.pubsub.pub( 'splash_set_text', 'fattening service info' )
             
-            services = self.GetManager( 'services' ).GetServices()
+            services = self.GetServicesManager().GetServices()
             
             for service in services:
                 
@@ -346,7 +351,7 @@ class Controller( HydrusController.HydrusController ):
     
     def RestartBooru( self ):
         
-        service = self.GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        service = self.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         info = service.GetInfo()
         

@@ -34,8 +34,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         image_list = wx.ImageList( 16, 16, True, 2 )
         
-        image_list.Add( CC.GlobalBMPs.transparent_bmp )
-        image_list.Add( CC.GlobalBMPs.inbox_bmp )
+        image_list.Add( CC.GlobalBMPs.transparent )
+        image_list.Add( CC.GlobalBMPs.inbox )
         
         self.AssignImageList( image_list, wx.IMAGE_LIST_SMALL )
         
@@ -423,7 +423,7 @@ class ConversationPanel( wx.Panel ):
     
     def EventReply( self, event ):
         
-        draft_key = os.urandom( 32 )
+        draft_key = HydrusData.GenerateKey()
         conversation_key = self._conversation.GetConversationKey()
         subject = self._conversation.GetSubject()
         contact_from = self._identity
@@ -610,7 +610,7 @@ class DestinationPanel( wx.Panel ):
                 elif command == 'read': status = 'read'
                 elif command == 'unread': status = 'sent'
                 
-                my_message_depot = wx.GetApp().GetManager( 'services' ).GetService( self._identity.GetServiceKey() )
+                my_message_depot = wx.GetApp().GetServicesManager().GetService( self._identity.GetServiceKey() )
                 
                 connection = my_message_depot.GetConnection()
                 
@@ -781,33 +781,33 @@ class DraftBodyPanel( wx.Panel ):
         
         self._toolbar.SetToolBitmapSize( ( 16, 16 ) )
         
-        self._toolbar.AddCheckTool( self.ID_BOLD, CC.GlobalBMPs.bold_bmp )
-        self._toolbar.AddCheckTool( self.ID_ITALIC, CC.GlobalBMPs.italic_bmp )
-        self._toolbar.AddCheckTool( self.ID_UNDERLINE, CC.GlobalBMPs.underline_bmp )
+        self._toolbar.AddCheckTool( self.ID_BOLD, CC.GlobalBMPs.bold )
+        self._toolbar.AddCheckTool( self.ID_ITALIC, CC.GlobalBMPs.italic )
+        self._toolbar.AddCheckTool( self.ID_UNDERLINE, CC.GlobalBMPs.underline )
         
         self._toolbar.AddSeparator()
         
-        self._toolbar.AddRadioTool( self.ID_ALIGN_LEFT, CC.GlobalBMPs.align_left_bmp )
-        self._toolbar.AddRadioTool( self.ID_ALIGN_CENTER, CC.GlobalBMPs.align_center_bmp )
-        self._toolbar.AddRadioTool( self.ID_ALIGN_RIGHT, CC.GlobalBMPs.align_right_bmp )
+        self._toolbar.AddRadioTool( self.ID_ALIGN_LEFT, CC.GlobalBMPs.align_left )
+        self._toolbar.AddRadioTool( self.ID_ALIGN_CENTER, CC.GlobalBMPs.align_center )
+        self._toolbar.AddRadioTool( self.ID_ALIGN_RIGHT, CC.GlobalBMPs.align_right )
         
         self._toolbar.AddSeparator()
         
-        self._toolbar.AddLabelTool( self.ID_INDENT_LESS, 'indent less', CC.GlobalBMPs.indent_less_bmp )
-        self._toolbar.AddLabelTool( self.ID_INDENT_MORE, 'indent more', CC.GlobalBMPs.indent_more_bmp )
+        self._toolbar.AddLabelTool( self.ID_INDENT_LESS, 'indent less', CC.GlobalBMPs.indent_less )
+        self._toolbar.AddLabelTool( self.ID_INDENT_MORE, 'indent more', CC.GlobalBMPs.indent_more )
         
         self._toolbar.AddSeparator()
         
-        self._toolbar.AddLabelTool( self.ID_FONT, 'font', CC.GlobalBMPs.font_bmp )
-        self._toolbar.AddLabelTool( self.ID_FONT_COLOUR, 'font colour', CC.GlobalBMPs.colour_bmp, shortHelp = 'font colour' )
+        self._toolbar.AddLabelTool( self.ID_FONT, 'font', CC.GlobalBMPs.font )
+        self._toolbar.AddLabelTool( self.ID_FONT_COLOUR, 'font colour', CC.GlobalBMPs.colour, shortHelp = 'font colour' )
         
         # font background
         # message background?
         
         self._toolbar.AddSeparator()
         
-        self._toolbar.AddLabelTool( self.ID_LINK, 'link', CC.GlobalBMPs.link_bmp )
-        self._toolbar.AddLabelTool( self.ID_LINK_BREAK, 'break link', CC.GlobalBMPs.link_break_bmp )
+        self._toolbar.AddLabelTool( self.ID_LINK, 'link', CC.GlobalBMPs.link )
+        self._toolbar.AddLabelTool( self.ID_LINK_BREAK, 'break link', CC.GlobalBMPs.link_break )
         
         self._toolbar.Realize()
         
@@ -1044,7 +1044,7 @@ class DraftPanel( wx.Panel ):
         
         self.SetBackgroundColour( CC.COLOUR_MESSAGE )
         
-        self._compose_key = os.urandom( 32 )
+        self._compose_key = HydrusData.GenerateKey()
         
         self._draft_message = draft_message
         
@@ -1234,7 +1234,7 @@ class DraftPanel( wx.Panel ):
             
             try:
                 
-                my_message_depot = wx.GetApp().GetManager( 'services' ).GetService( self._contact_from.GetServiceKey() )
+                my_message_depot = wx.GetApp().GetServicesManager().GetService( self._contact_from.GetServiceKey() )
                 
                 connection = my_message_depot.GetConnection()
                 

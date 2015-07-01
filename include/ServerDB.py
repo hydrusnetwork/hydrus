@@ -35,7 +35,7 @@ class MessageDB( object ):
         try: ( service_id, account_id ) = self._c.execute( 'SELECT service_id, account_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( contact_key ), ) ).fetchone()
         except: raise HydrusExceptions.ForbiddenException( 'Did not find that contact key for the message depot!' )
         
-        message_key = os.urandom( 32 )
+        message_key = HydrusData.GenerateKey()
         
         self._c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, HydrusData.GetNow() ) )
         
@@ -2160,7 +2160,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( account_id, access_key ) in old_account_info:
                 
-                account_key = os.urandom( 32 )
+                account_key = HydrusData.GenerateKey()
                 
                 self._c.execute( 'INSERT INTO accounts ( account_id, account_key, access_key ) VALUES ( ?, ?, ? );', ( account_id, sqlite3.Binary( account_key ), sqlite3.Binary( access_key ) ) )
                 
@@ -2176,7 +2176,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( registration_key, service_id, account_type_id, access_key, expires ) in old_r_k_info:
                 
-                account_key = os.urandom( 32 )
+                account_key = HydrusData.GenerateKey()
                 
                 self._c.execute( 'INSERT INTO registration_keys ( registration_key, service_id, account_type_id, account_key, access_key, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( sqlite3.Binary( registration_key ), service_id, account_type_id, sqlite3.Binary( account_key ), sqlite3.Binary( access_key ), expires ) )
                 
@@ -2239,8 +2239,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if account_id in existing_account_ids:
                     
-                    account_key = os.urandom( 32 )
-                    access_key = os.urandom( 32 )
+                    account_key = HydrusData.GenerateKey()
+                    access_key = HydrusData.GenerateKey()
                     
                     account_log_text += 'The account at port ' + str( service_dict[ service_id ] ) + ' now uses access key: ' + access_key.encode( 'hex' ) + os.linesep
                     
@@ -2388,6 +2388,8 @@ class DB( HydrusDB.HydrusDB ):
         print( 'The server has updated to version ' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
+        
+        HydrusGlobals.is_db_updated = True
         
     
     def _UpdateRatings( self, service_id, account_id, ratings ):

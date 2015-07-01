@@ -20,7 +20,7 @@ class Media( object ):
     
     def __init__( self ):
         
-        self._id = os.urandom( 32 )
+        self._id = HydrusData.GenerateKey()
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
@@ -52,7 +52,7 @@ class MediaList( object ):
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
         ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
         
-        services_manager = wx.GetApp().GetManager( 'services' )
+        services_manager = wx.GetApp().GetServicesManager()
         
         local_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         remote_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetServiceType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
@@ -340,7 +340,7 @@ class MediaList( object ):
                 
                 ( x_local_ratings, x_remote_ratings ) = x.GetRatings()
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = deal_with_none( x_local_ratings.GetRating( service_key ) )
                 else: rating = deal_with_none( x_remote_ratings.GetScore( service_key ) )
@@ -865,7 +865,7 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -903,7 +903,7 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         service_type = service.GetServiceType()
         

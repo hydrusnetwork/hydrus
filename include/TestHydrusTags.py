@@ -15,9 +15,9 @@ class TestMergeTagsManagers( unittest.TestCase ):
     
     def test_merge( self ):
         
-        first = os.urandom( 32 )
-        second = os.urandom( 32 )
-        third = os.urandom( 32 )
+        first = HydrusData.GenerateKey()
+        second = HydrusData.GenerateKey()
+        third = HydrusData.GenerateKey()
         
         #
         
@@ -84,9 +84,9 @@ class TestTagsManager( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._first_key = os.urandom( 32 )
-        self._second_key = os.urandom( 32 )
-        self._third_key = os.urandom( 32 )
+        self._first_key = HydrusData.GenerateKey()
+        self._second_key = HydrusData.GenerateKey()
+        self._third_key = HydrusData.GenerateKey()
         
         service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
@@ -109,9 +109,9 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        self._pending_service_key = os.urandom( 32 )
-        self._content_update_service_key = os.urandom( 32 )
-        self._reset_service_key = os.urandom( 32 )
+        self._pending_service_key = HydrusData.GenerateKey()
+        self._content_update_service_key = HydrusData.GenerateKey()
+        self._reset_service_key = HydrusData.GenerateKey()
         
         other_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
@@ -240,7 +240,7 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_process_content_update( self ):
         
-        hashes = { os.urandom( 32 ) for i in range( 6 ) }
+        hashes = { HydrusData.GenerateKey() for i in range( 6 ) }
         
         #
         
@@ -546,9 +546,9 @@ class TestTagParents( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._first_key = os.urandom( 32 )
-        self._second_key = os.urandom( 32 )
-        self._third_key = os.urandom( 32 )
+        self._first_key = HydrusData.GenerateKey()
+        self._second_key = HydrusData.GenerateKey()
+        self._third_key = HydrusData.GenerateKey()
         
         first_dict = HydrusData.default_dict_set()
         
@@ -691,9 +691,9 @@ class TestTagSiblings( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._first_key = os.urandom( 32 )
-        self._second_key = os.urandom( 32 )
-        self._third_key = os.urandom( 32 )
+        self._first_key = HydrusData.GenerateKey()
+        self._second_key = HydrusData.GenerateKey()
+        self._third_key = HydrusData.GenerateKey()
         
         tag_siblings = collections.defaultdict( HydrusData.default_dict_set )
         

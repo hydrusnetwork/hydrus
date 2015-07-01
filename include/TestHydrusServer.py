@@ -31,11 +31,11 @@ class TestServer( unittest.TestCase ):
         
         services = []
         
-        self._file_service = ClientData.Service( os.urandom( 32 ), HC.FILE_REPOSITORY, 'file repo', {} )
-        self._tag_service = ClientData.Service( os.urandom( 32 ), HC.TAG_REPOSITORY, 'tag repo', {} )
-        self._admin_service = ClientData.Service( os.urandom( 32 ), HC.SERVER_ADMIN, 'server admin', {} )
+        self._file_service = ClientData.Service( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo', {} )
+        self._tag_service = ClientData.Service( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo', {} )
+        self._admin_service = ClientData.Service( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin', {} )
         
-        services_manager = wx.GetApp().GetManager( 'services' )
+        services_manager = wx.GetApp().GetServicesManager()
         
         services_manager._keys_to_services[ self._file_service.GetServiceKey() ] = self._file_service
         services_manager._keys_to_services[ self._tag_service.GetServiceKey() ] = self._tag_service
@@ -43,7 +43,7 @@ class TestServer( unittest.TestCase ):
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
-        account_key = os.urandom( 32 )
+        account_key = HydrusData.GenerateKey()
         account_type = HydrusData.AccountType( 'account', permissions, ( None, None ) )
         created = HydrusData.GetNow() - 100000
         expires = None
@@ -52,8 +52,8 @@ class TestServer( unittest.TestCase ):
         
         self._account = HydrusData.Account( account_key, account_type, created, expires, used_bytes, used_requests )
         
-        self._access_key = os.urandom( 32 )
-        self._file_hash = os.urandom( 32 )
+        self._access_key = HydrusData.GenerateKey()
+        self._file_hash = HydrusData.GenerateKey()
         
         def TWISTEDSetup():
             
@@ -221,8 +221,8 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        share_key = os.urandom( 32 )
-        hashes = [ os.urandom( 32 ) for i in range( 5 ) ]
+        share_key = HydrusData.GenerateKey()
+        hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
         
         with open( ClientFiles.GetExpectedFilePath( hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
         with open( ClientFiles.GetExpectedThumbnailPath( hashes[0], False ), 'wb' ) as f: f.write( 'thumbnail' )
@@ -359,7 +359,7 @@ class TestServer( unittest.TestCase ):
         subindex = 2
         num_hashes = 12
         tag = 'series:blah'
-        hash_ids_to_hashes = { i : os.urandom( 32 ) for i in range( 12 ) }
+        hash_ids_to_hashes = { i : HydrusData.GenerateKey() for i in range( 12 ) }
         rows = [ ( tag, [ i for i in range( num_hashes ) ] ) ]
         
         update = HydrusData.ServerToClientContentUpdatePackage()
@@ -393,7 +393,7 @@ class TestServer( unittest.TestCase ):
         
         # access_key
         
-        registration_key = os.urandom( 32 )
+        registration_key = HydrusData.GenerateKey()
         
         wx.GetApp().SetRead( 'access_key', self._access_key )
         
@@ -417,7 +417,7 @@ class TestServer( unittest.TestCase ):
         
         wx.GetApp().SetRead( 'service', service )
         
-        wx.GetApp().SetRead( 'account_key_from_access_key', os.urandom( 32 ) )
+        wx.GetApp().SetRead( 'account_key_from_access_key', HydrusData.GenerateKey() )
         wx.GetApp().SetRead( 'account', self._account )
         
         # account
@@ -431,17 +431,17 @@ class TestServer( unittest.TestCase ):
         account_info = { 'message' : 'hello' }
         
         wx.GetApp().SetRead( 'account_info', account_info )
-        wx.GetApp().SetRead( 'account_key_from_identifier', os.urandom( 32 ) )
+        wx.GetApp().SetRead( 'account_key_from_identifier', HydrusData.GenerateKey() )
         
-        response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : os.urandom( 32 ).encode( 'hex' ) } )
-        
-        self.assertEqual( response[ 'account_info' ], account_info )
-        
-        response = service.Request( HC.GET, 'account_info', { 'subject_hash' : os.urandom( 32 ).encode( 'hex' ) } )
+        response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : HydrusData.GenerateKey().encode( 'hex' ) } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
-        response = service.Request( HC.GET, 'account_info', { 'subject_hash' : os.urandom( 32 ).encode( 'hex' ), 'subject_tag' : 'hello'.encode( 'hex' ) } )
+        response = service.Request( HC.GET, 'account_info', { 'subject_hash' : HydrusData.GenerateKey().encode( 'hex' ) } )
+        
+        self.assertEqual( response[ 'account_info' ], account_info )
+        
+        response = service.Request( HC.GET, 'account_info', { 'subject_hash' : HydrusData.GenerateKey().encode( 'hex' ), 'subject_tag' : 'hello'.encode( 'hex' ) } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
@@ -469,7 +469,7 @@ class TestServer( unittest.TestCase ):
         
         # registration_keys
         
-        registration_key = os.urandom( 32 )
+        registration_key = HydrusData.GenerateKey()
         
         wx.GetApp().SetRead( 'registration_keys', [ registration_key ] )
         
@@ -501,7 +501,7 @@ class TestServer( unittest.TestCase ):
         
         # init
         
-        access_key = os.urandom( 32 )
+        access_key = HydrusData.GenerateKey()
         
         wx.GetApp().SetRead( 'init', access_key )
         
@@ -615,12 +615,12 @@ class TestAMP( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._alice = os.urandom( 32 )
-        self._bob = os.urandom( 32 )
+        self._alice = HydrusData.GenerateKey()
+        self._bob = HydrusData.GenerateKey()
         
         self._server_port = HC.DEFAULT_SERVICE_PORT + 10
         
-        self._service_key = os.urandom( 32 )
+        self._service_key = HydrusData.GenerateKey()
         
         def TWISTEDSetup():
             
@@ -680,7 +680,7 @@ class TestAMP( unittest.TestCase ):
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
-        account_key = os.urandom( 32 )
+        account_key = HydrusData.GenerateKey()
         account_type = HC.AccountType( 'account', permissions, ( None, None ) )
         created = HC.GetNow() - 100000
         expires = None
@@ -689,7 +689,7 @@ class TestAMP( unittest.TestCase ):
         
         account = HC.Account( account_key, account_type, created, expires, used_bytes, used_requests )
         
-        HC.app.SetRead( 'account_key_from_access_key', os.urandom( 32 ) )
+        HC.app.SetRead( 'account_key_from_access_key', HydrusData.GenerateKey() )
         HC.app.SetRead( 'account', account )
         
         deferred = protocol.callRemote( HydrusServerAMP.IMSessionKey, access_key = access_key, name = name )
@@ -717,7 +717,7 @@ class TestAMP( unittest.TestCase ):
     def test_connections( self ):
         
         persistent_protocol = self._get_client_protocol()
-        persistent_access_key = os.urandom( 32 )
+        persistent_access_key = HydrusData.GenerateKey()
         persistent_identifier = hashlib.sha256( persistent_access_key ).digest()
         persistent_name = 'persistent'
         
@@ -729,7 +729,7 @@ class TestAMP( unittest.TestCase ):
         temp_protocol_1 = self._get_client_protocol()
         temp_protocol_2 = self._get_client_protocol()
         temp_name_1 = 'temp_1'
-        temp_identifier = os.urandom( 32 )
+        temp_identifier = HydrusData.GenerateKey()
         temp_name_2 = 'temp_2'
         
         self._make_temporary_connection( temp_protocol_1, temp_identifier, temp_name_1 )
@@ -762,14 +762,14 @@ class TestAMP( unittest.TestCase ):
     def test_message( self ):
         
         persistent_protocol = self._get_client_protocol()
-        persistent_access_key = os.urandom( 32 )
+        persistent_access_key = HydrusData.GenerateKey()
         persistent_identifier = hashlib.sha256( persistent_access_key ).digest()
         persistent_name = 'persistent'
         
         self._make_persistent_connection( persistent_protocol, persistent_access_key, persistent_name )
         
         temp_protocol = self._get_client_protocol()
-        temp_identifier = os.urandom( 32 )
+        temp_identifier = HydrusData.GenerateKey()
         temp_name = 'temp'
         
         self._make_temporary_connection( temp_protocol, temp_identifier, temp_name )

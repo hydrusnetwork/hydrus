@@ -1,4 +1,6 @@
 import ClientConstants as CC
+import ClientGUICommon
+import ClientRatings
 import HydrusConstants as HC
 import HydrusData
 import string
@@ -13,13 +15,13 @@ class PanelPredicateSystem( wx.Panel ):
         raise NotImplementedError()
         
     
-    def GetPredicate( self ):
+    def GetPredicates( self ):
         
         info = self.GetInfo()
         
-        predicate = HydrusData.Predicate( self.PREDICATE_TYPE, info )
+        predicates = ( HydrusData.Predicate( self.PREDICATE_TYPE, info ), )
         
-        return predicate
+        return predicates
         
     
 class PanelPredicateSystemAge( PanelPredicateSystem ):
@@ -141,7 +143,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         self._sign.SetSelection( 0 )
         self._current_pending.SetSelection( 0 )
         
-        services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+        services = wx.GetApp().GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
         
         for service in services: self._file_service_key.Append( service.GetName(), service.GetServiceKey() )
         self._file_service_key.SetSelection( 0 )
@@ -509,46 +511,90 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._service_like = wx.Choice( self )
+        local_like_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
-        self._value_like = wx.Choice( self, choices=[ 'like', 'dislike', 'rated', 'not rated' ] ) # set words based on current service
+        self._checkboxes_to_info = {}
         
-        self._local_likes = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        self._rating_ctrls = []
         
-        for service in self._local_likes: self._service_like.Append( service.GetName(), service.GetServiceKey() )
+        gridbox = wx.FlexGridSizer( 0, 4 )
         
-        self._value_like.SetSelection( 0 )
+        gridbox.AddGrowableCol( 0, 1 )
         
-        if len( self._local_likes ) > 0: self._service_like.SetSelection( 0 )
+        for service in local_like_services:
+            
+            name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            rated_checkbox = wx.CheckBox( self, label = 'rated' )
+            not_rated_checkbox = wx.CheckBox( self, label = 'not rated' )
+            rating_ctrl = ClientGUICommon.RatingLikeDialog( self, service_key )
+            
+            self._checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
+            self._checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
+            self._rating_ctrls.append( rating_ctrl )
+            
+            gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
+            gridbox.AddF( rated_checkbox, CC.FLAGS_MIXED )
+            gridbox.AddF( not_rated_checkbox, CC.FLAGS_MIXED )
+            gridbox.AddF( rating_ctrl, CC.FLAGS_MIXED )
+            
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._service_like, CC.FLAGS_MIXED )
-        hbox.AddF( wx.StaticText( self, label = '=' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._value_like, CC.FLAGS_MIXED )
-        
-        self.SetSizer( hbox )
-        
-        wx.CallAfter( self._value_like.SetFocus )
+        self.SetSizer( gridbox )
         
     
     def GetInfo( self ):
         
-        service_key = self._service_like.GetClientData( self._service_like.GetSelection() )
+        infos = []
         
-        operator = '='
+        for ( checkbox, ( service_key, rating_state ) ) in self._checkboxes_to_info.items():
+            
+            if checkbox.GetValue() == True:
+                
+                if rating_state == ClientRatings.SET:
+                    
+                    value = 'rated'
+                    
+                elif rating_state == ClientRatings.NULL:
+                    
+                    value = 'not rated'
+                    
+                
+                infos.append( ( '=', value, service_key ) )
+                
+            
         
-        selection = self._value_like.GetSelection()
+        for ctrl in self._rating_ctrls:
+            
+            rating_state = ctrl.GetRatingState()
+            
+            if rating_state in ( ClientRatings.LIKE, ClientRatings.DISLIKE ):
+                
+                if rating_state == ClientRatings.LIKE:
+                    
+                    value = '1'
+                    
+                elif rating_state == ClientRatings.DISLIKE:
+                    
+                    value = '0'
+                    
+                
+                service_key = ctrl.GetServiceKey()
+                
+                infos.append( ( '=', value, service_key ) )
+                
+            
         
-        if selection == 0: value = '1'
-        elif selection == 1: value = '0'
-        elif selection == 2: value = 'rated'
-        elif selection == 3: value = 'not rated'
+        return infos
         
-        info = ( operator, value, service_key )
+    
+    def GetPredicates( self ):
         
-        return info
+        infos = self.GetInfo()
+        
+        predicates = [ HydrusData.Predicate( self.PREDICATE_TYPE, info ) for info in infos ]
+        
+        return predicates
         
     
 class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
@@ -559,72 +605,89 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._service_numerical = wx.Choice( self )
-        self._service_numerical.Bind( wx.EVT_CHOICE, self.EventRatingsService )
+        local_numerical_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
-        self._sign_numerical = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248', '=rated', '=not rated' ] )
+        self._checkboxes_to_info = {}
         
-        self._value_numerical = wx.SpinCtrl( self, min = 0, max = 50000, size = ( 60, -1 ) ) # set bounds based on current service
+        self._rating_ctrls_to_info = {}
         
-        self._local_numericals = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        gridbox = wx.FlexGridSizer( 0, 5 )
         
-        for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service )
+        gridbox.AddGrowableCol( 0, 1 )
         
-        self._sign_numerical.SetSelection( 0 )
+        for service in local_numerical_services:
+            
+            name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            rated_checkbox = wx.CheckBox( self, label = 'rated' )
+            not_rated_checkbox = wx.CheckBox( self, label = 'not rated' )
+            choice = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248' ] )
+            rating_ctrl = ClientGUICommon.RatingNumericalDialog( self, service_key )
+            
+            choice.Select( 2 )
+            
+            self._checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
+            self._checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
+            self._rating_ctrls_to_info[ rating_ctrl ] = choice
+            
+            gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
+            gridbox.AddF( rated_checkbox, CC.FLAGS_MIXED )
+            gridbox.AddF( not_rated_checkbox, CC.FLAGS_MIXED )
+            gridbox.AddF( choice, CC.FLAGS_MIXED )
+            gridbox.AddF( rating_ctrl, CC.FLAGS_MIXED )
+            
         
-        self._value_numerical.SetValue( 0 )
-        
-        if len( self._local_numericals ) > 0: self._service_numerical.SetSelection( 0 )
-        
-        self.EventRatingsService( None )
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._service_numerical, CC.FLAGS_MIXED )
-        hbox.AddF( self._sign_numerical, CC.FLAGS_MIXED )
-        hbox.AddF( self._value_numerical, CC.FLAGS_MIXED )
-        
-        self.SetSizer( hbox )
-        
-        wx.CallAfter( self._value_numerical.SetFocus )
-        
-    
-    def EventRatingsService( self, event ):
-        
-        service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
-        
-        num_stars = service.GetInfo( 'num_stars' )
-        
-        self._value_numerical.SetRange( 0, num_stars )
+        self.SetSizer( gridbox )
         
     
     def GetInfo( self ):
         
-        service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
+        infos = []
         
-        operator = self._sign_numerical.GetStringSelection()
+        for ( checkbox, ( service_key, rating_state ) ) in self._checkboxes_to_info.items():
+            
+            if checkbox.GetValue() == True:
+                
+                if rating_state == ClientRatings.SET:
+                    
+                    value = 'rated'
+                    
+                elif rating_state == ClientRatings.NULL:
+                    
+                    value = 'not rated'
+                    
+                
+                infos.append( ( '=', value, service_key ) )
+                
+            
         
-        if operator in ( '=rated', '=not rated' ):
+        for ( ctrl, choice ) in self._rating_ctrls_to_info.items():
             
-            value = operator[1:]
+            rating_state = ctrl.GetRatingState()
             
-            operator = '='
-            
-        else:
-            
-            num_stars = service.GetInfo( 'num_stars' )
-            
-            value_raw = self._value_numerical.GetValue()
-            
-            value = float( value_raw ) / num_stars
+            if rating_state == ClientRatings.SET:
+                
+                operator = choice.GetStringSelection()
+                
+                value = ctrl.GetRating()
+                
+                service_key = ctrl.GetServiceKey()
+                
+                infos.append( ( operator, value, service_key ) )
+                
             
         
-        service_key = service.GetServiceKey()
+        return infos
         
-        info = ( operator, value, service_key )
+    
+    def GetPredicates( self ):
         
-        return info
+        infos = self.GetInfo()
+        
+        predicates = [ HydrusData.Predicate( self.PREDICATE_TYPE, info ) for info in infos ]
+        
+        return predicates
         
     
 class PanelPredicateSystemRatio( PanelPredicateSystem ):

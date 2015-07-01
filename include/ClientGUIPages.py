@@ -24,7 +24,7 @@ class Page( wx.SplitterWindow ):
         
         wx.SplitterWindow.__init__( self, parent )
         
-        self._page_key = os.urandom( 32 )
+        self._page_key = HydrusData.GenerateKey()
         
         self._management_controller = management_controller
         

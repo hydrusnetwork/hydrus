@@ -197,7 +197,7 @@ class LocalBooruCache( object ):
     
     def _RefreshShares( self ):
         
-        self._local_booru_service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._local_booru_service = wx.GetApp().GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         self._keys_to_infos = {}
         

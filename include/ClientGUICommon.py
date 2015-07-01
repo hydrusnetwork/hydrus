@@ -469,8 +469,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._file_service_key = file_service_key
         self._tag_service_key = tag_service_key
         
-        file_service = wx.GetApp().GetManager( 'services' ).GetService( self._file_service_key )
-        tag_service = wx.GetApp().GetManager( 'services' ).GetService( self._tag_service_key )
+        file_service = wx.GetApp().GetServicesManager().GetService( self._file_service_key )
+        tag_service = wx.GetApp().GetServicesManager().GetService( self._tag_service_key )
         
         self._file_repo_button = wx.Button( self._dropdown_window, label = file_service.GetName() )
         self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
@@ -487,7 +487,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
 
         self._file_service_key = file_service_key
         
-        file_service = wx.GetApp().GetManager( 'services' ).GetService( self._file_service_key )
+        file_service = wx.GetApp().GetServicesManager().GetService( self._file_service_key )
         
         name = file_service.GetName()
         
@@ -498,7 +498,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
 
         self._tag_service_key = tag_service_key
         
-        tag_service = tag_service = wx.GetApp().GetManager( 'services' ).GetService( self._tag_service_key )
+        tag_service = tag_service = wx.GetApp().GetServicesManager().GetService( self._tag_service_key )
         
         name = tag_service.GetName()
         
@@ -524,7 +524,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventFileButton( self, event ):
         
-        services_manager = wx.GetApp().GetManager( 'services' )
+        services_manager = wx.GetApp().GetServicesManager()
         
         services = []
         services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
@@ -566,7 +566,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventTagButton( self, event ):
         
-        services_manager = wx.GetApp().GetManager( 'services' )
+        services_manager = wx.GetApp().GetServicesManager()
         
         services = []
         services.append( services_manager.GetService( CC.COMBINED_TAG_SERVICE_KEY ) )
@@ -1183,7 +1183,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         collect_types = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in collect_types ] )
         collect_types.sort()
         
-        ratings_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for ratings_service in ratings_services: collect_types.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey() ) ) )
         
@@ -1320,7 +1320,7 @@ class ChoiceSort( BetterChoice ):
         
         sort_choices = CC.SORT_CHOICES + sort_by
         
-        ratings_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for ratings_service in ratings_services:
             
@@ -1492,8 +1492,6 @@ class Frame( wx.Frame ):
     def __init__( self, *args, **kwargs ):
         
         wx.Frame.__init__( self, *args, **kwargs )
-        
-        #self.SetDoubleBuffered( True )
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
@@ -3566,12 +3564,12 @@ class PopupMessage( PopupWindow ):
         self._copy_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._copy_tb_button.Hide()
         
-        self._pause_button = wx.Button( self, label = 'pause' )
+        self._pause_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPauseButton )
         self._pause_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._pause_button.Hide()
         
-        self._cancel_button = wx.Button( self, label = 'cancel' )
+        self._cancel_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.stop )
         self._cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelButton )
         self._cancel_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._cancel_button.Hide()
@@ -3619,6 +3617,7 @@ class PopupMessage( PopupWindow ):
         
         self._job_key.Cancel()
         
+        self._pause_button.Disable()
         self._cancel_button.Disable()
         
     
@@ -3630,13 +3629,13 @@ class PopupMessage( PopupWindow ):
             
             self._job_key.Resume()
             
-            self._pause_button.SetLabel( 'pause' )
+            self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
             
         else:
             
             self._job_key.Pause()
             
-            self._pause_button.SetLabel( 'resume' )
+            self._pause_button.SetBitmap( CC.GlobalBMPs.play )
             
         
     
@@ -3678,7 +3677,7 @@ class PopupMessage( PopupWindow ):
     
     def EventShowFilesButton( self, event ):
         
-        hashes = self._job_key.GetVariable( 'popup_message_files' )
+        hashes = self._job_key.GetVariable( 'popup_files' )
         
         media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
         
@@ -3718,9 +3717,9 @@ class PopupMessage( PopupWindow ):
             return
             
         
-        if self._job_key.HasVariable( 'popup_message_title' ):
+        if self._job_key.HasVariable( 'popup_title' ):
             
-            text = self._job_key.GetVariable( 'popup_message_title' )
+            text = self._job_key.GetVariable( 'popup_title' )
             
             if self._title.GetLabel() != text: self._title.SetLabel( text )
             
@@ -3728,9 +3727,9 @@ class PopupMessage( PopupWindow ):
             
         else: self._title.Hide()
         
-        if self._job_key.HasVariable( 'popup_message_text_1' ):
+        if self._job_key.HasVariable( 'popup_text_1' ) and not self._job_key.IsPaused():
             
-            text = self._job_key.GetVariable( 'popup_message_text_1' )
+            text = self._job_key.GetVariable( 'popup_text_1' )
             
             if self._text_1.GetLabel() != text: self._text_1.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
@@ -3738,9 +3737,9 @@ class PopupMessage( PopupWindow ):
             
         else: self._text_1.Hide()
         
-        if self._job_key.HasVariable( 'popup_message_gauge_1' ):
+        if self._job_key.HasVariable( 'popup_gauge_1' ) and not self._job_key.IsPaused():
             
-            ( gauge_value, gauge_range ) = self._job_key.GetVariable( 'popup_message_gauge_1' )
+            ( gauge_value, gauge_range ) = self._job_key.GetVariable( 'popup_gauge_1' )
             
             if gauge_range is None or gauge_value is None: self._gauge_1.Pulse()
             else:
@@ -3753,9 +3752,9 @@ class PopupMessage( PopupWindow ):
             
         else: self._gauge_1.Hide()
         
-        if self._job_key.HasVariable( 'popup_message_text_2' ):
+        if self._job_key.HasVariable( 'popup_text_2' ) and not self._job_key.IsPaused():
             
-            text = self._job_key.GetVariable( 'popup_message_text_2' )
+            text = self._job_key.GetVariable( 'popup_text_2' )
             
             if self._text_2.GetLabel() != text: self._text_2.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
@@ -3763,9 +3762,9 @@ class PopupMessage( PopupWindow ):
             
         else: self._text_2.Hide()
         
-        if self._job_key.HasVariable( 'popup_message_gauge_2' ):
+        if self._job_key.HasVariable( 'popup_gauge_2' ) and not self._job_key.IsPaused():
             
-            ( gauge_value, gauge_range ) = self._job_key.GetVariable( 'popup_message_gauge_2' )
+            ( gauge_value, gauge_range ) = self._job_key.GetVariable( 'popup_gauge_2' )
             
             if gauge_range is None or gauge_value is None: self._gauge_2.Pulse()
             else:
@@ -3778,9 +3777,9 @@ class PopupMessage( PopupWindow ):
             
         else: self._gauge_2.Hide()
         
-        if self._job_key.HasVariable( 'popup_message_files' ):
+        if self._job_key.HasVariable( 'popup_files' ):
             
-            hashes = self._job_key.GetVariable( 'popup_message_files' )
+            hashes = self._job_key.GetVariable( 'popup_files' )
             
             text = 'show ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
             
@@ -3790,12 +3789,12 @@ class PopupMessage( PopupWindow ):
             
         else: self._show_files_button.Hide()
         
-        if self._job_key.HasVariable( 'popup_message_traceback' ) or self._job_key.HasVariable( 'popup_message_caller_traceback' ) or self._job_key.HasVariable( 'popup_message_db_traceback' ): self._copy_tb_button.Show()
+        if self._job_key.HasVariable( 'popup_traceback' ) or self._job_key.HasVariable( 'popup_caller_traceback' ) or self._job_key.HasVariable( 'popup_db_traceback' ): self._copy_tb_button.Show()
         else: self._copy_tb_button.Hide()
         
-        if self._job_key.HasVariable( 'popup_message_traceback' ):
+        if self._job_key.HasVariable( 'popup_traceback' ):
             
-            text = self._job_key.GetVariable( 'popup_message_traceback' )
+            text = self._job_key.GetVariable( 'popup_traceback' )
             
             if self._tb_text.GetLabel() != text: self._tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
@@ -3807,9 +3806,9 @@ class PopupMessage( PopupWindow ):
             self._tb_text.Hide()
             
         
-        if self._job_key.HasVariable( 'popup_message_caller_traceback' ):
+        if self._job_key.HasVariable( 'popup_caller_traceback' ):
             
-            text = self._job_key.GetVariable( 'popup_message_caller_traceback' )
+            text = self._job_key.GetVariable( 'popup_caller_traceback' )
             
             if self._caller_tb_text.GetLabel() != text: self._caller_tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
@@ -3821,9 +3820,9 @@ class PopupMessage( PopupWindow ):
             self._caller_tb_text.Hide()
             
         
-        if self._job_key.HasVariable( 'popup_message_db_traceback' ):
+        if self._job_key.HasVariable( 'popup_db_traceback' ):
             
-            text = self._job_key.GetVariable( 'popup_message_db_traceback' )
+            text = self._job_key.GetVariable( 'popup_db_traceback' )
             
             if self._db_tb_text.GetLabel() != text: self._db_tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
             
@@ -4098,6 +4097,11 @@ class RatingLike( wx.Window ):
         raise NotImplementedError()
         
     
+    def GetServiceKey( self ):
+        
+        return self._service_key
+        
+    
 class RatingLikeDialog( RatingLike ):
     
     def __init__( self, parent, service_key ):
@@ -4166,7 +4170,7 @@ class RatingLikeCanvas( RatingLike ):
         self._current_media = None
         self._rating_state = None
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         name = service.GetName()
         
@@ -4270,7 +4274,7 @@ class RatingNumerical( wx.Window ):
         
         self._service_key = service_key
         
-        self._service = wx.GetApp().GetManager( 'services' ).GetService( self._service_key )
+        self._service = wx.GetApp().GetServicesManager().GetService( self._service_key )
         
         self._num_stars = self._service.GetInfo( 'num_stars' )
         self._allow_zero = self._service.GetInfo( 'allow_zero' )
@@ -4356,6 +4360,11 @@ class RatingNumerical( wx.Window ):
     def EventRightDown( self, event ):
         
         raise NotImplementedError()
+        
+    
+    def GetServiceKey( self ):
+        
+        return self._service_key
         
     
 class RatingNumericalDialog( RatingNumerical ):

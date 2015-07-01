@@ -232,16 +232,12 @@ class OptionsPanelImportFiles( OptionsPanel ):
     
     def GetOptions( self ):
         
-        options = ClientData.ImportFileOptions()
-        
         automatic_archive = self._auto_archive.GetValue()
         exclude_deleted = self._exclude_deleted.GetValue()
         min_size = self._min_size.GetValue()
         min_resolution = self._min_resolution.GetValue()
         
-        options.SetTuple( automatic_archive, exclude_deleted, min_size, min_resolution )
-        
-        return options
+        return ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
         
     
     def SetInfo( self, info ):
@@ -395,7 +391,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         self._service_keys_to_checkbox_info = {}
         
-        services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
         if len( services ) > 0:
             

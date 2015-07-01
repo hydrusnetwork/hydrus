@@ -178,7 +178,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
         
         if len( content_updates ) > 0:
             
-            name = wx.GetApp().GetManager( 'services' ).GetService( service_key ).GetName()
+            name = wx.GetApp().GetServicesManager().GetService( service_key ).GetName()
             
             locations.add( name )
             
@@ -515,6 +515,10 @@ def DeserialisePrettyTags( text ):
     tags = text.split( '\n' )
     
     return tags
+    
+def GenerateKey():
+    
+    return os.urandom( HC.HYDRUS_KEY_LENGTH )
     
 def GetEmptyDataDict():
     
@@ -1219,7 +1223,7 @@ class JobKey( object ):
     
     def __init__( self, pausable = False, cancellable = False ):
         
-        self._key = os.urandom( 32 )
+        self._key = GenerateKey()
         
         self._pausable = pausable
         self._cancellable = cancellable
@@ -1323,17 +1327,17 @@ class JobKey( object ):
         
         with self._variable_lock:
             
-            if 'popup_message_title' in self._variables: stuff_to_print.append( self._variables[ 'popup_message_title' ] )
+            if 'popup_title' in self._variables: stuff_to_print.append( self._variables[ 'popup_title' ] )
             
-            if 'popup_message_text_1' in self._variables: stuff_to_print.append( self._variables[ 'popup_message_text_1' ] )
+            if 'popup_text_1' in self._variables: stuff_to_print.append( self._variables[ 'popup_text_1' ] )
             
-            if 'popup_message_text_2' in self._variables: stuff_to_print.append( self._variables[ 'popup_message_text_2' ] )
+            if 'popup_text_2' in self._variables: stuff_to_print.append( self._variables[ 'popup_text_2' ] )
             
-            if 'popup_message_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_message_traceback' ] )
+            if 'popup_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_traceback' ] )
             
-            if 'popup_message_caller_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_message_caller_traceback' ] )
+            if 'popup_caller_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_caller_traceback' ] )
             
-            if 'popup_message_db_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_message_db_traceback' ] )
+            if 'popup_db_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_db_traceback' ] )
             
         
         try:
@@ -1348,14 +1352,26 @@ class JobKey( object ):
             
         
     
-    def WaitOnPause( self ):
+    def WaitIfNeeded( self ):
         
-        while self._paused.is_set():
+        i_paused = False
+        should_quit = False
+        
+        while self.IsPaused():
+            
+            i_paused = True
             
             time.sleep( 0.1 )
             
-            if HydrusGlobals.shutdown or self.IsDone(): return
+            if HydrusGlobals.shutdown or self.IsDone(): break
             
+        
+        if HydrusGlobals.shutdown or self.IsCancelled():
+            
+            should_quit = True
+            
+        
+        return ( i_paused, should_quit )
         
     
 class Predicate( HydrusSerialisable.SerialisableBase ):
@@ -1578,7 +1594,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, value, service_key ) = self._value
                     
-                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                    service = wx.GetApp().GetServicesManager().GetService( service_key )
                     
                     base += u' for ' + service.GetName() + u' ' + operator + u' ' + ToString( value )
                     
@@ -1612,7 +1628,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if current_or_pending == HC.PENDING: base += u' pending to '
                     else: base += u' currently in '
                     
-                    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                    service = wx.GetApp().GetServicesManager().GetService( service_key )
                     
                     base += service.GetName()
                     

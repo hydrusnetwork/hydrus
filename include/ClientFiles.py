@@ -513,7 +513,7 @@ class LocationsManager( object ):
         pending = self.GetPendingRemote()
         petitioned = self.GetPetitionedRemote()
         
-        file_repo_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
+        file_repo_services = wx.GetApp().GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
         
         file_repo_services = list( file_repo_services )
         

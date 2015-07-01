@@ -103,7 +103,7 @@ def ImportFromHTA( parent, path, service_key ):
     
     del hta
     
-    service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+    service = wx.GetApp().GetServicesManager().GetService( service_key )
     
     service_type = service.GetServiceType()
     
@@ -182,7 +182,7 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
     
     if service_keys is None:
         
-        services = wx.GetApp().GetManager( 'services' ).GetServices( service_types )
+        services = wx.GetApp().GetServicesManager().GetServices( service_types )
         
         if permission is not None: services = [ service for service in services if service.GetInfo( 'account' ).HasPermission( permission ) ]
         
@@ -200,7 +200,7 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
         
     else:
         
-        services = { wx.GetApp().GetManager( 'services' ).GetService( service_key ) for service_key in service_keys }
+        services = { wx.GetApp().GetServicesManager().GetService( service_key ) for service_key in service_keys }
         
         names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in services }
         
@@ -316,7 +316,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             #
             
-            services = [ service for service in wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
+            services = [ service for service in wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
             
             for service in services:
                 
@@ -673,7 +673,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
             self._num.SetValue( 1 )
             
-            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+            service = wx.GetApp().GetServicesManager().GetService( service_key )
             
             response = service.Request( HC.GET, 'account_types' )
             
@@ -735,7 +735,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         lifetime = self._lifetime.GetClientData( self._lifetime.GetSelection() )
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( self._service_key )
+        service = wx.GetApp().GetServicesManager().GetService( self._service_key )
         
         try:
             
@@ -911,7 +911,7 @@ class DialogInputCustomFilterAction( Dialog ):
             self._ok_ratings_numerical.Bind( wx.EVT_BUTTON, self.EventOKRatingsNumerical )
             self._ok_ratings_numerical.SetForegroundColour( ( 0, 128, 0 ) )
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
             for service in services:
                 
@@ -932,7 +932,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
             else:
                 
-                self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                self._service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 service_name = self._service.GetName()
                 service_type = self._service.GetServiceType()
@@ -1067,7 +1067,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_key = self._ratings_like_service_keys.GetClientData( selection )
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 self._current_ratings_like_service = service
                 
@@ -1081,7 +1081,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_key = self._ratings_numerical_service_keys.GetClientData( selection )
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 self._current_ratings_numerical_service = service
                 
@@ -1206,7 +1206,7 @@ class DialogInputCustomFilterAction( Dialog ):
         ( modifier, key ) = self._shortcut.GetValue()
         
         if self._service_key is None: pretty_service_key = ''
-        else: pretty_service_key = wx.GetApp().GetManager( 'services' ).GetService( self._service_key ).GetName()
+        else: pretty_service_key = wx.GetApp().GetServicesManager().GetService( self._service_key ).GetName()
         
         ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
         
@@ -1220,7 +1220,7 @@ class DialogInputCustomFilterAction( Dialog ):
         self._tag_value.SetValue( tag )
         
     
-class DialogInputFileSystemPredicate( Dialog ):
+class DialogInputFileSystemPredicates( Dialog ):
     
     def __init__( self, parent, predicate_type ):
         
@@ -1245,7 +1245,7 @@ class DialogInputFileSystemPredicate( Dialog ):
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumWords )
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
             
-            services_manager = wx.GetApp().GetManager( 'services' )
+            services_manager = wx.GetApp().GetServicesManager()
             
             ratings_like = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
             ratings_numerical = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
@@ -1274,14 +1274,14 @@ class DialogInputFileSystemPredicate( Dialog ):
         self.SetInitialSize( ( x, y ) )
         
     
-    def SubPanelOK( self, predicate ):
+    def SubPanelOK( self, predicates ):
         
-        self._predicate = predicate
+        self._predicates = predicates
         
         self.EndModal( wx.ID_OK )
         
     
-    def GetPredicate( self ): return self._predicate
+    def GetPredicates( self ): return self._predicates
     
     class _Panel( wx.Panel ):
         
@@ -1306,9 +1306,9 @@ class DialogInputFileSystemPredicate( Dialog ):
         
         def EventOK( self, event ):
             
-            predicate = self._predicate_panel.GetPredicate()
+            predicates = self._predicate_panel.GetPredicates()
             
-            self.GetParent().SubPanelOK( predicate )
+            self.GetParent().SubPanelOK( predicates )
             
         
     
@@ -1432,7 +1432,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyExternalShareURL( self, event ):
         
-        self._service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = wx.GetApp().GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         info = self._service.GetInfo()
         
@@ -1449,7 +1449,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyInternalShareURL( self, event ):
         
-        self._service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = wx.GetApp().GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         info = self._service.GetInfo()
         
@@ -1489,11 +1489,11 @@ class DialogInputLocalFiles( Dialog ):
             
             self._gauge_text = wx.StaticText( self, label = '' )
             
-            self._gauge_pause = wx.Button( self, label = 'pause' )
+            self._gauge_pause = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.pause )
             self._gauge_pause.Bind( wx.EVT_BUTTON, self.EventGaugePause )
             self._gauge_pause.Disable()
             
-            self._gauge_cancel = wx.Button( self, label = 'cancel' )
+            self._gauge_cancel = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.stop )
             self._gauge_cancel.Bind( wx.EVT_BUTTON, self.EventGaugeCancel )
             self._gauge_cancel.Disable()
             
@@ -1715,7 +1715,7 @@ class DialogInputLocalFiles( Dialog ):
             self._add_button.Disable()
             self._tag_button.Disable()
             
-            self._gauge_pause.SetLabel( 'pause' )
+            self._gauge_pause.SetBitmap( CC.GlobalBMPs.pause )
             
         else:
             
@@ -1724,7 +1724,7 @@ class DialogInputLocalFiles( Dialog ):
             self._add_button.Enable()
             self._tag_button.Enable()
             
-            self._gauge_pause.SetLabel( 'resume' )
+            self._gauge_pause.SetBitmap( CC.GlobalBMPs.play )
             
         
     
@@ -1830,9 +1830,12 @@ class DialogInputLocalFiles( Dialog ):
             
             wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Done ' + HydrusData.ConvertValueRangeToPrettyString( i, num_file_paths ) )
             
-            job_key.WaitOnPause()
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
-            if job_key.IsCancelled(): break
+            if should_quit:
+                
+                break
+                
             
             info = os.lstat( path )
             
@@ -2877,7 +2880,7 @@ class DialogModifyAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'modify account' )
         
-        self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        self._service = wx.GetApp().GetServicesManager().GetService( service_key )
         self._subject_identifiers = list( subject_identifiers )
         
         InitialiseControls()
@@ -3093,7 +3096,7 @@ class DialogPageChooser( Dialog ):
         
         ArrangeControls()
         
-        self._services = wx.GetApp().GetManager( 'services' ).GetServices()
+        self._services = wx.GetApp().GetServicesManager().GetServices()
         
         self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
         
@@ -3142,7 +3145,7 @@ class DialogPageChooser( Dialog ):
         if entry_type == 'menu': button.SetLabel( obj )
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
-            name = wx.GetApp().GetManager( 'services' ).GetService( obj ).GetName()
+            name = wx.GetApp().GetServicesManager().GetService( obj ).GetName()
             
             button.SetLabel( name )
             
@@ -3301,7 +3304,7 @@ class DialogPathsToTags( Dialog ):
         
         def PopulateControls():
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -3325,7 +3328,7 @@ class DialogPathsToTags( Dialog ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            default_tag_repository = wx.GetApp().GetManager( 'services' ).GetService( default_tag_repository_key )
+            default_tag_repository = wx.GetApp().GetServicesManager().GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
@@ -3933,7 +3936,7 @@ class DialogRegisterService( Dialog ):
             return
             
         
-        service_key = os.urandom( 32 )
+        service_key = HydrusData.GenerateKey()
         name = 'temp registering service'
         
         info = { 'host' : host, 'port' : port }
@@ -4555,7 +4558,7 @@ class DialogShortcuts( Dialog ):
                         
                         try:
                             
-                            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                            service = wx.GetApp().GetServicesManager().GetService( service_key )
                             
                             pretty_service_key = service.GetName()
                             

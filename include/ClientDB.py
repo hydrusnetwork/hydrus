@@ -1101,8 +1101,6 @@ class DB( HydrusDB.HydrusDB ):
             
             inserts = ( ( file_service_id, service_id, namespace_id, tag_id, 0, 0 ) for ( file_service_id, ( namespace_id, tag_id ) ) in itertools.product( file_service_ids, existing_tag_ids ) )
             
-            #self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', inserts )
-            
         elif service_type == HC.FILE_REPOSITORY:
             
             tag_service_ids = self._GetServiceIds( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
@@ -1110,8 +1108,6 @@ class DB( HydrusDB.HydrusDB ):
             existing_tag_ids = self._c.execute( 'SELECT namespace_id, tag_id FROM existing_tags;' ).fetchall()
             
             inserts = ( ( service_id, tag_service_id, namespace_id, tag_id, 0, 0 ) for ( tag_service_id, ( namespace_id, tag_id ) ) in itertools.product( tag_service_ids, existing_tag_ids ) )
-            
-            #self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', inserts )
             
         
     
@@ -1196,35 +1192,32 @@ class DB( HydrusDB.HydrusDB ):
         HydrusData.ShowText( 'Database backup done!' )
         
     
-    def _CheckFileIntegrity( self, mode ):
+    def _CheckFileIntegrity( self, mode, move_location = None ):
         
         prefix_string = 'checking file integrity: '
         
         job_key = HydrusData.JobKey( cancellable = True )
         
-        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
+        job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
         HydrusGlobals.pubsub.pub( 'message', job_key )
         
         info = self._c.execute( 'SELECT hash_id, mime FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchall()
         
+        missing_count = 0
         deletee_hash_ids = []
         
         for ( i, ( hash_id, mime ) ) in enumerate( info ):
             
-            if job_key.IsCancelled():
-                
-                job_key.SetVariable( 'popup_message_text_1', prefix_string + 'cancelled' )
-                
-                print( job_key.ToString() )
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
                 
                 return
                 
             
-            if HydrusGlobals.shutdown: return
-            
-            job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( info ) ) )
-            job_key.SetVariable( 'popup_message_gauge_1', ( i, len( info ) ) )
+            job_key.SetVariable( 'popup_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( info ) ) )
+            job_key.SetVariable( 'popup_gauge_1', ( i, len( info ) ) )
             
             hash = self._GetHash( hash_id )
             
@@ -1233,6 +1226,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 deletee_hash_ids.append( hash_id )
                 
+                missing_count += 1
+                
                 continue
                 
             
@@ -1240,21 +1235,51 @@ class DB( HydrusDB.HydrusDB ):
                 
                 actual_hash = HydrusFileHandling.GetHashFromPath( path )
                 
-                if actual_hash != hash: deletee_hash_ids.append( hash_id )
+                if actual_hash != hash:
+                    
+                    deletee_hash_ids.append( hash_id )
+                    
+                    if move_location is not None:
+                        
+                        move_path = move_location + os.path.sep + 'believed ' + hash.encode( 'hex' ) + ' actually ' + actual_hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                        
+                        shutil.move( path, move_path )
+                        
+                    
                 
             
         
-        job_key.DeleteVariable( 'popup_message_gauge_1' )
-        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'deleting the incorrect records' )
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', prefix_string + 'deleting the incorrect records' )
         
         self._DeleteFiles( self._local_file_service_id, deletee_hash_ids )
         
         final_text = 'done! '
         
-        if len( deletee_hash_ids ) == 0: final_text += 'all files ok!'
-        else: final_text += HydrusData.ConvertIntToPrettyString( len( deletee_hash_ids ) ) + ' files deleted!'
+        if len( deletee_hash_ids ) == 0:
+            
+            final_text += 'all files ok!'
+            
+        else:
+            
+            final_text += HydrusData.ConvertIntToPrettyString( missing_count ) + ' files were missing!'
+            
+            if mode == 'thorough':
+                
+                final_text += ' ' + HydrusData.ConvertIntToPrettyString( len( deletee_hash_ids ) - missing_count ) + ' files were incorrect and thus '
+                
+                if move_location is None:
+                    
+                    final_text += 'deleted!'
+                    
+                else:
+                    
+                    final_text += 'moved!'
+                    
+                
+            
         
-        job_key.SetVariable( 'popup_message_text_1', prefix_string + final_text )
+        job_key.SetVariable( 'popup_text_1', prefix_string + final_text )
         
         print( job_key.ToString() )
         
@@ -1379,10 +1404,10 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE INDEX local_ratings_rating_index ON local_ratings ( rating );' )
         
         self._c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
+        self._c.execute( 'CREATE INDEX mappings_namespace_id_index ON mappings ( namespace_id );' )
+        self._c.execute( 'CREATE INDEX mappings_tag_id_index ON mappings ( tag_id );' )
         self._c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
-        self._c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
-        self._c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
-        self._c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
+        self._c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
         
         self._c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, reason_id ) );' )
         self._c.execute( 'CREATE INDEX mapping_petitions_hash_id_index ON mapping_petitions ( hash_id );' )
@@ -1566,7 +1591,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key = HydrusData.JobKey( cancellable = True )
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering file information' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'gathering file information' )
         
         HydrusGlobals.pubsub.pub( 'message', job_key )
         
@@ -1586,16 +1611,13 @@ class DB( HydrusDB.HydrusDB ):
         
         local_files_hashes = ClientFiles.GetAllFileHashes()
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'deleting orphan files' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'deleting orphan files' )
         
         for hash in local_files_hashes & deletee_hashes:
             
-            if HydrusGlobals.shutdown or job_key.IsCancelled():
-                
-                if job_key.IsCancelled():
-                    
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
-                    
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
                 
                 return
                 
@@ -1619,7 +1641,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # perceptual_hashes and thumbs
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'deleting internal orphan information' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'deleting internal orphan information' )
         
         perceptual_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM perceptual_hashes;' ) }
         
@@ -1629,25 +1651,22 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( perceptual_deletees ) + ';' )
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering thumbnail information' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'gathering thumbnail information' )
         
         local_thumbnail_hashes = ClientFiles.GetAllThumbnailHashes()
         
         hashes = set( self._GetHashes( hash_ids ) )
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'deleting orphan thumbnails' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'deleting orphan thumbnails' )
         
         for hash in local_thumbnail_hashes - hashes:
             
             path = ClientFiles.GetExpectedThumbnailPath( hash, True )
             resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
             
-            if HydrusGlobals.shutdown or job_key.IsCancelled():
-                
-                if job_key.IsCancelled():
-                    
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
-                    
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
                 
                 return
                 
@@ -1666,7 +1685,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, HydrusData.GetNow() ) )
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'done!' )
         
         job_key.Finish()
         
@@ -1746,7 +1765,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key = HydrusData.JobKey( cancellable = True )
         
-        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
+        job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
         HydrusGlobals.pubsub.pub( 'message', job_key )
         
@@ -1767,21 +1786,17 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( i, hash_id ) in enumerate( hash_ids ):
             
-            if job_key.IsCancelled():
-                
-                job_key.SetVariable( 'popup_message_text_1', prefix_string + 'cancelled' )
-                
-                print( job_key.ToString() )
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
                 
                 return
                 
             
-            if HydrusGlobals.shutdown: return
-            
             if i % 100 == 0:
                 
-                job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( hash_ids ) ) )
-                job_key.SetVariable( 'popup_message_gauge_1', ( i, len( hash_ids ) ) )
+                job_key.SetVariable( 'popup_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( hash_ids ) ) )
+                job_key.SetVariable( 'popup_gauge_1', ( i, len( hash_ids ) ) )
                 
             
             if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: archive_hash = self._GetHash( hash_id )
@@ -1803,12 +1818,12 @@ class DB( HydrusDB.HydrusDB ):
             hta.AddMappings( archive_hash, tags )
             
         
-        job_key.DeleteVariable( 'popup_message_gauge_1' )
-        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'committing the change and vacuuming the archive' )
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', prefix_string + 'committing the change and vacuuming the archive' )
         
         hta.CommitBigJob()
         
-        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'done!' )
+        job_key.SetVariable( 'popup_text_1', prefix_string + 'done!' )
         
         print( job_key.ToString() )
         
@@ -2371,7 +2386,10 @@ class DB( HydrusDB.HydrusDB ):
             
             query_hash_ids = None
             
-            if len( tags_to_include ) > 0: query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+            if len( tags_to_include ) > 0:
+                
+                query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+                
             
             if len( namespaces_to_include ) > 0:
                 
@@ -4482,7 +4500,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             job_key = HydrusData.JobKey()
                             
-                            job_key.SetVariable( 'popup_message_text_1', text )
+                            job_key.SetVariable( 'popup_text_1', text )
                             
                             self.pub_after_commit( 'message', job_key )
                             
@@ -4668,7 +4686,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key = HydrusData.JobKey()
             
-            job_key.SetVariable( 'popup_message_text_1', prefix + 'initialising' )
+            job_key.SetVariable( 'popup_text_1', prefix + 'initialising' )
             
             HydrusGlobals.pubsub.pub( 'message', job_key )
             
@@ -4678,12 +4696,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 os.remove( path )
                 
-                job_key.SetVariable( 'popup_message_text_1', prefix + 'done ' + HydrusData.ConvertIntToPrettyString( i ) )
+                job_key.SetVariable( 'popup_text_1', prefix + 'done ' + HydrusData.ConvertIntToPrettyString( i ) )
                 
             
             self.pub_after_commit( 'thumbnail_resize' )
             
-            job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
+            job_key.SetVariable( 'popup_text_1', prefix + 'done!' )
             
         
         self.pub_after_commit( 'notify_new_options' )
@@ -4819,7 +4837,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key = HydrusData.JobKey()
         
-        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
+        job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
         HydrusGlobals.pubsub.pub( 'message', job_key )
         
@@ -4850,13 +4868,13 @@ class DB( HydrusDB.HydrusDB ):
             
             if i % 100 == 0:
                 
-                job_key.SetVariable( 'popup_message_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( hash_ids ) ) )
-                job_key.SetVariable( 'popup_message_gauge_1', ( i, len( hash_ids ) ) )
+                job_key.SetVariable( 'popup_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( hash_ids ) ) )
+                job_key.SetVariable( 'popup_gauge_1', ( i, len( hash_ids ) ) )
                 
             
         
-        job_key.DeleteVariable( 'popup_message_gauge_1' )
-        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'done!' )
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', prefix_string + 'done!' )
         
         self.pub_after_commit( 'notify_new_pending' )
         
@@ -5446,6 +5464,17 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 162:
+            
+            self._c.execute( 'DROP INDEX mappings_service_id_tag_id_index;' )
+            self._c.execute( 'DROP INDEX mappings_service_id_hash_id_index;' )
+            self._c.execute( 'DROP INDEX mappings_service_id_status_index;' )
+            
+            self._c.execute( 'CREATE INDEX mappings_namespace_id_index ON mappings ( namespace_id );' )
+            self._c.execute( 'CREATE INDEX mappings_tag_id_index ON mappings ( tag_id );' )
+            self._c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
+            
+        
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HydrusGlobals.is_db_updated = True
@@ -5958,13 +5987,13 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key = HydrusData.JobKey()
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'vacuuming' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'vacuuming' )
         
         HydrusGlobals.pubsub.pub( 'message', job_key )
         
         self._c.execute( 'VACUUM' )
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'cleaning up' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'cleaning up' )
         
         self._c.execute( 'ANALYZE' )
         
@@ -5975,7 +6004,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._InitDBCursor()
         
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'done!' )
         
         print( job_key.ToString() )
         

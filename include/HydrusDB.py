@@ -40,6 +40,8 @@ class HydrusDB( object ):
         
         ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
+        run_analyze_after = version < HC.SOFTWARE_VERSION
+        
         if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + HydrusData.ToString( version ) + ' is too old for this version ' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + HydrusData.ToString( version + 45 ) + ' or earlier first.' )
         
         while version < HC.SOFTWARE_VERSION:
@@ -66,6 +68,11 @@ class HydrusDB( object ):
                 
             
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
+            
+        
+        if run_analyze_after:
+            
+            self._c.execute( 'ANALYZE' )
             
         
         self._CloseDBCursor()

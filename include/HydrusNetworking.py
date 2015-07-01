@@ -96,7 +96,7 @@ def ConvertHydrusGETArgsToQuery( request_args ):
     
 def DoHydrusBandwidth( service_key, method, command, size ):
     
-    try: service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+    try: service = wx.GetApp().GetServicesManager().GetService( service_key )
     except: return
     
     service_type = service.GetServiceType()

@@ -989,7 +989,12 @@ class GalleryParserPixiv( GalleryParser ):
     
     def _ParseImagePage( self, html, page_url ):
         
-        if 'member_illust.php?mode=manga' in html: raise Exception( page_url + ' was manga, not a single image, so could not be downloaded.' )
+        if 'member_illust.php?mode=manga' in html:
+            
+            manga_url = page_url.replace( 'medium', 'manga' )
+            
+            raise Exception( page_url + ' was manga, not a single image, so could not be downloaded.' )
+            
         
         soup = bs4.BeautifulSoup( html )
         
@@ -997,41 +1002,35 @@ class GalleryParserPixiv( GalleryParser ):
         
         # this is the page that holds the full size of the image.
         # pixiv won't serve the image unless it thinks this page is the referrer
-        referral_url = page_url.replace( 'medium', 'big' ) # http://www.pixiv.net/member_illust.php?mode=big&illust_id=33500690
+        #referral_url = page_url.replace( 'medium', 'big' ) # http://www.pixiv.net/member_illust.php?mode=big&illust_id=33500690
         
         #
         
-        works_display = soup.find( class_ = 'works_display' )
+        original_image = soup.find( class_ = 'original-image' )
         
-        img = works_display.find( 'img' )
-        
-        img_url = img[ 'src' ] # http://i2.pixiv.net/img122/img/amanekukagenoyuragi/34992468_m.png
-        
-        image_url = img_url.replace( '_m.', '.' ) # http://i2.pixiv.net/img122/img/amanekukagenoyuragi/34992468.png
+        image_url = original_image[ 'data-src' ] # http://i3.pixiv.net/img-original/img/2014/01/25/19/21/56/41171994_p0.jpg
         
         #
         
-        tags = soup.find( 'ul', class_ = 'tags' )
+        tags = soup.find( 'ul', class_ = 'tagCloud' )
         
-        tags = [ a_item.string for a_item in tags.find_all( 'a', class_ = 'text' ) ]
+        # <a href="/member_illust.php?id=5754629&amp;tag=Ib">Ib<span class="cnt">(2)</span></a> -> Ib
+        tags = [ a_item.contents[0] for a_item in tags.find_all( 'a' ) ]
         
         user = soup.find( 'h1', class_ = 'user' )
         
         tags.append( 'creator:' + user.string )
         
-        title_parent = soup.find( 'section', class_ = 'work-info' )
+        title_parent = soup.find( 'section', class_ = re.compile( 'work-info' ) )
         
         title = title_parent.find( 'h1', class_ = 'title' )
         
         tags.append( 'title:' + title.string )
         
-        try: tags.append( 'creator:' + image_url.split( '/' )[ -2 ] ) # http://i2.pixiv.net/img02/img/dnosuke/462657.jpg -> dnosuke
-        except: pass
-        
-        return ( referral_url, image_url, tags )
+        return ( image_url, tags )
         
     
-    def _GetReferralURLFileURLAndTags( self, page_url ):
+    def _GetFileURLAndTags( self, page_url ):
         
         html = self._FetchData( page_url )
         
@@ -1040,18 +1039,18 @@ class GalleryParserPixiv( GalleryParser ):
     
     def GetFile( self, temp_path, url ):
         
-        ( referral_url, image_url, tags ) = self._GetReferralURLFileURLAndTags( url )
+        ( image_url, tags ) = self._GetFileURLAndTags( url )
         
-        request_headers = { 'Referer' : referral_url }
+        request_headers = { 'Referer' : url }
         
         self._FetchData( image_url, request_headers = request_headers, report_hooks = self._report_hooks, temp_path = temp_path )
         
     
     def GetFileAndTags( self, temp_path, url ):
         
-        ( referral_url, image_url, tags ) = self._GetReferralURLFileURLAndTags( url )
+        ( image_url, tags ) = self._GetFileURLAndTags( url )
         
-        request_headers = { 'Referer' : referral_url }
+        request_headers = { 'Referer' : url }
         
         self._FetchData( image_url, request_headers = request_headers, report_hooks = self._report_hooks, temp_path = temp_path )
         
@@ -1060,7 +1059,7 @@ class GalleryParserPixiv( GalleryParser ):
     
     def GetTags( self, url ):
         
-        ( referral_url, image_url, tags ) = self._GetReferralURLFileURLAndTags( url )
+        ( image_url, tags ) = self._GetFileURLAndTags( url )
         
         return tags
         
@@ -2045,8 +2044,8 @@ def THREADDownloadURL( job_key, url, url_string ):
         if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
         else: text = url_string + ' - ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range )
         
-        job_key.SetVariable( 'popup_message_text_1', text )
-        job_key.SetVariable( 'popup_message_gauge_1', ( gauge_value, gauge_range ) )
+        job_key.SetVariable( 'popup_text_1', text )
+        job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
         
     
     ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
@@ -2055,8 +2054,8 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         wx.GetApp().DoHTTP( HC.GET, url, temp_path = temp_path, report_hooks = [ hook ] )
         
-        job_key.DeleteVariable( 'popup_message_gauge_1' )
-        job_key.SetVariable( 'popup_message_text_1', 'importing ' + url_string )
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
         
         ( result, hash ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path )
         
@@ -2067,12 +2066,12 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
         
-        job_key.SetVariable( 'popup_message_text_1', url_string )
-        job_key.SetVariable( 'popup_message_files', { hash } )
+        job_key.SetVariable( 'popup_text_1', url_string )
+        job_key.SetVariable( 'popup_files', { hash } )
         
     elif result == CC.STATUS_DELETED:
         
-        job_key.SetVariable( 'popup_message_text_1', url_string + ' was already deleted!' )
+        job_key.SetVariable( 'popup_text_1', url_string + ' was already deleted!' )
         
     
 def Parse4chanPostScreen( html ):

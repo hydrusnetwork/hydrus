@@ -35,6 +35,8 @@ header_and_mime = [
     ( 0, 'PK\x03\x04', HC.APPLICATION_ZIP ),
     ( 0, 'hydrus encrypted zip', HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
     ( 4, 'ftypmp4', HC.VIDEO_MP4 ),
+    ( 4, 'ftypisom', HC.VIDEO_MP4 ),
+    ( 4, 'ftypM4V', HC.VIDEO_MP4 ),
     ( 0, 'fLaC', HC.AUDIO_FLAC ),
     ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
     ]

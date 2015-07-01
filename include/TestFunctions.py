@@ -11,12 +11,12 @@ class TestClientDownloadingFunctions( unittest.TestCase ):
     
     def test_dict_to_content_updates( self ):
         
-        hash = os.urandom( 32 )
+        hash = HydrusData.GenerateKey()
         
         hashes = set( [ hash ] )
         
         local_key = CC.LOCAL_TAG_SERVICE_KEY
-        remote_key = os.urandom( 32 )
+        remote_key = HydrusData.GenerateKey()
         
         service_keys_to_tags = { local_key : { 'a' } }
         
@@ -54,8 +54,8 @@ class TestClientDownloadingFunctions( unittest.TestCase ):
     
     def test_tags_to_dict( self ):
         
-        local_key = os.urandom( 32 )
-        remote_key = os.urandom( 32 )
+        local_key = HydrusData.GenerateKey()
+        remote_key = HydrusData.GenerateKey()
         
         advanced_tag_options = {}
         

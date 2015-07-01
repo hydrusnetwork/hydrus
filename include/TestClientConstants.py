@@ -61,14 +61,14 @@ class TestManagers( unittest.TestCase ):
             self.assertEqual( service.GetInfo(), info )
             
         
-        repo_key = os.urandom( 32 )
+        repo_key = HydrusData.GenerateKey()
         repo_type = HC.TAG_REPOSITORY
         repo_name = 'test tag repo'
         repo_info = { 'blah' : 5 }
         
         repo = ClientData.Service( repo_key, repo_type, repo_name, repo_info )
         
-        other_key = os.urandom( 32 )
+        other_key = HydrusData.GenerateKey()
         
         other = ClientData.Service( other_key, HC.LOCAL_BOORU, 'booru', {} )
         
@@ -112,9 +112,9 @@ class TestManagers( unittest.TestCase ):
     
     def test_undo( self ):
         
-        hash_1 = os.urandom( 32 )
-        hash_2 = os.urandom( 32 )
-        hash_3 = os.urandom( 32 )
+        hash_1 = HydrusData.GenerateKey()
+        hash_2 = HydrusData.GenerateKey()
+        hash_3 = HydrusData.GenerateKey()
         
         command_1 = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
         command_2 = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }

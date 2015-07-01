@@ -150,7 +150,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 subject_account_key = dlg.GetValue().decode( 'hex' )
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key.encode( 'hex' ) } )
                 
@@ -167,7 +167,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
             edit_log = []
             
-            service_key = os.urandom( 32 )
+            service_key = HydrusData.GenerateKey()
             service_type = HC.TAG_REPOSITORY
             name = 'public tag repository'
             
@@ -179,7 +179,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
             
-            service_key = os.urandom( 32 )
+            service_key = HydrusData.GenerateKey()
             service_type = HC.FILE_REPOSITORY
             name = 'read-only art file repository'
             
@@ -285,7 +285,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             HydrusData.ShowText( u'Creating admin service\u2026' )
             
-            admin_service_key = os.urandom( 32 )
+            admin_service_key = HydrusData.GenerateKey()
             service_type = HC.SERVER_ADMIN
             name = 'local server admin'
             
@@ -314,7 +314,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             wx.CallAfter( ClientGUICommon.ShowKeys, 'access', ( access_key, ) )
             
-            admin_service = wx.GetApp().GetManager( 'services' ).GetService( admin_service_key )
+            admin_service = wx.GetApp().GetServicesManager().GetService( admin_service_key )
             
             #
             
@@ -328,8 +328,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             edit_log = []
             
-            edit_log.append( ( HC.ADD, ( os.urandom( 32 ), HC.TAG_REPOSITORY, tag_options ) ) )
-            edit_log.append( ( HC.ADD, ( os.urandom( 32 ), HC.FILE_REPOSITORY, file_options ) ) )
+            edit_log.append( ( HC.ADD, ( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, tag_options ) ) )
+            edit_log.append( ( HC.ADD, ( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, file_options ) ) )
             
             response = admin_service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
             
@@ -356,7 +356,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
                 
@@ -378,7 +378,32 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             result = dlg.ShowModal()
             
             if result == wx.ID_YES: wx.GetApp().Write( 'file_integrity', 'quick' )
-            elif result == wx.ID_NO: wx.GetApp().Write( 'file_integrity', 'thorough' )
+            elif result == wx.ID_NO:
+                
+                text = 'If an existing file is found to be corrupt/incorrect, would you like to move it or delete it?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, text, title = 'Choose what do to with bad files.', yes_label = 'move', no_label = 'delete' ) as dlg_2:
+                    
+                    result = dlg_2.ShowModal()
+                    
+                    if result == wx.ID_YES:
+                        
+                        with wx.DirDialog( self, 'Select location.' ) as dlg_3:
+                            
+                            if dlg_3.ShowModal() == wx.ID_OK:
+                                
+                                path = dlg_3.GetPath()
+                                
+                                wx.GetApp().Write( 'file_integrity', 'thorough', path )
+                                
+                            
+                        
+                    elif result == wx.ID_NO:
+                        
+                        wx.GetApp().Write( 'file_integrity', 'thorough' )
+                        
+                    
+                
             
         
     
@@ -440,7 +465,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _DeletePending( self, service_key ):
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service.GetName() + '?' ) as dlg:
             
@@ -473,7 +498,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 hash = dlg.GetValue().decode( 'hex' )
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash.encode( 'hex' ) } )
                 
@@ -625,7 +650,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def search():
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices()
+            services = wx.GetApp().GetServicesManager().GetServices()
             
             tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
             
@@ -714,7 +739,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             for ( service_key, info ) in nums_pending.items():
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 service_type = service.GetServiceType()
                 name = service.GetName()
@@ -750,8 +775,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def services():
             
-            tag_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
-            file_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
+            tag_services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            file_services = wx.GetApp().GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
             
             submenu = wx.Menu()
             
@@ -802,13 +827,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def admin():
             
-            tag_repositories = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            tag_repositories = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             admin_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            file_repositories = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
+            file_repositories = wx.GetApp().GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
             admin_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            servers_admin = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.SERVER_ADMIN, ) )
+            servers_admin = wx.GetApp().GetServicesManager().GetServices( ( HC.SERVER_ADMIN, ) )
             server_admins = [ service for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
             if len( admin_tag_services ) > 0 or len( admin_file_services ) > 0 or len( server_admins ) > 0:
@@ -878,13 +903,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendMenu( wx.ID_NONE, p( 'I don\'t know what I am doing' ), dont_know )
             links = wx.Menu()
             site = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'site' ), p( 'Site' ) )
-            site.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'file_repository_small.png' ) )
+            site.SetBitmap( CC.GlobalBMPs.file_repository )
             board = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( '8chan_board' ), p( '8chan Board' ) )
-            board.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + '8chan.png' ) )
+            board.SetBitmap( CC.GlobalBMPs.eight_chan )
             twitter = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'twitter' ), p( 'Twitter' ) )
-            twitter.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'twitter.png' ) )
+            twitter.SetBitmap( CC.GlobalBMPs.twitter )
             tumblr = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tumblr' ), p( 'Tumblr' ) )
-            tumblr.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'tumblr.png' ) )
+            tumblr.SetBitmap( CC.GlobalBMPs.tumblr )
             links.AppendItem( site )
             links.AppendItem( board )
             links.AppendItem( twitter )
@@ -943,7 +968,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 paths = dlg.GetPaths()
                 
-                services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+                services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
                 
                 service_keys = [ service.GetServiceKey() for service in services ]
                 
@@ -1115,7 +1140,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ModifyAccount( self, service_key ):
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account key for the account to be modified.' ) as dlg:
             
@@ -1194,7 +1219,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
             
-            service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+            service = wx.GetApp().GetServicesManager().GetService( service_key )
             
             page_name = service.GetName() + ' petitions'
             
@@ -1272,7 +1297,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 news = dlg.GetValue()
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'news', { 'news' : news } )
                 
@@ -1323,7 +1348,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     job_key = HydrusData.JobKey( pausable = True, cancellable = True )
                     
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'creating directories' )
+                    job_key.SetVariable( 'popup_text_1', prefix + 'creating directories' )
                     
                     HydrusGlobals.pubsub.pub( 'message', job_key )
                     
@@ -1348,11 +1373,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                                 time.sleep( 0.1 )
                                 
-                                if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
+                                if job_key.IsPaused(): job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
                                 
                                 if job_key.IsCancelled():
                                     
-                                    job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                                    job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
                                     
                                     print( job_key.ToString() )
                                     
@@ -1366,7 +1391,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             if mime in HC.MIMES_WITH_THUMBNAILS:
                                 
-                                job_key.SetVariable( 'popup_message_text_1', prefix + HydrusData.ConvertIntToPrettyString( i ) + ' done' )
+                                job_key.SetVariable( 'popup_text_1', prefix + HydrusData.ConvertIntToPrettyString( i ) + ' done' )
                                 
                                 ( base, filename ) = os.path.split( path )
                                 
@@ -1396,8 +1421,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                         
                     
-                    if num_broken > 0: job_key.SetVariable( 'popup_message_text_1', prefix + 'done! ' + HydrusData.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
-                    else: job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
+                    if num_broken > 0: job_key.SetVariable( 'popup_text_1', prefix + 'done! ' + HydrusData.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
+                    else: job_key.SetVariable( 'popup_text_1', prefix + 'done!' )
                     
                     print( job_key.ToString() )
                     
@@ -1551,7 +1576,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _Stats( self, service_key ):
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         response = service.Request( HC.GET, 'stats' )
         
@@ -1592,7 +1617,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _THREADUploadPending( self, service_key ):
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         service_name = service.GetName()
         service_type = service.GetServiceType()
@@ -1603,7 +1628,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             job_key = HydrusData.JobKey( pausable = True, cancellable = True )
             
-            job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering pending content' )
+            job_key.SetVariable( 'popup_text_1', prefix + 'gathering pending content' )
             
             HydrusGlobals.pubsub.pub( 'message', job_key )
             
@@ -1615,7 +1640,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
                 
-                job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
+                job_key.SetVariable( 'popup_text_1', prefix + 'connecting to repository' )
                 
                 good_hashes = []
                 
@@ -1627,11 +1652,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         time.sleep( 0.1 )
                         
-                        if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
+                        if job_key.IsPaused(): job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
                         
                         if job_key.IsCancelled():
                             
-                            job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                            job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
                             
                             print( job_key.ToString() )
                             
@@ -1646,8 +1671,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     hash = media_result.GetHash()
                     mime = media_result.GetMime()
                     
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading file ' + HydrusData.ConvertIntToPrettyString( i ) + ' of ' + HydrusData.ConvertIntToPrettyString( len( media_results ) ) )
-                    job_key.SetVariable( 'popup_message_gauge_1', ( i, len( media_results ) ) )
+                    job_key.SetVariable( 'popup_text_1', prefix + 'uploading file ' + HydrusData.ConvertIntToPrettyString( i ) + ' of ' + HydrusData.ConvertIntToPrettyString( len( media_results ) ) )
+                    job_key.SetVariable( 'popup_gauge_1', ( i, len( media_results ) ) )
                     
                     try:
                         
@@ -1681,7 +1706,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if not update.IsEmpty():
                     
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading petitions' )
+                    job_key.SetVariable( 'popup_text_1', prefix + 'uploading petitions' )
                     
                     service.Request( HC.POST, 'content_update_package', { 'update' : update } )
                     
@@ -1694,7 +1719,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 updates = result
                 
-                job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
+                job_key.SetVariable( 'popup_text_1', prefix + 'connecting to repository' )
                 
                 for ( i, update ) in enumerate( updates ):
                     
@@ -1702,11 +1727,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         time.sleep( 0.1 )
                         
-                        if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
+                        if job_key.IsPaused(): job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
                         
                         if job_key.IsCancelled():
                             
-                            job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                            job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
                             
                             print( job_key.ToString() )
                             
@@ -1716,8 +1741,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         if HydrusGlobals.shutdown: return
                         
                     
-                    job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( updates ) ) )
-                    job_key.SetVariable( 'popup_message_gauge_1', ( i, len( updates ) ) )
+                    job_key.SetVariable( 'popup_text_1', prefix + 'posting update: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( updates ) ) )
+                    job_key.SetVariable( 'popup_gauge_1', ( i, len( updates ) ) )
                     
                     service.Request( HC.POST, 'content_update_package', { 'update' : update } )
                     
@@ -1739,8 +1764,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             raise
             
         
-        job_key.DeleteVariable( 'popup_message_gauge_1' )
-        job_key.SetVariable( 'popup_message_text_1', prefix + 'upload done!' )
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', prefix + 'upload done!' )
         
         print( job_key.ToString() )
         
@@ -2268,7 +2293,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         listbook_dict = {}
         
-        services = wx.GetApp().GetManager( 'services' ).GetServices()
+        services = wx.GetApp().GetServicesManager().GetServices()
         
         for service in services:
             
@@ -2564,7 +2589,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._service_key = service_key
             
-            self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+            self._service = wx.GetApp().GetServicesManager().GetService( service_key )
             
             service_type = self._service.GetServiceType()
             
@@ -2881,7 +2906,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+                self._service = wx.GetApp().GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -2905,7 +2930,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = wx.GetApp().GetManager( 'services' ).GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+                self._service = wx.GetApp().GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -3009,7 +3034,7 @@ class FrameSplash( ClientGUICommon.Frame ):
         self._initial_position = self.GetPosition()
         
         # this is 124 x 166
-        self._hydrus = wx.Image( HC.STATIC_DIR + os.path.sep + 'hydrus_splash.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
+        self._hydrus = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'hydrus_splash.png' )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_MOTION, self.EventDrag )

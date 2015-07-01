@@ -184,7 +184,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         response = service.Request( HC.GET, 'account_types' )
         
@@ -350,7 +350,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        service = wx.GetApp().GetManager( 'services' ).GetService( self._service_key )
+        service = wx.GetApp().GetServicesManager().GetService( self._service_key )
         
         service.Request( HC.POST, 'account_types', { 'edit_log' : self._edit_log } )
         
@@ -1454,7 +1454,10 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             existing_path = export_folder.GetName()
             
-            if path == existing_path:
+            test_path = path + os.path.sep
+            test_existing_path = existing_path + os.path.sep
+            
+            if test_path == test_existing_path:
                 
                 text = 'That directory already exists as an export folder--at current, there can only be one export folder per destination.'
                 
@@ -1463,7 +1466,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
                 return
                 
             
-            if path.startswith( existing_path ):
+            if test_path.startswith( test_existing_path ):
                 
                 text = 'You have entered a subdirectory of an existing path--at current, this is not permitted.'
                 
@@ -1472,7 +1475,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
                 return
                 
             
-            if existing_path.startswith( path ):
+            if test_existing_path.startswith( test_path ):
                 
                 text = 'You have entered a parent directory of an existing path--at current, this is not permitted.'
                 
@@ -1619,7 +1622,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
         
-        self._page_key = os.urandom( 32 )
+        self._page_key = HydrusData.GenerateKey()
         
         predicates = file_search_context.GetPredicates()
         
@@ -3172,7 +3175,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
             
             for service in services: self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
             
@@ -4080,8 +4083,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            like_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-            numerical_services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+            like_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+            numerical_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
             
             self._panels = []
             
@@ -4436,7 +4439,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             self.SetInitialSize( ( 680, y ) )
             
         
-        self._service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+        self._service = wx.GetApp().GetServicesManager().GetService( service_key )
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + self._service.GetName() + ' services' )
         
@@ -4476,7 +4479,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         self._CheckCurrentServiceIsValid()
         
-        service_key = os.urandom( 32 )
+        service_key = HydrusData.GenerateKey()
         
         service_type = self._service_types.GetClientData( self._service_types.GetSelection() )
         
@@ -4755,7 +4758,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 parent_listbook.AddPage( name, listbook )
                 
-                services = wx.GetApp().GetManager( 'services' ).GetServices( ( service_type, ) )
+                services = wx.GetApp().GetServicesManager().GetServices( ( service_type, ) )
                 
                 for service in services:
                     
@@ -4865,7 +4868,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
                         
-                        service_key = os.urandom( 32 )
+                        service_key = HydrusData.GenerateKey()
                         service_type = self._listbooks_to_service_types[ services_listbook ]
                         
                         info = {}
@@ -6298,7 +6301,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            services = wx.GetApp().GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
@@ -6482,7 +6485,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -6505,7 +6508,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            service = wx.GetApp().GetManager( 'services' ).GetService( default_tag_repository_key )
+            service = wx.GetApp().GetServicesManager().GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( service.GetName() )
             
@@ -6663,7 +6666,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
@@ -7013,7 +7016,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._tag_repositories.AddPage( name, page )
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -7030,7 +7033,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            service = wx.GetApp().GetManager( 'services' ).GetService( default_tag_repository_key )
+            service = wx.GetApp().GetServicesManager().GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( service.GetName() )
             
@@ -7194,7 +7197,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( service_key )
+                service = wx.GetApp().GetServicesManager().GetService( service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
@@ -7606,7 +7609,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = wx.GetApp().GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
             name_to_select = None
             
@@ -7815,7 +7818,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if not self._i_am_local_tag_service:
                 
-                service = wx.GetApp().GetManager( 'services' ).GetService( tag_service_key )
+                service = wx.GetApp().GetServicesManager().GetService( tag_service_key )
                 
                 try: self._account = service.GetInfo( 'account' )
                 except: self._account = HydrusData.GetUnknownAccount()
@@ -7880,20 +7883,50 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             choices = []
             
+            sibling_tag = wx.GetApp().GetManager( 'tag_siblings' ).GetSibling( tag )
+            
+            if sibling_tag is not None:
+                
+                num_sibling_current = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
+                
+            
             if self._i_am_local_tag_service:
                 
-                if num_current < num_files: choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', HC.CONTENT_UPDATE_ADD ) )
-                if num_current > 0 and not only_add: choices.append( ( 'delete ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current ) + ' files', HC.CONTENT_UPDATE_DELETE ) )
+                if num_current < num_files:
+                    
+                    choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, tag ) ) )
+                    
+                
+                if sibling_tag is not None and num_sibling_current < num_files:
+                    
+                    choices.append( ( 'add ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
+                    
+                
+                if num_current > 0 and not only_add:
+                    
+                    choices.append( ( 'delete ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current ) + ' files', ( HC.CONTENT_UPDATE_DELETE, tag ) ) )
+                    
                 
             else:
                 
                 num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_key ) ] )
                 num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_key ) ] )
                 
-                if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', HC.CONTENT_UPDATE_PENDING ) )
-                if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', HC.CONTENT_UPDATE_PETITION ) )
-                if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', HC.CONTENT_UPDATE_RESCIND_PENDING ) )
-                if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' files', HC.CONTENT_UPDATE_RESCIND_PETITION ) )
+                if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PENDING, tag ) ) )
+                
+                if sibling_tag is not None:
+                    
+                    num_sibling_pending = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetPending( self._tag_service_key ) ] )
+                    
+                    if num_sibling_current + num_sibling_pending < num_files:
+                        
+                        choices.append( ( 'pend ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_PENDING, sibling_tag ) ) )
+                        
+                    
+                
+                if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_PETITION, tag ) ) )
+                if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PENDING, tag ) ) )
+                if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) ) )
                 
             
             if len( choices ) == 0: return
@@ -7909,16 +7942,18 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
             else: [ ( text, choice ) ] = choices
             
-            if choice == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-            elif choice == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-            elif choice == HC.CONTENT_UPDATE_PENDING: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
-            elif choice == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
-            elif choice == HC.CONTENT_UPDATE_RESCIND_PENDING: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
-            elif choice == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
+            ( choice_action, choice_tag ) = choice
+            
+            if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
+            elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
+            elif choice_action == HC.CONTENT_UPDATE_PENDING: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
+            elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
+            elif choice_action == HC.CONTENT_UPDATE_RESCIND_PENDING: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
+            elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
             
             hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
             
-            if choice == HC.CONTENT_UPDATE_PETITION:
+            if choice_action == HC.CONTENT_UPDATE_PETITION:
                 
                 if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
                 else:
@@ -7932,9 +7967,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                         
                     
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, choice, ( tag, hashes, reason ) )
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes, reason ) )
                 
-            else: content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, choice, ( tag, hashes ) )
+            else: content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes ) )
             
             for m in self._media: m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
             

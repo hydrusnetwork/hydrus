@@ -16,13 +16,13 @@ class TestSessions( unittest.TestCase ):
         
         discard = wx.GetApp().GetWrite( 'session' ) # just to discard gumph from testserver
         
-        session_key_1 = os.urandom( 32 )
-        service_key = os.urandom( 32 )
+        session_key_1 = HydrusData.GenerateKey()
+        service_key = HydrusData.GenerateKey()
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
-        access_key = os.urandom( 32 )
-        account_key = os.urandom( 32 )
+        access_key = HydrusData.GenerateKey()
+        account_key = HydrusData.GenerateKey()
         account_type = HydrusData.AccountType( 'account', permissions, ( None, None ) )
         created = HydrusData.GetNow() - 100000
         expires = HydrusData.GetNow() + 300
@@ -58,7 +58,7 @@ class TestSessions( unittest.TestCase ):
         
         expires = HydrusData.GetNow() + 300
         
-        account_key_2 = os.urandom( 32 )
+        account_key_2 = HydrusData.GenerateKey()
         
         account_2 = HydrusData.Account( account_key_2, account_type, created, expires, used_bytes, used_requests )
         
