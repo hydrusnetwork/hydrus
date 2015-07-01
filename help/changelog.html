@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 163</h3></li>
+				<ul>
+					<li>reconfigured some important mapping indices in the client db to reduce search time for many common tag operations</li>
+					<li>the new indices have also sped up tag processing significantly</li>
+					<li>added an automatic db optimiser analyzer run whenever the db updates</li>
+					<li>pixiv now downloads the largest version of an image again</li>
+					<li>pixiv tag parsing improved</li>
+					<li>added support for some unusual mp4 types</li>
+					<li>the noquery media panel is removed. pages with no query status will now show a normal thumbnail panel with 0 files, rather than 'None' files.</li>
+					<li>check file integrity will now report number of missing files and incorrect files separately</li>
+					<li>check file integrity can now take a folder to move incorrect files, rather than deleting them</li>
+					<li>when you try to pend a tag with a sibling in the manage tags dialog, you will be prompted with the chance to pend the sibling instead</li>
+					<li>the rating system predicate dialog now allows for easier (and multiple!) selection of like rating parameters</li>
+					<li>the rating system predicate dialog now allows for easier (and multiple!) selection of numerical rating parameters</li>
+					<li>the rating system predicate dialog now offers correct predicates for 'zero allowed' numerical rating services</li>
+					<li>some bmp icon code cleanup</li>
+					<li>changed pause and cancel buttons to bitmap buttons</li>
+					<li>cleaned up a lot of pause and cancel code</li>
+					<li>now, when popups are paused, they will hide their details</li>
+					<li>popups that are cancelled by a dialog change (for instance when subscriptions are changed while subs are processing) will now dismiss themselves after a few seconds</li>
+					<li>during repository sync, http failures are recovered from more gracefully, and any pending processing will continue</li>
+					<li>the repository update downloading and processing loops will wait on the db and gui more efficiently</li>
+					<li>fixed a bug in the way the manage export folders dialog was testing existence of subdirectories</li>
+					<li>general code cleanup</li>
+					<li>bit more code cleanup</li>
+					<li>some good daemon refactoring</li>
+				</ul>
 				<li><h3>version 162</h3></li>
 				<ul>
 					<li>on update, all previous gui sessions are deleted!</li>
