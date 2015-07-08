@@ -94,7 +94,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _Archive( self ):
         
-        hashes = self._GetSelectedHashes( CC.DISCRIMINANT_INBOX )
+        hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_INBOX )
         
         if len( hashes ) > 0:
             
@@ -161,8 +161,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 if len( media_results ) > 0:
                     
-                    try: ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results, shortcuts )
-                    except: wx.MessageBox( traceback.format_exc() )
+                    ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results, shortcuts )
                     
                 
             
@@ -170,38 +169,51 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _Delete( self, file_service_key ):
         
-        if file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
+        hashes = self._GetSelectedHashes( has_location = file_service_key )
+        
+        num_to_delete = len( hashes )
+        
+        if num_to_delete > 0:
             
-            hashes = self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL )
-            
-            num_to_delete = len( hashes )
-            
-            if num_to_delete:
+            if file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
                 
-                if num_to_delete == 1: message = 'Are you sure you want to delete this file?'
-                else: message = 'Are you sure you want to delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
+                if num_to_delete == 1: text = 'Are you sure you want to send this file to the trash?'
+                else: text = 'Are you sure you want send these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files to the trash?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            elif file_service_key == CC.TRASH_SERVICE_KEY:
+                
+                if num_to_delete == 1: text = 'Are you sure you want to permanently delete this file?'
+                else: text = 'Are you sure you want to permanently delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
+                
+            else:
+                
+                if num_to_delete == 1: text = 'Are you sure you want to admin-delete this file?'
+                else: text = 'Are you sure you want to admin-delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
+                
+            
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
                     
-                    if dlg.ShowModal() == wx.ID_YES:
+                    if file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
                         
-                        self.SetFocussedMedia( self._page_key, None )
+                        if file_service_key == CC.TRASH_SERVICE_KEY:
+                            
+                            self.SetFocussedMedia( self._page_key, None )
+                            
                         
-                        try: wx.GetApp().Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
-                        except: wx.MessageBox( traceback.format_exc() )
+                        wx.GetApp().Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+                        
+                    else:
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) )
+                        
+                        service_keys_to_content_updates = { file_service_key : ( content_update, ) }
+                        
+                        wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
                         
                     
                 
-            
-        else:
-            
-            hashes = self._GetSelectedHashes()
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) )
-            
-            service_keys_to_content_updates = { file_service_key : ( content_update, ) }
-            
-            wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
             
         
     
@@ -245,12 +257,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _Filter( self ):
         
-        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ) )
+        media_results = self.GenerateMediaResults( has_location = CC.LOCAL_FILE_SERVICE_KEY, selected_media = set( self._selected_media ) )
         
         if len( media_results ) > 0:
             
-            try: ClientGUICanvas.CanvasFullscreenMediaListFilterInbox( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results )
-            except: wx.MessageBox( traceback.format_exc() )
+            ClientGUICanvas.CanvasFullscreenMediaListFilterInbox( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results )
             
         
     
@@ -302,11 +313,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _GetSelectedHashes( self, discriminant = None, not_uploaded_to = None ):
+    def _GetSelectedHashes( self, has_location = None, discriminant = None, not_uploaded_to = None ):
         
         result = set()
         
-        for media in self._selected_media: result.update( media.GetHashes( discriminant, not_uploaded_to ) )
+        for media in self._selected_media: result.update( media.GetHashes( has_location, discriminant, not_uploaded_to ) )
         
         return result
         
@@ -381,7 +392,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _Inbox( self ):
         
-        hashes = self._GetSelectedHashes( CC.DISCRIMINANT_ARCHIVE )
+        hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_ARCHIVE )
         
         if len( hashes ) > 0:
             
@@ -515,13 +526,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( media_results ) > 0:
             
-            try:
-                
-                service = wx.GetApp().GetServicesManager().GetService( service_key )
-                
-                if service.GetServiceType() == HC.LOCAL_RATING_LIKE: ClientGUICanvas.RatingsFilterFrameLike( self.GetTopLevelParent(), self._page_key, service_key, media_results )
-                
-            except: wx.MessageBox( traceback.format_exc() )
+            service = wx.GetApp().GetServicesManager().GetService( service_key )
+            
+            if service.GetServiceType() == HC.LOCAL_RATING_LIKE: ClientGUICanvas.RatingsFilterFrameLike( self.GetTopLevelParent(), self._page_key, service_key, media_results )
             
         
     
@@ -638,6 +645,27 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             sorted_media_results = [ hashes_to_media_results[ media.GetHash() ] for media in sorted_flat_media if media.GetHash() in hashes_to_media_results ]
             
             HydrusGlobals.pubsub.pub( 'new_page_query', self._file_service_key, initial_media_results = sorted_media_results )
+            
+        
+    
+    def _Undelete( self ):
+        
+        hashes = self._GetSelectedHashes( has_location = CC.TRASH_SERVICE_KEY )
+        
+        num_to_undelete = len( hashes )
+        
+        if num_to_undelete > 0:
+            
+            if num_to_undelete == 1: text = 'Are you sure you want to undelete this file?'
+            else: text = 'Are you sure you want to undelete these ' + HydrusData.ConvertIntToPrettyString( num_to_undelete ) + ' files?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    wx.GetApp().Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] } )
+                    
+                
             
         
     
@@ -976,24 +1004,20 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( self._selected_media ) > 0:
             
-            try:
+            flat_media = []
+            
+            for media in self._sorted_media:
                 
-                flat_media = []
-                
-                for media in self._sorted_media:
+                if media in self._selected_media:
                     
-                    if media in self._selected_media:
-                        
-                        if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
-                        else: flat_media.append( media )
-                        
+                    if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
+                    else: flat_media.append( media )
                     
                 
-                with ClientGUIDialogs.DialogSetupExport( None, flat_media ) as dlg: dlg.ShowModal()
-                
-                self.SetFocus()
-                
-            except: wx.MessageBox( traceback.format_exc() )
+            
+            with ClientGUIDialogs.DialogSetupExport( None, flat_media ) as dlg: dlg.ShowModal()
+            
+            self.SetFocus()
             
         
     
@@ -1360,7 +1384,7 @@ class MediaPanelThumbnails( MediaPanel ):
             if command == 'archive': self._Archive()
             elif command == 'copy_bmp': self._CopyBMPToClipboard()
             elif command == 'copy_files':
-                with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ) )
+                with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL ) )
             elif command == 'copy_hash': self._CopyHashToClipboard()
             elif command == 'copy_hashes': self._CopyHashesToClipboard()
             elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
@@ -1371,7 +1395,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             elif command == 'custom_filter': self._CustomFilter()
             elif command == 'delete': self._Delete( data )
-            elif command == 'download': wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
+            elif command == 'download': wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
             elif command == 'export_files': self._ExportFiles()
             elif command == 'export_tags': self._ExportTags()
             elif command == 'filter': self._Filter()
@@ -1394,6 +1418,7 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'select': self._Select( data )
             elif command == 'share_on_local_booru': self._ShareOnLocalBooru()
             elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
+            elif command == 'undelete': self._Undelete()
             elif command == 'upload': self._UploadFiles( data )
             elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
             elif command == 'key_down': self._MoveFocussedThumbnail( 1, 0, False )
@@ -1510,7 +1535,8 @@ class MediaPanelThumbnails( MediaPanel ):
         
         all_locations_managers = [ media.GetLocationsManager() for media in self._selected_media ]
         
-        selection_has_local = True in ( locations_manager.HasLocal() for locations_manager in all_locations_managers )
+        selection_has_local_file_service = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
+        selection_has_trash = True in ( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
         selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
         
@@ -1596,6 +1622,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     inbox_phrase = 'return selected to inbox'
                     remove_phrase = 'remove selected'
                     local_delete_phrase = 'delete selected'
+                    trash_delete_phrase = 'delete selected from trash now'
+                    undelete_phrase = 'undelete selected'
                     dump_phrase = 'dump selected to 4chan'
                     export_phrase = 'files'
                     copy_phrase = 'files'
@@ -1622,6 +1650,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     inbox_phrase = 'return to inbox'
                     remove_phrase = 'remove'
                     local_delete_phrase = 'delete'
+                    trash_delete_phrase = 'delete from trash now'
+                    undelete_phrase = 'undelete'
                     dump_phrase = 'dump to 4chan'
                     export_phrase = 'file'
                     copy_phrase = 'file'
@@ -1675,7 +1705,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
                     
-                    if not locations_manager.HasLocal() and not locations_manager.HasDownloading(): selection_downloadable_file_service_keys.update( downloadable_file_service_keys & locations_manager.GetCurrentRemote() )
+                    if not CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() and not locations_manager.HasDownloading(): selection_downloadable_file_service_keys.update( downloadable_file_service_keys & locations_manager.GetCurrentRemote() )
                     
                     # we can petition when we have permission and a file is current
                     # we can re-petition an already petitioned file
@@ -1788,7 +1818,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                if selection_has_local and multiple_selected:
+                if selection_has_local_file_service and multiple_selected:
                     
                     filter_menu = wx.Menu()
                     
@@ -1801,20 +1831,27 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 menu.AppendSeparator()
                 
-                if selection_has_local:
+                if selection_has_inbox: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), archive_phrase )
+                if selection_has_archive: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), inbox_phrase )
+                
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), remove_phrase )
+                
+                if selection_has_local_file_service:
                     
-                    if selection_has_inbox: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), archive_phrase )
-                    if selection_has_archive: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), inbox_phrase )
-                    
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), remove_phrase )
                     menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), local_delete_phrase )
+                    
+                
+                if selection_has_trash:
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.TRASH_SERVICE_KEY ), trash_delete_phrase )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ), undelete_phrase )
                     
                 
                 # share
                 
                 menu.AppendSeparator()
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', CC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally' ), '&open externally' )
                 
                 share_menu = wx.Menu()
                 
@@ -2325,8 +2362,34 @@ class Thumbnail( Selectable ):
         
         locations_manager = self.GetLocationsManager()
         
-        if inbox: dc.DrawBitmap( CC.GlobalBMPs.inbox, width - 18, 0 )
-        elif CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetPending(): dc.DrawBitmap( CC.GlobalBMPs.downloading, width - 18, 0 )
+        icons_to_draw = []
+        
+        if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetPending():
+            
+            icons_to_draw.append( CC.GlobalBMPs.downloading )
+            
+        
+        if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            icons_to_draw.append( CC.GlobalBMPs.trash )
+            
+        
+        if inbox:
+            
+            icons_to_draw.append( CC.GlobalBMPs.inbox )
+            
+        
+        if len( icons_to_draw ) > 0:
+            
+            icon_x = 0
+            
+            for icon in icons_to_draw:
+                
+                dc.DrawBitmap( icon, width + icon_x - 18, 0 )
+                
+                icon_x -= 18
+                
+            
         
         if self._dump_status == CC.DUMPER_DUMPED_OK: dc.DrawBitmap( CC.GlobalBMPs.dump_ok, width - 18, 18 )
         elif self._dump_status == CC.DUMPER_RECOVERABLE_ERROR: dc.DrawBitmap( CC.GlobalBMPs.dump_recoverable, width - 18, 18 )

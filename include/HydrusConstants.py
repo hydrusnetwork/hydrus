@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 163
+SOFTWARE_VERSION = 164
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -80,6 +80,7 @@ CONTENT_UPDATE_RATING = 9
 CONTENT_UPDATE_DENY_PEND = 11
 CONTENT_UPDATE_DENY_PETITION = 12
 CONTENT_UPDATE_ADVANCED = 13
+CONTENT_UPDATE_UNDELETE = 14
 
 content_update_string_lookup = {}
 
@@ -95,6 +96,7 @@ content_update_string_lookup[ CONTENT_UPDATE_INBOX ] = 'inbox'
 content_update_string_lookup[ CONTENT_UPDATE_RATING ] = 'rating'
 content_update_string_lookup[ CONTENT_UPDATE_DENY_PEND ] = 'deny pend'
 content_update_string_lookup[ CONTENT_UPDATE_DENY_PETITION ] = 'deny petition'
+content_update_string_lookup[ CONTENT_UPDATE_UNDELETE ] = 'undelete'
 
 IMPORT_FOLDER_TYPE_DELETE = 0
 IMPORT_FOLDER_TYPE_SYNCHRONISE = 1

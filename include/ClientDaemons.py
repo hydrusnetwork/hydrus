@@ -190,6 +190,7 @@ def DAEMONDownloadFiles():
         for service_key in service_keys:
             
             if service_key == CC.LOCAL_FILE_SERVICE_KEY: break
+            elif service_key == CC.TRASH_SERVICE_KEY: continue
             
             try: file_repository = wx.GetApp().GetServicesManager().GetService( service_key )
             except HydrusExceptions.NotFoundException: continue
@@ -404,7 +405,7 @@ def DAEMONSynchroniseSubscriptions():
                         
                         tags = query.split( ' ' )
                         
-                        all_args = ( ( booru, tags ), )
+                        all_args = ( ( booru_name, tags ), )
                         
                     elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
                         

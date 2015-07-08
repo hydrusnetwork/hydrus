@@ -209,14 +209,22 @@ class GalleryParser( object ):
     
 class GalleryParserBooru( GalleryParser ):
     
-    def __init__( self, booru, tags ):
+    def __init__( self, booru_name, tags ):
         
-        self._booru = booru
+        try:
+            
+            self._booru = wx.GetApp().Read( 'remote_booru', booru_name )
+            
+        except:
+            
+            raise HydrusExceptions.NotFoundException( 'Attempted to find booru "' + booru_name + '", but it was missing from the database!' )
+            
+        
         self._tags = tags
         
         self._gallery_advance_num = None
         
-        ( self._search_url, self._advance_by_page_num, self._search_separator, self._thumb_classname ) = booru.GetGalleryParsingInfo()
+        ( self._search_url, self._advance_by_page_num, self._search_separator, self._thumb_classname ) = self._booru.GetGalleryParsingInfo()
         
         GalleryParser.__init__( self )
         
@@ -296,55 +304,62 @@ class GalleryParserBooru( GalleryParser ):
         
         image_url = None
         
-        if image_id is not None:
+        try:
             
-            image = soup.find( id = image_id )
-            
-            if image is None:
+            if image_id is not None:
                 
-                image_string = soup.find( text = re.compile( 'Save this file' ) )
+                image = soup.find( id = image_id )
                 
-                if image_string is None: image_string = soup.find( text = re.compile( 'Save this video' ) )
-                
-                image = image_string.parent
-                
-                image_url = image[ 'href' ]
-                
-            else:
-                
-                if image.name in ( 'img', 'video' ):
+                if image is None:
                     
-                    image_url = image[ 'src' ]
+                    image_string = soup.find( text = re.compile( 'Save this file' ) )
                     
-                    if 'sample/sample-' in image_url:
+                    if image_string is None: image_string = soup.find( text = re.compile( 'Save this video' ) )
+                    
+                    image = image_string.parent
+                    
+                    image_url = image[ 'href' ]
+                    
+                else:
+                    
+                    if image.name in ( 'img', 'video' ):
                         
-                        # danbooru resized image
+                        image_url = image[ 'src' ]
                         
-                        image = soup.find( id = 'image-resize-link' )
+                        if 'sample/sample-' in image_url:
+                            
+                            # danbooru resized image
+                            
+                            image = soup.find( id = 'image-resize-link' )
+                            
+                            image_url = image[ 'href' ]
+                            
+                        
+                    elif image.name == 'a':
                         
                         image_url = image[ 'href' ]
                         
                     
-                elif image.name == 'a':
+                
+            
+            if image_data is not None:
+                
+                links = soup.find_all( 'a' )
+                
+                for link in links:
                     
-                    image_url = image[ 'href' ]
+                    if link.string == image_data: image_url = link[ 'href' ]
                     
                 
             
-        
-        if image_data is not None:
+        except Exception as e:
             
-            links = soup.find_all( 'a' )
-            
-            for link in links:
-                
-                if link.string == image_data: image_url = link[ 'href' ]
-                
+            raise HydrusExceptions.NotFoundException( 'Could not parse a download link for ' + url_base + '!' + os.linesep + HydrusData.ToString( e ) )
             
         
         if image_url is None:
             
-            raise HydrusExceptions.NotFoundException( 'Could not find the image URL!' )
+            raise HydrusExceptions.NotFoundException( 'Could not parse a download link for ' + url_base + '!' )
             
         
         image_url = urlparse.urljoin( url_base, image_url )

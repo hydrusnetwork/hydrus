@@ -397,9 +397,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 if event.GetWheelRotation() > 0: command_type = wx.wxEVT_SCROLLWIN_LINEUP
                 else: command_type = wx.wxEVT_SCROLLWIN_LINEDOWN
                 
-                scroll_event = wx.ScrollEvent( command_type )
-                
-                self._dropdown_list.EventScroll( scroll_event )
+                wx.PostEvent( self, wx.ScrollWinEvent( command_type ) )
                 
             
         
@@ -529,6 +527,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         services = []
         services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
         services.append( services_manager.GetService( CC.LOCAL_FILE_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.TRASH_SERVICE_KEY ) )
         services.extend( services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) )
         
         menu = wx.Menu()
@@ -1944,18 +1943,19 @@ class ListBox( wx.ScrolledWindow ):
         
         self._background_colour = wx.Colour( 255, 255, 255 )
         
-        self._current_y_offset = 0
-        self._drawn_up_to = 0
-        
         self._ordered_strings = []
         self._strings_to_terms = {}
         
-        self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
+        self._client_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
         self._current_selected_index = None
         self._current_selected_term = None
         
-        dc = self._GetScrolledDC()
+        self._last_virtual_size = None
+        self._last_view_start = None
+        self._dirty = True
+        
+        dc = wx.MemoryDC( self._client_bmp )
         
         dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
         
@@ -1979,102 +1979,11 @@ class ListBox( wx.ScrolledWindow ):
         self.Bind( wx.EVT_CHAR_HOOK, self.EventKeyDown )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
-        self.Bind( wx.EVT_SCROLLWIN, self.EventScroll )
         
     
     def __len__( self ): return len( self._ordered_strings )
     
     def _Activate( self, s, term ): pass
-    
-    def _DrawText( self, index ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        dc = self._GetScrolledDC()
-        
-        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-        
-        i = 0
-        
-        dc.SetBackground( wx.Brush( self._background_colour ) )
-        
-        i = index
-        text = self._ordered_strings[ i ]
-        
-        ( r, g, b ) = self._GetTextColour( text )
-        
-        text_colour = wx.Colour( r, g, b )
-        
-        if i == self._current_selected_index:
-            
-            dc.SetBrush( wx.Brush( text_colour ) )
-            
-            text_colour = wx.WHITE
-            
-        
-        dc.SetPen( wx.TRANSPARENT_PEN )
-        
-        dc.DrawRectangle( 0, i * self._text_y, my_width, self._text_y )
-        
-        dc.SetTextForeground( text_colour )
-        
-        ( x, y ) = ( 3, i * self._text_y )
-        
-        dc.DrawText( text, x, y )
-        
-    
-    def _DrawTexts( self ):
-        
-        ( start_x, start_y ) = self.GetViewStart()
-        
-        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        draw_up_to = ( ( start_y + self._current_y_offset ) * yUnit ) + my_height
-        
-        if draw_up_to > self._drawn_up_to:
-            
-            dc = self._GetScrolledDC()
-            
-            dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-            
-            i = 0
-            
-            dc.SetBackground( wx.Brush( self._background_colour ) )
-            
-            if self._drawn_up_to == 0: dc.Clear()
-            
-            for ( i, text ) in enumerate( self._ordered_strings ):
-                
-                if i * self._text_y < self._drawn_up_to: continue
-                if i * self._text_y > draw_up_to: break
-                
-                ( r, g, b ) = self._GetTextColour( text )
-                
-                text_colour = wx.Colour( r, g, b )
-                
-                if self._current_selected_index is not None and i == self._current_selected_index:
-                    
-                    dc.SetBrush( wx.Brush( text_colour ) )
-                    
-                    dc.SetPen( wx.TRANSPARENT_PEN )
-                    
-                    dc.DrawRectangle( 0, i * self._text_y, my_width, self._text_y )
-                    
-                    text_colour = wx.WHITE
-                    
-                
-                dc.SetTextForeground( text_colour )
-                
-                ( x, y ) = ( 3, i * self._text_y )
-                
-                dc.DrawText( text, x, y )
-                
-            
-            self._drawn_up_to = draw_up_to
-            
-        
     
     def _GetIndexUnderMouse( self, mouse_event ):
         
@@ -2093,16 +2002,65 @@ class ListBox( wx.ScrolledWindow ):
         return row_index
         
     
-    def _GetScrolledDC( self ):
-        
-        cdc = wx.ClientDC( self )
-        
-        self.DoPrepareDC( cdc ) # because this is a scrolled window
-        
-        return wx.BufferedDC( cdc, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
-        
-    
     def _GetTextColour( self, text ): return ( 0, 111, 250 )
+    
+    def _Redraw( self, dc ):
+        
+        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
+        
+        ( x_scroll, y_scroll ) = self.GetViewStart()
+        
+        self._last_view_start = self.GetViewStart()
+        
+        y_offset = y_scroll * yUnit
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        first_visible_index = y_offset / self._text_y
+        
+        last_visible_index = ( y_offset + my_height ) / self._text_y
+        
+        if ( y_offset + my_height ) % self._text_y != 0:
+            
+            last_visible_index += 1
+            
+        
+        last_visible_index = min( last_visible_index, len( self._ordered_strings ) - 1 )
+        
+        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+        
+        dc.SetBackground( wx.Brush( self._background_colour ) )
+        
+        dc.Clear()
+        
+        for ( i, current_index ) in enumerate( range( first_visible_index, last_visible_index + 1 ) ):
+            
+            text = self._ordered_strings[ current_index ]
+            
+            ( r, g, b ) = self._GetTextColour( text )
+            
+            text_colour = wx.Colour( r, g, b )
+            
+            if self._current_selected_index is not None and current_index == self._current_selected_index:
+                
+                dc.SetBrush( wx.Brush( text_colour ) )
+                
+                dc.SetPen( wx.TRANSPARENT_PEN )
+                
+                dc.DrawRectangle( 0, i * self._text_y, my_width, self._text_y )
+                
+                text_colour = wx.WHITE
+                
+            
+            dc.SetTextForeground( text_colour )
+            
+            ( x, y ) = ( 3, i * self._text_y )
+            
+            dc.DrawText( text, x, y )
+            
+        
+        self._dirty = False
+        
     
     def _Select( self, index ):
         
@@ -2116,14 +2074,13 @@ class ListBox( wx.ScrolledWindow ):
         
         self._current_selected_index = index
         
-        if old_index is not None: self._DrawText( old_index )
-        
-        if self._current_selected_index is None: self._current_selected_term = None
+        if self._current_selected_index is None:
+            
+            self._current_selected_term = None
+            
         else:
             
             self._current_selected_term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-            
-            self._DrawText( self._current_selected_index )
             
             # scroll to index, if needed
             
@@ -2153,10 +2110,17 @@ class ListBox( wx.ScrolledWindow ):
                 
             
         
+        self._SetDirty()
+        
+    
+    def _SetDirty( self ):
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
     
     def _TextsHaveChanged( self ):
-        
-        self._drawn_up_to = 0
         
         self._current_selected_index = None
         
@@ -2175,12 +2139,20 @@ class ListBox( wx.ScrolledWindow ):
             if self._current_selected_index is None: self._current_selected_term = None
             
         
-        total_height = self._text_y * len( self._ordered_strings )
+        ( my_x, my_y ) = self.GetClientSize()
         
-        ( my_x, my_y ) = self._canvas_bmp.GetSize()
+        total_height = max( self._text_y * len( self._ordered_strings ), my_y )
         
-        if my_y != total_height: wx.PostEvent( self, wx.SizeEvent() )
-        else: self._DrawTexts()
+        ( virtual_x, virtual_y ) = self.GetVirtualSize()
+        
+        if total_height != virtual_y:
+            
+            wx.PostEvent( self, wx.SizeEvent() )
+            
+        else:
+            
+            self._SetDirty()
+            
         
     
     def EventDClick( self, event ):
@@ -2293,63 +2265,37 @@ class ListBox( wx.ScrolledWindow ):
         event.Skip()
         
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
+    def EventPaint( self, event ):
+        
+        dc = wx.BufferedPaintDC( self, self._client_bmp )
+        
+        if self._dirty or self._last_view_start != self.GetViewStart():
+            
+            self._Redraw( dc )
+            
+        
     
     def EventResize( self, event ):
         
-        ( client_x, client_y ) = self.GetClientSize()
+        ( my_x, my_y ) = self.GetClientSize()
         
-        ( my_x, my_y ) = self._canvas_bmp.GetSize()
+        self._num_rows_per_page = my_y / self._text_y
         
-        self._num_rows_per_page = client_y / self._text_y
+        ideal_virtual_size = ( my_x, max( self._text_y * len( self._ordered_strings ), my_y ) )
         
-        total_height = self._text_y * len( self._ordered_strings )
-        
-        if my_x != client_x or my_y != total_height:
+        if ideal_virtual_size != self._last_virtual_size:
             
-            new_y = max( client_y, total_height )
+            self.SetVirtualSize( ideal_virtual_size )
             
-            self.SetVirtualSize( ( client_x, new_y ) )
+            self._last_virtual_size = ideal_virtual_size
             
-            self._canvas_bmp = wx.EmptyBitmap( client_x, new_y, 24 )
+            if self._client_bmp.GetSize() != ( my_x, my_y ):
+                
+                self._client_bmp = wx.EmptyBitmap( my_x, my_y, 24 )
+                
             
-            self._drawn_up_to = 0
+            self._SetDirty()
             
-            self._DrawTexts()
-            
-        
-    
-    def EventScroll( self, event ):
-        
-        # it seems that some scroll events happen after the viewstart has changed, some happen before
-        # so I have to keep track of a manual current_y_start
-        
-        ( start_x, start_y ) = self.GetViewStart()
-        
-        ( my_virtual_width, my_virtual_height ) = self.GetVirtualSize()
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
-        
-        page_of_y_units = my_height / yUnit
-        
-        event_type = event.GetEventType()
-        
-        if event_type == wx.wxEVT_SCROLLWIN_LINEUP: self._current_y_offset = -1
-        elif event_type == wx.wxEVT_SCROLLWIN_LINEDOWN: self._current_y_offset = 1
-        elif event_type == wx.wxEVT_SCROLLWIN_THUMBTRACK: self._current_y_offset = 0
-        elif event_type == wx.wxEVT_SCROLLWIN_THUMBRELEASE: self._current_y_offset = 0
-        elif event_type == wx.wxEVT_SCROLLWIN_PAGEUP: self._current_y_offset = - page_of_y_units
-        elif event_type == wx.wxEVT_SCROLLWIN_PAGEDOWN: self._current_y_offset = page_of_y_units
-        elif event_type == wx.wxEVT_SCROLLWIN_TOP: self._current_y_offset = - start_y
-        elif event_type == wx.wxEVT_SCROLLWIN_BOTTOM: self._current_y_offset = ( my_virtual_height / yUnit ) - start_y
-        
-        self._DrawTexts()
-        
-        self._current_y_offset = 0
-        
-        event.Skip()
         
     
     def GetClientData( self, s = None ):

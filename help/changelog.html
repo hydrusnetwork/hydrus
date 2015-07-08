@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 164</h3></li>
+				<ul>
+					<li>rewrote the drawing code for the listbox that displays tags in various ways to be a lot faster and more memory efficient</li>
+					<li>updated one new client mapping index that wasn't working quite as I wanted it to something more clever</li>
+					<li>db will be a little smaller and mappings stuff will be even faster</li>
+					<li>merged the two ratings system predicate input panels, so you can now select like/dislike and numerical ratings system predicates at the same time</li>
+					<li>fixed booru download page serialisation, which means they will save to sessions</li>
+					<li>prototyped trash service</li>
+					<li>locally deleted files will now be sent to trash</li>
+					<li>locally deleted files will not be removed from the existing search</li>
+					<li>files can be permanently deleted from trash, which will also immediately physically delete them from your hdd</li>
+					<li>files can be restored from trash back to the local file service</li>
+					<li>inbox state is now more separate from the local file service, so it will be remembered through a visit to the trash</li>
+					<li>improved delete code all around</li>
+					<li>general inbox/archive db code improvements</li>
+					<li>misc content update pipeline improvements</li>
+					<li>optimised mass-adding of files to a service (for instance, when (un)deleting a whole bunch of files!)</li>
+					<li>delete orphans daemon is removed--it will be replaced by a more thorough single-shot hdd/db purge like 'check file integrity'</li>
+					<li>files are not yet automatically removed from the trash--I will add that next week.</li>
+					<li>updated db access info in db folder</li>
+					<li>added sqlite command line executable to db folder for all platforms</li>
+					<li>bit of code cleaning</li>
+					<li>cleaned up some gui error reporting</li>
+					<li>might have fixed a service cache bug in the db that was causing double bandwidth reports and possible looping sync behaviour</li>
+				</ul>
 				<li><h3>version 163</h3></li>
 				<ul>
 					<li>reconfigured some important mapping indices in the client db to reduce search time for many common tag operations</li>

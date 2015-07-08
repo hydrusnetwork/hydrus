@@ -1935,10 +1935,10 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
             
             def gallery_parsers_factory( raw_tags ):
                 
-                booru = self._gallery_type
+                booru_name = self._gallery_type
                 tags = raw_tags.split( ' ' )
                 
-                return ( ClientDownloading.GalleryParserBooru( booru, tags ), )
+                return ( ClientDownloading.GalleryParserBooru( booru_name, tags ), )
                 
             
         elif self._site_type == HC.SITE_TYPE_DEVIANT_ART:
@@ -2027,9 +2027,9 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
         
         if self._site_type == HC.SITE_TYPE_BOORU:
             
-            booru = self._gallery_type
+            name = self._gallery_type
             
-            name = booru.GetName()
+            booru = wx.GetApp().Read( 'remote_booru', name )
             
             namespaces = booru.GetNamespaces()
             initial_search_value = 'search tags'

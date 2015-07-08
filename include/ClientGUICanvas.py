@@ -560,11 +560,38 @@ class Canvas( object ):
         HydrusGlobals.pubsub.pub( 'clipboard', 'text', path )
         
     
-    def _Delete( self ):
+    def _Delete( self, service_key = None ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
+        if service_key is None:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+            locations_manager = self._current_display_media.GetLocationsManager()
+            
+            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                service_key = CC.LOCAL_FILE_SERVICE_KEY
+                
+            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                service_key = CC.TRASH_SERVICE_KEY
+                
+            else:
+                
+                return
+                
+            
+        
+        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            
+            text = 'Send this file to the trash?'
+            
+        elif service_key == CC.TRASH_SERVICE_KEY:
+            
+            text = 'Permanently delete this file?'
+            
+        
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
@@ -694,6 +721,16 @@ class Canvas( object ):
         if HC.PLATFORM_OSX and new_position == self._media_container.GetPosition(): self._media_container.Refresh()
         
         if new_position != self._media_container.GetPosition(): self._media_container.SetPosition( new_position )
+        
+    
+    def _Undelete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Undelete this file?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+            
+        
+        self.SetFocus() # annoying bug because of the modal dialog
         
     
     def _ZoomIn( self ):
@@ -1005,9 +1042,26 @@ class CanvasWithDetails( Canvas ):
             
             icons_to_show = []
             
+            if CC.TRASH_SERVICE_KEY in self._current_media.GetLocationsManager().GetCurrent():
+                
+                icons_to_show.append( CC.GlobalBMPs.trash )
+                
+            
             if self._current_media.HasInbox():
                 
-                dc.DrawBitmap( CC.GlobalBMPs.inbox, client_width - 18, 2 )
+                icons_to_show.append( CC.GlobalBMPs.inbox )
+                
+            
+            if len( icons_to_show ) > 0:
+                
+                icon_x = 0
+                
+                for icon in icons_to_show:
+                    
+                    dc.DrawBitmap( icon, client_width + icon_x - 18, 2 )
+                    
+                    icon_x -= 18
+                    
                 
                 current_y += 18
                 
@@ -1135,11 +1189,12 @@ class CanvasPanel( Canvas, wx.Window ):
                 elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
-                elif command == 'delete': self._Delete()
+                elif command == 'delete': self._Delete( data )
                 elif command == 'inbox': self._Inbox()
                 elif command == 'manage_ratings': self._ManageRatings()
                 elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
                 elif command == 'open_externally': self._OpenExternally()
+                elif command == 'undelete': self._Undelete()
                 else: event.Skip()
                 
             
@@ -1150,6 +1205,8 @@ class CanvasPanel( Canvas, wx.Window ):
         if self._current_display_media is not None:
             
             services = wx.GetApp().GetServicesManager().GetServices()
+            
+            locations_manager = self._current_display_media.GetLocationsManager()
             
             local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
             
@@ -1182,11 +1239,20 @@ class CanvasPanel( Canvas, wx.Window ):
             
             if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
             if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+            
+            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+                
+            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ), '&undelete' )
+                
             
             menu.AppendSeparator()
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', CC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally' ), '&open externally' )
             
             share_menu = wx.Menu()
             
@@ -2028,7 +2094,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
-                elif command == 'delete': self._Delete()
+                elif command == 'delete': self._Delete( data )
                 elif command == 'fullscreen_switch': self._FullscreenSwitch()
                 elif command == 'first': self._ShowFirst()
                 elif command == 'last': self._ShowLast()
@@ -2052,6 +2118,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 elif command == 'remove': self._Remove()
                 elif command == 'slideshow': wx.CallAfter( self._StartSlideshow, data )
                 elif command == 'slideshow_pause_play': wx.CallAfter( self._PausePlaySlideshow )
+                elif command == 'undelete': self._Undelete()
                 elif command == 'zoom_in': self._ZoomIn()
                 elif command == 'zoom_out': self._ZoomOut()
                 elif command == 'zoom_switch': self._ZoomSwitch()
@@ -2087,6 +2154,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         i_can_post_ratings = len( local_ratings_services ) > 0
         
         self._last_drag_coordinates = None # to stop successive right-click drag warp bug
+        
+        locations_manager = self._current_display_media.GetLocationsManager()
         
         menu = wx.Menu()
         
@@ -2137,12 +2206,22 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', CC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+        
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), '&remove' )
+        
+        if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+            
+        elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ), '&undelete' )
+            
         
         menu.AppendSeparator()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', CC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally' ), '&open externally' )
         
         share_menu = wx.Menu()
         
@@ -2423,7 +2502,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
-                elif command == 'delete': self._Delete()
+                elif command == 'delete': self._Delete( data )
                 elif command == 'fullscreen_switch': self._FullscreenSwitch()
                 elif command == 'first': self._ShowFirst()
                 elif command == 'last': self._ShowLast()
@@ -2436,6 +2515,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
                 elif command == 'open_externally': self._OpenExternally()
                 elif command == 'remove': self._Remove()
+                elif command == 'undelete': self._Undelete()
                 elif command == 'zoom_in': self._ZoomIn()
                 elif command == 'zoom_out': self._ZoomOut()
                 elif command == 'zoom_switch': self._ZoomSwitch()
@@ -2469,6 +2549,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         
         i_can_post_ratings = len( local_ratings_services ) > 0
+        
+        locations_manager = self._current_display_media.GetLocationsManager()
         
         #
         
@@ -2523,12 +2605,22 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), '&remove' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+        
+        if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+            
+        elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ), '&undelete' )
+            
         
         menu.AppendSeparator()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', CC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally' ), '&open externally' )
         
         share_menu = wx.Menu()
         

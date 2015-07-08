@@ -214,7 +214,7 @@ def ConvertShortcutToPrettyShortcut( modifier, key ):
     
 def ConvertSiteTypeGalleryTypeToPrettyString( site_type, gallery_type ):
     
-    if site_type == HC.SITE_TYPE_BOORU: s = gallery_type.GetName()
+    if site_type == HC.SITE_TYPE_BOORU: s = gallery_type
     else:
         
         s = HC.site_type_string_lookup[ site_type ]
@@ -1089,7 +1089,7 @@ class ContentUpdate( object ):
                 
                 hashes = set( ( hash, ) )
                 
-            elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_RESCIND_PENDING, HC.CONTENT_UPDATE_RESCIND_PETITION ): hashes = self._row
+            elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_RESCIND_PENDING, HC.CONTENT_UPDATE_RESCIND_PETITION ): hashes = self._row
             elif self._action == HC.CONTENT_UPDATE_PETITION: ( hashes, reason ) = self._row
             
         elif self._data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:

@@ -286,11 +286,6 @@ class Controller( HydrusController.HydrusController ):
             if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > self._options[ 'maintenance_vacuum_period' ]: self.Write( 'vacuum' )
             
         
-        if self._options[ 'maintenance_delete_orphans_period' ] != 0:
-            
-            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > self._options[ 'maintenance_delete_orphans_period' ]: self.Write( 'delete_orphans' )
-            
-        
         if self._timestamps[ 'last_service_info_cache_fatten' ] != 0 and now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
             
             HydrusGlobals.pubsub.pub( 'splash_set_text', 'fattening service info' )

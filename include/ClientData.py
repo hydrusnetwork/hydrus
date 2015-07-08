@@ -2010,7 +2010,7 @@ class UndoManager( object ):
                 ( data_type, action, row ) = content_update.ToTuple()
                 
                 if data_type == HC.CONTENT_DATA_TYPE_FILES:
-                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_RESCIND_PETITION ): continue
+                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION ): continue
                 elif data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
                     
                     if action in ( HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ): continue

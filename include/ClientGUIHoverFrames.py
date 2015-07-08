@@ -411,11 +411,13 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         
         self._icon_panel.SetBackgroundColour( wx.WHITE )
         
+        self._trash_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.trash )
         self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.inbox )
         
         icon_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         icon_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        icon_hbox.AddF( self._trash_icon, CC.FLAGS_MIXED )
         icon_hbox.AddF( self._inbox_icon, CC.FLAGS_MIXED )
         
         self._icon_panel.SetSizer( icon_hbox )
@@ -492,9 +494,30 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         
         if self._current_media is not None:
             
-            if self._current_media.HasInbox():
+            has_inbox = self._current_media.HasInbox()
+            has_trash = CC.TRASH_SERVICE_KEY in self._current_media.GetLocationsManager().GetCurrent()
+            
+            if has_inbox or has_trash:
                 
                 self._icon_panel.Show()
+                
+                if has_inbox:
+                    
+                    self._inbox_icon.Show()
+                    
+                else:
+                    
+                    self._inbox_icon.Hide()
+                    
+                
+                if has_trash:
+                    
+                    self._trash_icon.Show()
+                    
+                else:
+                    
+                    self._trash_icon.Hide()
+                    
                 
             else:
                 

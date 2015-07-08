@@ -177,7 +177,9 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = ClientDownloading.GalleryParserBooru( ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ], [ 'animal_ears' ] )
+        wx.GetApp().SetRead( 'remote_booru', ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ] )
+        
+        downloader = ClientDownloading.GalleryParserBooru( 'sankaku chan', [ 'animal_ears' ] )
         
         #
         
@@ -243,7 +245,9 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = ClientDownloading.GalleryParserBooru( ClientDefaults.GetDefaultBoorus()[ 'e621' ], [ 'hair' ] )
+        wx.GetApp().SetRead( 'remote_booru', ClientDefaults.GetDefaultBoorus()[ 'e621' ] )
+        
+        downloader = ClientDownloading.GalleryParserBooru( 'e621', [ 'hair' ] )
         
         #
         

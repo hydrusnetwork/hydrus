@@ -179,11 +179,21 @@ class MediaList( object ):
         for media in self._collected_media: media.DeletePending( service_key )
         
     
-    def GenerateMediaResults( self, discriminant = None, selected_media = None, unrated = None ):
+    def GenerateMediaResults( self, has_location = None, discriminant = None, selected_media = None, unrated = None ):
         
         media_results = []
         
         for media in self._sorted_media:
+            
+            if has_location is not None:
+                
+                locations_manager = media.GetLocationsManager()
+                
+                if has_location not in locations_manager.GetCurrent():
+                    
+                    continue
+                    
+                
             
             if selected_media is not None and media not in selected_media: continue
             
@@ -253,12 +263,19 @@ class MediaList( object ):
         
         if data_type == HC.CONTENT_DATA_TYPE_FILES:
             
-            if action == HC.CONTENT_UPDATE_DELETE and service_key == self._file_service_key:
+            if action == HC.CONTENT_UPDATE_DELETE:
                 
-                affected_singleton_media = self._GetMedia( hashes, 'singletons' )
-                affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
+                permanently_deleted = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in ( CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY )
                 
-                self._RemoveMedia( affected_singleton_media, affected_collected_media )
+                repo_deleted = service_key not in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ) and service_key == self._file_service_key
+                
+                if permanently_deleted or repo_deleted:
+                    
+                    affected_singleton_media = self._GetMedia( hashes, 'singletons' )
+                    affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
+                    
+                    self._RemoveMedia( affected_singleton_media, affected_collected_media )
+                    
                 
             
         
@@ -542,14 +559,14 @@ class MediaCollection( MediaList, Media ):
     
     def GetHash( self ): return self.GetDisplayMedia().GetHash()
     
-    def GetHashes( self, discriminant = None, not_uploaded_to = None ):
+    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None ):
         
-        if discriminant is None and not_uploaded_to is None: return self._hashes
+        if has_location is None and discriminant is None and not_uploaded_to is None: return self._hashes
         else:
             
             result = set()
             
-            for media in self._sorted_media: result.update( media.GetHashes( discriminant, not_uploaded_to ) )
+            for media in self._sorted_media: result.update( media.GetHashes( has_location, discriminant, not_uploaded_to ) )
             
             return result
             
@@ -646,20 +663,23 @@ class MediaSingleton( Media ):
     
     def GetHash( self ): return self._media_result.GetHash()
     
-    def GetHashes( self, discriminant = None, not_uploaded_to = None ):
+    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None ):
+        
+        locations_manager = self._media_result.GetLocationsManager()
         
         if discriminant is not None:
             
             inbox = self._media_result.GetInbox()
             
-            locations_manager = self._media_result.GetLocationsManager()
-            
             if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal() ): return set()
             
         
-        if not_uploaded_to is not None:
+        if has_location is not None:
             
-            locations_manager = self._media_result.GetLocationsManager()
+            if has_location not in locations_manager.GetCurrent(): return set()
+            
+        
+        if not_uploaded_to is not None:
             
             if not_uploaded_to in locations_manager.GetCurrentRemote(): return set()
             
@@ -681,6 +701,7 @@ class MediaSingleton( Media ):
         
         if self.HasInbox(): return 1
         else: return 0
+        
     
     def GetNumWords( self ): return self._media_result.GetNumWords()
     
@@ -910,12 +931,10 @@ class MediaResult( object ):
         if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( service_key, content_update )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
             
-            if service_type == HC.LOCAL_FILE:
+            if service_key == CC.LOCAL_FILE_SERVICE_KEY:
                 
-                if action == HC.CONTENT_UPDATE_ADD and not locations_manager.HasLocal(): inbox = True
-                elif action == HC.CONTENT_UPDATE_ARCHIVE: inbox = False
+                if action == HC.CONTENT_UPDATE_ARCHIVE: inbox = False
                 elif action == HC.CONTENT_UPDATE_INBOX: inbox = True
-                elif action == HC.CONTENT_UPDATE_DELETE: inbox = False
                 
                 self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings )
                 

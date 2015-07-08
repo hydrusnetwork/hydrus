@@ -662,6 +662,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             menu = wx.Menu()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', CC.TRASH_SERVICE_KEY ), p( '&New Trash Search' ), p( 'Open a new search tab for your recently deleted files' ) )
             for service in file_repositories: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
             if len( petition_resolve_tag_services ) > 0 or len( petition_resolve_file_services ) > 0:
                 
@@ -721,7 +722,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu = wx.Menu()
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
+            #submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_service_info' ), p( '&Clear Service Info Cache' ), p( 'Delete all cache service info, in case it has become desynchronised.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
@@ -1183,7 +1184,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 booru = dlg.GetBooru()
                 
-                self._NewPageImportGallery( HC.SITE_TYPE_BOORU, booru )
+                self._NewPageImportGallery( HC.SITE_TYPE_BOORU, booru.GetName() )
                 
             
         
@@ -2489,6 +2490,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
                         
                         self._info_panel.AddF( self._files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                        
                         self._info_panel.AddF( self._deleted_files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                         
                         if service_type == HC.FILE_REPOSITORY:
@@ -2756,9 +2758,10 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                     total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
-                    num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                     
                     self._files_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
+                    
+                    num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                     
                     self._deleted_files_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
                     

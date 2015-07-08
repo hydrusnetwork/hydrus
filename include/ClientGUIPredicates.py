@@ -503,7 +503,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         return info
         
     
-class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
+class PanelPredicateSystemRating( PanelPredicateSystem ):
     
     PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_RATING
     
@@ -511,15 +511,17 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
+        #
+        
         local_like_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
-        self._checkboxes_to_info = {}
+        self._like_checkboxes_to_info = {}
         
-        self._rating_ctrls = []
+        self._like_rating_ctrls = []
         
-        gridbox = wx.FlexGridSizer( 0, 4 )
+        gridbox_like = wx.FlexGridSizer( 0, 4 )
         
-        gridbox.AddGrowableCol( 0, 1 )
+        gridbox_like.AddGrowableCol( 0, 1 )
         
         for service in local_like_services:
             
@@ -530,24 +532,68 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
             not_rated_checkbox = wx.CheckBox( self, label = 'not rated' )
             rating_ctrl = ClientGUICommon.RatingLikeDialog( self, service_key )
             
-            self._checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
-            self._checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
-            self._rating_ctrls.append( rating_ctrl )
+            self._like_checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
+            self._like_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
+            self._like_rating_ctrls.append( rating_ctrl )
             
-            gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
-            gridbox.AddF( rated_checkbox, CC.FLAGS_MIXED )
-            gridbox.AddF( not_rated_checkbox, CC.FLAGS_MIXED )
-            gridbox.AddF( rating_ctrl, CC.FLAGS_MIXED )
+            gridbox_like.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
+            gridbox_like.AddF( rated_checkbox, CC.FLAGS_MIXED )
+            gridbox_like.AddF( not_rated_checkbox, CC.FLAGS_MIXED )
+            gridbox_like.AddF( rating_ctrl, CC.FLAGS_MIXED )
             
         
-        self.SetSizer( gridbox )
+        #
+        
+        local_numerical_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        
+        self._numerical_checkboxes_to_info = {}
+        
+        self._numerical_rating_ctrls_to_info = {}
+        
+        gridbox_numerical = wx.FlexGridSizer( 0, 5 )
+        
+        gridbox_numerical.AddGrowableCol( 0, 1 )
+        
+        for service in local_numerical_services:
+            
+            name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            rated_checkbox = wx.CheckBox( self, label = 'rated' )
+            not_rated_checkbox = wx.CheckBox( self, label = 'not rated' )
+            choice = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248' ] )
+            rating_ctrl = ClientGUICommon.RatingNumericalDialog( self, service_key )
+            
+            choice.Select( 2 )
+            
+            self._numerical_checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
+            self._numerical_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
+            self._numerical_rating_ctrls_to_info[ rating_ctrl ] = choice
+            
+            gridbox_numerical.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
+            gridbox_numerical.AddF( rated_checkbox, CC.FLAGS_MIXED )
+            gridbox_numerical.AddF( not_rated_checkbox, CC.FLAGS_MIXED )
+            gridbox_numerical.AddF( choice, CC.FLAGS_MIXED )
+            gridbox_numerical.AddF( rating_ctrl, CC.FLAGS_MIXED )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( gridbox_like, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( gridbox_numerical, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
         
     
     def GetInfo( self ):
         
         infos = []
         
-        for ( checkbox, ( service_key, rating_state ) ) in self._checkboxes_to_info.items():
+        #
+        
+        for ( checkbox, ( service_key, rating_state ) ) in self._like_checkboxes_to_info.items():
             
             if checkbox.GetValue() == True:
                 
@@ -564,7 +610,7 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
                 
             
         
-        for ctrl in self._rating_ctrls:
+        for ctrl in self._like_rating_ctrls:
             
             rating_state = ctrl.GetRatingState()
             
@@ -585,67 +631,9 @@ class PanelPredicateSystemRatingLike( PanelPredicateSystem ):
                 
             
         
-        return infos
+        #
         
-    
-    def GetPredicates( self ):
-        
-        infos = self.GetInfo()
-        
-        predicates = [ HydrusData.Predicate( self.PREDICATE_TYPE, info ) for info in infos ]
-        
-        return predicates
-        
-    
-class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
-    
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_RATING
-    
-    def __init__( self, parent ):
-        
-        PanelPredicateSystem.__init__( self, parent )
-        
-        local_numerical_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
-        
-        self._checkboxes_to_info = {}
-        
-        self._rating_ctrls_to_info = {}
-        
-        gridbox = wx.FlexGridSizer( 0, 5 )
-        
-        gridbox.AddGrowableCol( 0, 1 )
-        
-        for service in local_numerical_services:
-            
-            name = service.GetName()
-            service_key = service.GetServiceKey()
-            
-            rated_checkbox = wx.CheckBox( self, label = 'rated' )
-            not_rated_checkbox = wx.CheckBox( self, label = 'not rated' )
-            choice = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248' ] )
-            rating_ctrl = ClientGUICommon.RatingNumericalDialog( self, service_key )
-            
-            choice.Select( 2 )
-            
-            self._checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
-            self._checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
-            self._rating_ctrls_to_info[ rating_ctrl ] = choice
-            
-            gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
-            gridbox.AddF( rated_checkbox, CC.FLAGS_MIXED )
-            gridbox.AddF( not_rated_checkbox, CC.FLAGS_MIXED )
-            gridbox.AddF( choice, CC.FLAGS_MIXED )
-            gridbox.AddF( rating_ctrl, CC.FLAGS_MIXED )
-            
-        
-        self.SetSizer( gridbox )
-        
-    
-    def GetInfo( self ):
-        
-        infos = []
-        
-        for ( checkbox, ( service_key, rating_state ) ) in self._checkboxes_to_info.items():
+        for ( checkbox, ( service_key, rating_state ) ) in self._numerical_checkboxes_to_info.items():
             
             if checkbox.GetValue() == True:
                 
@@ -662,7 +650,7 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
                 
             
         
-        for ( ctrl, choice ) in self._rating_ctrls_to_info.items():
+        for ( ctrl, choice ) in self._numerical_rating_ctrls_to_info.items():
             
             rating_state = ctrl.GetRatingState()
             
@@ -677,6 +665,8 @@ class PanelPredicateSystemRatingNumerical( PanelPredicateSystem ):
                 infos.append( ( operator, value, service_key ) )
                 
             
+        
+        #
         
         return infos
         

@@ -997,7 +997,7 @@ class TestClientDB( unittest.TestCase ):
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertItemsEqual( { CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
+        self.assertItemsEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
         
         #
         

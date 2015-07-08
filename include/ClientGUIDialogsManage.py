@@ -7729,13 +7729,32 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def EventDelete( self, event ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
+        locations_manager = self._current_media.GetLocationsManager()
+        
+        if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            text = 'Send this file to the trash?'
+            
+            service_key = CC.LOCAL_FILE_SERVICE_KEY
+            
+        elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            text = 'Permanently delete this file?'
+            
+            service_key = CC.TRASH_SERVICE_KEY
+            
+        else:
+            
+            return
+            
+        
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
                 self._CommitCurrentChanges()
                 
-                wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+                wx.GetApp().Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
                 
             
         

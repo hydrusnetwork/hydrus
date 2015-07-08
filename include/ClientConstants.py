@@ -232,6 +232,7 @@ class GlobalBMPs( object ):
         
         GlobalBMPs.collection = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'collection.png' )
         GlobalBMPs.inbox = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'inbox.png' )
+        GlobalBMPs.trash = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'trash.png' )
         
         GlobalBMPs.archive = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'archive.png' )
         GlobalBMPs.to_inbox = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'to_inbox.png' )
@@ -264,6 +265,8 @@ LOCAL_TAG_SERVICE_KEY = 'local tags'
 LOCAL_FILE_SERVICE_KEY = 'local files'
 
 LOCAL_BOORU_SERVICE_KEY = 'local booru'
+
+TRASH_SERVICE_KEY = 'trash'
 
 COMBINED_FILE_SERVICE_KEY = 'all known files'
 

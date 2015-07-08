@@ -1247,11 +1247,12 @@ class DialogInputFileSystemPredicates( Dialog ):
             
             services_manager = wx.GetApp().GetServicesManager()
             
-            ratings_like = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-            ratings_numerical = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+            ratings_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
-            if len( ratings_like ) > 0: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatingLike )
-            if len( ratings_numerical ) > 0: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatingNumerical )
+            if len( ratings_services ) > 0:
+                
+                pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRating )
+                
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSimilarTo )
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSize )
@@ -3176,7 +3177,7 @@ class DialogPageChooser( Dialog ):
             
             file_repos = [ ( 'page_query', service_key ) for service_key in [ service.GetServiceKey() for service in self._services if service.GetServiceType() == HC.FILE_REPOSITORY ] ]
             
-            entries = [ ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ) ] + file_repos
+            entries = [ ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ), ( 'page_query', CC.TRASH_SERVICE_KEY ) ] + file_repos
             
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery':
@@ -3240,7 +3241,7 @@ class DialogPageChooser( Dialog ):
                             
                             booru = dlg.GetBooru()
                             
-                            HydrusGlobals.pubsub.pub( 'new_import_gallery', HC.SITE_TYPE_BOORU, booru )
+                            HydrusGlobals.pubsub.pub( 'new_import_gallery', HC.SITE_TYPE_BOORU, booru.GetName() )
                             
                         
                     

@@ -62,28 +62,6 @@ def GenerateExportFilename( media, terms ):
     
     return filename
     
-def GetAllFileHashes():
-    
-    file_hashes = set()
-    
-    for path in IterateAllFilePaths():
-        
-        ( base, filename ) = os.path.split( path )
-        
-        result = filename.split( '.', 1 )
-        
-        if len( result ) != 2: continue
-        
-        ( hash_encoded, ext ) = result
-        
-        try: hash = hash_encoded.decode( 'hex' )
-        except TypeError: continue
-        
-        file_hashes.add( hash )
-        
-    
-    return file_hashes
-
 def GetAllPaths( raw_paths ):
     
     file_paths = []
@@ -225,6 +203,24 @@ def GetExpectedServiceUpdatePackagePath( service_key, begin ):
     
     return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin ) + '_metadata.json'
     
+def IterateAllFileHashes():
+    
+    for path in IterateAllFilePaths():
+        
+        ( base, filename ) = os.path.split( path )
+        
+        result = filename.split( '.', 1 )
+        
+        if len( result ) != 2: continue
+        
+        ( hash_encoded, ext ) = result
+        
+        try: hash = hash_encoded.decode( 'hex' )
+        except TypeError: continue
+        
+        yield hash
+        
+    
 def IterateAllFilePaths():
     
     hex_chars = '0123456789abcdef'
@@ -236,6 +232,7 @@ def IterateAllFilePaths():
         next_paths = dircache.listdir( dir )
         
         for path in next_paths: yield dir + os.path.sep + path
+        
 
 def IterateAllThumbnailPaths():
     
@@ -485,6 +482,8 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class LocationsManager( object ):
     
+    LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY }
+    
     def __init__( self, current, deleted, pending, petitioned ):
         
         self._current = current
@@ -502,10 +501,16 @@ class LocationsManager( object ):
     def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
     
     def GetCurrent( self ): return self._current
-    def GetCurrentRemote( self ): return self._current - set( ( CC.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetCurrentRemote( self ):
+        
+        return self._current - self.LOCAL_LOCATIONS
+        
     
     def GetDeleted( self ): return self._deleted
-    def GetDeletedRemote( self ): return self._deleted - set( ( CC.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetDeletedRemote( self ):
+        
+        return self._deleted - self.LOCAL_LOCATIONS
+        
     
     def GetFileRepositoryStrings( self ):
     
@@ -548,14 +553,20 @@ class LocationsManager( object ):
         
     
     def GetPending( self ): return self._pending
-    def GetPendingRemote( self ): return self._pending - set( ( CC.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetPendingRemote( self ):
+        
+        return self._pending - self.LOCAL_LOCATIONS
+        
     
     def GetPetitioned( self ): return self._petitioned
-    def GetPetitionedRemote( self ): return self._petitioned - set( ( CC.LOCAL_FILE_SERVICE_KEY, ) )
+    def GetPetitionedRemote( self ):
+        
+        return self._petitioned - self.LOCAL_LOCATIONS
+        
     
     def HasDownloading( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._pending
     
-    def HasLocal( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._current
+    def HasLocal( self ): return len( self._current.union( self.LOCAL_LOCATIONS ) ) > 0
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
@@ -568,12 +579,28 @@ class LocationsManager( object ):
             self._deleted.discard( service_key )
             self._pending.discard( service_key )
             
+            if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                
+                self._current.discard( CC.TRASH_SERVICE_KEY )
+                
+            
         elif action == HC.CONTENT_UPDATE_DELETE:
             
             self._deleted.add( service_key )
             
             self._current.discard( service_key )
             self._petitioned.discard( service_key )
+            
+            if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                
+                self._current.add( CC.TRASH_SERVICE_KEY )
+                
+            
+        elif action == HC.CONTENT_UPDATE_UNDELETE:
+            
+            self._current.discard( CC.TRASH_SERVICE_KEY )
+            
+            self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
             
         elif action == HC.CONTENT_UPDATE_PENDING:
             
