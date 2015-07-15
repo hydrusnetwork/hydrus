@@ -648,6 +648,10 @@ def TimeHasPassed( timestamp ):
     
     return GetNow() > timestamp
     
+def TimeHasPassedPrecise( precise_timestamp ):
+    
+    return GetNowPrecise() > precise_timestamp
+    
 def ToBytes( text_producing_object ):
     
     if type( text_producing_object ) == unicode: return text_producing_object.encode( 'utf-8' )
@@ -1340,16 +1344,9 @@ class JobKey( object ):
             if 'popup_db_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_db_traceback' ] )
             
         
-        try:
-            
-            return os.linesep.join( stuff_to_print )
-            
-        except UnicodeEncodeError:
-            
-            stuff_to_print = [ ToString( s ) for s in stuff_to_print ]
-            
-            return os.linesep.join( stuff_to_print )
-            
+        stuff_to_print = [ ToString( s ) for s in stuff_to_print ]
+        
+        return os.linesep.join( stuff_to_print )
         
     
     def WaitIfNeeded( self ):
@@ -1411,6 +1408,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             serialisable_value = ( operator, value, service_key.encode( 'hex' ) )
             
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            
+            ( hash, max_hamming ) = self._value
+            
+            serialisable_value = ( hash.encode( 'hex' ), max_hamming )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+            
+            serialisable_value = self._value.encode( 'hex' )
+            
         else:
             
             serialisable_value = self._value
@@ -1428,6 +1435,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             ( operator, value, service_key ) = serialisable_value
             
             self._value = ( operator, value, service_key.decode( 'hex' ) )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            
+            ( serialisable_hash, max_hamming ) = serialisable_value
+            
+            self._value = ( serialisable_hash.decode( 'hex' ), max_hamming )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+            
+            self._value = serialisable_value.decode( 'hex' )
             
         else:
             
@@ -1670,7 +1687,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             if not self._inclusive: base = u'-'
             else: base = u''
             
-            base += namespace + u':*'
+            base += namespace + u':*anything*'
             
         elif self._predicate_type == HC.PREDICATE_TYPE_WILDCARD:
             

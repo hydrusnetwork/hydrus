@@ -455,7 +455,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _DeleteOrphans( self ):
         
-        text = 'This will iterate through the client\'s file store, deleting anything that is no longer needed. It happens automatically every few days, but you can force it here. If you have a lot of files, it will take a few minutes. A popup message will appear when it is done.'
+        text = 'This will iterate through the client\'s file store, deleting anything that is no longer needed. It happens automatically every few days, but you can force it here. If you have a lot of files, it will take a few minutes. A popup message will show its status.'
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
@@ -1608,7 +1608,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _VacuumDatabase( self ):
         
-        text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes. A popup message will appear when it is done.'
+        text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes. A popup message will show its status'
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
@@ -2997,10 +2997,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                         ( action, row ) = service_update.ToTuple()
                         
-                        if action in ( HC.SERVICE_UPDATE_ACCOUNT, HC.SERVICE_UPDATE_REQUEST_MADE ): wx.CallLater( 600, self._DisplayAccountInfo )
+                        if action in ( HC.SERVICE_UPDATE_ACCOUNT, HC.SERVICE_UPDATE_REQUEST_MADE ):
+                            
+                            self._DisplayAccountInfo()
+                            
                         else:
-                            wx.CallLater( 200, self._DisplayService )
-                            wx.CallLater( 400, self.Layout ) # ugly hack, but it works for now
+                            
+                            self._DisplayService()
+                            
+                        
+                        self.Layout()
                         
                     
                 

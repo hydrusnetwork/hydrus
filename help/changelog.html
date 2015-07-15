@@ -8,6 +8,53 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 165</h3></li>
+				<ul>
+					<li>added a db table to track when a file was sent to trash</li>
+					<li>added an option for whether trashed files are removed from view</li>
+					<li>added a max age to trashed files</li>
+					<li>added a max size to the trash</li>
+					<li>added a daemon to maintain the trash</li>
+					<li>improved some generic deleted shortcut logic, so delete key will present option to delete from trash if appropriate</li>
+					<li>shift+delete will now undelete</li>
+					<li>misc trash code improvements</li>
+					<li>thumbnails deleted from the trash will accurately remove their inbox status icons</li>
+					<li>images downloaded from file repositories will accurately add inbox status icons</li>
+					<li>reduced chance of problems when trying to delete media from the trash when it is currently being rendered</li>
+					<li>further reduced this chance</li>
+					<li>removed redundant undelete code, folded it into add/delete code</li>
+					<li>the media viewer will now remove files deleted from the trash in all cases, even when launched from a file repository search</li>
+					<li>significantly improved how animations figure out when to put frames on screen. these timings should be much more accurate, slowing down only if your CPU can't keep up</li>
+					<li>8chan thread watcher now parses all files from multiple file posts</li>
+					<li>if a booru provides a link starting with 'Download PNG', which refers to the original source png, that will be preferred over the jpg (konachan and yande.re, which run Moebooru, do this)</li>
+					<li>booru parser is now a little more liberal in parsing for the image link</li>
+					<li>yande.re booru support is added by default</li>
+					<li>fixed some local/remote state code, which was breaking file repository searches in several ways</li>
+					<li>improved error handling in repository file download daemon</li>
+					<li>cleaned up manage options dialog code</li>
+					<li>reduced min size of the media caches in manage options dialog</li>
+					<li>moved thumbnail size to 'maintenance and memory'</li>
+					<li>added better error handling to repositories that cannot find an update file during processing</li>
+					<li>repositories that have such errors will pause to give the user a chance to figure out a solution</li>
+					<li>misc code improvements</li>
+					<li>fixed a bug where file repository downloads were not importing if the file had once been deleted</li>
+					<li>dropped the clever indices from last week--sqlite had too much trouble with them. I will reform my db tables next week to get around the whole issue. for now, I have reintroduced the bulky index and forced sqlite to use it where appropriate</li>
+					<li>added a test for collecting pending tag data</li>
+					<li>tags in the form 'text:', which would sometimes slip through when typing quickly, are now not processed</li>
+					<li>improved tag cleaning error reporting</li>
+					<li>improved when special wildcard and namespace predicates are provided</li>
+					<li>namespace predicates now display as 'namespace:*anything*'</li>
+					<li>fixed a bug when launching the media viewer from collected results</li>
+					<li>fixed a command hover window layout bug that was putting namespace text in incorrect places</li>
+					<li>fixed a bug that was causing the new client-wide processing phase option not to work because, ironically, its calculation was out of phase</li>
+					<li>review services will now state how many updates have been processed</li>
+					<li>review services will specify if an update is imminently due, rather than saying the repo is fully synched</li>
+					<li>fixed a review services layout bug that was misaligning text after an account or data usage update</li>
+					<li>fixed a bug in system:similar_to serialisation, so pages with this predicate can now be saved to a session</li>
+					<li>fixed the same bug for system:hash</li>
+					<li>vacuum should be a bit politer about waiting for its popup message to appear</li>
+					<li>database maintenance won't run while a repository is synchronising</li>
+				</ul>
 				<li><h3>version 164</h3></li>
 				<ul>
 					<li>rewrote the drawing code for the listbox that displays tags in various ways to be a lot faster and more memory efficient</li>

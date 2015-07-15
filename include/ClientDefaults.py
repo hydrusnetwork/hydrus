@@ -15,9 +15,9 @@ def GetClientDefaultOptions():
     options[ 'hpos' ] = 400
     options[ 'vpos' ] = 700
     options[ 'exclude_deleted_files' ] = False
-    options[ 'thumbnail_cache_size' ] = 100 * 1048576
-    options[ 'preview_cache_size' ] = 25 * 1048576
-    options[ 'fullscreen_cache_size' ] = 200 * 1048576
+    options[ 'thumbnail_cache_size' ] = 25 * 1048576
+    options[ 'preview_cache_size' ] = 15 * 1048576
+    options[ 'fullscreen_cache_size' ] = 150 * 1048576
     options[ 'thumbnail_dimensions' ] = [ 150, 125 ]
     options[ 'password' ] = None
     options[ 'num_autocomplete_chars' ] = 2
@@ -29,6 +29,9 @@ def GetClientDefaultOptions():
     options[ 'maintenance_delete_orphans_period' ] = 86400 * 3
     options[ 'maintenance_vacuum_period' ] = 86400 * 5
     options[ 'fit_to_canvas' ] = False
+    options[ 'trash_max_age' ] = 72
+    options[ 'trash_max_size' ] = 512
+    options[ 'remove_trashed_files' ] = False
     
     system_predicates = {}
     
@@ -294,6 +297,17 @@ def GetDefaultBoorus():
     tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
     
     boorus[ 'konachan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+    
+    name = 'yande.re'
+    search_url = 'http://yande.re/post?page=%index%&tags=%tags%'
+    search_separator = '+'
+    advance_by_page_num = True
+    thumb_classname = 'thumb'
+    image_id = None
+    image_data = 'View larger version'
+    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+    
+    boorus[ 'yande.re' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'tbib'
     search_url = 'http://tbib.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'

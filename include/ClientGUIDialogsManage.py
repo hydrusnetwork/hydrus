@@ -2814,269 +2814,216 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._listbook = ClientGUICommon.ListBook( self )
-            
-            # connection
-            
-            self._connection_page = wx.Panel( self._listbook )
-            self._connection_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._proxy_type = ClientGUICommon.BetterChoice( self._connection_page )
-            
-            self._proxy_address = wx.TextCtrl( self._connection_page )
-            self._proxy_port = wx.SpinCtrl( self._connection_page, min = 0, max = 65535 )
-            
-            self._proxy_username = wx.TextCtrl( self._connection_page )
-            self._proxy_password = wx.TextCtrl( self._connection_page )
-            
-            self._listbook.AddPage( 'connection', self._connection_page )
-            
-            # files and thumbnails
-            
-            self._file_page = wx.Panel( self._listbook )
-            self._file_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._export_location = wx.DirPickerCtrl( self._file_page, style = wx.DIRP_USE_TEXTCTRL )
-            
-            self._exclude_deleted_files = wx.CheckBox( self._file_page, label = '' )
-            
-            self._thumbnail_width = wx.SpinCtrl( self._file_page, min=20, max=200 )
-            self._thumbnail_width.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
-            self._thumbnail_height = wx.SpinCtrl( self._file_page, min=20, max=200 )
-            self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
-            self._listbook.AddPage( 'files and thumbnails', self._file_page )
-            
-            # maintenance and memory
-            
-            self._maintenance_page = wx.Panel( self._listbook )
-            self._maintenance_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._thumbnail_cache_size = wx.SpinCtrl( self._maintenance_page, min = 10, max = 3000 )
-            self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
-            self._estimated_number_thumbnails = wx.StaticText( self._maintenance_page, label = '' )
-            
-            self._preview_cache_size = wx.SpinCtrl( self._maintenance_page, min = 20, max = 3000 )
-            self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
-            
-            self._estimated_number_previews = wx.StaticText( self._maintenance_page, label = '' )
-            
-            self._fullscreen_cache_size = wx.SpinCtrl( self._maintenance_page, min = 100, max = 3000 )
-            self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
-            
-            self._estimated_number_fullscreens = wx.StaticText( self._maintenance_page, label = '' )
-            
-            self._maintenance_idle_period = wx.SpinCtrl( self._maintenance_page, min = 0, max = 1000 )
-            self._maintenance_vacuum_period = wx.SpinCtrl( self._maintenance_page, min = 0, max = 365 )
-            self._maintenance_delete_orphans_period = wx.SpinCtrl( self._maintenance_page, min = 0, max = 365 )
-            
-            self._num_autocomplete_chars = wx.SpinCtrl( self._maintenance_page, min = 1, max = 100 )
-            self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db' + os.linesep + 'increase this if you find autocomplete results are slow' )
-            
-            self._autocomplete_long_wait = wx.SpinCtrl( self._maintenance_page, min = 0, max = 10000 )
-            self._autocomplete_long_wait.SetToolTipString( 'how long the gui will wait, after you enter a character, before it queries the db with what you have entered so far' )
-            
-            self._autocomplete_short_wait_chars = wx.SpinCtrl( self._maintenance_page, min = 1, max = 100 )
-            self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
-            
-            self._autocomplete_short_wait = wx.SpinCtrl( self._maintenance_page, min = 0, max = 10000 )
-            self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
-            
-            self._processing_phase = wx.SpinCtrl( self._maintenance_page, min = 0, max = 100000 )
-            self._processing_phase.SetToolTipString( 'how long this client will delay processing updates after they are due. useful if you have multiple clients and do not want them to process at the same time' )
-            
-            self._listbook.AddPage( 'maintenance and memory', self._maintenance_page )
-            
-            # media
-            
-            self._media_page = wx.Panel( self._listbook )
-            self._media_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._fit_to_canvas = wx.CheckBox( self._media_page, label = '' )
-            
-            self._listbook.AddPage( 'media', self._media_page )
-            
-            # gui
-            
-            self._gui_page = wx.Panel( self._listbook )
-            self._gui_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._default_gui_session = wx.Choice( self._gui_page )
-            
-            self._confirm_client_exit = wx.CheckBox( self._gui_page )
-            
-            self._gui_capitalisation = wx.CheckBox( self._gui_page )
-            
-            self._gui_show_all_tags_in_autocomplete = wx.CheckBox( self._gui_page )
-            
-            self._default_tag_sort = wx.Choice( self._gui_page )
-            
-            self._default_tag_sort.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
-            self._default_tag_sort.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
-            self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
-            self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
-            
-            self._default_tag_repository = ClientGUICommon.BetterChoice( self._gui_page )
-            
-            self._listbook.AddPage( 'gui', self._gui_page )
-            
-            # sound
-            
-            self._sound_page = wx.Panel( self._listbook )
-            self._sound_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._play_dumper_noises = wx.CheckBox( self._sound_page, label = 'play success/fail noises when dumping' )
-            
-            self._listbook.AddPage( 'sound', self._sound_page )
-            
-            # default file system predicates
-            
-            self._file_system_predicates_page = wx.Panel( self._listbook )
-            self._file_system_predicates_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._file_system_predicate_age = ClientGUIPredicates.PanelPredicateSystemAge( self._file_system_predicates_page )
-            
-            self._file_system_predicate_duration = ClientGUIPredicates.PanelPredicateSystemDuration( self._file_system_predicates_page )
-            
-            self._file_system_predicate_height = ClientGUIPredicates.PanelPredicateSystemHeight( self._file_system_predicates_page )
-            
-            self._file_system_predicate_limit = ClientGUIPredicates.PanelPredicateSystemLimit( self._file_system_predicates_page )
-            
-            self._file_system_predicate_mime = ClientGUIPredicates.PanelPredicateSystemMime( self._file_system_predicates_page )
-            
-            self._file_system_predicate_num_pixels = ClientGUIPredicates.PanelPredicateSystemNumPixels( self._file_system_predicates_page )
-            
-            self._file_system_predicate_num_tags = ClientGUIPredicates.PanelPredicateSystemNumTags( self._file_system_predicates_page )
-            
-            self._file_system_predicate_num_words = ClientGUIPredicates.PanelPredicateSystemNumWords( self._file_system_predicates_page )
-            
-            self._file_system_predicate_ratio = ClientGUIPredicates.PanelPredicateSystemRatio( self._file_system_predicates_page )
-            
-            self._file_system_predicate_similar_to = ClientGUIPredicates.PanelPredicateSystemSimilarTo( self._file_system_predicates_page )
-            
-            self._file_system_predicate_size = ClientGUIPredicates.PanelPredicateSystemSize( self._file_system_predicates_page )
-            
-            self._file_system_predicate_width = ClientGUIPredicates.PanelPredicateSystemWidth( self._file_system_predicates_page )
-            
-            self._listbook.AddPage( 'default file system predicates', self._file_system_predicates_page )
-            
-            # default advanced tag options
-            
-            self._advanced_tag_options_page = wx.Panel( self._listbook )
-            self._advanced_tag_options_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._advanced_tag_options = wx.ListBox( self._advanced_tag_options_page )
-            self._advanced_tag_options.Bind( wx.EVT_LEFT_DCLICK, self.EventATODelete )
-            
-            self._advanced_tag_options_add = wx.Button( self._advanced_tag_options_page, label = 'add' )
-            self._advanced_tag_options_add.Bind( wx.EVT_BUTTON, self.EventATOAdd )
-            
-            self._advanced_tag_options_edit = wx.Button( self._advanced_tag_options_page, label = 'edit' )
-            self._advanced_tag_options_edit.Bind( wx.EVT_BUTTON, self.EventATOEdit )
-            
-            self._advanced_tag_options_delete = wx.Button( self._advanced_tag_options_page, label = 'delete' )
-            self._advanced_tag_options_delete.Bind( wx.EVT_BUTTON, self.EventATODelete )
-            
-            self._listbook.AddPage( 'default advanced tag options', self._advanced_tag_options_page )
-            
-            # colours
-            
-            self._colour_page = wx.Panel( self._listbook )
-            self._colour_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage options' )
+        
+        self._listbook = ClientGUICommon.ListBook( self )
+        
+        self._listbook.AddPage( 'connection', self._ConnectionPanel( self._listbook ) )
+        self._listbook.AddPage( 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
+        self._listbook.AddPage( 'maintenance and memory', self._MaintenanceAndMemoryPanel( self._listbook ) )
+        self._listbook.AddPage( 'media', self._MediaPanel( self._listbook ) )
+        self._listbook.AddPage( 'gui', self._GUIPanel( self._listbook ) )
+        #self._listbook.AddPage( 'sound', self._SoundPanel( self._listbook ) )
+        self._listbook.AddPage( 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook ) )
+        self._listbook.AddPage( 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook ) )
+        self._listbook.AddPage( 'colours', self._ColoursPanel( self._listbook ) )
+        self._listbook.AddPage( 'local server', self._ServerPanel( self._listbook ) )
+        self._listbook.AddPage( 'sort/collect', self._SortCollectPanel( self._listbook ) )
+        self._listbook.AddPage( 'shortcuts', self._ShortcutsPanel( self._listbook ) )
+        self._listbook.AddPage( 'thread checker', self._ThreadCheckerPanel( self._listbook ) )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Save' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
+        buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 800: x = 800
+        if y < 600: y = 600
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        #
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    class _ColoursPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._gui_colours = {}
             
             for ( name, rgb ) in HC.options[ 'gui_colours' ].items():
                 
-                ctrl = wx.ColourPickerCtrl( self._colour_page )
+                ctrl = wx.ColourPickerCtrl( self )
                 
                 ctrl.SetMaxSize( ( 20, -1 ) )
                 
                 self._gui_colours[ name ] = ctrl
                 
             
-            self._namespace_colours = ClientGUICommon.ListBoxTagsColourOptions( self._colour_page, HC.options[ 'namespace_colours' ] )
+            self._namespace_colours = ClientGUICommon.ListBoxTagsColourOptions( self, HC.options[ 'namespace_colours' ] )
             
-            self._edit_namespace_colour = wx.Button( self._colour_page, label = 'edit selected' )
+            self._edit_namespace_colour = wx.Button( self, label = 'edit selected' )
             self._edit_namespace_colour.Bind( wx.EVT_BUTTON, self.EventEditNamespaceColour )
             
-            self._new_namespace_colour = wx.TextCtrl( self._colour_page, style = wx.TE_PROCESS_ENTER )
+            self._new_namespace_colour = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
             self._new_namespace_colour.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownNamespace )
-            
-            self._listbook.AddPage( 'colours', self._colour_page )
-            
-            # server
-            
-            self._server_page = wx.Panel( self._listbook )
-            self._server_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._local_port = wx.SpinCtrl( self._server_page, min = 0, max = 65535 )
-            
-            self._listbook.AddPage( 'local server', self._server_page )
-            
-            # sort/collect
-            
-            self._sort_by_page = wx.Panel( self._listbook )
-            self._sort_by_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._default_sort = ClientGUICommon.ChoiceSort( self._sort_by_page, sort_by = HC.options[ 'sort_by' ] )
-            
-            self._default_collect = ClientGUICommon.CheckboxCollect( self._sort_by_page )
-            
-            self._sort_by = wx.ListBox( self._sort_by_page )
-            self._sort_by.Bind( wx.EVT_LEFT_DCLICK, self.EventRemoveSortBy )
-            
-            self._new_sort_by = wx.TextCtrl( self._sort_by_page, style = wx.TE_PROCESS_ENTER )
-            self._new_sort_by.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownSortBy )
-            
-            self._listbook.AddPage( 'sort/collect', self._sort_by_page )
-            
-            # shortcuts
-            
-            self._shortcuts_page = wx.Panel( self._listbook )
-            self._shortcuts_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._shortcuts = ClientGUICommon.SaneListCtrl( self._shortcuts_page, 480, [ ( 'modifier', 120 ), ( 'key', 120 ), ( 'action', -1 ) ], delete_key_callback = self.DeleteShortcuts )
-            
-            self._shortcuts_add = wx.Button( self._shortcuts_page, label = 'add' )
-            self._shortcuts_add.Bind( wx.EVT_BUTTON, self.EventShortcutsAdd )
-            
-            self._shortcuts_edit = wx.Button( self._shortcuts_page, label = 'edit' )
-            self._shortcuts_edit.Bind( wx.EVT_BUTTON, self.EventShortcutsEdit )
-            
-            self._shortcuts_delete = wx.Button( self._shortcuts_page, label = 'delete' )
-            self._shortcuts_delete.Bind( wx.EVT_BUTTON, self.EventShortcutsDelete )
-            
-            self._listbook.AddPage( 'shortcuts', self._shortcuts_page )
-            
-            # thread checker
-            
-            self._thread_checker_page = wx.Panel( self._listbook )
-            self._thread_checker_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._thread_times_to_check = wx.SpinCtrl( self._thread_checker_page, min = 0, max = 100 )
-            self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
-            
-            self._thread_check_period = wx.SpinCtrl( self._thread_checker_page, min = 30, max = 86400 )
-            self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
-            
-            self._listbook.AddPage( 'thread checker', self._thread_checker_page )
             
             #
             
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Save' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            for ( name, rgb ) in HC.options[ 'gui_colours' ].items(): self._gui_colours[ name ].SetColour( wx.Colour( *rgb ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'thumbnail background (local: normal/selected, remote: normal/selected): ' ), CC.FLAGS_MIXED )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._gui_colours[ 'thumb_background' ], CC.FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_background_selected' ], CC.FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_background_remote' ], CC.FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_background_remote_selected' ], CC.FLAGS_MIXED )
+            
+            gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'thumbnail border (local: normal/selected, remote: normal/selected): ' ), CC.FLAGS_MIXED )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._gui_colours[ 'thumb_border' ], CC.FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_border_selected' ], CC.FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_border_remote' ], CC.FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_border_remote_selected' ], CC.FLAGS_MIXED )
+            
+            gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'thumbnail grid background: '), CC.FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'thumbgrid_background' ], CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'autocomplete background: '), CC.FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'autocomplete_background' ], CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'media viewer background: '), CC.FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'media_background' ], CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'media viewer text: '), CC.FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'media_text' ], CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'tags box background: '), CC.FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'tags_box' ], CC.FLAGS_MIXED )
+            
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
             
         
-        def PopulateControls():
+        def EventEditNamespaceColour( self, event ):
+            
+            result = self._namespace_colours.GetSelectedNamespaceColour()
+            
+            if result is not None:
+                
+                ( namespace, colour ) = result
+                
+                colour_data = wx.ColourData()
+                
+                colour_data.SetColour( colour )
+                colour_data.SetChooseFull( True )
+                
+                with wx.ColourDialog( self, data = colour_data ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        colour_data = dlg.GetColourData()
+                        
+                        colour = colour_data.GetColour()
+                        
+                        self._namespace_colours.SetNamespaceColour( namespace, colour )
+                        
+                    
+                
+            
+        
+        def EventKeyDownNamespace( self, event ):
+            
+            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                namespace = self._new_namespace_colour.GetValue()
+                
+                if namespace != '':
+                    
+                    self._namespace_colours.SetNamespaceColour( namespace, wx.Colour( random.randint( 0, 255 ), random.randint( 0, 255 ), random.randint( 0, 255 ) ) )
+                    
+                    self._new_namespace_colour.SetValue( '' )
+                    
+                
+            else: event.Skip()
+            
+        
+        def UpdateOptions( self ):
+            
+            for ( name, ctrl ) in self._gui_colours.items():
+                
+                colour = ctrl.GetColour()
+                
+                rgb = ( colour.Red(), colour.Green(), colour.Blue() )
+                
+                HC.options[ 'gui_colours' ][ name ] = rgb
+                
+            
+            HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
+            
+        
+    
+    class _ConnectionPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._proxy_type = ClientGUICommon.BetterChoice( self )
+            
+            self._proxy_address = wx.TextCtrl( self )
+            self._proxy_port = wx.SpinCtrl( self, min = 0, max = 65535 )
+            
+            self._proxy_username = wx.TextCtrl( self )
+            self._proxy_password = wx.TextCtrl( self )
+            
+            #
             
             self._proxy_type.Append( 'http', 'http' )
             self._proxy_type.Append( 'socks4', 'socks4' )
@@ -3108,6 +3055,286 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Proxy type: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_type, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Address: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_address, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Port: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_port, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Username (optional): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_username, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Password (optional): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._proxy_password, CC.FLAGS_MIXED )
+            
+            text = 'You have to restart the client for proxy settings to take effect.'
+            text += os.linesep
+            text += 'This is in a buggy prototype stage right now, pending a rewrite of the networking engine.'
+            text += os.linesep
+            text += 'Please send me your feedback.'
+            
+            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            if self._proxy_address.GetValue() == '':
+                
+                HC.options[ 'proxy' ] = None
+                
+            else:
+                
+                proxytype = self._proxy_type.GetChoice()
+                address = self._proxy_address.GetValue()
+                port = self._proxy_port.GetValue()
+                username = self._proxy_username.GetValue()
+                password = self._proxy_password.GetValue()
+                
+                if username == '': username = None
+                if password == '': password = None
+                
+                HC.options[ 'proxy' ] = ( proxytype, address, port, username, password )
+                
+            
+        
+    
+    class _DefaultFileSystemPredicatesPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._file_system_predicate_age = ClientGUIPredicates.PanelPredicateSystemAge( self )
+            self._file_system_predicate_duration = ClientGUIPredicates.PanelPredicateSystemDuration( self )
+            self._file_system_predicate_height = ClientGUIPredicates.PanelPredicateSystemHeight( self )
+            self._file_system_predicate_limit = ClientGUIPredicates.PanelPredicateSystemLimit( self )
+            self._file_system_predicate_mime = ClientGUIPredicates.PanelPredicateSystemMime( self )
+            self._file_system_predicate_num_pixels = ClientGUIPredicates.PanelPredicateSystemNumPixels( self )
+            self._file_system_predicate_num_tags = ClientGUIPredicates.PanelPredicateSystemNumTags( self )
+            self._file_system_predicate_num_words = ClientGUIPredicates.PanelPredicateSystemNumWords( self )
+            self._file_system_predicate_ratio = ClientGUIPredicates.PanelPredicateSystemRatio( self )
+            self._file_system_predicate_similar_to = ClientGUIPredicates.PanelPredicateSystemSimilarTo( self )
+            self._file_system_predicate_size = ClientGUIPredicates.PanelPredicateSystemSize( self )
+            self._file_system_predicate_width = ClientGUIPredicates.PanelPredicateSystemWidth( self )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_height, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_mime, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_num_pixels, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_num_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_num_words, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_ratio, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_similar_to, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_system_predicate_width, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            system_predicates = HC.options[ 'file_system_predicates' ]
+            
+            system_predicates[ 'age' ] = self._file_system_predicate_age.GetInfo()
+            system_predicates[ 'duration' ] = self._file_system_predicate_duration.GetInfo()
+            system_predicates[ 'hamming_distance' ] = self._file_system_predicate_similar_to.GetInfo()[1]
+            system_predicates[ 'height' ] = self._file_system_predicate_height.GetInfo()
+            system_predicates[ 'limit' ] = self._file_system_predicate_limit.GetInfo()
+            system_predicates[ 'mime' ] = self._file_system_predicate_mime.GetInfo()
+            system_predicates[ 'num_pixels' ] = self._file_system_predicate_num_pixels.GetInfo()
+            system_predicates[ 'num_tags' ] = self._file_system_predicate_num_tags.GetInfo()
+            system_predicates[ 'num_words' ] = self._file_system_predicate_num_words.GetInfo()
+            system_predicates[ 'ratio' ] = self._file_system_predicate_ratio.GetInfo()
+            system_predicates[ 'size' ] = self._file_system_predicate_size.GetInfo()
+            system_predicates[ 'width' ] = self._file_system_predicate_width.GetInfo()
+            
+            HC.options[ 'file_system_predicates' ] = system_predicates
+            
+        
+    
+    class _DefaultTagImportOptionsPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._advanced_tag_options = wx.ListBox( self )
+            self._advanced_tag_options.Bind( wx.EVT_LEFT_DCLICK, self.EventDelete )
+            
+            self._advanced_tag_options_add = wx.Button( self, label = 'add' )
+            self._advanced_tag_options_add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            
+            self._advanced_tag_options_edit = wx.Button( self, label = 'edit' )
+            self._advanced_tag_options_edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+            
+            self._advanced_tag_options_delete = wx.Button( self, label = 'delete' )
+            self._advanced_tag_options_delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+            
+            #
+            
+            for ( name, ato ) in HC.options[ 'default_advanced_tag_options' ].items():
+                
+                if name == 'default': pretty_name = 'default'
+                elif type( name ) == int: pretty_name = HC.site_type_string_lookup[ name ]
+                else:
+                    
+                    ( booru_id, booru_name ) = name
+                    
+                    pretty_name = 'booru: ' + booru_name
+                    
+                
+                self._advanced_tag_options.Append( pretty_name, ( name, ato ) )
+                
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._advanced_tag_options_add, CC.FLAGS_BUTTON_SIZER )
+            hbox.AddF( self._advanced_tag_options_edit, CC.FLAGS_BUTTON_SIZER )
+            hbox.AddF( self._advanced_tag_options_delete, CC.FLAGS_BUTTON_SIZER )
+            
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def EventAdd( self, event ):
+            
+            pretty_names_to_names = {}
+            
+            for ( k, v ) in HC.site_type_string_lookup.items(): pretty_names_to_names[ v ] = k
+            
+            boorus = wx.GetApp().Read( 'remote_boorus' )
+            
+            for ( booru_name, booru ) in boorus.items(): pretty_names_to_names[ 'booru: ' + booru_name ] = ( HC.SITE_TYPE_BOORU, booru_name )
+            
+            names = pretty_names_to_names.keys()
+            
+            names.sort()
+            
+            pretty_names_to_names[ 'default' ] = 'default'
+            
+            names.insert( 0, 'default' )
+            
+            with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select tag domain', names ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    pretty_name = dlg.GetString()
+                    
+                    for i in range( self._advanced_tag_options.GetCount() ):
+                        
+                        if pretty_name == self._advanced_tag_options.GetString( i ):
+                            
+                            wx.MessageBox( 'You already have default tag import options set up for that domain!' )
+                            
+                            return
+                            
+                        
+                    
+                    name = pretty_names_to_names[ pretty_name ]
+                    
+                    with ClientGUIDialogs.DialogInputAdvancedTagOptions( self, pretty_name, name, {} ) as ato_dlg:
+                        
+                        if ato_dlg.ShowModal() == wx.ID_OK:
+                            
+                            ato = ato_dlg.GetATO()
+                            
+                            self._advanced_tag_options.Append( pretty_name, ( name, ato ) )
+                            
+                        
+                    
+                
+            
+        
+        def EventDelete( self, event ):
+            
+            selection = self._advanced_tag_options.GetSelection()
+            
+            if selection != wx.NOT_FOUND: self._advanced_tag_options.Delete( selection )
+            
+        
+        def EventEdit( self, event ):
+            
+            selection = self._advanced_tag_options.GetSelection()
+            
+            if selection != wx.NOT_FOUND:
+                
+                pretty_name = self._advanced_tag_options.GetString( selection )
+                
+                ( name, ato ) = self._advanced_tag_options.GetClientData( selection )
+                
+                with ClientGUIDialogs.DialogInputAdvancedTagOptions( self, pretty_name, name, ato ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        ato = dlg.GetATO()
+                        
+                        self._advanced_tag_options.SetClientData( selection, ( name, ato ) )
+                        
+                    
+                
+            
+        
+        def UpdateOptions( self ):
+            
+            default_advanced_tag_options = {}
+            
+            for ( name, ato ) in [ self._advanced_tag_options.GetClientData( i ) for i in range( self._advanced_tag_options.GetCount() ) ]:
+                
+                default_advanced_tag_options[ name ] = ato
+                
+            
+            HC.options[ 'default_advanced_tag_options' ] = default_advanced_tag_options
+            
+        
+    
+    class _FilesAndTrashPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._export_location = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            
+            self._exclude_deleted_files = wx.CheckBox( self, label = '' )
+            
+            self._remove_trashed_files = wx.CheckBox( self, label = '' )
+            
+            self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no age limit', min = 0, max = 8640 )
+            self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no size limit', min = 0, max = 20480 )
+            
+            #
+            
             if HC.options[ 'export_path' ] is not None:
                 
                 abs_path = HydrusData.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
@@ -3116,40 +3343,76 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
             
             self._exclude_deleted_files.SetValue( HC.options[ 'exclude_deleted_files' ] )
-            
-            ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
-            
-            self._thumbnail_width.SetValue( thumbnail_width )
-            
-            self._thumbnail_height.SetValue( thumbnail_height )
+            self._remove_trashed_files.SetValue( HC.options[ 'remove_trashed_files' ] )
+            self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
+            self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
             
             #
             
-            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
+            vbox = wx.BoxSizer( wx.VERTICAL )
             
-            self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
+            gridbox = wx.FlexGridSizer( 0, 2 )
             
-            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
+            gridbox.AddGrowableCol( 1, 1 )
             
-            self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
+            gridbox.AddF( wx.StaticText( self, label = 'Default export directory: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._export_location, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self._maintenance_idle_period.SetValue( HC.options[ 'idle_period' ] / 60 )
-            self._maintenance_vacuum_period.SetValue( HC.options[ 'maintenance_vacuum_period' ] / 86400 )
-            self._maintenance_delete_orphans_period.SetValue( HC.options[ 'maintenance_delete_orphans_period' ] / 86400 )
+            gridbox.AddF( wx.StaticText( self, label = 'By default, do not reimport files that have been previously deleted: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._exclude_deleted_files, CC.FLAGS_MIXED )
             
-            ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
+            gridbox.AddF( wx.StaticText( self, label = 'By default, remove files from view when they are sent to the trash: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._remove_trashed_files, CC.FLAGS_MIXED )
             
-            self._autocomplete_long_wait.SetValue( long_wait )
+            gridbox.AddF( wx.StaticText( self, label = 'Number of hours a file can be in the trash before being deleted: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._trash_max_age, CC.FLAGS_MIXED )
             
-            self._autocomplete_short_wait_chars.SetValue( char_limit )
+            gridbox.AddF( wx.StaticText( self, label = 'Maximum size of trash (MB): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._trash_max_size, CC.FLAGS_MIXED )
             
-            self._autocomplete_short_wait.SetValue( short_wait )
+            text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
             
-            self._processing_phase.SetValue( HC.options[ 'processing_phase' ] )
+            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_CENTER )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
-            #
+            self.SetSizer( vbox )
             
-            self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'export_path' ] = HydrusFileHandling.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
+            
+            HC.options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
+            HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
+            HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
+            HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+        
+    
+    class _GUIPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._default_gui_session = wx.Choice( self )
+            
+            self._confirm_client_exit = wx.CheckBox( self )
+            
+            self._gui_capitalisation = wx.CheckBox( self )
+            
+            self._gui_show_all_tags_in_autocomplete = wx.CheckBox( self )
+            
+            self._default_tag_sort = wx.Choice( self )
+            
+            self._default_tag_sort.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
+            self._default_tag_sort.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
+            self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
+            self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
+            
+            self._default_tag_repository = ClientGUICommon.BetterChoice( self )
             
             #
             
@@ -3185,121 +3448,119 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            self._play_dumper_noises.SetValue( HC.options[ 'play_dumper_noises' ] )
+            gridbox = wx.FlexGridSizer( 0, 2 )
             
-            #
+            gridbox.AddGrowableCol( 1, 1 )
             
-            for ( name, rgb ) in HC.options[ 'gui_colours' ].items(): self._gui_colours[ name ].SetColour( wx.Colour( *rgb ) )
+            gridbox.AddF( wx.StaticText( self, label = 'Default session on startup:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._default_gui_session, CC.FLAGS_MIXED )
             
-            #
+            gridbox.AddF( wx.StaticText( self, label = 'Confirm client exit:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._confirm_client_exit, CC.FLAGS_MIXED )
             
-            for ( name, ato ) in HC.options[ 'default_advanced_tag_options' ].items():
-                
-                if name == 'default': pretty_name = 'default'
-                elif type( name ) == int: pretty_name = HC.site_type_string_lookup[ name ]
-                else:
-                    
-                    ( booru_id, booru_name ) = name
-                    
-                    pretty_name = 'booru: ' + booru_name
-                    
-                
-                self._advanced_tag_options.Append( pretty_name, ( name, ato ) )
-                
+            gridbox.AddF( wx.StaticText( self, label = 'Default tag service in manage tag dialogs:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._default_tag_repository, CC.FLAGS_MIXED )
             
-            #
+            gridbox.AddF( wx.StaticText( self, label = 'Default tag sort on management panel:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._default_tag_sort, CC.FLAGS_MIXED )
             
-            self._local_port.SetValue( HC.options[ 'local_port' ] )
+            gridbox.AddF( wx.StaticText( self, label = 'Capitalise gui: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._gui_capitalisation, CC.FLAGS_MIXED )
             
-            #
+            gridbox.AddF( wx.StaticText( self, label = 'By default, search non-local tags in write-autocomplete: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._gui_show_all_tags_in_autocomplete, CC.FLAGS_MIXED )
             
-            for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]: self._sort_by.Append( '-'.join( sort_by ), sort_by )
-            
-            #
-            
-            for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items():
-                
-                for ( key, action ) in key_dict.items():
-                    
-                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
-                    
-                    pretty_action = action
-                    
-                    self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
-                    
-                
-            
-            self._SortListCtrl()
-            
-            #
-            
-            ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
-            
-            self._thread_times_to_check.SetValue( times_to_check )
-            
-            self._thread_check_period.SetValue( check_period )
+            self.SetSizer( gridbox )
             
         
-        def ArrangeControls():
+        def UpdateOptions( self ):
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            HC.options[ 'default_gui_session' ] = self._default_gui_session.GetStringSelection()
+            HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
+            HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
+            HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
+            HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
+            HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+        
+    
+    class _MaintenanceAndMemoryPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
             
-            gridbox.AddGrowableCol( 1, 1 )
+            wx.Panel.__init__( self, parent )
             
-            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Proxy type: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_type, CC.FLAGS_MIXED )
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Address: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_address, CC.FLAGS_MIXED )
+            self._thumbnail_width = wx.SpinCtrl( self, min = 20, max = 200 )
+            self._thumbnail_width.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Port: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_port, CC.FLAGS_MIXED )
+            self._thumbnail_height = wx.SpinCtrl( self, min = 20, max = 200 )
+            self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Username (optional): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_username, CC.FLAGS_MIXED )
+            self._thumbnail_cache_size = wx.SpinCtrl( self, min = 5, max = 3000 )
+            self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            gridbox.AddF( wx.StaticText( self._connection_page, label = 'Password (optional): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_password, CC.FLAGS_MIXED )
+            self._estimated_number_thumbnails = wx.StaticText( self, label = '' )
             
-            text = 'You have to restart the client for proxy settings to take effect.'
-            text += os.linesep
-            text += 'This is in a buggy prototype stage right now, pending a rewrite of the networking engine.'
-            text += os.linesep
-            text += 'Please send me your feedback.'
+            self._preview_cache_size = wx.SpinCtrl( self, min = 5, max = 3000 )
+            self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
             
-            vbox.AddF( wx.StaticText( self._connection_page, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._estimated_number_previews = wx.StaticText( self, label = '' )
             
-            self._connection_page.SetSizer( vbox )
+            self._fullscreen_cache_size = wx.SpinCtrl( self, min = 25, max = 3000 )
+            self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
+            
+            self._estimated_number_fullscreens = wx.StaticText( self, label = '' )
+            
+            self._maintenance_idle_period = wx.SpinCtrl( self, min = 0, max = 1000 )
+            self._maintenance_vacuum_period = wx.SpinCtrl( self, min = 0, max = 365 )
+            self._maintenance_delete_orphans_period = wx.SpinCtrl( self, min = 0, max = 365 )
+            
+            self._num_autocomplete_chars = wx.SpinCtrl( self, min = 1, max = 100 )
+            self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db' + os.linesep + 'increase this if you find autocomplete results are slow' )
+            
+            self._autocomplete_long_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
+            self._autocomplete_long_wait.SetToolTipString( 'how long the gui will wait, after you enter a character, before it queries the db with what you have entered so far' )
+            
+            self._autocomplete_short_wait_chars = wx.SpinCtrl( self, min = 1, max = 100 )
+            self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
+            
+            self._autocomplete_short_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
+            self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
+            
+            self._processing_phase = wx.SpinCtrl( self, min = 0, max = 100000 )
+            self._processing_phase.SetToolTipString( 'how long this client will delay processing updates after they are due. useful if you have multiple clients and do not want them to process at the same time' )
             
             #
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            self._thumbnail_width.SetValue( thumbnail_width )
             
-            gridbox.AddGrowableCol( 1, 1 )
+            self._thumbnail_height.SetValue( thumbnail_height )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Default export directory: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._export_location, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'By default, do not reimport files that have been previously deleted: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._exclude_deleted_files, CC.FLAGS_MIXED )
+            self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail width: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thumbnail_width, CC.FLAGS_MIXED )
+            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail height: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thumbnail_height, CC.FLAGS_MIXED )
+            self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
             
-            text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
+            self._maintenance_idle_period.SetValue( HC.options[ 'idle_period' ] / 60 )
+            self._maintenance_vacuum_period.SetValue( HC.options[ 'maintenance_vacuum_period' ] / 86400 )
+            self._maintenance_delete_orphans_period.SetValue( HC.options[ 'maintenance_delete_orphans_period' ] / 86400 )
             
-            vbox.AddF( wx.StaticText( self._file_page, label = text ), CC.FLAGS_CENTER )
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
             
-            self._file_page.SetSizer( vbox )
+            self._autocomplete_long_wait.SetValue( long_wait )
+            
+            self._autocomplete_short_wait_chars.SetValue( char_limit )
+            
+            self._autocomplete_short_wait.SetValue( short_wait )
+            
+            self._processing_phase.SetValue( HC.options[ 'processing_phase' ] )
             
             #
             
@@ -3322,40 +3583,136 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail width: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._thumbnail_width, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail height: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._thumbnail_height, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( thumbnails_sizer, CC.FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'MB memory reserved for preview cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for preview cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( previews_sizer, CC.FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'MB memory reserved for fullscreen cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for fullscreen cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Minutes of inactivity until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Minutes of inactivity until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._maintenance_idle_period, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Number of days to wait between vacuums (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Number of days to wait between vacuums (0 for never): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._maintenance_vacuum_period, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Number of days to wait between orphan deletions (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Number of days to wait between orphan deletions (0 for never): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._maintenance_delete_orphans_period, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete character threshold: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete character threshold: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._num_autocomplete_chars, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete long wait (ms): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait (ms): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_long_wait, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete short wait threshold: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait threshold: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_short_wait_chars, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_short_wait, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Delay update processing by (s): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Delay update processing by (s): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._processing_phase, CC.FLAGS_MIXED )
             
-            self._maintenance_page.SetSizer( gridbox )
+            self.SetSizer( gridbox )
+            
+            #
+            
+            self.EventFullscreensUpdate( None )
+            self.EventPreviewsUpdate( None )
+            self.EventThumbnailsUpdate( None )
+            
+            wx.CallAfter( self.Layout ) # draws the static texts correctly
+            
+        
+        def EventFullscreensUpdate( self, event ):
+            
+            ( width, height ) = wx.GetDisplaySize()
+            
+            estimated_bytes_per_fullscreen = 3 * width * height
+            
+            self._estimated_number_fullscreens.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
+            
+        
+        def EventPreviewsUpdate( self, event ):
+            
+            estimated_bytes_per_preview = 3 * 400 * 400
+            
+            self._estimated_number_previews.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._preview_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_preview ) + ' previews)' )
+            
+        
+        def EventThumbnailsUpdate( self, event ):
+            
+            estimated_bytes_per_thumb = 3 * self._thumbnail_height.GetValue() * self._thumbnail_width.GetValue()
+            
+            self._estimated_number_thumbnails.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
+            
+        
+        def UpdateOptions( self ):
+            
+            new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
+            
+            if new_thumbnail_dimensions != HC.options[ 'thumbnail_dimensions' ]:
+                
+                text = 'You have changed the thumbnail dimensions, which will mean deleting all the old resized thumbnails right now, during which time the database will be locked. If you have tens or hundreds of thousands of files, this could take a long time.'
+                text += os.linesep * 2
+                text += 'Are you sure you want to change your thumbnail dimensions?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES: HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
+                    
+                
+            
+            HC.options[ 'idle_period' ] = 60 * self._maintenance_idle_period.GetValue()
+            HC.options[ 'maintenance_delete_orphans_period' ] = 86400 * self._maintenance_delete_orphans_period.GetValue()
+            HC.options[ 'maintenance_vacuum_period' ] = 86400 * self._maintenance_vacuum_period.GetValue()
+            
+            HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
+            HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
+            HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
+            
+            HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
+            
+            long_wait = self._autocomplete_long_wait.GetValue()
+            
+            char_limit = self._autocomplete_short_wait_chars.GetValue()
+            
+            short_wait = self._autocomplete_short_wait.GetValue()
+            
+            HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
+            
+            HC.options[ 'processing_phase' ] = self._processing_phase.GetValue()
+            
+        
+    
+    class _MediaPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._fit_to_canvas = wx.CheckBox( self, label = '' )
+            
+            # this is a great place to put mime->defaults page
+            # moreso, it can do fit_to_canvas for each media type!
+            
+            # fit to canvas
+            # load immediately, or show embed flash window, or show button to launch externally, or never show in media viewer--launch externally when thumbnail 'activated'
+            
+            #
+            
+            self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
             
             #
             
@@ -3363,71 +3720,31 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._media_page, label = 'Zoom smaller images to fit media canvas: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Zoom smaller images to fit media canvas: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._fit_to_canvas, CC.FLAGS_MIXED )
             
-            self._media_page.SetSizer( gridbox )
+            self.SetSizer( gridbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'fit_to_canvas' ] = self._fit_to_canvas.GetValue()
+            
+        
+    
+    class _ServerPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._local_port = wx.SpinCtrl( self, min = 0, max = 65535 )
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._gui_page, label = 'Default session on startup:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default_gui_session, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._gui_page, label = 'Confirm client exit:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._confirm_client_exit, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._gui_page, label = 'Default tag service in manage tag dialogs:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default_tag_repository, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._gui_page, label = 'Default tag sort on management panel:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default_tag_sort, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._gui_page, label = 'Capitalise gui: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_capitalisation, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._gui_page, label = 'By default, search non-local tags in write-autocomplete: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_show_all_tags_in_autocomplete, CC.FLAGS_MIXED )
-            
-            self._gui_page.SetSizer( gridbox )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_height, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_mime, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_num_pixels, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_num_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_num_words, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_ratio, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_similar_to, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_width, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._file_system_predicates_page.SetSizer( vbox )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._advanced_tag_options_add, CC.FLAGS_BUTTON_SIZER )
-            hbox.AddF( self._advanced_tag_options_edit, CC.FLAGS_BUTTON_SIZER )
-            hbox.AddF( self._advanced_tag_options_delete, CC.FLAGS_BUTTON_SIZER )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._advanced_tag_options_page.SetSizer( vbox )
+            self._local_port.SetValue( HC.options[ 'local_port' ] )
             
             #
             
@@ -3435,70 +3752,170 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._server_page, label = 'local server port: ' ), CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'local server port: ' ), CC.FLAGS_MIXED )
             hbox.AddF( self._local_port, CC.FLAGS_MIXED )
             
             vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            self._server_page.SetSizer( vbox )
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            new_local_port = self._local_port.GetValue()
+            
+            if new_local_port != HC.options[ 'local_port' ]: HydrusGlobals.pubsub.pub( 'restart_server' )
+            
+            HC.options[ 'local_port' ] = new_local_port
+            
+        
+    
+    class _ShortcutsPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'modifier', 120 ), ( 'key', 120 ), ( 'action', -1 ) ], delete_key_callback = self.DeleteShortcuts )
+            
+            self._shortcuts_add = wx.Button( self, label = 'add' )
+            self._shortcuts_add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            
+            self._shortcuts_edit = wx.Button( self, label = 'edit' )
+            self._shortcuts_edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+            
+            self._shortcuts_delete = wx.Button( self, label = 'delete' )
+            self._shortcuts_delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+            
+            #
+            
+            for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items():
+                
+                for ( key, action ) in key_dict.items():
+                    
+                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                    
+                    pretty_action = action
+                    
+                    self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
+                    
+                
+            
+            self._SortListCtrl()
             
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._play_dumper_noises, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = 'These shortcuts are global to the main gui! You probably want to stick to function keys or ctrl + something!' ), CC.FLAGS_MIXED )
+            vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self._sound_page.SetSizer( vbox )
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._shortcuts_add, CC.FLAGS_BUTTON_SIZER )
+            hbox.AddF( self._shortcuts_edit, CC.FLAGS_BUTTON_SIZER )
+            hbox.AddF( self._shortcuts_delete, CC.FLAGS_BUTTON_SIZER )
+            
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def _SortListCtrl( self ): self._shortcuts.SortListItems( 2 )
+        
+        def DeleteShortcuts( self ):
+            
+            self._shortcuts.RemoveAllSelected()
+            
+        
+        def EventAdd( self, event ):
+            
+            with ClientGUIDialogs.DialogInputShortcut( self ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( modifier, key, action ) = dlg.GetInfo()
+                    
+                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                    
+                    pretty_action = action
+                    
+                    self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
+                    
+                    self._SortListCtrl()
+                    
+                
+            
+        
+        def EventDelete( self, event ):
+            
+            self.DeleteShortcuts()
+            
+        
+        def EventEdit( self, event ):
+            
+            indices = self._shortcuts.GetAllSelected()
+            
+            for index in indices:
+                
+                ( modifier, key, action ) = self._shortcuts.GetClientData( index )
+                
+                with ClientGUIDialogs.DialogInputShortcut( self, modifier, key, action ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        ( modifier, key, action ) = dlg.GetInfo()
+                        
+                        ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                        
+                        pretty_action = action
+                        
+                        self._shortcuts.UpdateRow( index, ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
+                        
+                        self._SortListCtrl()
+                        
+                    
+                
+            
+        
+        def UpdateOptions( self ):
+            
+            shortcuts = {}
+            
+            shortcuts[ wx.ACCEL_NORMAL ] = {}
+            shortcuts[ wx.ACCEL_CTRL ] = {}
+            shortcuts[ wx.ACCEL_ALT ] = {}
+            shortcuts[ wx.ACCEL_SHIFT ] = {}
+            
+            for ( modifier, key, action ) in self._shortcuts.GetClientData(): shortcuts[ modifier ][ key ] = action
+            
+            HC.options[ 'shortcuts' ] = shortcuts
+            
+        
+    
+    class _SortCollectPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._default_sort = ClientGUICommon.ChoiceSort( self, sort_by = HC.options[ 'sort_by' ] )
+            
+            self._default_collect = ClientGUICommon.CheckboxCollect( self )
+            
+            self._sort_by = wx.ListBox( self )
+            self._sort_by.Bind( wx.EVT_LEFT_DCLICK, self.EventRemoveSortBy )
+            
+            self._new_sort_by = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+            self._new_sort_by.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownSortBy )
             
             #
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddF( wx.StaticText( self._colour_page, label = 'thumbnail background (local: normal/selected, remote: normal/selected): ' ), CC.FLAGS_MIXED )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._gui_colours[ 'thumb_background' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_background_selected' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_background_remote' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_background_remote_selected' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            gridbox.AddF( wx.StaticText( self._colour_page, label = 'thumbnail border (local: normal/selected, remote: normal/selected): ' ), CC.FLAGS_MIXED )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._gui_colours[ 'thumb_border' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_border_selected' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_border_remote' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_border_remote_selected' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            gridbox.AddF( wx.StaticText( self._colour_page, label = 'thumbnail grid background: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'thumbgrid_background' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._colour_page, label = 'autocomplete background: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'autocomplete_background' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._colour_page, label = 'media viewer background: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'media_background' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._colour_page, label = 'media viewer text: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'media_text' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._colour_page, label = 'tags box background: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'tags_box' ], CC.FLAGS_MIXED )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._colour_page.SetSizer( vbox )
+            for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]: self._sort_by.Append( '-'.join( sort_by ), sort_by )
             
             #
             
@@ -3506,9 +3923,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._sort_by_page, label = 'default sort: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'default sort: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._default_sort, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._sort_by_page, label = 'default collect: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'default collect: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._default_collect, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
@@ -3520,28 +3937,107 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             sort_by_text += 'Any changes will be shown in the sort-by dropdowns of any new pages you open.'
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self._sort_by_page, label = sort_by_text ), CC.FLAGS_MIXED )
+            vbox.AddF( wx.StaticText( self, label = sort_by_text ), CC.FLAGS_MIXED )
             vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._new_sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self._sort_by_page.SetSizer( vbox )
+            self.SetSizer( vbox )
+            
+        
+        def EventKeyDownSortBy( self, event ):
+            
+            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                sort_by_string = self._new_sort_by.GetValue()
+                
+                if sort_by_string != '':
+                    
+                    try: sort_by = sort_by_string.split( '-' )
+                    except:
+                        
+                        wx.MessageBox( 'Could not parse that sort by string!' )
+                        
+                        return
+                        
+                    
+                    self._sort_by.Append( sort_by_string, sort_by )
+                    
+                    self._new_sort_by.SetValue( '' )
+                    
+                
+            else: event.Skip()
+            
+        
+        def EventRemoveSortBy( self, event ):
+            
+            selection = self._sort_by.GetSelection()
+            
+            if selection != wx.NOT_FOUND: self._sort_by.Delete( selection )
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'default_sort' ] = self._default_sort.GetSelection() 
+            HC.options[ 'default_collect' ] = self._default_collect.GetChoice()
+            
+            sort_by_choices = []
+            
+            for sort_by in [ self._sort_by.GetClientData( i ) for i in range( self._sort_by.GetCount() ) ]: sort_by_choices.append( ( 'namespaces', sort_by ) )
+            
+            HC.options[ 'sort_by' ] = sort_by_choices
+            
+        
+    
+    class _SoundPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._play_dumper_noises = wx.CheckBox( self, label = 'play success/fail noises when dumping' )
+            
+            #
+            
+            self._play_dumper_noises.SetValue( HC.options[ 'play_dumper_noises' ] )
             
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self._shortcuts_page, label = 'These shortcuts are global to the main gui! You probably want to stick to function keys or ctrl + something!' ), CC.FLAGS_MIXED )
-            vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._play_dumper_noises, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            self.SetSizer( vbox )
             
-            hbox.AddF( self._shortcuts_add, CC.FLAGS_BUTTON_SIZER )
-            hbox.AddF( self._shortcuts_edit, CC.FLAGS_BUTTON_SIZER )
-            hbox.AddF( self._shortcuts_delete, CC.FLAGS_BUTTON_SIZER )
+        
+        def UpdateOptions( self ):
             
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            HC.options[ 'play_dumper_noises' ] = self._play_dumper_noises.GetValue()
             
-            self._shortcuts_page.SetSizer( vbox )
+        
+    
+    class _ThreadCheckerPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._thread_times_to_check = wx.SpinCtrl( self, min = 0, max = 100 )
+            self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
+            
+            self._thread_check_period = wx.SpinCtrl( self, min = 30, max = 86400 )
+            self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
+            
+            #
+            
+            ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
+            
+            self._thread_times_to_check.SetValue( times_to_check )
+            
+            self._thread_check_period.SetValue( check_period )
             
             #
             
@@ -3549,418 +4045,31 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._thread_checker_page, label = 'default number of times to check: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'default number of times to check: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._thread_times_to_check, CC.FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self._thread_checker_page, label = 'default wait in seconds between checks: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'default wait in seconds between checks: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._thread_check_period, CC.FLAGS_MIXED )
             
-            self._thread_checker_page.SetSizer( gridbox )
-            
-            #
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 800: x = 800
-            if y < 600: y = 600
-            
-            self.SetInitialSize( ( x, y ) )
+            self.SetSizer( gridbox )
             
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'hydrus client options' )
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        self.EventFullscreensUpdate( None )
-        self.EventPreviewsUpdate( None )
-        self.EventThumbnailsUpdate( None )
-        
-        wx.CallAfter( self._maintenance_page.Layout ) # draws the static texts correctly
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def _SortListCtrl( self ): self._shortcuts.SortListItems( 2 )
-    
-    def DeleteShortcuts( self ): self._shortcuts.RemoveAllSelected()
-    
-    def EventATOAdd( self, event ):
-        
-        pretty_names_to_names = {}
-        
-        for ( k, v ) in HC.site_type_string_lookup.items(): pretty_names_to_names[ v ] = k
-        
-        boorus = wx.GetApp().Read( 'remote_boorus' )
-        
-        for ( booru_name, booru ) in boorus.items(): pretty_names_to_names[ 'booru: ' + booru_name ] = ( HC.SITE_TYPE_BOORU, booru_name )
-        
-        names = pretty_names_to_names.keys()
-        
-        names.sort()
-        
-        pretty_names_to_names[ 'default' ] = 'default'
-        
-        names.insert( 0, 'default' )
-        
-        with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select tag domain', names ) as dlg:
+        def UpdateOptions( self ):
             
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                pretty_name = dlg.GetString()
-                
-                for i in range( self._advanced_tag_options.GetCount() ):
-                    
-                    if pretty_name == self._advanced_tag_options.GetString( i ):
-                        
-                        wx.MessageBox( 'You already have default advanced tag options set up for that domain!' )
-                        
-                        return
-                        
-                    
-                
-                name = pretty_names_to_names[ pretty_name ]
-                
-                with ClientGUIDialogs.DialogInputAdvancedTagOptions( self, pretty_name, name, {} ) as ato_dlg:
-                    
-                    if ato_dlg.ShowModal() == wx.ID_OK:
-                        
-                        ato = ato_dlg.GetATO()
-                        
-                        self._advanced_tag_options.Append( pretty_name, ( name, ato ) )
-                        
-                    
-                
+            HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
             
-        
-    
-    def EventATODelete( self, event ):
-        
-        selection = self._advanced_tag_options.GetSelection()
-        
-        if selection != wx.NOT_FOUND: self._advanced_tag_options.Delete( selection )
-        
-    
-    def EventATOEdit( self, event ):
-        
-        selection = self._advanced_tag_options.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            pretty_name = self._advanced_tag_options.GetString( selection )
-            
-            ( name, ato ) = self._advanced_tag_options.GetClientData( selection )
-            
-            with ClientGUIDialogs.DialogInputAdvancedTagOptions( self, pretty_name, name, ato ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ato = dlg.GetATO()
-                    
-                    self._advanced_tag_options.SetClientData( selection, ( name, ato ) )
-                    
-                
-            
-        
-    
-    def EventEditNamespaceColour( self, event ):
-        
-        result = self._namespace_colours.GetSelectedNamespaceColour()
-        
-        if result is not None:
-            
-            ( namespace, colour ) = result
-            
-            colour_data = wx.ColourData()
-            
-            colour_data.SetColour( colour )
-            colour_data.SetChooseFull( True )
-            
-            with wx.ColourDialog( self, data = colour_data ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    colour_data = dlg.GetColourData()
-                    
-                    colour = colour_data.GetColour()
-                    
-                    self._namespace_colours.SetNamespaceColour( namespace, colour )
-                    
-                
-            
-        
-    
-    def EventFullscreensUpdate( self, event ):
-        
-        ( width, height ) = wx.GetDisplaySize()
-        
-        estimated_bytes_per_fullscreen = 3 * width * height
-        
-        self._estimated_number_fullscreens.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
-        
-    
-    def EventKeyDownNamespace( self, event ):
-        
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            namespace = self._new_namespace_colour.GetValue()
-            
-            if namespace != '':
-                
-                self._namespace_colours.SetNamespaceColour( namespace, wx.Colour( random.randint( 0, 255 ), random.randint( 0, 255 ), random.randint( 0, 255 ) ) )
-                
-                self._new_namespace_colour.SetValue( '' )
-                
-            
-        else: event.Skip()
-        
-    
-    def EventKeyDownSortBy( self, event ):
-        
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            sort_by_string = self._new_sort_by.GetValue()
-            
-            if sort_by_string != '':
-                
-                try: sort_by = sort_by_string.split( '-' )
-                except:
-                    
-                    wx.MessageBox( 'Could not parse that sort by string!' )
-                    
-                    return
-                    
-                
-                self._sort_by.Append( sort_by_string, sort_by )
-                
-                self._new_sort_by.SetValue( '' )
-                
-            
-        else: event.Skip()
         
     
     def EventOK( self, event ):
         
-        if self._proxy_address.GetValue() == '':
+        for ( name, page ) in self._listbook.GetNamesToActivePages().items():
             
-            HC.options[ 'proxy' ] = None
+            page.UpdateOptions()
             
-        else:
-            
-            proxytype = self._proxy_type.GetChoice()
-            address = self._proxy_address.GetValue()
-            port = self._proxy_port.GetValue()
-            username = self._proxy_username.GetValue()
-            password = self._proxy_password.GetValue()
-            
-            if username == '': username = None
-            if password == '': password = None
-            
-            HC.options[ 'proxy' ] = ( proxytype, address, port, username, password )
-            
-        
-        #
-        
-        HC.options[ 'play_dumper_noises' ] = self._play_dumper_noises.GetValue()
-        
-        HC.options[ 'default_gui_session' ] = self._default_gui_session.GetStringSelection()
-        HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
-        HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
-        HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
-        
-        HC.options[ 'export_path' ] = HydrusFileHandling.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
-        HC.options[ 'default_sort' ] = self._default_sort.GetSelection() 
-        HC.options[ 'default_collect' ] = self._default_collect.GetChoice()
-        
-        HC.options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
-        
-        HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
-        HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
-        HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
-        
-        HC.options[ 'idle_period' ] = 60 * self._maintenance_idle_period.GetValue()
-        HC.options[ 'maintenance_delete_orphans_period' ] = 86400 * self._maintenance_delete_orphans_period.GetValue()
-        HC.options[ 'maintenance_vacuum_period' ] = 86400 * self._maintenance_vacuum_period.GetValue()
-        
-        new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
-        
-        if new_thumbnail_dimensions != HC.options[ 'thumbnail_dimensions' ]:
-            
-            text = 'You have changed the thumbnail dimensions, which will mean deleting all the old resized thumbnails right now, during which time the database will be locked. If you have tens or hundreds of thousands of files, this could take a long time.'
-            text += os.linesep * 2
-            text += 'Are you sure you want to change your thumbnail dimensions?'
-            
-            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES: HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
-                
-            
-        
-        HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
-        
-        long_wait = self._autocomplete_long_wait.GetValue()
-        
-        char_limit = self._autocomplete_short_wait_chars.GetValue()
-        
-        short_wait = self._autocomplete_short_wait.GetValue()
-        
-        HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
-        
-        HC.options[ 'processing_phase' ] = self._processing_phase.GetValue()
-        
-        HC.options[ 'fit_to_canvas' ] = self._fit_to_canvas.GetValue()
-        
-        for ( name, ctrl ) in self._gui_colours.items():
-            
-            colour = ctrl.GetColour()
-            
-            rgb = ( colour.Red(), colour.Green(), colour.Blue() )
-            
-            HC.options[ 'gui_colours' ][ name ] = rgb
-            
-        
-        HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
-        
-        sort_by_choices = []
-        
-        for sort_by in [ self._sort_by.GetClientData( i ) for i in range( self._sort_by.GetCount() ) ]: sort_by_choices.append( ( 'namespaces', sort_by ) )
-        
-        HC.options[ 'sort_by' ] = sort_by_choices
-        
-        system_predicates = HC.options[ 'file_system_predicates' ]
-        
-        system_predicates[ 'age' ] = self._file_system_predicate_age.GetInfo()
-        system_predicates[ 'duration' ] = self._file_system_predicate_duration.GetInfo()
-        system_predicates[ 'hamming_distance' ] = self._file_system_predicate_similar_to.GetInfo()[1]
-        system_predicates[ 'height' ] = self._file_system_predicate_height.GetInfo()
-        system_predicates[ 'limit' ] = self._file_system_predicate_limit.GetInfo()
-        system_predicates[ 'mime' ] = self._file_system_predicate_mime.GetInfo()
-        system_predicates[ 'num_pixels' ] = self._file_system_predicate_num_pixels.GetInfo()
-        system_predicates[ 'num_tags' ] = self._file_system_predicate_num_tags.GetInfo()
-        system_predicates[ 'num_words' ] = self._file_system_predicate_num_words.GetInfo()
-        system_predicates[ 'ratio' ] = self._file_system_predicate_ratio.GetInfo()
-        system_predicates[ 'size' ] = self._file_system_predicate_size.GetInfo()
-        system_predicates[ 'width' ] = self._file_system_predicate_width.GetInfo()
-        
-        HC.options[ 'file_system_predicates' ] = system_predicates
-        
-        default_advanced_tag_options = {}
-        
-        for ( name, ato ) in [ self._advanced_tag_options.GetClientData( i ) for i in range( self._advanced_tag_options.GetCount() ) ]:
-            
-            default_advanced_tag_options[ name ] = ato
-            
-        
-        HC.options[ 'default_advanced_tag_options' ] = default_advanced_tag_options
-        
-        shortcuts = {}
-        
-        shortcuts[ wx.ACCEL_NORMAL ] = {}
-        shortcuts[ wx.ACCEL_CTRL ] = {}
-        shortcuts[ wx.ACCEL_ALT ] = {}
-        shortcuts[ wx.ACCEL_SHIFT ] = {}
-        
-        for ( modifier, key, action ) in self._shortcuts.GetClientData(): shortcuts[ modifier ][ key ] = action
-        
-        HC.options[ 'shortcuts' ] = shortcuts
-        
-        HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
-        HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
-        
-        new_local_port = self._local_port.GetValue()
-        
-        if new_local_port != HC.options[ 'local_port' ]: HydrusGlobals.pubsub.pub( 'restart_server' )
-        
-        HC.options[ 'local_port' ] = new_local_port
-        
-        HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
         
         try: wx.GetApp().Write( 'save_options', HC.options )
         except: wx.MessageBox( traceback.format_exc() )
         
         self.EndModal( wx.ID_OK )
-        
-    
-    def EventRemoveSortBy( self, event ):
-        
-        selection = self._sort_by.GetSelection()
-        
-        if selection != wx.NOT_FOUND: self._sort_by.Delete( selection )
-        
-    
-    def EventPreviewsUpdate( self, event ):
-        
-        estimated_bytes_per_preview = 3 * 400 * 400
-        
-        self._estimated_number_previews.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._preview_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_preview ) + ' previews)' )
-        
-    
-    def EventShortcutsAdd( self, event ):
-        
-        with ClientGUIDialogs.DialogInputShortcut( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                ( modifier, key, action ) = dlg.GetInfo()
-                
-                ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
-                
-                pretty_action = action
-                
-                self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
-                
-                self._SortListCtrl()
-                
-            
-        
-    
-    def EventShortcutsDelete( self, event ): self.DeleteShortcuts()
-    
-    def EventShortcutsEdit( self, event ):
-        
-        indices = self._shortcuts.GetAllSelected()
-        
-        for index in indices:
-            
-            ( modifier, key, action ) = self._shortcuts.GetClientData( index )
-            
-            with ClientGUIDialogs.DialogInputShortcut( self, modifier, key, action ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( modifier, key, action ) = dlg.GetInfo()
-                    
-                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
-                    
-                    pretty_action = action
-                    
-                    self._shortcuts.UpdateRow( index, ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
-                    
-                    self._SortListCtrl()
-                    
-                
-            
-        
-    
-    def EventThumbnailsUpdate( self, event ):
-        
-        estimated_bytes_per_thumb = 3 * self._thumbnail_height.GetValue() * self._thumbnail_width.GetValue()
-        
-        self._estimated_number_thumbnails.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
         
     
 class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):

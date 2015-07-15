@@ -961,10 +961,46 @@ class TestClientDB( unittest.TestCase ):
     
     def test_pending( self ):
         
-        pass
+        service_key = HydrusData.GenerateKey()
         
-        # result = self._read( 'pending', service_key )
-        # do more when I do remote repos
+        info = {}
+        
+        info[ 'host' ] = 'example_host'
+        info[ 'port' ] = 80
+        info[ 'access_key' ] = HydrusData.GenerateKey() 
+        
+        new_tag_repo = ( service_key, HC.TAG_REPOSITORY, 'new tag repo', info )
+        
+        edit_log = [ HydrusData.EditLogActionAdd( new_tag_repo ) ]
+        
+        self._write( 'update_services', edit_log )
+        
+        #
+        
+        hashes = [ os.urandom( 32 ) for i in range( 64 ) ]
+        
+        tags = [ 'this', 'is', 'a:test' ]
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( tag, hashes ) ) for tag in tags ]
+        
+        service_keys_to_content_updates = { service_key : content_updates }
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        pending = self._read( 'pending', service_key )
+        
+        self.assertEqual( len( pending ), 4 )
+        
+        for obj in pending:
+            
+            self.assertEqual( type( obj ), HydrusData.ClientToServerContentUpdatePackage )
+            
+        
+        #
+        
+        edit_log = [ HydrusData.EditLogActionDelete( service_key ) ]
+        
+        self._write( 'update_services', edit_log )
         
     
     def test_pixiv_account( self ):

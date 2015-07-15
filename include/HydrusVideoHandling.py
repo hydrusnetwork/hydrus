@@ -393,7 +393,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
                         
                     finally: self._next_render_index = ( self._next_render_index + 1 ) % num_frames
                     
-                    frame = HydrusImageHandling.GenerateHydrusBitmapFromNumPyImage( numpy_image )
+                    frame = HydrusImageHandling.GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = False )
                     
                     wx.CallAfter( self.AddFrame, frame_index, frame )
                     

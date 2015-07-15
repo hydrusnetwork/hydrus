@@ -197,11 +197,17 @@ class MediaList( object ):
             
             if selected_media is not None and media not in selected_media: continue
             
-            if media.IsCollection(): media_results.extend( media.GenerateMediaResults( discriminant ) )
+            if media.IsCollection(): media_results.extend( media.GenerateMediaResults( has_location = has_location, discriminant = discriminant, selected_media = selected_media, unrated = unrated ) )
             else:
                 
                 if discriminant is not None:
-                    if ( discriminant == CC.DISCRIMINANT_INBOX and not media.HasInbox() ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not media.GetLocationsManager().HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and media.GetLocationsManager().HasLocal() ): continue
+                    
+                    inbox_failed = discriminant == CC.DISCRIMINANT_INBOX and not media.HasInbox()
+                    local_failed = discriminant == CC.DISCRIMINANT_LOCAL and not media.GetLocationsManager().HasLocal()
+                    not_local_failed = discriminant == CC.DISCRIMINANT_NOT_LOCAL and media.GetLocationsManager().HasLocal()
+                    
+                    if inbox_failed or local_failed or not_local_failed: continue
+                    
                 
                 if unrated is not None:
                     
@@ -265,11 +271,15 @@ class MediaList( object ):
             
             if action == HC.CONTENT_UPDATE_DELETE:
                 
-                permanently_deleted = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in ( CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY )
+                local_service_keys = ( CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY )
                 
-                repo_deleted = service_key not in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ) and service_key == self._file_service_key
+                deleted_from_trash_and_local_view = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in local_service_keys
                 
-                if permanently_deleted or repo_deleted:
+                deleted_from_local_and_option_set = HC.options[ 'remove_trashed_files' ] and service_key == CC.LOCAL_FILE_SERVICE_KEY and self._file_service_key in local_service_keys
+                
+                deleted_from_repo_and_repo_view = service_key not in local_service_keys and self._file_service_key == service_key
+                
+                if deleted_from_trash_and_local_view or deleted_from_local_and_option_set or deleted_from_repo_and_repo_view:
                     
                     affected_singleton_media = self._GetMedia( hashes, 'singletons' )
                     affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
@@ -931,10 +941,25 @@ class MediaResult( object ):
         if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( service_key, content_update )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
             
-            if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            if service_type == HC.LOCAL_FILE:
                 
                 if action == HC.CONTENT_UPDATE_ARCHIVE: inbox = False
                 elif action == HC.CONTENT_UPDATE_INBOX: inbox = True
+                
+                if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                    
+                    if action == HC.CONTENT_UPDATE_ADD and CC.TRASH_SERVICE_KEY not in locations_manager.GetCurrent():
+                        
+                        inbox = True
+                        
+                    
+                elif service_key == CC.TRASH_SERVICE_KEY:
+                    
+                    if action == HC.CONTENT_UPDATE_DELETE:
+                        
+                        inbox = False
+                        
+                    
                 
                 self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings )
                 

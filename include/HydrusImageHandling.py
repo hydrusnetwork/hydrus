@@ -110,27 +110,29 @@ def GenerateNumpyImage( path ):
     
     return numpy_image
     
-def GenerateHydrusBitmap( path ):
+def GenerateHydrusBitmap( path, compressed = True ):
     
     try:
         
         numpy_image = GenerateNumpyImage( path )
         
-        return GenerateHydrusBitmapFromNumPyImage( numpy_image )
+        return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
         
     except:
         
         pil_image = GeneratePILImage( path )
         
-        return GenerateHydrusBitmapFromPILImage( pil_image )
+        return GenerateHydrusBitmapFromPILImage( pil_image, compressed = compressed )
         
     
-def GenerateHydrusBitmapFromNumPyImage( numpy_image ):
+def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
     
     ( y, x, depth ) = numpy_image.shape
     
-    if depth == 4: return HydrusBitmap( numpy_image.data, wx.BitmapBufferFormat_RGBA, ( x, y ) )
-    else: return HydrusBitmap( numpy_image.data, wx.BitmapBufferFormat_RGB, ( x, y ) )
+    if depth == 4: buffer_format = wx.BitmapBufferFormat_RGBA
+    else: buffer_format = wx.BitmapBufferFormat_RGB
+    
+    return HydrusBitmap( numpy_image.data, buffer_format, ( x, y ), compressed = compressed )
     
 def GenerateNumPyImageFromPILImage( pil_image ):
     
@@ -149,7 +151,7 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     
     return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
     
-def GenerateHydrusBitmapFromPILImage( pil_image ):
+def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
     if pil_image.mode == 'RGBA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
         
@@ -164,7 +166,7 @@ def GenerateHydrusBitmapFromPILImage( pil_image ):
         format = wx.BitmapBufferFormat_RGB
         
     
-    return HydrusBitmap( pil_image.tostring(), format, pil_image.size )
+    return HydrusBitmap( pil_image.tostring(), format, pil_image.size, compressed = compressed )
     
 def GeneratePerceptualHash( path ):
     
@@ -438,29 +440,51 @@ def _GetFramesPIL( self ):
 # the cv code was initially written by @fluffy_cub
 class HydrusBitmap( object ):
     
-    def __init__( self, data, format, size ):
+    def __init__( self, data, format, size, compressed = True ):
         
-        self._data = lz4.dumps( data )
+        self._compressed = compressed
+        
+        if self._compressed:
+            
+            self._data = lz4.dumps( data )
+            
+        else:
+            
+            self._data = data
+            
+        
         self._format = format
         self._size = size
+        
+    
+    def _GetData( self ):
+        
+        if self._compressed:
+            
+            return lz4.loads( self._data )
+            
+        else:
+            
+            return self._data
+            
         
     
     def GetWxBitmap( self ):
         
         ( width, height ) = self._size
         
-        if self._format == wx.BitmapBufferFormat_RGB: return wx.BitmapFromBuffer( width, height, lz4.loads( self._data ) )
-        else: return wx.BitmapFromBufferRGBA( width, height, lz4.loads( self._data ) )
+        if self._format == wx.BitmapBufferFormat_RGB: return wx.BitmapFromBuffer( width, height, self._GetData() )
+        else: return wx.BitmapFromBufferRGBA( width, height, self._GetData() )
         
     
     def GetWxImage( self ):
         
         ( width, height ) = self._size
         
-        if self._format == wx.BitmapBufferFormat_RGB: return wx.ImageFromBuffer( width, height, lz4.loads( self._data ) )
+        if self._format == wx.BitmapBufferFormat_RGB: return wx.ImageFromBuffer( width, height, self._GetData() )
         else:
             
-            bitmap = wx.BitmapFromBufferRGBA( width, height, lz4.loads( self._data ) )
+            bitmap = wx.BitmapFromBufferRGBA( width, height, self._GetData() )
             
             image = wx.ImageFromBitmap( bitmap )
             

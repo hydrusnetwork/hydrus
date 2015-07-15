@@ -56,7 +56,7 @@ class Page( wx.SplitterWindow ):
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
         
-        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, file_service_key )
+        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key )
         
         self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, initial_media_results )
         

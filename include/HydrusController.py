@@ -131,7 +131,7 @@ class HydrusController( wx.App ):
         
         self._timestamps[ 'last_maintenance_time' ] = HydrusData.GetNow()
         
-        if not self._just_woke_from_sleep and self.CurrentlyIdle(): self.MaintainDB()
+        if not self._just_woke_from_sleep and self.CurrentlyIdle() and not HydrusGlobals.currently_processing_updates: self.MaintainDB()
         
     
     def WaitUntilWXThreadIdle( self ):

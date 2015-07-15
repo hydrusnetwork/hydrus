@@ -910,22 +910,33 @@ def CheckTagNotEmpty( tag ):
 
 def CleanTag( tag ):
     
-    tag = tag[:1024]
-    
-    tag = tag.lower()
-    
-    tag = HydrusData.ToString( tag )
-    
-    tag.replace( '\r', '' )
-    tag.replace( '\n', '' )
-    
-    tag = re.sub( '[\\s]+', ' ', tag, flags = re.UNICODE ) # turns multiple spaces into single spaces
-    
-    tag = re.sub( '\\s\\Z', '', tag, flags = re.UNICODE ) # removes space at the end
-    
-    while re.match( '\\s|-|system:', tag, flags = re.UNICODE ) is not None:
+    try:
         
-        tag = re.sub( '\\A(\\s|-|system:)', '', tag, flags = re.UNICODE ) # removes space at the beginning
+        tag = tag[:1024]
+        
+        tag = tag.lower()
+        
+        tag = HydrusData.ToString( tag )
+        
+        tag.replace( '\r', '' )
+        tag.replace( '\n', '' )
+        
+        tag = re.sub( '[\\s]+', ' ', tag, flags = re.UNICODE ) # turns multiple spaces into single spaces
+        
+        tag = re.sub( '\\s\\Z', '', tag, flags = re.UNICODE ) # removes space at the end
+        
+        while re.match( '\\s|-|system:', tag, flags = re.UNICODE ) is not None:
+            
+            tag = re.sub( '\\A(\\s|-|system:)', '', tag, flags = re.UNICODE ) # removes spaces or garbage at the beginning
+            
+        
+    except Exception as e:
+        
+        text = 'Was unable to parse the tag: ' + repr( tag )
+        text += os.linesep * 2
+        text += str( e )
+        
+        raise Exception( text )
         
     
     return tag

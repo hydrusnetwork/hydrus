@@ -42,7 +42,7 @@ HASH_TYPE_SHA512 = 3 # 64 bytes long
 # RebuildNamespaces takes namespaces_to_exclude, if you want to curate your namespaces a little better.
 
 # If your GetNamespaces gives garbage, then just hit DeleteNamespaces. I'll be using the result of GetNamespaces to populate
-# the advanced tag options widget when people sync with these archives.
+# the tag import options widget when people sync with these archives.
 
 
 # And also feel free to contact me directly at hydrus.admin@gmail.com if you need help.

@@ -115,6 +115,7 @@ class Animation( wx.Window ):
         self._current_frame_index = 0
         self._current_frame_drawn = False
         self._current_frame_drawn_at = 0.0
+        self._next_frame_due_at = 0.0
         
         self._paused = False
         
@@ -133,7 +134,7 @@ class Animation( wx.Window ):
         
         self.EventResize( None )
         
-        self._timer_video.Start( 16, wx.TIMER_ONE_SHOT )
+        self._timer_video.Start( 5, wx.TIMER_CONTINUOUS )
         
     
     def __del__( self ):
@@ -168,11 +169,23 @@ class Animation( wx.Window ):
         
         self._current_frame_drawn = True
         
-        now_in_ms = HydrusData.GetNowPrecise()
-        frame_was_supposed_to_be_at = self._current_frame_drawn_at + ( self._video_container.GetDuration( self._current_frame_index ) / 1000 )
+        next_frame_time_s = self._video_container.GetDuration( self._current_frame_index ) / 1000.0
         
-        if 1000.0 * ( now_in_ms - frame_was_supposed_to_be_at ) > 16.7: self._current_frame_drawn_at = now_in_ms
-        else: self._current_frame_drawn_at = frame_was_supposed_to_be_at
+        if HydrusData.TimeHasPassedPrecise( self._next_frame_due_at + next_frame_time_s ):
+            
+            # we are rendering slower than the animation demands, so we'll slow down
+            # this also initialises self._next_frame_due_at
+            
+            self._current_frame_drawn_at = HydrusData.GetNowPrecise()
+            
+        else:
+            
+            # to make timings more accurate and keep frame throughput accurate, let's pretend we drew this at the right time
+            
+            self._current_frame_drawn_at = self._next_frame_due_at
+            
+        
+        self._next_frame_due_at = self._current_frame_drawn_at + next_frame_time_s
         
     
     def _DrawWhite( self ):
@@ -188,7 +201,10 @@ class Animation( wx.Window ):
     
     def EventEraseBackground( self, event ): pass
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    def EventPaint( self, event ):
+        
+        wx.BufferedPaintDC( self, self._canvas_bmp )
+        
     
     def EventPropagateKey( self, event ):
         
@@ -244,9 +260,6 @@ class Animation( wx.Window ):
                 if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
                 else: self._DrawWhite()
                 
-                self._timer_video.Start( 1, wx.TIMER_ONE_SHOT )
-                
-                
             
         
     
@@ -264,8 +277,6 @@ class Animation( wx.Window ):
             if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
             else: self._DrawWhite()
             
-            self._timer_video.Start( 1, wx.TIMER_ONE_SHOT )
-            
         
         self._paused = True
         
@@ -274,24 +285,16 @@ class Animation( wx.Window ):
         
         self._paused = False
         
-        self._timer_video.Start( 1, wx.TIMER_ONE_SHOT )
-        
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
     
     def TIMEREventVideo( self, event ):
         
-        MIN_TIMER_TIME = 4
-        
         if self.IsShown():
             
             if self._current_frame_drawn:
                 
-                ms_since_current_frame_drawn = int( 1000.0 * ( HydrusData.GetNowPrecise() - self._current_frame_drawn_at ) )
-                
-                time_to_update = ms_since_current_frame_drawn + MIN_TIMER_TIME / 2 > self._video_container.GetDuration( self._current_frame_index )
-                
-                if not self._paused and time_to_update:
+                if not self._paused and HydrusData.TimeHasPassedPrecise( self._next_frame_due_at ):
                     
                     num_frames = self._media.GetNumFrames()
                     
@@ -304,15 +307,6 @@ class Animation( wx.Window ):
                 
             
             if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
-            
-            if not self._current_frame_drawn or not self._paused:
-                
-                ms_since_current_frame_drawn = int( 1000.0 * ( HydrusData.GetNowPrecise() - self._current_frame_drawn_at ) )
-                
-                ms_until_next_frame = max( MIN_TIMER_TIME, self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn )
-                
-                self._timer_video.Start( ms_until_next_frame, wx.TIMER_ONE_SHOT )
-                
             
         
     
@@ -495,13 +489,11 @@ class AnimationBar( wx.Window ):
     
 class Canvas( object ):
     
-    def __init__( self, file_service_key, image_cache, claim_focus = True ):
+    def __init__( self, image_cache, claim_focus = True ):
         
-        self._file_service_key = file_service_key
+        self._file_service_key = CC.LOCAL_FILE_SERVICE_KEY
         self._image_cache = image_cache
         self._claim_focus = claim_focus
-        
-        self._file_service = wx.GetApp().GetServicesManager().GetService( self._file_service_key )
         
         self._canvas_key = HydrusData.GenerateKey()
         
@@ -591,7 +583,12 @@ class Canvas( object ):
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                hashes = { self._current_display_media.GetHash() }
+                
+                wx.GetApp().Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+                
             
         
         self.SetFocus() # annoying bug because of the modal dialog
@@ -725,12 +722,17 @@ class Canvas( object ):
     
     def _Undelete( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Undelete this file?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( self._current_display_media.GetHash(), ) ) ] } )
-            
+        locations_manager = self._current_display_media.GetLocationsManager()
         
-        self.SetFocus() # annoying bug because of the modal dialog
+        if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Undelete this file?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+                
+            
+            self.SetFocus() # annoying bug because of the modal dialog
+            
         
     
     def _ZoomIn( self ):
@@ -897,7 +899,15 @@ class Canvas( object ):
     
     def SetMedia( self, media ):
         
-        initial_image = self._current_media == None
+        if media is not None:
+            
+            locations_manager = media.GetLocationsManager()
+            
+            if not locations_manager.HasLocal():
+                
+                media = None
+                
+            
         
         if media != self._current_media:
             
@@ -1154,10 +1164,10 @@ class CanvasWithDetails( Canvas ):
     
 class CanvasPanel( Canvas, wx.Window ):
     
-    def __init__( self, parent, page_key, file_service_key ):
+    def __init__( self, parent, page_key ):
         
         wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER )
-        Canvas.__init__( self, file_service_key, wx.GetApp().GetCache( 'preview' ), claim_focus = False )
+        Canvas.__init__( self, wx.GetApp().GetCache( 'preview' ), claim_focus = False )
         
         self._page_key = page_key
         
@@ -1309,11 +1319,11 @@ class CanvasPanel( Canvas, wx.Window ):
     
 class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails, ClientGUICommon.FrameThatResizes ):
     
-    def __init__( self, my_parent, page_key, file_service_key, media_results ):
+    def __init__( self, my_parent, page_key, media_results ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
-        CanvasWithDetails.__init__( self, file_service_key, wx.GetApp().GetCache( 'fullscreen' ) )
-        ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
+        CanvasWithDetails.__init__( self, wx.GetApp().GetCache( 'fullscreen' ) )
+        ClientMedia.ListeningMediaList.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._page_key = page_key
         
@@ -1634,9 +1644,9 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     
 class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
-    def __init__( self, my_parent, page_key, file_service_key, media_results ):
+    def __init__( self, my_parent, page_key, media_results ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, media_results )
         
         self._kept = set()
         self._deleted = set()
@@ -1881,6 +1891,12 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
         self._Skip()
         
     
+    def EventUndelete( self, event ):
+        
+        if self._HydrusShouldNotProcessInput(): event.Skip()
+        else: self._Undelete()
+        
+    
     def Skip( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
@@ -1891,9 +1907,9 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
 class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
     
-    def __init__( self, my_parent, page_key, file_service_key, media_results ):
+    def __init__( self, my_parent, page_key, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_key, media_results )
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, media_results )
         
         HydrusGlobals.pubsub.sub( self, 'Keep', 'canvas_archive' )
         HydrusGlobals.pubsub.sub( self, 'Delete', 'canvas_delete' )
@@ -1906,9 +1922,9 @@ class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
     
 class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
     
-    def __init__( self, my_parent, page_key, file_service_key, media_results ):
+    def __init__( self, my_parent, page_key, media_results ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, media_results )
         
         HydrusGlobals.pubsub.sub( self, 'Archive', 'canvas_archive' )
         HydrusGlobals.pubsub.sub( self, 'Delete', 'canvas_delete' )
@@ -1999,9 +2015,9 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
     
 class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     
-    def __init__( self, my_parent, page_key, file_service_key, media_results, first_hash ):
+    def __init__( self, my_parent, page_key, media_results, first_hash ):
         
-        CanvasFullscreenMediaListNavigable.__init__( self, my_parent, page_key, file_service_key, media_results )
+        CanvasFullscreenMediaListNavigable.__init__( self, my_parent, page_key, media_results )
         
         self._timer_slideshow = wx.Timer( self, id = ID_TIMER_SLIDESHOW )
         
@@ -2054,6 +2070,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
             
             if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self._Delete()
+            elif modifier == wx.ACCEL_SHIFT and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self._Undelete()
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): wx.CallAfter( self._PausePlaySlideshow )
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
@@ -2283,9 +2300,9 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     
 class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable ):
     
-    def __init__( self, my_parent, page_key, file_service_key, media_results, shortcuts ):
+    def __init__( self, my_parent, page_key, media_results, shortcuts ):
         
-        CanvasFullscreenMediaListNavigable.__init__( self, my_parent, page_key, file_service_key, media_results )
+        CanvasFullscreenMediaListNavigable.__init__( self, my_parent, page_key, media_results )
         
         self._shortcuts = shortcuts
         

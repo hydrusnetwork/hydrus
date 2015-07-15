@@ -566,7 +566,7 @@ class LocationsManager( object ):
     
     def HasDownloading( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._pending
     
-    def HasLocal( self ): return len( self._current.union( self.LOCAL_LOCATIONS ) ) > 0
+    def HasLocal( self ): return len( self._current.intersection( self.LOCAL_LOCATIONS ) ) > 0
     
     def ProcessContentUpdate( self, service_key, content_update ):
         

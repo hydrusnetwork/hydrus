@@ -828,7 +828,7 @@ class DialogInputAdvancedTagOptions( Dialog ):
         self._name = name
         self._initial_ato = ato
         
-        Dialog.__init__( self, parent, 'configure default advanced tag options for ' + pretty_name )
+        Dialog.__init__( self, parent, 'configure default tag import options for ' + pretty_name )
         
         InitialiseControls()
         

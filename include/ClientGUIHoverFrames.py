@@ -288,8 +288,6 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             self._info_text.Show()
             
         
-        self._SizeAndPosition()
-        
     
     def AddCommand( self, label, callback ):
         
@@ -366,6 +364,10 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             self._ResetButtons()
             
             self._ResetText()
+            
+            self.Fit()
+            
+            self._SizeAndPosition()
             
         
     
@@ -577,6 +579,8 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
             FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
             
             self._ResetData()
+            
+        
 
 class FullscreenHoverFrameTags( FullscreenHoverFrame ):
     

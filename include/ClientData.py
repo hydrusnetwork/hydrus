@@ -1002,6 +1002,25 @@ class Service( HydrusData.HydrusYAMLBase ):
     
     def __hash__( self ): return self._service_key.__hash__()
     
+    def _ReportSyncProcessingError( self, path ):
+        
+        text = 'While synchronising ' + self._name + ', the expected update file ' + path + ', was missing.'
+        text += os.linesep * 2
+        text += 'The service has been indefinitely paused.'
+        text += os.linesep * 2
+        text += 'This is a serious error. Unless you know where the file(s) went and can restore them, you should delete this service and recreate it from scratch.'
+        
+        HydrusData.ShowText( text )
+        
+        service_updates = [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_PAUSE ) ]
+        
+        service_keys_to_service_updates = { self._service_key : service_updates }
+        
+        self.ProcessServiceUpdates( service_keys_to_service_updates )
+        
+        wx.GetApp().Write( 'service_updates', service_keys_to_service_updates )
+        
+    
     def CanDownload( self ): return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError()
     
     def CanDownloadUpdate( self ):
@@ -1015,7 +1034,7 @@ class Service( HydrusData.HydrusYAMLBase ):
         
         update_is_downloaded = self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
         
-        it_is_time = HydrusData.TimeHasPassed( self._info[ 'next_processing_timestamp' ] + HC.options[ 'processing_phase' ] )
+        it_is_time = HydrusData.TimeHasPassed( self._info[ 'next_processing_timestamp' ] + HC.UPDATE_DURATION + HC.options[ 'processing_phase' ] )
         
         return update_is_downloaded and it_is_time
         
@@ -1076,7 +1095,8 @@ class Service( HydrusData.HydrusYAMLBase ):
             num_updates_processed = ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION
             
         
-        downloaded_text = HydrusData.ConvertValueRangeToPrettyString( num_updates_downloaded, num_updates )
+        downloaded_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_downloaded, num_updates )
+        processed_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_processed, num_updates )
         
         if not self._info[ 'account' ].HasPermission( HC.GET_DATA ): status = 'updates on hold'
         else:
@@ -1084,10 +1104,20 @@ class Service( HydrusData.HydrusYAMLBase ):
             if self.CanDownloadUpdate(): status = 'downloaded up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
             elif self.CanProcessUpdate(): status = 'processed up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_processing_timestamp' ] )
             elif self.HasRecentError(): status = 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
-            else: status = 'fully synchronised - next update ' + HydrusData.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+            else:
+                
+                if HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION ):
+                    
+                    status = 'next update will be downloaded soon'
+                    
+                else:
+                    
+                    status = 'fully synchronised - next update ' + HydrusData.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+                    
+                
             
         
-        return downloaded_text + ' - ' + status
+        return downloaded_text + ' - ' + processed_text + ' - ' + status
         
     
     def HasRecentError( self ):
@@ -1158,6 +1188,10 @@ class Service( HydrusData.HydrusYAMLBase ):
                             
                             self._info[ 'next_processing_timestamp' ] = next_processing_timestamp
                             
+                        
+                    elif action == HC.SERVICE_UPDATE_PAUSE:
+                        
+                        self._info[ 'paused' ] = True
                         
                     
                 
@@ -1489,6 +1523,13 @@ class Service( HydrusData.HydrusYAMLBase ):
                 
                 path = ClientFiles.GetExpectedServiceUpdatePackagePath( self._service_key, self._info[ 'next_processing_timestamp' ] )
                 
+                if not os.path.exists( path ):
+                    
+                    self._ReportSyncProcessingError( path )
+                    
+                    return
+                    
+                
                 with open( path, 'rb' ) as f: obj_string = f.read()
                 
                 service_update_package = HydrusSerialisable.CreateFromString( obj_string )
@@ -1503,6 +1544,13 @@ class Service( HydrusData.HydrusYAMLBase ):
                     subupdate_index_string = 'content update ' + HydrusData.ConvertValueRangeToPrettyString( subindex + 1, subindex_count ) + ': '
                     
                     path = ClientFiles.GetExpectedContentUpdatePackagePath( self._service_key, self._info[ 'next_processing_timestamp' ], subindex )
+                    
+                    if not os.path.exists( path ):
+                        
+                        self._ReportSyncProcessingError( path )
+                        
+                        return
+                        
                     
                     job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'loading from disk' )
                     

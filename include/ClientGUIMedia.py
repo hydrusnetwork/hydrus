@@ -161,13 +161,33 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 if len( media_results ) > 0:
                     
-                    ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results, shortcuts )
+                    ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, media_results, shortcuts )
                     
                 
             
         
     
-    def _Delete( self, file_service_key ):
+    def _Delete( self, file_service_key = None ):
+        
+        if file_service_key is None:
+            
+            has_local = True in ( CC.LOCAL_FILE_SERVICE_KEY in media.GetLocationsManager().GetCurrent() for media in self._selected_media )
+            
+            has_trash = True in ( CC.TRASH_SERVICE_KEY in media.GetLocationsManager().GetCurrent() for media in self._selected_media )
+            
+            if has_local:
+                
+                file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+                
+            elif has_trash:
+                
+                file_service_key = CC.TRASH_SERVICE_KEY
+                
+            else:
+                
+                return
+                
+            
         
         hashes = self._GetSelectedHashes( has_location = file_service_key )
         
@@ -195,12 +215,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    if file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
-                        
-                        if file_service_key == CC.TRASH_SERVICE_KEY:
-                            
-                            self.SetFocussedMedia( self._page_key, None )
-                            
+                    local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY )
+                    
+                    if file_service_key in local_file_services:
                         
                         wx.GetApp().Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
                         
@@ -251,7 +268,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             if first_media is not None and first_media.GetLocationsManager().HasLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
             else: first_hash = None
             
-            ClientGUICanvas.CanvasFullscreenMediaListBrowser( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results, first_hash )
+            ClientGUICanvas.CanvasFullscreenMediaListBrowser( self.GetTopLevelParent(), self._page_key, media_results, first_hash )
             
         
     
@@ -261,7 +278,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( media_results ) > 0:
             
-            ClientGUICanvas.CanvasFullscreenMediaListFilterInbox( self.GetTopLevelParent(), self._page_key, self._file_service_key, media_results )
+            ClientGUICanvas.CanvasFullscreenMediaListFilterInbox( self.GetTopLevelParent(), self._page_key, media_results )
             
         
     
@@ -1394,7 +1411,17 @@ class MediaPanelThumbnails( MediaPanel ):
                 if self._focussed_media is not None: self._HitMedia( self._focussed_media, True, False )
                 
             elif command == 'custom_filter': self._CustomFilter()
-            elif command == 'delete': self._Delete( data )
+            elif command == 'delete':
+                
+                if data is None:
+                    
+                    self._Delete()
+                    
+                else:
+                    
+                    self._Delete( data )
+                    
+                
             elif command == 'download': wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
             elif command == 'export_files': self._ExportFiles()
             elif command == 'export_tags': self._ExportTags()
@@ -1956,8 +1983,8 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_home' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_end' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_end' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_RETURN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_ENTER, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_up' ) ),
@@ -1972,6 +1999,8 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_home' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_end' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_end' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_up' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_up' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_down' ) ),

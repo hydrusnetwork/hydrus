@@ -518,7 +518,7 @@ class TestTagObjects( unittest.TestCase ):
         
         p = HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
         
-        self.assertEqual( p.GetUnicode(), u'series:*' )
+        self.assertEqual( p.GetUnicode(), u'series:*anything*' )
         
         p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series', inclusive = False )
         

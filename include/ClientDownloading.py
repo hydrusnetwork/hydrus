@@ -346,9 +346,34 @@ class GalleryParserBooru( GalleryParser ):
                 
                 links = soup.find_all( 'a' )
                 
+                ok_link = None
+                better_link = None
+                
                 for link in links:
                     
-                    if link.string == image_data: image_url = link[ 'href' ]
+                    if link.string is not None:
+                        
+                        if link.string.startswith( image_data ):
+                            
+                            ok_link = link[ 'href' ]
+                            
+                        
+                        if link.string.startswith( 'Download PNG' ):
+                            
+                            better_link = link[ 'href' ]
+                            
+                            break
+                            
+                        
+                    
+                
+                if better_link is not None:
+                    
+                    image_url = better_link
+                    
+                else:
+                    
+                    image_url = ok_link
                     
                 
             
@@ -1993,13 +2018,33 @@ class ImportQueueBuilderThread( ImportQueueBuilder ):
                         
                         for post in posts_list:
                             
-                            if 'md5' not in post: continue
+                            if 'md5' not in post:
+                                
+                                continue
+                                
                             
                             image_md5 = post[ 'md5' ].decode( 'base64' )
                             image_url = image_base + HydrusData.ToString( post[ 'tim' ] ) + post[ 'ext' ]
                             image_original_filename = post[ 'filename' ] + post[ 'ext' ]
                             
                             image_infos.append( ( image_md5, image_url, image_original_filename ) )
+                            
+                            if 'extra_files' in post:
+                                
+                                for extra_file in post[ 'extra_files' ]:
+                                    
+                                    if 'md5' not in extra_file:
+                                        
+                                        continue
+                                        
+                                    
+                                    image_md5 = extra_file[ 'md5' ].decode( 'base64' )
+                                    image_url = image_base + HydrusData.ToString( extra_file[ 'tim' ] ) + extra_file[ 'ext' ]
+                                    image_original_filename = extra_file[ 'filename' ] + extra_file[ 'ext' ]
+                                    
+                                    image_infos.append( ( image_md5, image_url, image_original_filename ) )
+                                    
+                                
                             
                         
                         image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in image_infos_already_added ]

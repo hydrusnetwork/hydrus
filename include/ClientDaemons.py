@@ -211,7 +211,7 @@ def DAEMONDownloadFiles():
                         
                         wx.GetApp().WaitUntilWXThreadIdle()
                         
-                        wx.GetApp().WriteSynchronous( 'import_file', temp_path )
+                        wx.GetApp().WriteSynchronous( 'import_file', temp_path, override_deleted = True )
                         
                     finally:
                         
@@ -220,9 +220,10 @@ def DAEMONDownloadFiles():
                     
                     break
                     
-                except:
+                except Exception as e:
                     
-                    HydrusData.ShowText( 'Error downloading file:' + os.linesep + traceback.format_exc() )
+                    HydrusData.ShowText( 'Error downloading file!' )
+                    HydrusData.ShowException( e )
                     
                 
             
@@ -235,6 +236,64 @@ def DAEMONFlushServiceUpdates( list_of_service_keys_to_service_updates ):
     service_keys_to_service_updates = HydrusData.MergeKeyToListDicts( list_of_service_keys_to_service_updates )
     
     wx.GetApp().WriteSynchronous( 'service_updates', service_keys_to_service_updates )
+    
+def DAEMONMaintainTrash():
+    
+    max_size = HC.options[ 'trash_max_size' ] * 1048576
+    max_age = HC.options[ 'trash_max_age' ] * 3600
+    
+    if max_size is not None:
+        
+        service_info = wx.GetApp().Read( 'service_info', CC.TRASH_SERVICE_KEY )
+        
+        while service_info[ HC.SERVICE_INFO_TOTAL_SIZE ] > max_size:
+            
+            if HydrusGlobals.shutdown:
+                
+                return
+                
+            
+            hashes = wx.GetApp().Read( 'oldest_trash_hashes' )
+            
+            if len( hashes ) == 0:
+                
+                return
+                
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
+            
+            service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+            
+            wx.GetApp().WaitUntilWXThreadIdle()
+            
+            wx.GetApp().WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+            service_info = wx.GetApp().Read( 'service_info', CC.TRASH_SERVICE_KEY )
+            
+        
+    
+    if max_age is not None:
+        
+        hashes = wx.GetApp().Read( 'oldest_trash_hashes', minimum_age = max_age )
+        
+        while len( hashes ) > 0:
+            
+            if HydrusGlobals.shutdown:
+                
+                return
+                
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
+            
+            service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+            
+            wx.GetApp().WaitUntilWXThreadIdle()
+            
+            wx.GetApp().WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+            hashes = wx.GetApp().Read( 'oldest_trash_hashes', minimum_age = max_age )
+            
+        
     
 def DAEMONResizeThumbnails():
     
@@ -342,10 +401,14 @@ def DAEMONSynchroniseRepositories():
         
         services = wx.GetApp().GetServicesManager().GetServices( HC.REPOSITORIES )
         
+        HydrusGlobals.currently_processing_updates = True
+        
         for service in services:
             
             service.Sync()
             
+        
+        HydrusGlobals.currently_processing_updates = False
         
         time.sleep( 5 )
         

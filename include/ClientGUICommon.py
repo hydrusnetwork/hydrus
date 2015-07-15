@@ -640,6 +640,15 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         ( inclusive, search_text, entry_predicate ) = self._ParseSearchText()
         
+        try:
+            
+            HydrusTags.CheckTagNotEmpty( search_text )
+            
+        except HydrusExceptions.SizeException:
+            
+            return
+            
+        
         self._BroadcastChoice( entry_predicate )
         
     
@@ -800,8 +809,25 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 matches = ClientSearch.FilterPredicates( search_text, predicates )
                 
             
-            if self._current_namespace != '': matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
-            if '*' in search_text: matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+            if self._current_namespace != '':
+                
+                if '*' not in self._current_namespace:
+                    
+                    matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
+                    
+                
+                if half_complete_tag != '':
+                    
+                    if '*' in self._current_namespace or ( '*' in half_complete_tag and half_complete_tag != '*' ):
+                        
+                        matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                        
+                    
+                
+            elif '*' in search_text:
+                
+                matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                
             
             try:
                 
@@ -941,6 +967,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     def _BroadcastCurrentText( self ):
         
         ( search_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
+        
+        try:
+            
+            HydrusTags.CheckTagNotEmpty( search_text )
+            
+        except HydrusExceptions.SizeException:
+            
+            return
+            
         
         if sibling_predicate is not None:
             
@@ -3273,7 +3308,11 @@ class NoneableSpinCtrl( wx.Panel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( wx.StaticText( self, label=message + ': ' ), CC.FLAGS_MIXED )
+        if len( message ) > 0:
+            
+            hbox.AddF( wx.StaticText( self, label = message + ': ' ), CC.FLAGS_MIXED )
+            
+        
         hbox.AddF( self._one, CC.FLAGS_MIXED )
         
         if self._num_dimensions == 2:
@@ -3567,7 +3606,10 @@ class PopupMessage( PopupWindow ):
         self._cancel_button.Disable()
         
     
-    def EventCopyTBButton( self, event ): HydrusGlobals.pubsub.pub( 'clipboard', 'text', self._job_key.ToString() )
+    def EventCopyTBButton( self, event ):
+        
+        HydrusGlobals.pubsub.pub( 'clipboard', 'text', self._job_key.ToString() )
+        
     
     def EventPauseButton( self, event ):
         
