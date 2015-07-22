@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 166</h3></li>
+				<ul>
+					<li>created new object to hold hdd import information</li>
+					<li>created new object to hold generalised import file status</li>
+					<li>moved hdd management controller to the new system</li>
+					<li>moved hdd management gui to the new system</li>
+					<li>hdd imports will now remember their import and pause status through a session change</li>
+					<li>misc import code improvements</li>
+					<li>hydrus client is getting out of the zip business--zips are no longer parsed for import nor able to be created for export</li>
+					<li>import and export code is simpler</li>
+					<li>repository file downloading daemon will now throw up a small auto-dismissing popup when it downloads files</li>
+					<li>repository file downloading daemon will respond to new downloads much quicker than previously</li>
+					<li>if a repsitory is in the process of backing up when it receives a request, it will now return a 503 'server temporarily busy' error (rather than timing out)</li>
+					<li>the client can now catch and handle these 503 errors gracefully</li>
+					<li>backing up will no longer block the client's gui, and it will no longer timeout if the operation takes more than ten minutes</li>
+					<li>some networking code is a little simpler</li>
+					<li>added 'select local files' and 'select trash' to thumbnail right click menu</li>
+					<li>'cancel download' added to file repository submenu of thumbnail right click menu</li>
+					<li>some buggy listbox resize behaviour (scrollbars not disappearing and occasional layout and drawing update fail) has been fixed</li>
+				</ul>
 				<li><h3>version 165</h3></li>
 				<ul>
 					<li>added a db table to track when a file was sent to trash</li>
