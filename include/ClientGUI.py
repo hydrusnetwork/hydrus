@@ -350,17 +350,40 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _BackupService( self, service_key ):
         
+        def do_it():
+            
+            service = wx.GetApp().GetServicesManager().GetService( service_key )
+            
+            service.Request( HC.POST, 'backup' )
+            
+            HydrusData.ShowText( 'Server backup started!' )
+            
+            time.sleep( 10 )
+            
+            result = service.Request( HC.GET, 'busy' )
+            
+            while result == '1':
+                
+                if HydrusGlobals.shutdown:
+                    
+                    return
+                    
+                
+                time.sleep( 10 )
+                
+                result = service.Request( HC.GET, 'busy' )
+                
+            
+            HydrusData.ShowText( 'Server backup done!' )
+            
+        
         message = 'This will tell the server to lock and copy its database files. It will probably take a few minutes to complete, during which time it will not be able to serve any requests. The client\'s GUI will lock up as well.'
         
         with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                service = wx.GetApp().GetServicesManager().GetService( service_key )
-                
-                with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
-                
-                HydrusData.ShowText( 'Server backup done!' )
+                HydrusThreading.CallToThread( do_it )
                 
             
         
@@ -1004,7 +1027,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             session = wx.GetApp().Read( 'gui_sessions', name )
             
-        except:
+        except Exception as e:
+            
+            HydrusData.ShowText( 'While trying to load session ' + name + ', this error happened:' )
+            HydrusData.ShowException( e )
             
             self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
             
@@ -1693,11 +1719,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
                         
-                    except Exception as e:
+                    except HydrusExceptions.ServerBusyException:
                         
-                        HydrusData.ShowException( e )
+                        job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
                         
-                        time.sleep( 2 )
+                        return
                         
                     
                     time.sleep( 0.1 )
@@ -1745,17 +1771,25 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     job_key.SetVariable( 'popup_text_1', prefix + 'posting update: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( updates ) ) )
                     job_key.SetVariable( 'popup_gauge_1', ( i, len( updates ) ) )
                     
-                    service.Request( HC.POST, 'content_update_package', { 'update' : update } )
+                    try:
+                        
+                        service.Request( HC.POST, 'content_update_package', { 'update' : update } )
+                        
+                        content_updates = update.GetContentUpdates( for_client = True )
+                        
+                        wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
+                        
+                    except HydrusExceptions.ServerBusyException:
+                        
+                        job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
+                        
+                        return
+                        
                     
-                    content_updates = update.GetContentUpdates( for_client = True )
-                    
-                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
-                    
-                    time.sleep( 0.5 )
+                    time.sleep( 0.1 )
                     
                     wx.GetApp().WaitUntilWXThreadIdle()
                     
-                
                 
             
         except Exception as e:
@@ -2043,9 +2077,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._NewPageImportGallery( site_type, gallery_type )
         
     
-    def NewPageImportHDD( self, paths_info, advanced_import_options, paths_to_tags, delete_after_success ):
+    def NewPageImportHDD( self, paths, import_file_options, paths_to_tags, delete_after_success ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths_info, advanced_import_options, paths_to_tags, delete_after_success )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, import_file_options, paths_to_tags, delete_after_success )
         
         self._NewPage( 'import', management_controller )
         

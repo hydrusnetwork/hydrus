@@ -16,7 +16,6 @@ import traceback
 import urllib
 import urlparse
 import wx
-import zipfile
 import HydrusTags
 import HydrusData
 import HydrusFileHandling
@@ -1189,11 +1188,11 @@ class GalleryParserTumblr( GalleryParser ):
     
 class ImportArgsGenerator( object ):
     
-    def __init__( self, job_key, item, advanced_import_options ):
+    def __init__( self, job_key, item, import_file_options ):
         
         self._job_key = job_key
         self._item = item
-        self._advanced_import_options = advanced_import_options
+        self._import_file_options = import_file_options
         
     
     def __call__( self ):
@@ -1212,7 +1211,7 @@ class ImportArgsGenerator( object ):
                     
                     self._job_key.SetVariable( 'status', 'importing' )
                     
-                    ( result, media_result ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path, advanced_import_options = self._advanced_import_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True, url = url )
+                    ( result, media_result ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True, url = url )
                     
                 finally:
                     
@@ -1236,7 +1235,7 @@ class ImportArgsGenerator( object ):
             
             self._job_key.Finish()
             
-            self._CleanUp() # e.g. possibly delete the file for hdd importargsgenerator
+            self._CleanUp()
             
         except Exception as e:
             
@@ -1263,9 +1262,9 @@ class ImportArgsGenerator( object ):
     
 class ImportArgsGeneratorGallery( ImportArgsGenerator ):
     
-    def __init__( self, job_key, item, advanced_import_options, advanced_tag_options, gallery_parsers_factory ):
+    def __init__( self, job_key, item, import_file_options, advanced_tag_options, gallery_parsers_factory ):
         
-        ImportArgsGenerator.__init__( self, job_key, item, advanced_import_options )
+        ImportArgsGenerator.__init__( self, job_key, item, import_file_options )
         
         self._advanced_tag_options = advanced_tag_options
         self._gallery_parsers_factory = gallery_parsers_factory
@@ -1319,7 +1318,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         ( status, hash ) = wx.GetApp().Read( 'url_status', url )
         
-        if status == CC.STATUS_DELETED and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
+        if status == CC.STATUS_DELETED and not self._import_file_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
         
         if status == CC.STATUS_REDUNDANT:
             
@@ -1345,80 +1344,11 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         else: return ( status, None )
         
     
-class ImportArgsGeneratorHDD( ImportArgsGenerator ):
-    
-    def __init__( self, job_key, item, advanced_import_options, paths_to_tags, delete_after_success ):
-        
-        ImportArgsGenerator.__init__( self, job_key, item, advanced_import_options )
-        
-        self._paths_to_tags = paths_to_tags
-        self._delete_after_success = delete_after_success
-        
-    
-    def _CleanUp( self ):
-        
-        result = self._job_key.GetVariable( 'result' )
-        
-        if self._delete_after_success and result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
-            
-            ( path_type, path_info ) = self._item
-            
-            if path_type == 'path':
-                
-                path = path_info
-                
-                try: os.remove( path )
-                except: pass
-                
-            
-        
-    
-    def _GetArgs( self, temp_path ):
-        
-        self._job_key.SetVariable( 'status', 'reading from hdd' )
-        
-        ( path_type, path_info ) = self._item
-        
-        service_keys_to_tags = {}
-        
-        if path_type == 'path':
-            
-            path = path_info
-            
-            with open( path, 'rb' ) as f_source:
-                
-                with open( temp_path, 'wb' ) as f_dest:
-                    
-                    HydrusFileHandling.CopyFileLikeToFileLike( f_source, f_dest )
-                    
-                
-            
-            if path in self._paths_to_tags: service_keys_to_tags = self._paths_to_tags[ path ]
-            
-        elif path_type == 'zip':
-            
-            ( zip_path, name ) = path_info
-            
-            with open( temp_path, 'wb' ) as f:
-                
-                with zipfile.ZipFile( zip_path, 'r' ) as z: f.write( z.read( name ) )
-                
-            
-            pretty_path = zip_path + os.path.sep + name
-            
-            if pretty_path in self._paths_to_tags: service_keys_to_tags = self._paths_to_tags[ pretty_path ]
-            
-            path = pretty_path
-            
-        
-        return ( path, service_keys_to_tags, None )
-        
-    
 class ImportArgsGeneratorThread( ImportArgsGenerator ):
     
-    def __init__( self, job_key, item, advanced_import_options, advanced_tag_options ):
+    def __init__( self, job_key, item, import_file_options, advanced_tag_options ):
         
-        ImportArgsGenerator.__init__( self, job_key, item, advanced_import_options )
+        ImportArgsGenerator.__init__( self, job_key, item, import_file_options )
         
         self._advanced_tag_options = advanced_tag_options
         
@@ -1454,7 +1384,7 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         ( status, hash ) = wx.GetApp().Read( 'md5_status', md5 )
         
-        if status == CC.STATUS_DELETED and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
+        if status == CC.STATUS_DELETED and not self._import_file_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
         
         if status == CC.STATUS_REDUNDANT:
             
@@ -1509,7 +1439,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         ( status, hash ) = wx.GetApp().Read( 'url_status', url )
         
-        if status == CC.STATUS_DELETED and not self._advanced_import_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
+        if status == CC.STATUS_DELETED and not self._import_file_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
         
         if status == CC.STATUS_REDUNDANT:
             

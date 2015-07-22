@@ -1,7 +1,6 @@
 import Crypto.PublicKey.RSA
 import HydrusConstants as HC
 import ClientDownloading
-import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
@@ -30,7 +29,6 @@ import traceback
 import urllib
 import wx
 import yaml
-import zipfile
 import HydrusData
 import ClientSearch
 import HydrusGlobals
@@ -1482,103 +1480,86 @@ class DialogInputLocalFiles( Dialog ):
         
         if paths is None: paths = []
         
-        def InitialiseControls():
-            
-            self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
-            
-            self._gauge = ClientGUICommon.Gauge( self )
-            
-            self._gauge_text = wx.StaticText( self, label = '' )
-            
-            self._gauge_pause = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.pause )
-            self._gauge_pause.Bind( wx.EVT_BUTTON, self.EventGaugePause )
-            self._gauge_pause.Disable()
-            
-            self._gauge_cancel = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.stop )
-            self._gauge_cancel.Bind( wx.EVT_BUTTON, self.EventGaugeCancel )
-            self._gauge_cancel.Disable()
-            
-            self._add_files_button = wx.Button( self, label = 'Add Files' )
-            self._add_files_button.Bind( wx.EVT_BUTTON, self.EventAddPaths )
-            
-            self._add_folder_button = wx.Button( self, label = 'Add Folder' )
-            self._add_folder_button.Bind( wx.EVT_BUTTON, self.EventAddFolder )
-            
-            self._remove_files_button = wx.Button( self, label = 'Remove Files' )
-            self._remove_files_button.Bind( wx.EVT_BUTTON, self.EventRemovePaths )
-            
-            self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
-            
-            self._delete_after_success = wx.CheckBox( self, label = 'delete files after successful import' )
-            
-            self._add_button = wx.Button( self, label = 'Import now' )
-            self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._tag_button = wx.Button( self, label = 'Add tags before importing' )
-            self._tag_button.Bind( wx.EVT_BUTTON, self.EventTags )
-            self._tag_button.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-    
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
-            
-            gauge_sizer.AddF( self._gauge_text, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gauge_sizer.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gauge_sizer.AddF( self._gauge_pause, CC.FLAGS_MIXED )
-            gauge_sizer.AddF( self._gauge_cancel, CC.FLAGS_MIXED )
-            
-            file_buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            file_buttons.AddF( self._add_files_button, CC.FLAGS_MIXED )
-            file_buttons.AddF( self._add_folder_button, CC.FLAGS_MIXED )
-            file_buttons.AddF( self._remove_files_button, CC.FLAGS_MIXED )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._add_button, CC.FLAGS_MIXED )
-            buttons.AddF( self._tag_button, CC.FLAGS_MIXED )
-            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
-            vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._delete_after_success, CC.FLAGS_LONE_BUTTON )
-            vbox.AddF( ( 0, 5 ), CC.FLAGS_NONE )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 780: x = 780
-            if y < 480: y = 480
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'importing files' )
         
         self.SetDropTarget( ClientGUICommon.FileDropTarget( self._AddPathsToList ) )
         
-        InitialiseControls()
+        self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
         
-        PopulateControls()
+        self._gauge = ClientGUICommon.Gauge( self )
         
-        ArrangeControls()
+        self._gauge_text = wx.StaticText( self, label = '' )
+        
+        self._gauge_pause = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.pause )
+        self._gauge_pause.Bind( wx.EVT_BUTTON, self.EventGaugePause )
+        self._gauge_pause.Disable()
+        
+        self._gauge_cancel = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.stop )
+        self._gauge_cancel.Bind( wx.EVT_BUTTON, self.EventGaugeCancel )
+        self._gauge_cancel.Disable()
+        
+        self._add_files_button = wx.Button( self, label = 'Add Files' )
+        self._add_files_button.Bind( wx.EVT_BUTTON, self.EventAddPaths )
+        
+        self._add_folder_button = wx.Button( self, label = 'Add Folder' )
+        self._add_folder_button.Bind( wx.EVT_BUTTON, self.EventAddFolder )
+        
+        self._remove_files_button = wx.Button( self, label = 'Remove Files' )
+        self._remove_files_button.Bind( wx.EVT_BUTTON, self.EventRemovePaths )
+        
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
+        
+        self._delete_after_success = wx.CheckBox( self, label = 'delete files after successful import' )
+        
+        self._add_button = wx.Button( self, label = 'Import now' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._tag_button = wx.Button( self, label = 'Add tags before importing' )
+        self._tag_button.Bind( wx.EVT_BUTTON, self.EventTags )
+        self._tag_button.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
+        
+        gauge_sizer.AddF( self._gauge_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gauge_sizer.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gauge_sizer.AddF( self._gauge_pause, CC.FLAGS_MIXED )
+        gauge_sizer.AddF( self._gauge_cancel, CC.FLAGS_MIXED )
+        
+        file_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        file_buttons.AddF( self._add_files_button, CC.FLAGS_MIXED )
+        file_buttons.AddF( self._add_folder_button, CC.FLAGS_MIXED )
+        file_buttons.AddF( self._remove_files_button, CC.FLAGS_MIXED )
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._add_button, CC.FLAGS_MIXED )
+        buttons.AddF( self._tag_button, CC.FLAGS_MIXED )
+        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._delete_after_success, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( ( 0, 5 ), CC.FLAGS_NONE )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 780: x = 780
+        if y < 480: y = 480
+        
+        self.SetInitialSize( ( x, y ) )
         
         self._processing_queue = []
         self._currently_parsing = False
@@ -1598,8 +1579,6 @@ class DialogInputLocalFiles( Dialog ):
         
         self._ProcessQueue()
         
-    
-    def _GetPathsInfo( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
     
     def _ProcessQueue( self ):
         
@@ -1636,23 +1615,16 @@ class DialogInputLocalFiles( Dialog ):
     
     def _TidyUp( self ): self._job_key.Cancel()
     
-    def AddParsedPath( self, path_type, mime, size, path_info ):
+    def AddParsedPath( self, path, mime, size ):
         
+        pretty_mime = HC.mime_string_lookup[ mime ]
         pretty_size = HydrusData.ConvertIntToBytes( size )
         
-        if path_type == 'path': pretty_path = path_info
-        elif path_type == 'zip':
+        if path not in self._current_paths:
             
-            ( zip_path, name ) = path_info
+            self._current_paths.add( path )
             
-            pretty_path = zip_path + os.path.sep + name
-            
-        
-        if ( path_type, path_info ) not in self._current_paths:
-            
-            self._current_paths.add( ( path_type, path_info ) )
-            
-            self._paths_list.Append( ( pretty_path, HC.mime_string_lookup[ mime ], pretty_size ), ( ( path_type, path_info ), mime, size ) )
+            self._paths_list.Append( ( path, pretty_mime, pretty_size ), ( path, mime, size ) )
             
         
     
@@ -1733,72 +1705,49 @@ class DialogInputLocalFiles( Dialog ):
         
         self._TidyUp()
         
-        paths_info = self._GetPathsInfo()
-        
-        if len( paths_info ) > 0:
+        if len( self._current_paths ) > 0:
             
-            advanced_import_options = self._advanced_import_options.GetInfo()
+            import_file_options = self._import_file_options.GetOptions()
             
             paths_to_tags = {}
             
             delete_after_success = self._delete_after_success.GetValue()
             
-            HydrusGlobals.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options, paths_to_tags, delete_after_success )
+            HydrusGlobals.pubsub.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
             
-            self.EndModal( wx.ID_OK )
-            
+        
+        self.EndModal( wx.ID_OK )
         
     
     def EventRemovePaths( self, event ): self.RemovePaths()
     
     def EventTags( self, event ):
         
-        try:
+        if len( self._current_paths ) > 0:
             
-            paths_info = self._GetPathsInfo()
+            import_file_options = self._import_file_options.GetOptions()
             
-            if len( paths_info ) > 0:
+            with DialogPathsToTags( self, self._current_paths ) as dlg:
                 
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                paths_to_send_to_dialog = []
-                
-                for ( path_type, path_info ) in paths_info:
+                if dlg.ShowModal() == wx.ID_OK:
                     
-                    if path_type == 'path': pretty_path = path_info
-                    elif path_type == 'zip':
-                        
-                        ( zip_path, name ) = path_info
-                        
-                        pretty_path = zip_path + os.path.sep + name
-                        
+                    paths_to_tags = dlg.GetInfo()
                     
-                    paths_to_send_to_dialog.append( pretty_path )
+                    delete_after_success = self._delete_after_success.GetValue()
                     
-                
-                with DialogPathsToTags( self, paths_to_send_to_dialog ) as dlg:
+                    HydrusGlobals.pubsub.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
                     
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        paths_to_tags = dlg.GetInfo()
-                        
-                        delete_after_success = self._delete_after_success.GetValue()
-                        
-                        HydrusGlobals.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options, paths_to_tags, delete_after_success )
-                        
-                        self.EndModal( wx.ID_OK )
-                        
+                    self.EndModal( wx.ID_OK )
                     
                 
             
-        except: wx.MessageBox( traceback.format_exc() )
         
     
     def RemovePaths( self ):
         
         self._paths_list.RemoveAllSelected()
         
-        self._current_paths = set( self._GetPathsInfo() )
+        self._current_paths = { row[0] for row in self._paths_list.GetClientData() }
         
     
     def SetGaugeInfo( self, gauge_range, gauge_value, text ):
@@ -1857,134 +1806,7 @@ class DialogInputLocalFiles( Dialog ):
                 
                 num_good_files += 1
                 
-                wx.CallAfter( self.AddParsedPath, 'path', mime, size, path )
-                
-            elif mime in HC.ARCHIVES:
-                
-                wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Found an archive; parsing\u2026' )
-                
-                if mime == HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP:
-                    
-                    aes_key = None
-                    iv = None
-                    
-                    if '.encrypted' in path:
-                        
-                        try:
-                            
-                            potential_key_path = path.replace( '.encrypted', '.key' )
-                            
-                            if os.path.exists( potential_key_path ):
-                                
-                                with open( potential_key_path, 'rb' ) as f: key_text = f.read()
-                                
-                                ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
-                                
-                            
-                        except: HydrusData.ShowText( 'Tried to read a key, but did not understand it.' )
-                        
-                    
-                    job_key = HydrusData.JobKey()
-                    
-                    def WXTHREADGetAESKey( key ):
-                        
-                        while key is None:
-                            
-                            with DialogTextEntry( wx.GetApp().GetTopWindow(), 'Please enter the key for ' + path + '.' ) as dlg:
-                                
-                                result = dlg.ShowModal()
-                                
-                                if result == wx.ID_OK:
-                                    
-                                    try:
-                                        
-                                        key_text = dlg.GetValue()
-                                        
-                                        ( key, iv ) = HydrusEncryption.AESTextToKey( key_text )
-                                        
-                                        job_key.SetVariable( 'result', ( key, iv ) )
-                                        
-                                    except: wx.MessageBox( 'Did not understand that key!' )
-                                    
-                                elif result == wx.ID_CANCEL: job_key.SetVariable( 'result', ( None, None ) )
-                                
-                            
-                        
-                    
-                    if aes_key is None:
-                        
-                        wx.CallAfter( WXTHREADGetAESKey, aes_key )
-                        
-                        while not job_key.HasVariable( 'result' ):
-                            
-                            if job_key.IsCancelled(): return
-                            
-                            time.sleep( 0.1 )
-                            
-                        
-                        ( aes_key, iv ) = job_key.GetVariable( 'result' )
-                        
-                    
-                    if aes_key is not None:
-                        
-                        path_to = HydrusEncryption.DecryptAESFile( aes_key, iv, path )
-                        
-                        path = path_to
-                        mime = HC.APPLICATION_ZIP
-                        
-                    
-                
-                if mime == HC.APPLICATION_ZIP:
-                    
-                    try:
-                        
-                        with zipfile.ZipFile( path, 'r' ) as z:
-                            
-                            if z.testzip() is not None: raise Exception()
-                            
-                            for name in z.namelist():
-                                
-                                # zip is deflate, which means have to read the whole file to read any of the file, so:
-                                # the file pointer returned by open doesn't support seek, lol!
-                                # so, might as well open the whole damn file
-                                
-                                
-                                ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
-                                
-                                try:
-                                    
-                                    with open( temp_path, 'wb' ) as f: f.write( z.read( name ) )
-                                    
-                                    name_mime = HydrusFileHandling.GetMime( temp_path )
-                                    
-                                finally:
-                                    
-                                    HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
-                                    
-                                
-                                if name_mime in HC.ALLOWED_MIMES:
-                                    
-                                    size = z.getinfo( name ).file_size
-                                    
-                                    if size > 0:
-                                        
-                                        num_good_files += 1
-                                        
-                                        wx.CallAfter( self.AddParsedPath, 'zip', name_mime, size, ( path, name ) )
-                                        
-                                    
-                                
-                            
-                        
-                    except Exception as e:
-                        
-                        num_odd_files += 1
-                        
-                        HydrusData.ShowException( e )
-                        
-                        continue
-                        
-                    
+                wx.CallAfter( self.AddParsedPath, path, mime, size )
                 
             else:
                 
@@ -4693,17 +4515,6 @@ class DialogSetupExport( Dialog ):
             self._open_location = wx.Button( self._export_path_box, label = 'open this location' )
             self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
             
-            self._zip_box = ClientGUICommon.StaticBox( self, 'zip' )
-            
-            self._export_to_zip = wx.CheckBox( self._zip_box, label = 'export to zip' )
-            self._export_to_zip.Bind( wx.EVT_CHECKBOX, self.EventExportToZipCheckbox )
-            
-            self._zip_name = wx.TextCtrl( self._zip_box )
-            self._zip_name.Disable()
-            
-            self._export_encrypted = wx.CheckBox( self._zip_box, label = 'encrypt zip' )
-            self._export_encrypted.Disable()
-            
             self._filenames_box = ClientGUICommon.StaticBox( self, 'filenames' )
             
             self._pattern = wx.TextCtrl( self._filenames_box )
@@ -4735,8 +4546,6 @@ class DialogSetupExport( Dialog ):
             
             self._directory_picker.SetPath( export_path )
             
-            self._zip_name.SetValue( 'archive name.zip' )
-            
             self._pattern.SetValue( '{hash}' )
             
         
@@ -4762,20 +4571,11 @@ class DialogSetupExport( Dialog ):
             
             self._filenames_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._export_to_zip, CC.FLAGS_MIXED )
-            hbox.AddF( self._zip_name, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._export_encrypted, CC.FLAGS_MIXED )
-            
-            self._zip_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             vbox.AddF( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._zip_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._export, CC.FLAGS_LONE_BUTTON )
             vbox.AddF( self._cancel, CC.FLAGS_LONE_BUTTON )
             
@@ -4809,14 +4609,11 @@ class DialogSetupExport( Dialog ):
         
         filename = ClientFiles.GenerateExportFilename( media, terms )
         
-        if self._export_to_zip.GetValue() == True: zip_path = self._zip_name.GetValue() + os.path.sep
-        else: zip_path = ''
-        
         mime = media.GetMime()
         
         ext = HC.mime_ext_lookup[ mime ]
         
-        return directory + os.path.sep + zip_path + filename + ext
+        return directory + os.path.sep + filename + ext
         
     
     def _RecalcPaths( self ):
@@ -4862,73 +4659,25 @@ class DialogSetupExport( Dialog ):
         
         self._RecalcPaths()
         
-        if self._export_to_zip.GetValue() == True:
+        for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
             
-            directory = self._directory_picker.GetPath()
-            
-            zip_path = directory + os.path.sep + self._zip_name.GetValue()
-            
-            with zipfile.ZipFile( zip_path, mode = 'w', compression = zipfile.ZIP_DEFLATED ) as z:
+            try:
                 
-                for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
-                    
-                    try:
-                        
-                        hash = media.GetHash()
-                        
-                        source_path = ClientFiles.GetFilePath( hash, mime )
-                        
-                        ( gumpf, filename ) = os.path.split( path )
-                        
-                        z.write( source_path, filename )
-                        
-                    except:
-                        
-                        wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HydrusData.ToString( ordering_index + 1 ) + '.' + os.linesep * 2 + traceback.format_exc() )
-                        
-                        break
-                        
-                    
+                hash = media.GetHash()
                 
-            
-            if self._export_encrypted.GetValue() == True: HydrusEncryption.EncryptAESFile( zip_path, preface = 'hydrus encrypted zip' )
-            
-        else:
-            
-            for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
+                source_path = ClientFiles.GetFilePath( hash, mime )
                 
-                try:
-                    
-                    hash = media.GetHash()
-                    
-                    source_path = ClientFiles.GetFilePath( hash, mime )
-                    
-                    shutil.copy( source_path, path )
-                    shutil.copystat( source_path, path )
-                    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                    except: pass
-                    
-                except:
-                    
-                    wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HydrusData.ToString( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
-                    
-                    break
-                    
+                shutil.copy( source_path, path )
+                shutil.copystat( source_path, path )
+                try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                except: pass
                 
-            
-        
-    
-    def EventExportToZipCheckbox( self, event ):
-        
-        if self._export_to_zip.GetValue() == True:
-            
-            self._zip_name.Enable()
-            self._export_encrypted.Enable()
-            
-        else:
-            
-            self._zip_name.Disable()
-            self._export_encrypted.Disable()
+            except:
+                
+                wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HydrusData.ToString( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
+                
+                break
+                
             
         
     

@@ -1986,7 +1986,6 @@ class ListBox( wx.ScrolledWindow ):
         self._current_selected_index = None
         self._current_selected_term = None
         
-        self._last_virtual_size = None
         self._last_view_start = None
         self._dirty = True
         
@@ -2302,6 +2301,15 @@ class ListBox( wx.ScrolledWindow ):
     
     def EventPaint( self, event ):
         
+        ( my_x, my_y ) = self.GetClientSize()
+        
+        if ( my_x, my_y ) != self._client_bmp.GetSize():
+            
+            self._client_bmp = wx.EmptyBitmap( my_x, my_y, 24 )
+            
+            self._dirty = True
+            
+        
         dc = wx.BufferedPaintDC( self, self._client_bmp )
         
         if self._dirty or self._last_view_start != self.GetViewStart():
@@ -2318,19 +2326,12 @@ class ListBox( wx.ScrolledWindow ):
         
         ideal_virtual_size = ( my_x, max( self._text_y * len( self._ordered_strings ), my_y ) )
         
-        if ideal_virtual_size != self._last_virtual_size:
+        if ideal_virtual_size != self.GetVirtualSize():
             
             self.SetVirtualSize( ideal_virtual_size )
             
-            self._last_virtual_size = ideal_virtual_size
-            
-            if self._client_bmp.GetSize() != ( my_x, my_y ):
-                
-                self._client_bmp = wx.EmptyBitmap( my_x, my_y, 24 )
-                
-            
-            self._SetDirty()
-            
+        
+        self._SetDirty()
         
     
     def GetClientData( self, s = None ):

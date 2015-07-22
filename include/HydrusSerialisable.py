@@ -9,7 +9,7 @@ SERIALISABLE_TYPE_PERIODIC = 4
 SERIALISABLE_TYPE_GALLERY_QUERY = 5
 SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS = 6
 SERIALISABLE_TYPE_IMPORT_FILE_OPTIONS = 7
-SERIALISABLE_TYPE_SEED_QUEUE = 8
+SERIALISABLE_TYPE_SEED_CACHE = 8
 SERIALISABLE_TYPE_HDD_IMPORT = 9
 SERIALISABLE_TYPE_SERVER_TO_CLIENT_CONTENT_UPDATE_PACKAGE = 10
 SERIALISABLE_TYPE_SERVER_TO_CLIENT_SERVICE_UPDATE_PACKAGE = 11
@@ -90,9 +90,9 @@ class SerialisableBase( object ):
         raise NotImplementedError()
         
     
-    def _UpdateInfo( self, version, old_info ):
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
-        return old_info
+        return old_serialisable_info
         
     
     def GetSerialisableInfo( self ):
@@ -109,9 +109,9 @@ class SerialisableBase( object ):
     
     def InitialiseFromSerialisableInfo( self, version, serialisable_info ):
         
-        if version != self.SERIALISABLE_VERSION:
+        while version < self.SERIALISABLE_VERSION:
             
-            serialisable_info = self._UpdateInfo( version, serialisable_info )
+            ( version, serialisable_info ) = self._UpdateSerialisableInfo( version, serialisable_info )
             
         
         self._InitialiseFromSerialisableInfo( serialisable_info )

@@ -264,7 +264,11 @@ def LaunchDirectory( path ):
         
         cmd.append( path )
         
-        subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+        process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+        
+        process.wait()
+        
+        process.communicate()
         
     
 def LaunchFile( path ):
@@ -280,6 +284,10 @@ def LaunchFile( path ):
         
         cmd.append( path )
         
-        subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+        process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+        
+        process.wait()
+        
+        process.communicate()        
         
     

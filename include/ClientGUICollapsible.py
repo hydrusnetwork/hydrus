@@ -25,6 +25,8 @@ class CollapsibleOptions( ClientGUICommon.StaticBox ):
     
     def GetInfo( self ): return self._options_panel.GetInfo()
     
+    def GetOptions( self ): return self._options_panel.GetOptions()
+    
     def SetInfo( self, info ): self._options_panel.SetInfo( info )
     
 class CollapsibleOptionsHentaiFoundry( CollapsibleOptions ):

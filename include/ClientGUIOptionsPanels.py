@@ -212,7 +212,7 @@ class OptionsPanelImportFiles( OptionsPanel ):
         
         self.SetSizer( vbox )
         
-        self.SetInfo( ClientDefaults.GetDefaultAdvancedImportOptions() )
+        self.SetInfo( ClientDefaults.GetDefaultImportFileOptions() )
         
     
     def GetInfo( self ):

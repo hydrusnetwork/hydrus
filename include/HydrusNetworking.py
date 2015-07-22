@@ -209,11 +209,11 @@ class HTTPConnectionManager( object ):
         threading.Thread( target = self.DAEMONMaintainConnections, name = 'Maintain Connections' ).start()
         
     
-    def _DoRequest( self, method, location, path, query, request_headers, body, follow_redirects = True, report_hooks = None, temp_path = None, num_redirects_permitted = 4, long_timeout = False ):
+    def _DoRequest( self, method, location, path, query, request_headers, body, follow_redirects = True, report_hooks = None, temp_path = None, num_redirects_permitted = 4 ):
         
         if report_hooks is None: report_hooks = []
         
-        connection = self._GetConnection( location, long_timeout )
+        connection = self._GetConnection( location )
         
         try:
             
@@ -236,7 +236,7 @@ class HTTPConnectionManager( object ):
                 
                 if new_location is None: new_location = location
                 
-                return self._DoRequest( new_method, new_location, new_path, new_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path, num_redirects_permitted = num_redirects_permitted - 1, long_timeout = long_timeout )
+                return self._DoRequest( new_method, new_location, new_path, new_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path, num_redirects_permitted = num_redirects_permitted - 1 )
                 
             
         except:
@@ -247,26 +247,22 @@ class HTTPConnectionManager( object ):
             
         
     
-    def _GetConnection( self, location, long_timeout = False ):
+    def _GetConnection( self, location ):
         
         with self._lock:
             
-            if long_timeout: return HTTPConnection( location, long_timeout )
-            else:
+            if location not in self._connections:
                 
-                if location not in self._connections:
-                    
-                    connection = HTTPConnection( location )
-                    
-                    self._connections[ location ] = connection
-                    
+                connection = HTTPConnection( location )
                 
-                return self._connections[ location ]
+                self._connections[ location ] = connection
                 
+            
+            return self._connections[ location ]
             
         
     
-    def Request( self, method, url, request_headers = None, body = '', return_everything = False, return_cookies = False, report_hooks = None, temp_path = None, long_timeout = False ):
+    def Request( self, method, url, request_headers = None, body = '', return_everything = False, return_cookies = False, report_hooks = None, temp_path = None ):
         
         if request_headers is None: request_headers = {}
         
@@ -274,7 +270,7 @@ class HTTPConnectionManager( object ):
         
         follow_redirects = not return_cookies
         
-        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( method, location, path, query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path, long_timeout = long_timeout )
+        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( method, location, path, query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path )
         
         if return_everything: return ( response, size_of_response, response_headers, cookies )
         elif return_cookies: return ( response, cookies )
@@ -317,12 +313,11 @@ class HTTPConnection( object ):
     
     read_block_size = 64 * 1024
     
-    def __init__( self, location, long_timeout = False ):
+    def __init__( self, location ):
         
         ( self._scheme, self._host, self._port ) = location
         
-        if long_timeout: self._timeout = 600
-        else: self._timeout = 30
+        self._timeout = 30
         
         self.lock = threading.Lock()
         
@@ -607,7 +602,28 @@ class HTTPConnection( object ):
             elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
             elif response.status == 419: raise HydrusExceptions.SessionException( parsed_response )
             elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
-            elif response.status in ( 500, 501, 502, 503 ): raise Exception( parsed_response )
+            elif response.status in ( 500, 501, 502, 503 ):
+                
+                server_header = response.getheader( 'Server' )
+                
+                if server_header is not None and 'hydrus' in server_header:
+                    
+                    hydrus_service = True
+                    
+                else:
+                    
+                    hydrus_service = False
+                    
+                
+                if response.status == 503 and hydrus_service:
+                    
+                    raise HydrusExceptions.ServerBusyException( 'Server is busy, please try again later.' )
+                    
+                else:
+                    
+                    raise Exception( parsed_response )
+                    
+                
             else: raise Exception( parsed_response )
             
         

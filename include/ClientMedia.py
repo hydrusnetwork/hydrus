@@ -202,11 +202,14 @@ class MediaList( object ):
                 
                 if discriminant is not None:
                     
-                    inbox_failed = discriminant == CC.DISCRIMINANT_INBOX and not media.HasInbox()
-                    local_failed = discriminant == CC.DISCRIMINANT_LOCAL and not media.GetLocationsManager().HasLocal()
-                    not_local_failed = discriminant == CC.DISCRIMINANT_NOT_LOCAL and media.GetLocationsManager().HasLocal()
+                    locations_manager = media.GetLocationsManager()
                     
-                    if inbox_failed or local_failed or not_local_failed: continue
+                    inbox_failed = discriminant == CC.DISCRIMINANT_INBOX and not media.HasInbox()
+                    local_failed = discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal()
+                    not_local_failed = discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal()
+                    downloading_failed = discriminant == CC.DISCRIMINANT_DOWNLOADING and CC.LOCAL_FILE_SERVICE_KEY not in locations_manager.GetPending()
+                    
+                    if inbox_failed or local_failed or not_local_failed or downloading_failed: continue
                     
                 
                 if unrated is not None:

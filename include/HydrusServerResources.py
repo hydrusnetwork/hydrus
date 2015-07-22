@@ -5,6 +5,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusThreading
 import os
 import ServerFiles
 import time
@@ -102,6 +103,23 @@ class HydrusDomain( object ):
         if self._local_only and client_ip != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
         
     
+class HydrusResourceBusyCheck( Resource ):
+    
+    def __init__( self ):
+        
+        Resource.__init__( self )
+        
+        self._server_version_string = HC.service_string_lookup[ HC.SERVER_ADMIN ] + '/' + str( HC.NETWORK_VERSION )
+        
+    
+    def render_GET( self, request ):
+        
+        request.setHeader( 'Server', self._server_version_string )
+        
+        if HydrusGlobals.server_busy: return '1'
+        else: return '0'
+        
+    
 class HydrusResourceWelcome( Resource ):
     
     def __init__( self, service_key, service_type, message ):
@@ -115,7 +133,7 @@ class HydrusResourceWelcome( Resource ):
         
         self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
         
-
+    
     def render_GET( self, request ):
         
         request.setHeader( 'Server', self._server_version_string )
@@ -136,7 +154,17 @@ class HydrusResourceCommand( Resource ):
         self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
         
     
+    def _checkServerBusy( self ):
+        
+        if HydrusGlobals.server_busy:
+            
+            raise HydrusExceptions.ServerBusyException( 'This server is busy, please try again later.' )
+            
+        
+    
     def _callbackCheckRestrictions( self, request ):
+        
+        self._checkServerBusy()
         
         self._checkUserAgent( request )
         
@@ -423,6 +451,7 @@ class HydrusResourceCommand( Resource ):
         elif failure.type == HydrusExceptions.ForbiddenException: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.NotFoundException: response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.NetworkVersionException: response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.ServerBusyException: response_context = ResponseContext( 503, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.SessionException: response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
         else:
             
@@ -560,6 +589,8 @@ class HydrusResourceCommandBooru( HydrusResourceCommand ):
         
     
     def _callbackCheckRestrictions( self, request ):
+        
+        self._checkServerBusy()
         
         self._checkUserAgent( request )
         
@@ -853,6 +884,8 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
     
     def _callbackCheckRestrictions( self, request ):
         
+        self._checkServerBusy()
+        
         self._checkUserAgent( request )
         
         self._domain.CheckValid( request.getClientIP() )
@@ -1021,9 +1054,16 @@ class HydrusResourceCommandRestrictedBackup( HydrusResourceCommandRestricted ):
     
     def _threadDoPOSTJob( self, request ):
         
-        #threading.Thread( target = HC.app.Write, args = ( 'backup', ), name = 'Backup Thread' ).start()
+        def do_it():
+            
+            HydrusGlobals.server_busy = True
+            
+            wx.GetApp().WriteSynchronous( 'backup' )
+            
+            HydrusGlobals.server_busy = False
+            
         
-        wx.GetApp().WriteSynchronous( 'backup' )
+        HydrusThreading.CallToThread( do_it )
         
         response_context = ResponseContext( 200 )
         

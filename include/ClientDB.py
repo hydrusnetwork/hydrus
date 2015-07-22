@@ -3890,18 +3890,29 @@ class DB( HydrusDB.HydrusDB ):
         return names
         
     
-    def _ImportFile( self, path, advanced_import_options = None, service_keys_to_tags = None, generate_media_result = False, override_deleted = False, url = None ):
+    def _ImportFile( self, path, import_file_options = None, service_keys_to_tags = None, generate_media_result = False, override_deleted = False, url = None ):
         
-        if advanced_import_options is None: advanced_import_options = ClientDefaults.GetDefaultAdvancedImportOptions()
+        if import_file_options is None: import_file_options = ClientDefaults.GetDefaultImportFileOptions()
         if service_keys_to_tags is None: service_keys_to_tags = {}
         
         result = CC.STATUS_SUCCESSFUL
         
         can_add = True
         
-        archive = advanced_import_options[ 'auto_archive' ]
-        
-        exclude_deleted_files = advanced_import_options[ 'exclude_deleted_files' ]
+        if type( import_file_options ) == dict:
+            
+            archive = import_file_options[ 'auto_archive' ]
+            
+            exclude_deleted_files = import_file_options[ 'exclude_deleted_files' ]
+            
+            min_size = import_file_options[ 'min_size' ]
+            
+            min_resolution = import_file_options[ 'min_resolution' ]
+            
+        else:
+            
+            ( archive, exclude_deleted_files, min_size, min_resolution ) = import_file_options.ToTuple()
+            
         
         HydrusImageHandling.ConvertToPngIfBmp( path )
         
@@ -3945,17 +3956,15 @@ class DB( HydrusDB.HydrusDB ):
             
             if width is not None and height is not None:
                 
-                if advanced_import_options[ 'min_resolution' ] is not None:
+                if min_resolution is not None:
                     
-                    ( min_x, min_y ) = advanced_import_options[ 'min_resolution' ]
+                    ( min_x, min_y ) = min_resolution
                     
                     if width < min_x or height < min_y: raise Exception( 'Resolution too small' )
                     
                 
             
-            if advanced_import_options[ 'min_size' ] is not None:
-                
-                min_size = advanced_import_options[ 'min_size' ]
+            if min_size is not None:
                 
                 if size < min_size: raise Exception( 'File too small' )
                 
@@ -5063,34 +5072,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
-        
-        if version == 115:
-            
-            for path in ClientFiles.IterateAllFilePaths():
-                
-                try:
-                    
-                    filename = os.path.basename( path )
-                    
-                    ( hash_encoded, ext ) = filename.split( '.', 1 )
-                    
-                    hash = hash_encoded.decode( 'hex' )
-                    
-                    if ext == 'webm':
-                        
-                        thumbnail = HydrusFileHandling.GenerateThumbnail( path )
-                        
-                        with open( ClientFiles.GetExpectedThumbnailPath( hash ), 'wb' ) as f: f.write( thumbnail )
-                        
-                    
-                except: print( traceback.format_exc())
-                
-            
-        
-        if version == 116:
-            
-            self._c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS, ) )
-            
         
         if version == 117:
             

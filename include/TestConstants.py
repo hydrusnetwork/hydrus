@@ -18,7 +18,7 @@ class FakeHTTPConnectionManager():
         self._fake_responses = {}
         
     
-    def Request( self, method, url, request_headers = None, body = '', return_everything = False, return_cookies = False, report_hooks = None, temp_path = None, long_timeout = False ):
+    def Request( self, method, url, request_headers = None, body = '', return_everything = False, return_cookies = False, report_hooks = None, temp_path = None ):
         
         if request_headers is None: request_headers = {}
         if report_hooks is None: report_hooks = []

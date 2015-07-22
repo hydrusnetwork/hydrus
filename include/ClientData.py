@@ -780,6 +780,38 @@ class ImportFileOptions( HydrusSerialisable.SerialisableBase ):
         ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution ) = serialisable_info
         
     
+    def FileIsValid( self, size, resolution = None ):
+        
+        if self._min_size is not None and size < self._min_size:
+            
+            return False
+            
+        
+        if resolution is not None and self._min_resolution is not None:
+            
+            ( x, y ) = resolution
+            
+            ( min_x, min_y ) = self._min_resolution
+            
+            if x < min_x or y < min_y:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def GetAutomaticArchive( self ):
+        
+        return self._automatic_archive
+        
+    
+    def GetExcludeDeleted( self ):
+        
+        return self._exclude_deleted
+        
+    
     def ToTuple( self ):
         
         return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
@@ -1021,13 +1053,16 @@ class Service( HydrusData.HydrusYAMLBase ):
         wx.GetApp().Write( 'service_updates', service_keys_to_service_updates )
         
     
-    def CanDownload( self ): return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError()
+    def CanDownload( self ):
+        
+        return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError()
+        
     
     def CanDownloadUpdate( self ):
         
         update_due = HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
         
-        return not self.IsPaused() and self.CanDownload() and update_due
+        return self.CanDownload() and update_due and not self.IsPaused()
         
     
     def CanProcessUpdate( self ):
@@ -1036,7 +1071,7 @@ class Service( HydrusData.HydrusYAMLBase ):
         
         it_is_time = HydrusData.TimeHasPassed( self._info[ 'next_processing_timestamp' ] + HC.UPDATE_DURATION + HC.options[ 'processing_phase' ] )
         
-        return update_is_downloaded and it_is_time
+        return update_is_downloaded and it_is_time and not self.IsPaused()
         
     
     def CanUpload( self ): return self._info[ 'account' ].HasPermission( HC.POST_DATA ) and not self.HasRecentError()
@@ -1098,7 +1133,7 @@ class Service( HydrusData.HydrusYAMLBase ):
         downloaded_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_downloaded, num_updates )
         processed_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_processed, num_updates )
         
-        if not self._info[ 'account' ].HasPermission( HC.GET_DATA ): status = 'updates on hold'
+        if self.IsPaused() or not self._info[ 'account' ].HasPermission( HC.GET_DATA ): status = 'updates on hold'
         else:
             
             if self.CanDownloadUpdate(): status = 'downloaded up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
@@ -1212,9 +1247,6 @@ class Service( HydrusData.HydrusYAMLBase ):
             elif command in ( 'session_key', 'access_key_verification' ): HydrusNetworking.AddHydrusCredentialsToHeaders( credentials, request_headers )
             else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self._service_key, request_headers )
             
-            if command == 'backup': long_timeout = True
-            else: long_timeout = False
-            
             path = '/' + command
             
             if method == HC.GET:
@@ -1252,7 +1284,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             url = 'http://' + host + ':' + HydrusData.ToString( port ) + path_and_query
             
-            ( response, size_of_response, response_headers, cookies ) = wx.GetApp().DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True, long_timeout = long_timeout )
+            ( response, size_of_response, response_headers, cookies ) = wx.GetApp().DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True )
             
             HydrusNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
             
@@ -1266,26 +1298,29 @@ class Service( HydrusData.HydrusYAMLBase ):
             
         except Exception as e:
             
-            if isinstance( e, HydrusExceptions.SessionException ):
+            if not isinstance( e, HydrusExceptions.ServerBusyException ):
                 
-                session_manager = wx.GetApp().GetManager( 'hydrus_sessions' )
-                
-                session_manager.DeleteSessionKey( self._service_key )
-                
-            
-            wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HydrusData.ToString( e ) ) ] } )
-            
-            if isinstance( e, HydrusExceptions.PermissionException ):
-                
-                if 'account' in self._info:
+                if isinstance( e, HydrusExceptions.SessionException ):
                     
-                    account_key = self._info[ 'account' ].GetAccountKey()
+                    session_manager = wx.GetApp().GetManager( 'hydrus_sessions' )
                     
-                    unknown_account = HydrusData.GetUnknownAccount( account_key )
+                    session_manager.DeleteSessionKey( self._service_key )
                     
-                else: unknown_account = HydrusData.GetUnknownAccount()
                 
-                wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, unknown_account ) ] } )
+                wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HydrusData.ToString( e ) ) ] } )
+                
+                if isinstance( e, HydrusExceptions.PermissionException ):
+                    
+                    if 'account' in self._info:
+                        
+                        account_key = self._info[ 'account' ].GetAccountKey()
+                        
+                        unknown_account = HydrusData.GetUnknownAccount( account_key )
+                        
+                    else: unknown_account = HydrusData.GetUnknownAccount()
+                    
+                    wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, unknown_account ) ] } )
+                    
                 
             
             raise

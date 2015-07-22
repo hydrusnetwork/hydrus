@@ -298,6 +298,7 @@ class HydrusServiceAdmin( HydrusServiceRestricted ):
         
         root = HydrusServiceRestricted._InitRoot( self )
         
+        root.putChild( 'busy', HydrusServerResources.HydrusResourceBusyCheck() )
         root.putChild( 'backup', HydrusServerResources.HydrusResourceCommandRestrictedBackup( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         root.putChild( 'init', HydrusServerResources.HydrusResourceCommandInit( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         root.putChild( 'services', HydrusServerResources.HydrusResourceCommandRestrictedServices( self._service_key, self._service_type, REMOTE_DOMAIN ) )

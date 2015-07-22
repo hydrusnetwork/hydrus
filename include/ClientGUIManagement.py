@@ -15,6 +15,7 @@ import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMedia
+import ClientImporting
 import ClientMedia
 import json
 import os
@@ -99,14 +100,13 @@ def CreateManagementControllerImportURL():
     
     return management_controller
     
-def CreateManagementControllerImportHDD( paths_info, advanced_import_options, paths_to_tags, delete_after_success ):
+def CreateManagementControllerImportHDD( paths, import_file_options, paths_to_tags, delete_after_success ):
     
     management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_HDD )
     
-    management_controller.SetVariable( 'paths_info', paths_info )
-    management_controller.SetVariable( 'advanced_import_options', advanced_import_options )
-    management_controller.SetVariable( 'paths_to_tags', paths_to_tags )
-    management_controller.SetVariable( 'delete_after_success', delete_after_success )
+    hdd_import = ClientImporting.HDDImport( paths = paths, import_file_options = import_file_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+    
+    management_controller.SetVariable( 'hdd_import', hdd_import )
     
     return management_controller
     
@@ -462,7 +462,7 @@ class Comment( wx.Panel ):
 class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self ):
         
@@ -483,22 +483,6 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         serialisable_simples = dict( self._simples )
         
-        if 'paths_to_tags' in serialisable_simples:
-            
-            paths_to_tags = serialisable_simples[ 'paths_to_tags' ]
-            
-            serialisable_paths_to_tags = {}
-            
-            for ( path, service_keys_to_tags ) in paths_to_tags.items():
-                
-                serialisable_service_keys_to_tags = { service_key.encode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags.items() }
-                
-                serialisable_paths_to_tags[ path ] = serialisable_service_keys_to_tags
-                
-            
-            serialisable_simples[ 'paths_to_tags' ] = serialisable_paths_to_tags
-            
-        
         serialisable_serialisables = { name : HydrusSerialisable.GetSerialisableTuple( value ) for ( name, value ) in self._serialisables.items() }
         
         return ( self._management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
@@ -512,23 +496,47 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._simples = dict( serialisable_simples )
         
-        if 'paths_to_tags' in self._simples:
-            
-            serialisable_paths_to_tags = self._simples[ 'paths_to_tags' ]
-            
-            paths_to_tags = {}
-            
-            for ( path, serialisable_service_keys_to_tags ) in paths_to_tags.items():
-                
-                service_keys_to_tags = { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in serialisable_service_keys_to_tags.items() }
-                
-                paths_to_tags[ path ] = service_keys_to_tags
-                
-            
-            self._simples[ 'paths_to_tags' ] = paths_to_tags
-            
-        
         self._serialisables = { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in serialisables.items() }
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            
+            if management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+                
+                advanced_import_options = serialisable_simples[ 'advanced_import_options' ]
+                paths_info = serialisable_simples[ 'paths_info' ]
+                paths_to_tags = serialisable_simples[ 'paths_to_tags' ]
+                delete_after_success = serialisable_simples[ 'delete_after_success' ]
+                
+                paths = [ path_info for ( path_type, path_info ) in paths_info if path_type != 'zip' ]
+                
+                automatic_archive = advanced_import_options[ 'automatic_archive' ]
+                exclude_deleted = advanced_import_options[ 'exclude_deleted' ]
+                min_size = advanced_import_options[ 'min_size' ]
+                min_resolution = advanced_import_options[ 'min_resolution' ]
+                
+                import_file_options = ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+                
+                paths_to_tags = { path : { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in paths_to_tags.items() }
+                
+                hdd_import = ClientImporting.HDDImport( paths = paths, import_file_options = import_file_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+                
+                serialisable_serialisables[ 'hdd_import' ] = HydrusSerialisable.GetSerialisableTuple( hdd_import )
+                
+                del serialisable_serialisables[ 'advanced_import_options' ]
+                del serialisable_serialisables[ 'paths_info' ]
+                del serialisable_serialisables[ 'paths_to_tags' ]
+                del serialisable_serialisables[ 'delete_after_success' ]
+                
+            
+            new_serialisable_info = ( management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def GetKey( self, name ):
@@ -1711,13 +1719,13 @@ class ManagementPanelImports( ManagementPanelImport ):
         queue_hbox.AddF( self._pending_import_queues_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_MIXED )
         
-        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._pending_import_queues_panel )
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._pending_import_queues_panel )
         
         self._pending_import_queues_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._pending_import_queues_panel.AddF( self._new_queue_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_import_queues_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_CENTER )
         self._pending_import_queues_panel.AddF( self._file_limit, CC.FLAGS_CENTER )
-        self._pending_import_queues_panel.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_import_queues_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.AddF( self._pending_import_queues_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1793,7 +1801,7 @@ class ManagementPanelImports( ManagementPanelImport ):
             
         
     
-    def GetAdvancedImportOptions( self ): return self._advanced_import_options.GetInfo()
+    def GetImportFileOptions( self ): return self._import_file_options.GetInfo()
     
     def EventCancelImportQueueBuilder( self, event ):
         
@@ -1905,13 +1913,13 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
         
         def factory( job_key, item ):
             
-            advanced_import_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedImportOptions )
+            import_file_options = HydrusThreading.CallBlockingToWx( self.GetImportFileOptions )
             
             advanced_tag_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedTagOptions )
             
             gallery_parsers_factory = self._GetGalleryParsersFactory()
             
-            return ClientDownloading.ImportArgsGeneratorGallery( job_key, item, advanced_import_options, advanced_tag_options, gallery_parsers_factory )
+            return ClientDownloading.ImportArgsGeneratorGallery( job_key, item, import_file_options, advanced_tag_options, gallery_parsers_factory )
             
         
         return factory
@@ -2116,9 +2124,9 @@ class ManagementPanelImportsURL( ManagementPanelImports ):
         
         def factory( job_key, item ):
             
-            advanced_import_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedImportOptions )
+            import_file_options = HydrusThreading.CallBlockingToWx( self.GetImportFileOptions )
             
-            return ClientDownloading.ImportArgsGeneratorURLs( job_key, item, advanced_import_options )
+            return ClientDownloading.ImportArgsGeneratorURLs( job_key, item, import_file_options )
             
         
         return factory
@@ -2146,36 +2154,125 @@ class ManagementPanelImportsURL( ManagementPanelImports ):
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_URL ] = ManagementPanelImportsURL
 
-class ManagementPanelImportHDD( ManagementPanelImport ):
+class ManagementPanelImportHDD( ManagementPanel ):
     
     def __init__( self, parent, page, management_controller ):
         
-        self._paths_info = management_controller.GetVariable( 'paths_info' )
-        self._advanced_import_options = management_controller.GetVariable( 'advanced_import_options' )
-        self._paths_to_tags = management_controller.GetVariable( 'paths_to_tags' )
-        self._delete_after_success = management_controller.GetVariable( 'delete_after_success' )
+        ManagementPanel.__init__( self, parent, page, management_controller )
         
-        ManagementPanelImport.__init__( self, parent, page, management_controller )
+        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import summary' )
         
-        self._import_controller.PendImportQueueJob( self._paths_info )
+        self._overall_status = wx.StaticText( self._import_queue_panel )
+        self._current_action = wx.StaticText( self._import_queue_panel )
+        self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
+        
+        self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._import_queue_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
+        
+        vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._MakeCurrentSelectionTagsBox( vbox )
+        
+        self.SetSizer( vbox )
+        
+        HydrusGlobals.pubsub.sub( self, 'UpdateStatus', 'update_status' )
+        
+        self._hdd_import = self._controller.GetVariable( 'hdd_import' )
+        
+        self._Update()
+        
+        self._hdd_import.Start( self._page_key )
         
     
-    def _GenerateImportArgsGeneratorFactory( self ):
+    def _Update( self ):
         
-        def factory( job_key, item ):
+        ( ( overall_status, ( overall_value, overall_range ) ), paused ) = self._hdd_import.GetStatus()
+        
+        self._overall_status.SetLabel( overall_status )
+        
+        self._overall_gauge.SetRange( overall_range )
+        self._overall_gauge.SetValue( overall_value )
+        
+        if paused:
             
-            return ClientDownloading.ImportArgsGeneratorHDD( job_key, item, self._advanced_import_options, self._paths_to_tags, self._delete_after_success )
+            current_action = 'paused at ' + HydrusData.ConvertValueRangeToPrettyString( overall_value, overall_range )
+            
+            if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
+                
+                self._pause_button.SetBitmap( CC.GlobalBMPs.play )
+                
+            
+        else:
+            
+            current_action = 'processing at ' + HydrusData.ConvertValueRangeToPrettyString( overall_value, overall_range )
+            
+            if self._pause_button.GetBitmap() != CC.GlobalBMPs.pause:
+                
+                self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
+                
             
         
-        return factory
+        if overall_value < overall_range:
+            
+            if not self._pause_button.IsShown():
+                
+                self._pause_button.Show()
+                self._current_action.Show()
+                self._overall_gauge.Show()
+                
+                self.Layout()
+                
+            
+        else:
+            
+            if self._pause_button.IsShown():
+                
+                self._pause_button.Hide()
+                self._current_action.Hide()
+                self._overall_gauge.Hide()
+                
+                self.Layout()
+                
+            
+        
+        self._current_action.SetLabel( current_action )
         
     
-    def _InitExtraVboxElements( self, vbox ):
+    def EventPause( self, event ):
         
-        ManagementPanelImport._InitExtraVboxElements( self, vbox )
+        self._hdd_import.PausePlay()
         
-        self._import_gauge.Hide()
-        self._import_cancel_button.Hide()
+        self._Update()
+        
+    
+    def TestAbleToClose( self ):
+        
+        ( ( overall_status, ( overall_value, overall_range ) ), paused ) = self._hdd_import.GetStatus()
+        
+        if overall_value < overall_range and not paused:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                
+            
+        
+    
+    def UpdateStatus( self, page_key ):
+        
+        if page_key == self._page_key:
+            
+            self._Update()
+            
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_HDD ] = ManagementPanelImportHDD
@@ -2186,14 +2283,14 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         def factory( job_key, item ):
             
-            advanced_import_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedImportOptions )
+            import_file_options = HydrusThreading.CallBlockingToWx( self.GetImportFileOptions )
             advanced_tag_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedTagOptions )
             
             # fourchan_board should be on the job_key or whatever. it is stuck on initial queue generation
             # we should not be getting it from the management_panel
             # we should have access to this info from the job_key or w/e
             
-            return ClientDownloading.ImportArgsGeneratorThread( job_key, item, advanced_import_options, advanced_tag_options )
+            return ClientDownloading.ImportArgsGeneratorThread( job_key, item, import_file_options, advanced_tag_options )
             
         
         return factory
@@ -2253,7 +2350,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         button_box.AddF( self._thread_pause_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         button_box.AddF( self._thread_manual_refresh_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._thread_panel )
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._thread_panel )
         
         self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_panel, namespaces = [ 'filename' ] )
         
@@ -2261,7 +2358,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._thread_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._thread_panel.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
-        self._thread_panel.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.AddF( self._thread_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2438,7 +2535,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
     def EventThreadVariable( self, event ): self._SetThreadVariables()
     
-    def GetAdvancedImportOptions( self ): return self._advanced_import_options.GetInfo()
+    def GetImportFileOptions( self ): return self._import_file_options.GetInfo()
     
     def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
     

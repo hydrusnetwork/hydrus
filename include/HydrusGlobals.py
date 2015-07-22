@@ -12,3 +12,4 @@ subs_changed = False
 currently_processing_updates = False
 
 db_profile_mode = False
+server_busy = False

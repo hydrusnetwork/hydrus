@@ -179,56 +179,92 @@ def DAEMONDownloadFiles():
     
     num_downloads = len( hashes )
     
-    for hash in hashes:
+    if num_downloads > 0:
         
-        ( media_result, ) = wx.GetApp().Read( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
+        successful_hashes = set()
         
-        service_keys = list( media_result.GetLocationsManager().GetCurrent() )
+        job_key = HydrusData.JobKey()
         
-        random.shuffle( service_keys )
+        job_key.SetVariable( 'popup_text_1', 'initialising downloader' )
         
-        for service_key in service_keys:
+        HydrusGlobals.pubsub.pub( 'message', job_key )
+        
+        for hash in hashes:
             
-            if service_key == CC.LOCAL_FILE_SERVICE_KEY: break
-            elif service_key == CC.TRASH_SERVICE_KEY: continue
+            job_key.SetVariable( 'popup_text_1', 'downloading ' + HydrusData.ConvertIntToPrettyString( num_downloads - len( successful_hashes ) ) + ' files from repositories' )
             
-            try: file_repository = wx.GetApp().GetServicesManager().GetService( service_key )
-            except HydrusExceptions.NotFoundException: continue
+            ( media_result, ) = wx.GetApp().Read( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
             
-            if file_repository.CanDownload(): 
+            service_keys = list( media_result.GetLocationsManager().GetCurrent() )
+            
+            random.shuffle( service_keys )
+            
+            for service_key in service_keys:
                 
-                try:
-                    
-                    request_args = { 'hash' : hash.encode( 'hex' ) }
-                    
-                    ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+                if service_key == CC.LOCAL_FILE_SERVICE_KEY: break
+                elif service_key == CC.TRASH_SERVICE_KEY: continue
+                
+                try: file_repository = wx.GetApp().GetServicesManager().GetService( service_key )
+                except HydrusExceptions.NotFoundException: continue
+                
+                if file_repository.CanDownload(): 
                     
                     try:
                         
-                        file_repository.Request( HC.GET, 'file', request_args = request_args, temp_path = temp_path )
+                        request_args = { 'hash' : hash.encode( 'hex' ) }
                         
-                        num_downloads -= 1
+                        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
                         
-                        wx.GetApp().WaitUntilWXThreadIdle()
+                        try:
+                            
+                            file_repository.Request( HC.GET, 'file', request_args = request_args, temp_path = temp_path )
+                            
+                            wx.GetApp().WaitUntilWXThreadIdle()
+                            
+                            wx.GetApp().WriteSynchronous( 'import_file', temp_path, override_deleted = True )
+                            
+                            successful_hashes.add( hash )
+                            
+                            break
+                            
+                        finally:
+                            
+                            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+                            
                         
-                        wx.GetApp().WriteSynchronous( 'import_file', temp_path, override_deleted = True )
+                    except HydrusExceptions.ServerBusyException:
                         
-                    finally:
+                        job_key.SetVariable( 'popup_text_1', file_repository.GetName() + ' was busy. waiting 30s before trying again' )
                         
-                        HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+                        time.sleep( 30 )
                         
-                    
-                    break
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowText( 'Error downloading file!' )
-                    HydrusData.ShowException( e )
+                        job_key.Delete()
+                        
+                        HydrusGlobals.pubsub.pub( 'notify_new_downloads' )
+                        
+                        return
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowText( 'Error downloading file!' )
+                        HydrusData.ShowException( e )
+                        
                     
                 
+                if HydrusGlobals.shutdown: return
+                
             
-            if HydrusGlobals.shutdown: return
+        
+        if len( successful_hashes ) > 0:
             
+            job_key.SetVariable( 'popup_text_1', HydrusData.ConvertIntToPrettyString( len( successful_hashes ) ) + ' files downloaded' )
+            
+        else:
+            
+            job_key.SetVariable( 'popup_text_1', 'all files failed to download' )
+            
+        
+        job_key.Delete()
         
     
 def DAEMONFlushServiceUpdates( list_of_service_keys_to_service_updates ):
@@ -435,7 +471,7 @@ def DAEMONSynchroniseSubscriptions():
             get_tags_if_redundant = info[ 'get_tags_if_redundant' ]
             initial_limit = info[ 'initial_limit' ]
             advanced_tag_options = info[ 'advanced_tag_options' ]
-            advanced_import_options = info[ 'advanced_import_options' ]
+            import_file_options = info[ 'advanced_import_options' ]
             last_checked = info[ 'last_checked' ]
             url_cache = info[ 'url_cache' ]
             paused = info[ 'paused' ]
@@ -672,7 +708,7 @@ def DAEMONSynchroniseSubscriptions():
                             
                             ( status, hash ) = wx.GetApp().Read( 'url_status', url )
                             
-                            if status == CC.STATUS_DELETED and not advanced_import_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
+                            if status == CC.STATUS_DELETED and not import_file_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
                             
                             if status == CC.STATUS_REDUNDANT:
                                 
@@ -715,7 +751,7 @@ def DAEMONSynchroniseSubscriptions():
                                     
                                     job_key.SetVariable( 'popup_text_1', x_out_of_y + 'importing file' )
                                     
-                                    ( status, hash ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_keys_to_tags = service_keys_to_tags, url = url )
+                                    ( status, hash ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path, import_file_options = import_file_options, service_keys_to_tags = service_keys_to_tags, url = url )
                                     
                                 finally:
                                     
@@ -742,7 +778,7 @@ def DAEMONSynchroniseSubscriptions():
                             info[ 'get_tags_if_redundant' ] = get_tags_if_redundant
                             info[ 'initial_limit' ] = initial_limit
                             info[ 'advanced_tag_options' ] = advanced_tag_options
-                            info[ 'advanced_import_options' ] = advanced_import_options
+                            info[ 'advanced_import_options' ] = import_file_options
                             info[ 'last_checked' ] = last_checked
                             info[ 'url_cache' ] = url_cache
                             info[ 'paused' ] = paused
@@ -794,7 +830,7 @@ def DAEMONSynchroniseSubscriptions():
                 info[ 'get_tags_if_redundant' ] = get_tags_if_redundant
                 info[ 'initial_limit' ] = initial_limit
                 info[ 'advanced_tag_options' ] = advanced_tag_options
-                info[ 'advanced_import_options' ] = advanced_import_options
+                info[ 'advanced_import_options' ] = import_file_options
                 info[ 'last_checked' ] = last_checked
                 info[ 'url_cache' ] = url_cache
                 info[ 'paused' ] = paused

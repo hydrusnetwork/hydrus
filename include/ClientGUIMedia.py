@@ -583,7 +583,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 ( media_to_deselect, media_to_select ) = ( self._selected_media, set( self._sorted_media ) - self._selected_media )
                 
             elif select_type == 'none': ( media_to_deselect, media_to_select ) = ( self._selected_media, [] )
-            else:
+            elif select_type in ( 'inbox', 'archive' ):
                 
                 inbox_media = { m for m in self._sorted_media if m.HasInbox() }
                 archive_media = { m for m in self._sorted_media if m not in inbox_media }
@@ -597,6 +597,22 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                     media_to_deselect = [ m for m in inbox_media if m in self._selected_media ]
                     media_to_select = [ m for m in archive_media if m not in self._selected_media ]
+                    
+                
+            elif select_type in ( 'local', 'trash' ):
+                
+                local_media = { media for media in self._sorted_media if CC.LOCAL_FILE_SERVICE_KEY in media.GetLocationsManager().GetCurrent() }
+                trash_media = { media for media in self._sorted_media if CC.TRASH_SERVICE_KEY in media.GetLocationsManager().GetCurrent() }
+                
+                if select_type == 'local':
+                    
+                    media_to_deselect = [ m for m in trash_media if m in self._selected_media ]
+                    media_to_select = [ m for m in local_media if m not in self._selected_media ]
+                    
+                elif select_type == 'trash':
+                    
+                    media_to_deselect = [ m for m in local_media if m in self._selected_media ]
+                    media_to_select = [ m for m in trash_media if m not in self._selected_media ]
                     
                 
             
@@ -1436,6 +1452,7 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'open_externally': self._OpenExternally()
             elif command == 'petition': self._PetitionFiles( data )
             elif command == 'remove': self._Remove()
+            elif command == 'rescind_download': wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_DOWNLOADING ) ) ] } )        
             elif command == 'rescind_petition': self._RescindPetitionFiles( data )
             elif command == 'rescind_upload': self._RescindUploadFiles( data )
             elif command == 'scroll_end': self._ScrollEnd( False )
@@ -1560,13 +1577,16 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if thumbnail is not None: self._HitMedia( thumbnail, event.CmdDown(), event.ShiftDown() )
         
-        all_locations_managers = [ media.GetLocationsManager() for media in self._selected_media ]
+        all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
+        selected_locations_managers = [ media.GetLocationsManager() for media in self._selected_media ]
         
-        selection_has_local_file_service = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
-        selection_has_trash = True in ( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
+        selection_has_local_file_service = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
+        selection_has_trash = True in ( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
         selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
         
+        media_has_local_file_service = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
+        media_has_trash = True in ( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
         media_has_inbox = True in ( media.HasInbox() for media in self._sorted_media )
         media_has_archive = True in ( media.HasArchive() for media in self._sorted_media )
         
@@ -1593,6 +1613,12 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
                     select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
+                    
+                
+                if media_has_local_file_service and media_has_trash:
+                    
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'local' ), 'local files' )
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'trash' ), 'trash' )
                     
                 
                 select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
@@ -1635,6 +1661,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     deleted_phrase = 'selected deleted from'
                     
                     download_phrase = 'download all possible selected'
+                    rescind_download_phrase = 'cancel downloads for all possible selected'
                     upload_phrase = 'upload all possible selected to'
                     rescind_upload_phrase = 'rescind pending selected uploads to'
                     petition_phrase = 'petition all possible selected for removal from'
@@ -1663,6 +1690,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     deleted_phrase = 'deleted from'
                     
                     download_phrase = 'download'
+                    rescind_download_phrase = 'cancel download'
                     upload_phrase = 'upload to'
                     rescind_upload_phrase = 'rescind pending upload to'
                     petition_phrase = 'petition for removal from'
@@ -1688,13 +1716,15 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 def MassUnion( lists ): return { item for item in itertools.chain.from_iterable( lists ) }
                 
-                all_current_file_service_keys = [ locations_manager.GetCurrentRemote() for locations_manager in all_locations_managers ]
+                all_current_file_service_keys = [ locations_manager.GetCurrentRemote() for locations_manager in selected_locations_managers ]
                 
                 current_file_service_keys = HydrusData.IntelligentMassIntersect( all_current_file_service_keys )
                 
                 some_current_file_service_keys = MassUnion( all_current_file_service_keys ) - current_file_service_keys
                 
-                all_pending_file_service_keys = [ locations_manager.GetPendingRemote() for locations_manager in all_locations_managers ]
+                all_pending_file_service_keys = [ locations_manager.GetPendingRemote() for locations_manager in selected_locations_managers ]
+                
+                some_downloading = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetPending() for locations_manager in selected_locations_managers )
                 
                 pending_file_service_keys = HydrusData.IntelligentMassIntersect( all_pending_file_service_keys )
                 
@@ -1702,7 +1732,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 selection_uploaded_file_service_keys = some_pending_file_service_keys.union( pending_file_service_keys )
                 
-                all_petitioned_file_service_keys = [ locations_manager.GetPetitionedRemote() for locations_manager in all_locations_managers ]
+                all_petitioned_file_service_keys = [ locations_manager.GetPetitionedRemote() for locations_manager in selected_locations_managers ]
                 
                 petitioned_file_service_keys = HydrusData.IntelligentMassIntersect( all_petitioned_file_service_keys )
                 
@@ -1710,7 +1740,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 selection_petitioned_file_service_keys = some_petitioned_file_service_keys.union( petitioned_file_service_keys )
                 
-                all_deleted_file_service_keys = [ locations_manager.GetDeletedRemote() for locations_manager in all_locations_managers ]
+                all_deleted_file_service_keys = [ locations_manager.GetDeletedRemote() for locations_manager in selected_locations_managers ]
                 
                 deleted_file_service_keys = HydrusData.IntelligentMassIntersect( all_deleted_file_service_keys )
                 
@@ -1724,7 +1754,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 selection_petitionable_file_service_keys = set()
                 
-                for locations_manager in all_locations_managers:
+                for locations_manager in selected_locations_managers:
                     
                     # we can upload (set pending) to a repo_id when we have permission, a file is local, not current, not pending, and either ( not deleted or admin )
                     
@@ -1742,7 +1772,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 selection_deletable_file_service_keys = set()
                 
-                for locations_manager in all_locations_managers:
+                for locations_manager in selected_locations_managers:
                     
                     # we can delete remote when we have permission and a file is current and it is not already petitioned
                     
@@ -1751,7 +1781,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 selection_modifyable_file_service_keys = set()
                 
-                for locations_manager in all_locations_managers:
+                for locations_manager in selected_locations_managers:
                     
                     # we can modify users when we have permission and the file is current or deleted
                     
@@ -1802,6 +1832,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     file_repo_menu = wx.Menu()
                     
                     if len( selection_downloadable_file_service_keys ) > 0: file_repo_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'download' ), download_phrase )
+                    
+                    if some_downloading: file_repo_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'rescind_download' ), rescind_download_phrase )
                     
                     if len( selection_uploadable_file_service_keys ) > 0: AddFileServiceKeysToMenu( file_repo_menu, selection_uploadable_file_service_keys, upload_phrase, 'upload' )
                     
@@ -1937,6 +1969,12 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
                         select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
+                        
+                    
+                    if media_has_local_file_service and media_has_trash:
+                        
+                        select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'local' ), 'local files' )
+                        select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'trash' ), 'trash' )
                         
                     
                     select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )

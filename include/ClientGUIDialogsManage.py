@@ -13,7 +13,6 @@ import ClientRatings
 import collections
 import HydrusConstants as HC
 import HydrusData
-import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusGlobals
@@ -6087,7 +6086,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
                 
-                self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
+                self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
                 
             
             def PopulateControls():
@@ -6132,7 +6131,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 vbox.AddF( self._query_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 self.SetSizer( vbox )
                 
@@ -6153,7 +6152,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 info[ 'get_tags_if_redundant' ] = False
                 info[ 'initial_limit' ] = 500
                 info[ 'advanced_tag_options' ] = {}
-                info[ 'advanced_import_options' ] = ClientDefaults.GetDefaultAdvancedImportOptions()
+                info[ 'advanced_import_options' ] = ClientDefaults.GetDefaultImportFileOptions()
                 info[ 'last_checked' ] = None
                 info[ 'url_cache' ] = set()
                 info[ 'paused' ] = False
@@ -6262,7 +6261,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             get_tags_if_redundant = info[ 'get_tags_if_redundant' ]
             initial_limit = info[ 'initial_limit' ]
             advanced_tag_options = info[ 'advanced_tag_options' ]
-            advanced_import_options = info[ 'advanced_import_options' ]
+            import_file_options = info[ 'advanced_import_options' ]
             last_checked = info[ 'last_checked' ]
             url_cache = info[ 'url_cache' ]
             paused = info[ 'paused' ]
@@ -6316,7 +6315,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             self._advanced_tag_options.SetInfo( advanced_tag_options )
             
-            self._advanced_import_options.SetInfo( advanced_import_options )
+            self._import_file_options.SetInfo( import_file_options )
             
         
         def EventBooruSelected( self, event ): self._ConfigureAdvancedTagOptions()
@@ -6368,7 +6367,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             info[ 'advanced_tag_options' ] = self._advanced_tag_options.GetInfo()
             
-            info[ 'advanced_import_options' ] = self._advanced_import_options.GetInfo()
+            info[ 'advanced_import_options' ] = self._import_file_options.GetInfo()
             
             if self._reset_cache:
                 

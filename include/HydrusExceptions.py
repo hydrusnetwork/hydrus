@@ -10,6 +10,7 @@ class NoContentException( Exception ): pass
 class NotFoundException( Exception ): pass
 class NotModifiedException( Exception ): pass
 class PermissionException( Exception ): pass
+class ServerBusyException( Exception ): pass
 class SessionException( Exception ): pass
 class ShutdownException( Exception ): pass
 class SizeException( Exception ): pass
