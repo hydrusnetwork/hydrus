@@ -1469,17 +1469,6 @@ class ExportPatternButton( wx.Button ):
         wx.CallAfter( menu.Destroy )
         
     
-class FileDropTarget( wx.FileDropTarget ):
-    
-    def __init__( self, callable ):
-        
-        wx.FileDropTarget.__init__( self )
-        
-        self._callable = callable
-        
-    
-    def OnDropFiles( self, x, y, paths ): wx.CallAfter( self._callable, paths )
-    
 class FitResistantStaticText( wx.StaticText ):
     
     # this is a huge damn mess! I think I really need to be doing this inside or before the parent's fit, or something
@@ -4776,14 +4765,39 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
         
     
-    def GetIndexFromClientData( self, data ):
+    def GetIndexFromClientData( self, data, column_index = None ):
         
         for index in range( self.GetItemCount() ):
             
-            if self.GetClientData( index ) == data: return index
+            client_data = self.GetClientData( index )
+            
+            if column_index is None:
+                
+                comparison_data = client_data
+                
+            else:
+                
+                comparison_data = client_data[ column_index ]
+                
+            
+            if comparison_data == data: return index
             
         
-        raise Exception( 'Data not found!' )
+        raise HydrusExceptions.NotFoundException( 'Data not found!' )
+        
+    
+    def HasClientData( self, data, column_index = None ):
+        
+        try:
+            
+            index = self.GetIndexFromClientData( data, column_index )
+            
+            return True
+            
+        except HydrusExceptions.NotFoundException:
+            
+            return False
+            
         
     
     def GetListCtrl( self ): return self
@@ -4842,6 +4856,128 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         else:
             
             self.itemDataMap[ data_index ] = list( client_data )
+            
+        
+    
+class SeedCacheControl( SaneListCtrl ):
+    
+    def __init__( self, parent, seed_cache ):
+        
+        height = 300
+        columns = [ ( 'source', -1 ), ( 'status', 90 ), ( 'added', 150 ), ( 'last modified', 150 ), ( 'note', 200 ) ]
+        
+        SaneListCtrl.__init__( self, parent, height, columns )
+        
+        self._seed_cache = seed_cache
+        
+        for info_tuple in self._seed_cache.GetSeedsWithInfo():
+            
+            self._AddSeed( info_tuple )
+            
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        
+        HydrusGlobals.pubsub.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
+        
+    
+    def _AddSeed( self, info_tuple ):
+        
+        pretty_tuple = self._GetPrettyTuple( info_tuple )
+        
+        self.Append( pretty_tuple, info_tuple )
+        
+    
+    def _GetPrettyTuple( self, info_tuple ):
+        
+        ( seed, status, added_timestamp, last_modified_timestamp, note ) = info_tuple
+        
+        pretty_seed = HydrusData.ToString( seed )
+        pretty_status = CC.status_string_lookup[ status ]
+        pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp )
+        pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp )
+        pretty_note = note
+        
+        return ( pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )
+        
+    
+    def _SetSelectedUnknown( self ):
+        
+        seeds_to_reset = set()
+        
+        for ( seed, status, added_timestamp, last_modified_timestamp, note ) in self.GetSelectedClientData():
+            
+            if status != CC.STATUS_UNKNOWN:
+                
+                seeds_to_reset.add( seed )
+                
+            
+        
+        for seed in seeds_to_reset:
+            
+            self._seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
+            
+        
+    
+    def EventMenu( self, event ):
+        
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'set_seed_unknown': self._SetSelectedUnknown()
+            else: event.Skip()
+            
+        
+    
+    def EventShowMenu( self, event ):
+        
+        menu = wx.Menu()
+        
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'set_seed_unknown' ), 'try again' )
+        
+        self.PopupMenu( menu )
+        
+        wx.CallAfter( menu.Destroy )
+        
+    
+    def NotifySeedAdded( self, seed ):
+        
+        if self._seed_cache.HasSeed( seed ):
+            
+            info_tuple = self._seed_cache
+            
+        
+    
+    def NotifySeedUpdated( self, seed ):
+        
+        if self._seed_cache.HasSeed( seed ):
+            
+            info_tuple = self._seed_cache.GetSeedInfo( seed )
+            
+            if self.HasClientData( seed, 0 ):
+                
+                index = self.GetIndexFromClientData( seed, 0 )
+                
+                pretty_tuple = self._GetPrettyTuple( info_tuple )
+                
+                self.UpdateRow( index, pretty_tuple, info_tuple )
+                
+            else:
+                
+                self._AddSeed( info_tuple )
+                
+            
+        else:
+            
+            if self.HasClientData( seed, 0 ):
+                
+                index = self.GetIndexFromClientData( seed, 0 )
+                
+                self.DeleteItem( index )
+                
             
         
     

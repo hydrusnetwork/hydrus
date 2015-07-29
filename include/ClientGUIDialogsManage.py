@@ -3,6 +3,7 @@ import ClientCaches
 import ClientConstants as CC
 import ClientData
 import ClientDefaults
+import ClientDragDrop
 import ClientFiles
 import ClientGUICollapsible
 import ClientGUICommon
@@ -422,7 +423,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         ArrangeControls()
         
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
     
         ( x, y ) = self.GetEffectiveMinSize()
         
@@ -930,7 +931,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( 980, y ) )
         
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
         
         self.EventContactChanged( None )
         
@@ -1843,7 +1844,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( 980, y ) )
         
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -2565,7 +2566,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         ArrangeControls()
         
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self._AddFolders ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self._AddFolders ) )
     
         ( x, y ) = self.GetEffectiveMinSize()
         
@@ -3413,6 +3414,10 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._default_tag_repository = ClientGUICommon.BetterChoice( self )
             
+            self._tag_dialog_size = wx.CheckBox( self )
+            self._tag_dialog_position = wx.CheckBox( self )
+            self._rating_dialog_position = wx.CheckBox( self )
+            
             #
             
             gui_session_names = wx.GetApp().Read( 'gui_session_names' )
@@ -3445,6 +3450,18 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._default_tag_repository.SelectClientData( default_tag_repository_key )
             
+            ( remember, size ) = HC.options[ 'tag_dialog_size' ]
+            
+            self._tag_dialog_size.SetValue( remember )
+            
+            ( remember, position ) = HC.options[ 'tag_dialog_position' ]
+            
+            self._tag_dialog_position.SetValue( remember )
+            
+            ( remember, position ) = HC.options[ 'rating_dialog_position' ]
+            
+            self._rating_dialog_position.SetValue( remember )
+            
             #
             
             gridbox = wx.FlexGridSizer( 0, 2 )
@@ -3469,6 +3486,15 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'By default, search non-local tags in write-autocomplete: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._gui_show_all_tags_in_autocomplete, CC.FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( self, label = 'Remember manage tags dialog size: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._tag_dialog_size, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Remember manage tags dialog position: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._tag_dialog_position, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Remember manage ratings dialog position: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._rating_dialog_position, CC.FLAGS_MIXED )
+            
             self.SetSizer( gridbox )
             
         
@@ -3480,6 +3506,45 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
             HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
             HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
+            
+            ( remember, size ) = HC.options[ 'tag_dialog_size' ]
+            
+            remember = self._tag_dialog_size.GetValue()
+            
+            if remember:
+                
+                HC.options[ 'tag_dialog_size' ] = ( remember, size )
+                
+            else:
+                
+                HC.options[ 'tag_dialog_size' ] = ( remember, None )
+                
+            
+            ( remember, position ) = HC.options[ 'tag_dialog_position' ]
+            
+            remember = self._tag_dialog_position.GetValue()
+            
+            if remember:
+                
+                HC.options[ 'tag_dialog_position' ] = ( remember, position )
+                
+            else:
+                
+                HC.options[ 'tag_dialog_position' ] = ( remember, None )
+                
+            
+            ( remember, position ) = HC.options[ 'rating_dialog_position' ]
+            
+            remember = self._rating_dialog_position.GetValue()
+            
+            if remember:
+                
+                HC.options[ 'rating_dialog_position' ] = ( remember, position )
+                
+            else:
+                
+                HC.options[ 'rating_dialog_position' ] = ( remember, None )
+                
             
         
     
@@ -4242,7 +4307,20 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         for m in media: self._hashes.update( m.GetHashes() )
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files' )
+        ( remember, position ) = HC.options[ 'rating_dialog_position' ]
+        
+        if remember and position is not None:
+            
+            my_position = 'custom'
+            
+            wx.CallAfter( self.SetPosition, position )
+            
+        else:
+            
+            my_position = 'topleft'
+            
+        
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files', position = my_position )
         
         InitialiseControls()
         
@@ -4286,6 +4364,17 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
             
             wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
+            
+            ( remember, position ) = HC.options[ 'rating_dialog_position' ]
+            
+            current_position = self.GetPositionTuple()
+            
+            if remember and position != current_position:
+                
+                HC.options[ 'rating_dialog_position' ] = ( remember, current_position )
+                
+                wx.GetApp().Write( 'save_options', HC.options )
+                
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -4922,7 +5011,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( 880, y + 220 ) )
         
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -5900,7 +5989,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( 680, max( 720, y ) ) )
         
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -7764,11 +7853,20 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self.SetSizer( vbox )
             
-            ( x, y ) = self.GetEffectiveMinSize()
+            ( remember, size ) = HC.options[ 'tag_dialog_size' ]
             
-            ( parent_window_width, parent_window_height ) = parent.GetTopLevelParent().GetSize()
-            
-            self.SetInitialSize( ( x + 200, max( 500, parent_window_height - 200 ) ) )
+            if remember and size is not None:
+                
+                self.SetInitialSize( size )
+                
+            else:
+                
+                ( x, y ) = self.GetEffectiveMinSize()
+                
+                ( parent_window_width, parent_window_height ) = parent.GetTopLevelParent().GetSize()
+                
+                self.SetInitialSize( ( x + 200, max( 500, parent_window_height - 200 ) ) )
+                
             
         
         self._file_service_key = file_service_key
@@ -7781,7 +7879,20 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         for m in media: self._hashes.update( m.GetHashes() )
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage tags for ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files' )
+        ( remember, position ) = HC.options[ 'tag_dialog_position' ]
+        
+        if remember and position is not None:
+            
+            my_position = 'custom'
+            
+            wx.CallAfter( self.SetPosition, position )
+            
+        else:
+            
+            my_position = 'topleft'
+            
+        
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage tags for ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files', position = my_position )
         
         InitialiseControls()
         
@@ -7898,7 +8009,32 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        try: self._CommitCurrentChanges()
+        try:
+            
+            self._CommitCurrentChanges()
+            
+            ( remember, size ) = HC.options[ 'tag_dialog_size' ]
+            
+            current_size = self.GetSizeTuple()
+            
+            if remember and size != current_size:
+                
+                HC.options[ 'tag_dialog_size' ] = ( remember, current_size )
+                
+                wx.GetApp().Write( 'save_options', HC.options )
+                
+            
+            ( remember, position ) = HC.options[ 'tag_dialog_position' ]
+            
+            current_position = self.GetPositionTuple()
+            
+            if remember and position != current_position:
+                
+                HC.options[ 'tag_dialog_position' ] = ( remember, current_position )
+                
+                wx.GetApp().Write( 'save_options', HC.options )
+                
+            
         finally: self.EndModal( wx.ID_OK )
         
     

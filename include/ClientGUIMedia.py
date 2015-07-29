@@ -2,6 +2,7 @@ import HydrusConstants as HC
 import ClientConstants as CC
 import ClientCaches
 import ClientData
+import ClientDragDrop
 import ClientFiles
 import ClientGUICommon
 import ClientGUIDialogs
@@ -14,6 +15,7 @@ import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import itertools
+import json
 import os
 import random
 import threading
@@ -119,16 +121,58 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HydrusGlobals.pubsub.pub( 'clipboard', 'bmp', media )
         
     
-    def _CopyHashToClipboard( self ):
+    def _CopyHashToClipboard( self, hash_type ):
         
-        hex_hash = self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' )
+        display_media = self._focussed_media.GetDisplayMedia()
+        
+        sha256_hash = display_media.GetHash()
+        
+        if hash_type == 'sha256':
+            
+            hex_hash = sha256_hash.encode( 'hex' )
+            
+        else:
+            
+            if display_media.GetLocationsManager().HasLocal():
+                
+                other_hash = wx.GetApp().Read( 'file_hash', sha256_hash, hash_type )
+                
+                hex_hash = other_hash.encode( 'hex' )
+                
+            else:
+                
+                wx.MessageBox( 'Unfortunately, you do not have that file in your database, so its non-sha256 hashes are unknown.' )
+                
+                return
+                
+            
         
         HydrusGlobals.pubsub.pub( 'clipboard', 'text', hex_hash )
         
     
-    def _CopyHashesToClipboard( self ):
+    def _CopyHashesToClipboard( self, hash_type ):
         
-        hex_hashes = os.linesep.join( [ hash.encode( 'hex' ) for hash in self._GetSelectedHashes() ] )
+        if hash_type == 'sha256':
+            
+            hex_hashes = os.linesep.join( [ hash.encode( 'hex' ) for hash in self._GetSelectedHashes() ] )
+            
+        else:
+            
+            sha256_hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL )
+            
+            if len( sha256_hashes ) > 0:
+                
+                other_hashes = [ wx.GetApp().Read( 'file_hash', sha256_hash, hash_type ) for sha256_hash in sha256_hashes ]
+                
+                hex_hashes = os.linesep.join( [ other_hash.encode( 'hex' ) for other_hash in other_hashes ] )
+                
+            else:
+                
+                wx.MessageBox( 'Unfortunately, none of those files are in your database, so their non-sha256 hashes are unknown.' )
+                
+                return
+                
+            
         
         HydrusGlobals.pubsub.pub( 'clipboard', 'text', hex_hashes )
         
@@ -884,6 +928,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._last_client_size = ( 0, 0 )
         self._num_columns = 1
         
+        self._drag_init_coordinates = None
         self._client_bmp = wx.EmptyBitmap( 0, 0 )
         self._clean_canvas_pages = {}
         self._dirty_canvas_pages = []
@@ -899,6 +944,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self.SetScrollRate( 0, thumbnail_span_height )
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventSelection )
+        self.Bind( wx.EVT_MOTION, self.EventDragTest )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventMouseFullScreen )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseFullScreen )
@@ -1396,6 +1442,61 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
+    def EventDragTest( self, event ):
+        
+        if event.LeftIsDown() and self._drag_init_coordinates is not None:
+            
+            ( old_x, old_y ) = self._drag_init_coordinates
+            
+            ( x, y ) = event.GetPosition()
+            
+            ( delta_x, delta_y ) = ( x - old_x, y - old_y )
+            
+            if delta_x > 5 or delta_y > 5:
+                
+                hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL )
+                
+                if len( hashes ) > 0:
+                    
+                    drop_source = wx.DropSource( self )
+                    
+                    data_object = wx.DataObjectComposite()
+                    
+                    #
+                    
+                    hydrus_media_data_object = wx.CustomDataObject( 'application/hydrus-media' )
+                    
+                    data = json.dumps( [ hash.encode( 'hex' ) for hash in hashes ] )
+                    
+                    hydrus_media_data_object.SetData( data )
+                    
+                    data_object.Add( hydrus_media_data_object, True )
+                    
+                    #
+                    
+                    file_data_object = wx.FileDataObject()
+                    
+                    for hash in hashes:
+                        
+                        path = ClientFiles.GetFilePath( hash )
+                        
+                        file_data_object.AddFile( path )
+                        
+                    
+                    data_object.Add( file_data_object )
+                    
+                    #
+                    
+                    drop_source.SetData( data_object )
+                    
+                    drop_source.DoDragDrop()
+                    
+                
+                self._drag_init_coordinates = None
+                
+            
+        
+    
     def EventEraseBackground( self, event ): pass
     
     def EventKeyDown( self, event ):
@@ -1418,8 +1519,8 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'copy_bmp': self._CopyBMPToClipboard()
             elif command == 'copy_files':
                 with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL ) )
-            elif command == 'copy_hash': self._CopyHashToClipboard()
-            elif command == 'copy_hashes': self._CopyHashesToClipboard()
+            elif command == 'copy_hash': self._CopyHashToClipboard( data )
+            elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
             elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
             elif command == 'copy_path': self._CopyPathToClipboard()
             elif command == 'ctrl-space':
@@ -1563,6 +1664,8 @@ class MediaPanelThumbnails( MediaPanel ):
         
     
     def EventSelection( self, event ):
+        
+        self._drag_init_coordinates = event.GetPosition()
         
         self._HitMedia( self._GetThumbnailUnderMouse( event ), event.CmdDown(), event.ShiftDown() )
         
@@ -1919,8 +2022,36 @@ class MediaPanelThumbnails( MediaPanel ):
                 copy_menu = wx.Menu()
                 
                 copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), copy_phrase )
-                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
-                if multiple_selected: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes' ) , 'hashes' )
+                
+                if selection_has_local_file_service:
+                    
+                    copy_hash_menu = wx.Menu()
+                    
+                    copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
+                    copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'md5' ) , 'md5' )
+                    copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha1' ) , 'sha1' )
+                    copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha512' ) , 'sha512' )
+                    
+                    copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
+                    
+                    if multiple_selected:
+                        
+                        copy_hash_menu = wx.Menu()
+                        
+                        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes', 'sha256' ) , 'sha256 (hydrus default)' )
+                        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes', 'md5' ) , 'md5' )
+                        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes', 'sha1' ) , 'sha1' )
+                        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes', 'sha512' ) , 'sha512' )
+                        
+                        copy_menu.AppendMenu( CC.ID_NULL, 'hashes', copy_hash_menu )
+                        
+                    
+                else:
+                    
+                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha256' ) , 'sha256 hash' )
+                    if multiple_selected: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes', 'sha256' ) , 'sha256 hashes' )
+                    
+                
                 if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ) , 'image' )
                 copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
                 copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )

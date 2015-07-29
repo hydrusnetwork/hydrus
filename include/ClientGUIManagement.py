@@ -2166,6 +2166,10 @@ class ManagementPanelImportHDD( ManagementPanel ):
         self._current_action = wx.StaticText( self._import_queue_panel )
         self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         
+        self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
+        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
+        
         self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
         
@@ -2173,10 +2177,15 @@ class ManagementPanelImportHDD( ManagementPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        button_sizer = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
+        
         self._import_queue_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
+        self._import_queue_panel.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
         
         vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2252,6 +2261,13 @@ class ManagementPanelImportHDD( ManagementPanel ):
         self._hdd_import.PausePlay()
         
         self._Update()
+        
+    
+    def EventSeedCache( self, event ):
+        
+        seed_cache = self._hdd_import.GetSeedCache()
+        
+        HydrusGlobals.pubsub.pub( 'show_seed_cache', seed_cache )
         
     
     def TestAbleToClose( self ):

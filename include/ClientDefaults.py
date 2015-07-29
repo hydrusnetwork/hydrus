@@ -167,6 +167,10 @@ def GetClientDefaultOptions():
     
     options[ 'client_size' ] = client_size
     
+    options[ 'tag_dialog_size' ] = ( False, None )
+    options[ 'tag_dialog_position' ] = ( False, None )
+    options[ 'rating_dialog_position' ] = ( False, None )
+    
     options[ 'local_port' ] = HC.DEFAULT_LOCAL_FILE_PORT
     
     return options

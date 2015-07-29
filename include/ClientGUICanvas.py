@@ -531,9 +531,29 @@ class Canvas( object ):
     
     def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
     
-    def _CopyHashToClipboard( self ):
+    def _CopyHashToClipboard( self, hash_type ):
         
-        hex_hash = self._current_display_media.GetHash().encode( 'hex' )
+        sha256_hash = self._current_display_media.GetHash()
+        
+        if hash_type == 'sha256':
+            
+            hex_hash = sha256_hash.encode( 'hex' )
+            
+        else:
+            
+            if self._current_display_media.GetLocationsManager().HasLocal():
+                
+                other_hash = wx.GetApp().Read( 'file_hash', sha256_hash, hash_type )
+                
+                hex_hash = other_hash.encode( 'hex' )
+                
+            else:
+                
+                wx.MessageBox( 'Unfortunately, you do not have that file in your database, so its non-sha256 hashes are unknown.' )
+                
+                return
+                
+            
         
         HydrusGlobals.pubsub.pub( 'clipboard', 'text', hex_hash )
         
@@ -1196,7 +1216,7 @@ class CanvasPanel( Canvas, wx.Window ):
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
                     with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
-                elif command == 'copy_hash': self._CopyHashToClipboard()
+                elif command == 'copy_hash': self._CopyHashToClipboard( data )
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete( data )
@@ -1269,7 +1289,16 @@ class CanvasPanel( Canvas, wx.Window ):
             copy_menu = wx.Menu()
             
             copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
-            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ), 'hash' )
+            
+            copy_hash_menu = wx.Menu()
+            
+            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
+            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'md5' ) , 'md5' )
+            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha1' ) , 'sha1' )
+            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha512' ) , 'sha512' )
+            
+            copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
+            
             copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
             copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
             
@@ -2108,7 +2137,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
                     with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
-                elif command == 'copy_hash': self._CopyHashToClipboard()
+                elif command == 'copy_hash': self._CopyHashToClipboard( data )
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete( data )
@@ -2245,7 +2274,16 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         copy_menu = wx.Menu()
         
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ), 'hash' )
+        
+        copy_hash_menu = wx.Menu()
+        
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'md5' ) , 'md5' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha1' ) , 'sha1' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha512' ) , 'sha512' )
+        
+        copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
+        
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
         
@@ -2516,7 +2554,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
                     with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
-                elif command == 'copy_hash': self._CopyHashToClipboard()
+                elif command == 'copy_hash': self._CopyHashToClipboard( data )
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete( data )
@@ -2644,7 +2682,16 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         copy_menu = wx.Menu()
         
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ), 'hash' )
+        
+        copy_hash_menu = wx.Menu()
+        
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'md5' ) , 'md5' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha1' ) , 'sha1' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha512' ) , 'sha512' )
+        
+        copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
+        
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
         

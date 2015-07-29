@@ -2029,6 +2029,8 @@ class ImportQueueBuilderThread( ImportQueueBuilder ):
     
 def THREADDownloadURL( job_key, url, url_string ):
     
+    job_key.SetVariable( 'popup_text_1', url_string + ' - initialising' )
+    
     def hook( gauge_range, gauge_value ):
         
         if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
@@ -2063,6 +2065,8 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         job_key.SetVariable( 'popup_text_1', url_string + ' was already deleted!' )
         
+    
+    job_key.Finish()
     
 def Parse4chanPostScreen( html ):
     

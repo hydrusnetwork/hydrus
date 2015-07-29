@@ -9,6 +9,7 @@ import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
 import ClientData
+import ClientDragDrop
 import ClientCaches
 import ClientFiles
 import ClientGUICommon
@@ -1482,7 +1483,7 @@ class DialogInputLocalFiles( Dialog ):
         
         Dialog.__init__( self, parent, 'importing files' )
         
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self._AddPathsToList ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self._AddPathsToList ) )
         
         self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
         
@@ -4719,7 +4720,7 @@ class DialogTextEntry( Dialog ):
         def InitialiseControls():
             
             self._text = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-            self._text.Bind( wx.EVT_CHAR, self.EventChar )
+            self._text.Bind( wx.EVT_TEXT, self.EventText )
             self._text.Bind( wx.EVT_TEXT_ENTER, self.EventEnter )
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
@@ -4782,7 +4783,7 @@ class DialogTextEntry( Dialog ):
             
         
     
-    def EventChar( self, event ):
+    def EventText( self, event ):
         
         wx.CallAfter( self._CheckText )
         

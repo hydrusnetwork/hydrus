@@ -4,6 +4,7 @@ import ClientConstants as CC
 import ClientCaches
 import ClientFiles
 import ClientData
+import ClientDragDrop
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
@@ -46,7 +47,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, None, resize_option_prefix = 'gui_', title = wx.GetApp().PrepStringForDisplay( 'Hydrus Client' ) )
         
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self.ImportFiles ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles ) )
         
         self._statusbar = self.CreateStatusBar()
         self._statusbar.SetFieldsCount( 3 )
@@ -90,6 +91,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HydrusGlobals.pubsub.sub( self, 'RefreshStatusBar', 'refresh_status' )
         HydrusGlobals.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         HydrusGlobals.pubsub.sub( self, 'SetMediaFocus', 'set_media_focus' )
+        HydrusGlobals.pubsub.sub( self, 'ShowSeedCache', 'show_seed_cache' )
         
         self._menus = {}
         
@@ -377,7 +379,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             HydrusData.ShowText( 'Server backup done!' )
             
         
-        message = 'This will tell the server to lock and copy its database files. It will probably take a few minutes to complete, during which time it will not be able to serve any requests. The client\'s GUI will lock up as well.'
+        message = 'This will tell the server to lock and copy its database files. It will probably take a few minutes to complete, during which time it will not be able to serve any requests.'
         
         with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
             
@@ -1432,11 +1434,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                                 with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
                                 
-                                thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
-                                
                                 thumbnail_resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
                                 
-                                with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
+                                if os.path.exists( thumbnail_resized_path ):
+                                    
+                                    os.remove( thumbnail_resized_path )
+                                    
                                 
                             
                         except:
@@ -2206,6 +2209,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def SetMediaFocus( self ): self._SetMediaFocus()
+    
+    def ShowSeedCache( self, seed_cache ):
+        
+        FrameSeedCache( seed_cache )
+        
     
     def Shutdown( self ):
         
@@ -3054,6 +3062,49 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         def TIMEREventUpdates( self, event ): self._updates_text.SetLabel( self._service.GetUpdateStatus() )
         
     
+    
+class FrameSeedCache( ClientGUICommon.Frame ):
+    
+    def __init__( self, seed_cache ):
+        
+        ( pos_x, pos_y ) = wx.GetApp().GetGUI().GetPositionTuple()
+        
+        pos = ( pos_x + 25, pos_y + 50 )
+        
+        tlp = wx.GetApp().GetTopWindow()
+        
+        ClientGUICommon.Frame.__init__( self, tlp, title = wx.GetApp().PrepStringForDisplay( 'File Import Status' ), pos = pos )
+        
+        self._seed_cache = seed_cache
+        
+        self._text = wx.StaticText( self, label = 'initialising' )
+        self._seed_cache_control = ClientGUICommon.SeedCacheControl( self, self._seed_cache )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self.SetInitialSize( ( 880, 620 ) )
+        
+        self.Show( True )
+        
+        HydrusGlobals.pubsub.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
+        
+        wx.CallAfter( self.Raise )
+        
+    
+    def NotifySeedUpdated( self, seed ):
+        
+        ( status, ( total_processed, total ) ) = self._seed_cache.GetStatus()
+        
+        self._text.SetLabel( status )
+        
+        self.Layout()
+        
+    
 class FrameSplash( ClientGUICommon.Frame ):
     
     WIDTH = 254
@@ -3061,7 +3112,7 @@ class FrameSplash( ClientGUICommon.Frame ):
     
     def __init__( self ):
         
-        wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR, title = 'hydrus client' )
+        wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR | wx.STAY_ON_TOP, title = 'hydrus client' )
         
         self._dirty = True
         self._text = ''

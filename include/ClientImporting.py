@@ -339,6 +339,11 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetSeedCache( self ):
+        
+        return self._paths_cache
+        
+    
     def GetStatus( self ):
         
         with self._lock:
@@ -533,7 +538,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             self._seeds_to_info[ seed ] = seed_info
             
-            
+        
+        HydrusGlobals.pubsub.pub( 'seed_cache_seed_updated', seed )
         
     
     def AdvanceSeed( self, seed ):
@@ -553,6 +559,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        HydrusGlobals.pubsub.pub( 'seed_cache_seed_updated', seed )
+        
     
     def DelaySeed( self, seed ):
         
@@ -570,6 +578,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                     
                 
             
+        
+        HydrusGlobals.pubsub.pub( 'seed_cache_seed_updated', seed )
         
     
     def GetNextUnknownSeed( self ):
@@ -612,6 +622,14 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
             
             return all_info
+            
+        
+    
+    def GetSeedInfo( self, seed ):
+        
+        with self._lock:
+            
+            return self._GetSeedTuple( seed )
             
         
     
@@ -668,6 +686,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        HydrusGlobals.pubsub.pub( 'seed_cache_seed_updated', seed )
+        
     
     def UpdateSeedStatus( self, seed, status, note = '' ):
         
@@ -679,6 +699,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             seed_info[ 'last_modified_timestamp' ] = HydrusData.GetNow()
             seed_info[ 'note' ] = note
             
+        
+        HydrusGlobals.pubsub.pub( 'seed_cache_seed_updated', seed )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE ] = SeedCache

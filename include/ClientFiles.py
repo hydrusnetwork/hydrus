@@ -187,9 +187,16 @@ def GetThumbnailPath( hash, full_size = True ):
             
             thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
-            
-            with open( path, 'wb' ) as f: f.write( thumbnail_resized )
+            if tuple( thumbnail_dimensions ) == HC.UNSCALED_THUMBNAIL_DIMENSIONS:
+                
+                path = full_size_path
+                
+            else:
+                
+                thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
+                
+                with open( path, 'wb' ) as f: f.write( thumbnail_resized )
+                
             
         
     

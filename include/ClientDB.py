@@ -1133,12 +1133,6 @@ class DB( HydrusDB.HydrusDB ):
             
             with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, options[ 'thumbnail_dimensions' ] )
-            
-            thumbnail_resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
-            
-            with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
-            
             phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
             
             hash_id = self._GetHashId( hash )
@@ -1835,6 +1829,7 @@ class DB( HydrusDB.HydrusDB ):
                 if os.path.exists( resized_path ):
                     
                     deletee_paths.add( resized_path )
+                    
                 
             
             self._c.execute( 'DELETE from perceptual_hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( deletable_thumbnail_hash_ids ) + ';' )
@@ -2204,6 +2199,26 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _GetDownloads( self ): return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
+    
+    def _GetFileHash( self, hash, hash_type ):
+        
+        hash_id = self._GetHashId( hash )
+        
+        result = self._c.execute( 'SELECT md5, sha1, sha512 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that hash record in the database!' )
+            
+        else:
+            
+            ( md5, sha1, sha512 ) = result
+            
+            if hash_type == 'md5': return md5
+            elif hash_type == 'sha1': return sha1
+            elif hash_type == 'sha512': return sha512
+            
+        
     
     def _GetFileSystemPredicates( self, service_key ):
         
@@ -2874,6 +2889,29 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsToHashes( self, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in self._c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) }
     
+    def _GetHashIdStatus( self, hash_id ):
+    
+        options = wx.GetApp().GetOptions()
+        
+        if options[ 'exclude_deleted_files' ]:
+            
+            result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
+            
+            if result is not None: return ( CC.STATUS_DELETED, None )
+            
+        
+        result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
+        
+        if result is not None:
+            
+            hash = self._GetHash( hash_id )
+            
+            return ( CC.STATUS_REDUNDANT, hash )
+            
+        
+        return ( CC.STATUS_NEW, None )
+        
+    
     def _GetHydrusSessions( self ):
         
         now = HydrusData.GetNow()
@@ -2944,30 +2982,16 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE md5 = ?;', ( sqlite3.Binary( md5 ), ) ).fetchone()
         
-        if result is not None:
+        if result is None:
+            
+            return ( CC.STATUS_NEW, None )
+            
+        else:
             
             ( hash_id, ) = result
             
-            options = wx.GetApp().GetOptions()
+            return self._GetHashIdStatus( hash_id )
             
-            if options[ 'exclude_deleted_files' ]:
-                
-                result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                
-                if result is not None: return ( CC.STATUS_DELETED, None )
-                
-            
-            result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
-            
-            if result is not None:
-                
-                hash = self._GetHash( hash_id )
-                
-                return ( CC.STATUS_REDUNDANT, hash )
-                
-            
-        
-        return ( CC.STATUS_NEW, None )
         
     
     def _GetMediaResults( self, service_key, hash_ids ):
@@ -3802,30 +3826,16 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
         
-        if result is not None:
+        if result is None:
+            
+            return ( CC.STATUS_NEW, None )
+            
+        else:
             
             ( hash_id, ) = result
             
-            options = wx.GetApp().GetOptions()
+            return self._GetHashIdStatus( hash_id )
             
-            if options[ 'exclude_deleted_files' ]:
-                
-                result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                
-                if result is not None: return ( CC.STATUS_DELETED, None )
-                
-            
-            result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
-            
-            if result is not None:
-                
-                hash = self._GetHash( hash_id )
-                
-                return ( CC.STATUS_REDUNDANT, hash )
-                
-            
-        
-        return ( CC.STATUS_NEW, None )
         
     
     def _GetWebSessions( self ):
@@ -4747,6 +4757,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
         elif action == 'export_folders': result = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+        elif action == 'file_hash': result = self._GetFileHash( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
         elif action == 'gui_session_names': result = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
@@ -5072,35 +5083,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
-        
-        if version == 117:
-            
-            i = 0
-            
-            for path in ClientFiles.IterateAllThumbnailPaths():
-                
-                if not path.endswith( '_resized' ):
-                    
-                    filename = os.path.basename( path )
-                    
-                    hash = filename.decode( 'hex' )
-                    
-                    try:
-                        
-                        phash = HydrusImageHandling.GeneratePerceptualHash( path )
-                        
-                        hash_id = self._GetHashId( hash )
-                        
-                        self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
-                        
-                        i += 1
-                        
-                        if i % 100 == 0: HydrusGlobals.pubsub.pub( 'splash_set_text', 'reprocessing thumbs: ' + HydrusData.ConvertIntToPrettyString( i ) )
-                        
-                    except: print( 'When updating to v118, ' + path + '\'s phash could not be recalculated.' )
-                    
-                
-            
         
         if version == 119:
             

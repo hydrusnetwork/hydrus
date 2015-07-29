@@ -191,11 +191,11 @@ status_string_lookup = {}
 
 status_string_lookup[ STATUS_UNKNOWN ] = ''
 status_string_lookup[ STATUS_SUCCESSFUL ] = 'successful'
-status_string_lookup[ STATUS_REDUNDANT ] = 'redundant'
+status_string_lookup[ STATUS_REDUNDANT ] = 'already in db'
 status_string_lookup[ STATUS_DELETED ] = 'deleted'
 status_string_lookup[ STATUS_FAILED ] = 'failed'
 status_string_lookup[ STATUS_NEW ] = 'new'
-status_string_lookup[ STATUS_PAUSED ] = 'new'
+status_string_lookup[ STATUS_PAUSED ] = 'paused'
 
 THUMBNAIL_MARGIN = 2
 THUMBNAIL_BORDER = 1
@@ -250,6 +250,8 @@ class GlobalBMPs( object ):
         GlobalBMPs.pause = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'pause.png' )
         GlobalBMPs.play = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'play.png' )
         GlobalBMPs.stop = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'stop.png' )
+        
+        GlobalBMPs.seed_cache = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'seed_cache.png' )
         
         GlobalBMPs.eight_chan = wx.Bitmap( HC.STATIC_DIR + os.path.sep + '8chan.png' )
         GlobalBMPs.twitter = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'twitter.png' )
