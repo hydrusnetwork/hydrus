@@ -8,6 +8,24 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 167</h3></li>
+				<ul>
+					<li>created gui control to show file import status</li>
+					<li>added a button to launch this control, wrapped in its own frame, to the hdd import page</li>
+					<li>you can now drag and drop thumbnails out of the client for quick export!</li>
+					<li>the client will catch internal drag and drops, and won't interpret that as an import request</li>
+					<li>dragging files onto the client will now always show the 'copy' mouse icon</li>
+					<li>some thumbnail generation code is a bit quicker--resized thumbs are now always generated on their first viewing</li>
+					<li>if you use 200x200 thumbnails, the client won't bother to generate resized thumbs, saving space and time</li>
+					<li>the text entry dialog will now check its button status on a non-keyboard related text-change (e.g. selecting paste from the right-click menu)</li>
+					<li>the popup created by downloading a raw url or a youtube video will finish itself properly when the import attempt is completed, removing the pause and cancel buttons and making the popup dismissable</li>
+					<li>the splash screen will now stay on top</li>
+					<li>the password entry dialog will also stay on top</li>
+					<li>you can now copy the md5, sha1, or sha512 hashes of local files from the normal share->copy->hash menu</li>
+					<li>fixed an overly broad deleted/redundant test on md5/url pre-import status checks</li>
+					<li>options to remember size of manage tags and position of both manage tags and ratings dialogs added to file->options->gui</li>
+					<li>updated some of the help</li>
+				</ul>
 				<li><h3>version 166</h3></li>
 				<ul>
 					<li>created new object to hold hdd import information</li>

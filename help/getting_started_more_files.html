@@ -11,16 +11,22 @@
 			<p>There are many ways to export files from the client:</p>
 			<ul>
 				<li>
-					<p><b>raw export</b></p>
+					<p><b>drag and drop</b></p>
+					<p>Just dragging from the thumbnail view will export (copy) all the selected files to wherever you drop them.</p>
+					<p>The files will be named by their ugly hexadecimal hash, which is how they are stored inside the database.</p>
+					<p>If you use this to open a file inside an image editing program, remember to go 'save as' and give it a new filename! The client does not expect files inside its db directory to change.</p>
+				</li>
+				<li>
+					<p><b>export dialog</b></p>
 					<p>Right clicking some files and selecting 'export all' will open this dialog:</p>
 					<p><img src="export.png" /></p>
-					<p>Which lets you export (copy) the selected files wherever you like in your filesystem. The default export location is your export folder, which is set in <i>file->options</i>.</p>
-					<p>You can do a lot with this. It'll start off trying to export by the files' hashes, which are fairly ugly, but once you are comfortable with tags, you'll be able to generate much cleverer and prettier filenames.</p>
+					<p>Which lets you export the selected files with custom filenames. The default export location is your export folder, which is set in <i>file->options</i>.</p>
+					<p>You can do a lot with this. It'll initialise trying to export the files named by their hashes, but once you are comfortable with tags, you'll be able to generate much cleverer and prettier filenames.</p>
 				</li>
 				<li>
 					<p><b>copy->copy all</b></p>
-					<p>Right clicking some files and selecting 'copy all' from the copy submenu will export the files to a temporary folder and copy their paths to your clipboard. You can then paste them wherever you like, just as with normal files. They will have their hashes for filenames.</p>
-					<p>This is a very quick operation, and can also be triggered by hitting Ctrl+C. It is best when you want to export just a few files somewhere for a temporary job.</p>
+					<p>Right clicking some files and selecting 'copy all' from the copy submenu will copy them to your clipboard. You can then paste them wherever you like, just as with normal files. They will have their hashes for filenames.</p>
+					<p>This is a very quick operation. It can also be triggered by hitting Ctrl+C.</p>
 				</li>
 				<li>
 					<p><b>copy->hash/hashes</b></p>
@@ -30,21 +36,12 @@
 				<li>
 					<p><b>copy->copy path/local url</b></p>
 					<p>Right clicking any file and selecting 'copy path' will copy the file's raw database path (install_path/db/client_files/[hash]) to your clipboard. 'copy local url' does the same, but with a localhost url in the form http://127.0.0.1:45865/file?hash=[hash].</p>
-					<p>These are most useful when you want to send a single file to another program. You can copy either of these addresses into a file open dialog like so:</p>
+					<p>These are useful when you want to send a single file to another program that won't accept a drag and drop. You can copy either of these addresses into a file open dialog like so:</p>
 					<p><a href="upload.png"><img src="upload.png" width="960" height="600" /></a></p>
-					<p>This works for file upload, opening a file in a graphics editor, or whatever. You can also paste into your browser's address bar, to check they are working.</p>
+					<p>You can also paste into your browser's address bar, to check they are working.</p>
 					<p>The path method will always work, the url method will only work while the client is running.</p>
-					<p>The path method will send the file's hash as the filename, the url method will send something odd like file[7].</p>
-					<p>The path method will change your current working directory to your client's db directory (usually very annoying), the url method will usually not change you current working directory.</p>
-					<p>I generally recommend you go with the url method.</p>
+					<p>The path method will send the file's hash as the filename, the url method might send something odd like file[7].</p>
 					<p>If you use the path method to open a file inside an image editing program, remember to go 'save as' and give it a new filename! The client does not expect files inside its db directory to change.</p>
-				</li>
-				<li>
-					<p><b>dumping to imageboard</b></p>
-					<p>Right clicking some files and selecting 'dump all' will let you mass-dump them to an imageboard. You'll be asked which board you want to dump to and then taken to a new page:</p>
-					<p><a href="dumping.png"><img src="dumping.png" width="960" height="600" /></a></p>
-					<p>If you have a 4chan pass, you can authenticate the client in <i>services->manage 4chan pass</i>. Any new dump pages will no longer show the captcha window.</p>
-					<p>The client comes with all of 4chan's boards pre-configured. If you feel very brave and confident of your html-form-parsing skills, go <i>services->manage imageboards</i> and try to add some new sites.</p>
 				</li>
 			</ul>
 			<h3>sharing files</h3>
