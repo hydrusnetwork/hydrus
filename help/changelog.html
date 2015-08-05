@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 168</h3></li>
+				<ul>
+					<li>thread watcher is moved to the new system--it will remember its previous state</li>
+					<li>thread watcher has more compact, flexible gui layout</li>
+					<li>thread watcher now supports file import status button, so failures can be reattempted</li>
+					<li>thread watcher check now button has improved logic</li>
+					<li>import tag options and import file options gui controls now plug into the new system</li>
+					<li>thread watcher will now remember its tag and file options</li>
+					<li>thread watcher will accept changes to its tag and file options after it is started</li>
+					<li>fixed a bug in import tag options deserialisation</li>
+					<li>hdd and thread watcher static texts will flicker less</li>
+					<li>improved some network transfer gui reporting code</li>
+					<li>send to trash, delete from trash, and undelete now all have different icons in the command hover window</li>
+					<li>added open externally button to command hover window</li>
+					<li>opening an animated gif or movie externally from the media viewer will pause it in the client</li>
+					<li>share->copy->image added to media viewer for static images</li>
+					<li>fixed a typo bug in copy 'image' to clipboard</li>
+					<li>fixed a typo in external ip discovery that was causing errors for local booru external link generation</li>
+					<li>improved external ip discovery error recovery</li>
+					<li>in prep for the de-wxing of the server, refactored a lot of code so the server and client code don't import each other at any point</li>
+					<li>if an attempt to close the client is aborted (e.g. because of an active import page), the exit splash screen will now destroy itself</li>
+				</ul>
 				<li><h3>version 167</h3></li>
 				<ul>
 					<li>created gui control to show file import status</li>
