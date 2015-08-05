@@ -7,6 +7,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetworking
 import HydrusSerialisable
+import HydrusTags
 import threading
 import traceback
 import os
@@ -824,11 +825,16 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS
     SERIALISABLE_VERSION = 1
     
-    def __init__( self ):
+    def __init__( self, service_keys_to_namespaces = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self._service_keys_to_namespaces = {}
+        if service_keys_to_namespaces is None:
+            
+            service_keys_to_namespaces = {}
+            
+        
+        self._service_keys_to_namespaces = service_keys_to_namespaces
         
     
     def _GetSerialisableInfo( self ):
@@ -842,7 +848,48 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
         
         safe_service_keys_to_namespaces = serialisable_info
         
-        self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() }
+        self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in safe_service_keys_to_namespaces.items() }
+        
+    
+    def GetServiceKeysToNamespaces( self ):
+        
+        return dict( self._service_keys_to_namespaces )
+        
+    
+    def GetServiceKeysToTags( self, tags ):
+        
+        tags = [ tag for tag in tags if tag is not None ]
+        
+        service_keys_to_tags = {}
+        
+        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        parents_manager = wx.GetApp().GetManager( 'tag_parents' )
+        
+        for ( service_key, namespaces ) in self._service_keys_to_namespaces.items():
+            
+            if len( namespaces ) > 0:
+                
+                tags_to_add_here = []
+                
+                for namespace in namespaces:
+                    
+                    if namespace == '': tags_to_add_here.extend( [ tag for tag in tags if not ':' in tag ] )
+                    else: tags_to_add_here.extend( [ tag for tag in tags if tag.startswith( namespace + ':' ) ] )
+                    
+                
+                tags_to_add_here = HydrusTags.CleanTags( tags_to_add_here )
+                
+                if len( tags_to_add_here ) > 0:
+                    
+                    tags_to_add_here = siblings_manager.CollapseTags( tags_to_add_here )
+                    tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
+                    
+                    service_keys_to_tags[ service_key ] = tags_to_add_here
+                    
+                
+            
+        
+        return service_keys_to_tags
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS ] = ImportTagOptions

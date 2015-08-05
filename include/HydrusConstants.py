@@ -28,17 +28,6 @@ if sys.platform == 'win32': PLATFORM_WINDOWS = True
 elif sys.platform == 'darwin': PLATFORM_OSX = True
 elif sys.platform == 'linux2': PLATFORM_LINUX = True
 
-#if PLATFORM_LINUX:
-#    
-#    if not hasattr( sys, 'frozen' ):
-#        
-#        import wxversion
-#        
-#        if not wxversion.checkInstalled( '2.9' ): raise Exception( 'Need wxPython 2.9 on Linux!' )
-#        
-#        wxversion.select( '2.9' )
-#        
-
 import wx
 import sqlite3
 import traceback
@@ -49,7 +38,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 167
+SOFTWARE_VERSION = 168
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

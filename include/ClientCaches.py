@@ -1,4 +1,5 @@
 import ClientFiles
+import ClientRendering
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
@@ -13,6 +14,10 @@ import HydrusData
 import ClientData
 import ClientConstants as CC
 import HydrusGlobals
+import collections
+import HydrusTags
+import itertools
+import ClientSearch
 
 class DataCache( object ):
     
@@ -331,7 +336,7 @@ class RenderedImageCache( object ):
         elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
         else:
             
-            image_container = HydrusImageHandling.ImageContainer( media, target_resolution )
+            image_container = ClientRendering.RasterContainerImage( media, target_resolution )
             
             self._keys_being_rendered[ key ] = image_container
             
@@ -397,7 +402,7 @@ class ThumbnailCache( object ):
                 
                 with open( temp_path, 'wb' ) as f: f.write( thumbnail )
                 
-                hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
+                hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path )
                 
                 self._special_thumbs[ name ] = hydrus_bitmap
                 
@@ -424,7 +429,7 @@ class ThumbnailCache( object ):
                     
                     path = ClientFiles.GetThumbnailPath( hash, False )
                     
-                    hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( path )
+                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path )
                     
                 except HydrusExceptions.NotFoundException:
                     
@@ -478,6 +483,552 @@ class ThumbnailCache( object ):
                 
                 HydrusData.ShowException( e )
                 
+            
+        
+    
+def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
+    
+    potential_loop_paths = { parent }
+    
+    while len( potential_loop_paths.intersection( simple_children_to_parents.keys() ) ) > 0:
+        
+        new_potential_loop_paths = set()
+        
+        for potential_loop_path in potential_loop_paths.intersection( simple_children_to_parents.keys() ):
+            
+            new_potential_loop_paths.update( simple_children_to_parents[ potential_loop_path ] )
+            
+        
+        potential_loop_paths = new_potential_loop_paths
+        
+        if child in potential_loop_paths: return True
+        
+    
+    return False
+    
+def BuildSimpleChildrenToParents( pairs ):
+    
+    simple_children_to_parents = HydrusData.default_dict_set()
+    
+    for ( child, parent ) in pairs:
+        
+        if child == parent: continue
+        
+        if LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ): continue
+        
+        simple_children_to_parents[ child ].add( parent )
+        
+    
+    return simple_children_to_parents
+    
+def CollapseTagSiblingChains( processed_siblings ):
+    
+    # now to collapse chains
+    # A -> B and B -> C goes to A -> C and B -> C
+    
+    siblings = {}
+    
+    for ( old_tag, new_tag ) in processed_siblings.items():
+        
+        # adding A -> B
+        
+        if new_tag in siblings:
+            
+            # B -> F already calculated and added, so add A -> F
+            
+            siblings[ old_tag ] = siblings[ new_tag ]
+            
+        else:
+            
+            while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
+            
+            siblings[ old_tag ] = new_tag
+            
+        
+    
+    reverse_lookup = collections.defaultdict( list )
+    
+    for ( old_tag, new_tag ) in siblings.items(): reverse_lookup[ new_tag ].append( old_tag )
+    
+    return ( siblings, reverse_lookup )
+    
+def CombineTagSiblingPairs( service_keys_to_statuses_to_pairs ):
+    
+    # first combine the services
+    # if A map already exists, don't overwrite
+    # if A -> B forms a loop, don't write it
+    
+    processed_siblings = {}
+    current_deleted_pairs = set()
+    
+    for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
+        
+        pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+        
+        for ( old, new ) in pairs:
+            
+            if old == new: continue
+            
+            if old not in processed_siblings:
+                
+                next_new = new
+                
+                we_have_a_loop = False
+                
+                while next_new in processed_siblings:
+                    
+                    next_new = processed_siblings[ next_new ]
+                    
+                    if next_new == old:
+                        
+                        we_have_a_loop = True
+                        
+                        break
+                        
+                    
+                
+                if not we_have_a_loop: processed_siblings[ old ] = new
+                
+            
+        
+    
+    return processed_siblings
+    
+# important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
+def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
+    
+    def AddParents( simple_children_to_parents, children_to_parents, child, parents ):
+        
+        for parent in parents:
+            
+            children_to_parents[ child ].append( parent )
+            
+            if parent in simple_children_to_parents:
+                
+                grandparents = simple_children_to_parents[ parent ]
+                
+                AddParents( simple_children_to_parents, children_to_parents, child, grandparents )
+                
+            
+        
+    
+    service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
+    
+    for ( service_key, simple_children_to_parents ) in service_keys_to_simple_children_to_parents.items():
+        
+        children_to_parents = service_keys_to_children_to_parents[ service_key ]
+        
+        for ( child, parents ) in simple_children_to_parents.items(): AddParents( simple_children_to_parents, children_to_parents, child, parents )
+        
+    
+    return service_keys_to_children_to_parents
+    
+def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
+    
+    service_keys_to_simple_children_to_parents = collections.defaultdict( HydrusData.default_dict_set )
+    
+    for ( service_key, pairs ) in service_keys_to_pairs_flat.items():
+        
+        service_keys_to_simple_children_to_parents[ service_key ] = BuildSimpleChildrenToParents( pairs )
+        
+    
+    return service_keys_to_simple_children_to_parents
+    
+class TagCensorshipManager( object ):
+    
+    def __init__( self ):
+        
+        self.RefreshData()
+        
+        HydrusGlobals.pubsub.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
+        
+    
+    def GetInfo( self, service_key ):
+        
+        if service_key in self._service_keys_to_info: return self._service_keys_to_info[ service_key ]
+        else: return ( True, set() )
+        
+    
+    def RefreshData( self ):
+        
+        info = wx.GetApp().Read( 'tag_censorship' )
+        
+        self._service_keys_to_info = {}
+        self._service_keys_to_predicates = {}
+        
+        for ( service_key, blacklist, censorships ) in info:
+            
+            self._service_keys_to_info[ service_key ] = ( blacklist, censorships )
+            
+            tag_matches = lambda tag: True in ( HydrusTags.CensorshipMatch( tag, censorship ) for censorship in censorships )
+            
+            if blacklist: predicate = lambda tag: not tag_matches( tag )
+            else: predicate = tag_matches
+            
+            self._service_keys_to_predicates[ service_key ] = predicate
+            
+        
+    
+    def FilterServiceKeysToStatusesToTags( self, service_keys_to_statuses_to_tags ):
+        
+        filtered_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+            
+            for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
+                
+                if service_key_lookup in self._service_keys_to_predicates:
+                    
+                    combined_predicate = self._service_keys_to_predicates[ service_key_lookup ]
+                    
+                    new_statuses_to_tags = HydrusData.default_dict_set()
+                    
+                    for ( status, tags ) in statuses_to_tags.items():
+                        
+                        new_statuses_to_tags[ status ] = { tag for tag in tags if combined_predicate( tag ) }
+                        
+                    
+                    statuses_to_tags = new_statuses_to_tags
+                    
+                
+            
+            filtered_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
+            
+        
+        return filtered_service_keys_to_statuses_to_tags
+        
+    
+    def FilterTags( self, service_key, tags ):
+        
+        for service_key in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
+            
+            if service_key in self._service_keys_to_predicates:
+                
+                predicate = self._service_keys_to_predicates[ service_key ]
+                
+                tags = { tag for tag in tags if predicate( tag ) }
+                
+            
+        
+        return tags
+        
+    
+class TagParentsManager( object ):
+    
+    def __init__( self ):
+        
+        self._RefreshParents()
+        
+        self._lock = threading.Lock()
+        
+        HydrusGlobals.pubsub.sub( self, 'RefreshParents', 'notify_new_parents' )
+        
+    
+    def _RefreshParents( self ):
+        
+        service_keys_to_statuses_to_pairs = wx.GetApp().Read( 'tag_parents' )
+        
+        # first collapse siblings
+        
+        sibling_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        
+        collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
+        
+        for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
+            
+            if service_key == CC.COMBINED_TAG_SERVICE_KEY: continue
+            
+            for ( status, pairs ) in statuses_to_pairs.items():
+                
+                pairs = sibling_manager.CollapsePairs( pairs )
+                
+                collapsed_service_keys_to_statuses_to_pairs[ service_key ][ status ] = pairs
+                
+            
+        
+        # now collapse current and pending
+        
+        service_keys_to_pairs_flat = HydrusData.default_dict_set()
+        
+        for ( service_key, statuses_to_pairs ) in collapsed_service_keys_to_statuses_to_pairs.items():
+            
+            pairs_flat = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+            
+            service_keys_to_pairs_flat[ service_key ] = pairs_flat
+            
+        
+        # now create the combined tag service
+        
+        combined_pairs_flat = set()
+        
+        for pairs_flat in service_keys_to_pairs_flat.values():
+            
+            combined_pairs_flat.update( pairs_flat )
+            
+        
+        service_keys_to_pairs_flat[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_pairs_flat
+        
+        #
+        
+        service_keys_to_simple_children_to_parents = BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat )
+        
+        self._service_keys_to_children_to_parents = BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents )
+        
+    
+    def ExpandPredicates( self, service_key, predicates ):
+        
+        # for now -- we will make an option, later
+        service_key = CC.COMBINED_TAG_SERVICE_KEY
+        
+        results = []
+        
+        with self._lock:
+            
+            for predicate in predicates:
+                
+                results.append( predicate )
+                
+                if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
+                    
+                    tag = predicate.GetValue()
+                    
+                    parents = self._service_keys_to_children_to_parents[ service_key ][ tag ]
+                    
+                    for parent in parents:
+                        
+                        parent_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
+                        
+                        results.append( parent_predicate )
+                        
+                    
+                
+            
+            return results
+            
+        
+    
+    def ExpandTags( self, service_key, tags ):
+        
+        with self._lock:
+            
+            # for now -- we will make an option, later
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+            tags_results = set( tags )
+            
+            for tag in tags: tags_results.update( self._service_keys_to_children_to_parents[ service_key ][ tag ] )
+            
+            return tags_results
+            
+        
+    
+    def GetParents( self, service_key, tag ):
+        
+        with self._lock:
+            
+            # for now -- we will make an option, later
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+            return self._service_keys_to_children_to_parents[ service_key ][ tag ]
+            
+        
+    
+    def RefreshParents( self ):
+        
+        with self._lock: self._RefreshParents()
+        
+    
+class TagSiblingsManager( object ):
+    
+    def __init__( self ):
+        
+        self._RefreshSiblings()
+        
+        self._lock = threading.Lock()
+        
+        HydrusGlobals.pubsub.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
+        
+    
+    def _RefreshSiblings( self ):
+        
+        service_keys_to_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings' )
+        
+        processed_siblings = CombineTagSiblingPairs( service_keys_to_statuses_to_pairs )
+        
+        ( self._siblings, self._reverse_lookup ) = CollapseTagSiblingChains( processed_siblings )
+        
+        HydrusGlobals.pubsub.pub( 'new_siblings_gui' )
+        
+    
+    def GetAutocompleteSiblings( self, half_complete_tag ):
+        
+        with self._lock:
+            
+            key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if ClientSearch.SearchEntryMatchesTag( half_complete_tag, key, search_siblings = False ) }
+            
+            value_based_matching_values = { value for value in self._siblings.values() if ClientSearch.SearchEntryMatchesTag( half_complete_tag, value, search_siblings = False ) }
+            
+            matching_values = key_based_matching_values.union( value_based_matching_values )
+            
+            # all the matching values have a matching sibling somewhere in their network
+            # so now fetch the networks
+            
+            lists_of_matching_keys = [ self._reverse_lookup[ value ] for value in matching_values ]
+            
+            matching_keys = itertools.chain.from_iterable( lists_of_matching_keys )
+            
+            matches = matching_values.union( matching_keys )
+            
+            return matches
+            
+        
+    
+    def GetSibling( self, tag ):
+        
+        with self._lock:
+            
+            if tag in self._siblings: return self._siblings[ tag ]
+            else: return None
+            
+        
+    
+    def GetAllSiblings( self, tag ):
+        
+        with self._lock:
+            
+            if tag in self._siblings:
+                
+                new_tag = self._siblings[ tag ]
+                
+            elif tag in self._reverse_lookup: new_tag = tag
+            else: return [ tag ]
+            
+            all_siblings = list( self._reverse_lookup[ new_tag ] )
+            
+            all_siblings.append( new_tag )
+            
+            return all_siblings
+            
+        
+    
+    def RefreshSiblings( self ):
+        
+        with self._lock: self._RefreshSiblings()
+        
+    
+    def CollapseNamespacedTags( self, namespace, tags ):
+        
+        with self._lock:
+            
+            results = set()
+            
+            for tag in tags:
+                
+                full_tag = namespace + ':' + tag
+                
+                if full_tag in self._siblings:
+                    
+                    sibling = self._siblings[ full_tag ]
+                    
+                    if ':' in sibling: sibling = sibling.split( ':', 1 )[1]
+                    
+                    results.add( sibling )
+                    
+                else: results.add( tag )
+                
+            
+            return results
+            
+        
+    
+    def CollapsePredicates( self, predicates ):
+        
+        with self._lock:
+            
+            results = [ predicate for predicate in predicates if predicate.GetType() != HC.PREDICATE_TYPE_TAG ]
+            
+            tag_predicates = [ predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG ]
+            
+            tags_to_predicates = { predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG }
+            
+            tags = tags_to_predicates.keys()
+            
+            tags_to_include_in_results = set()
+            
+            for tag in tags:
+                
+                if tag in self._siblings:
+                    
+                    old_tag = tag
+                    old_predicate = tags_to_predicates[ old_tag ]
+                    
+                    new_tag = self._siblings[ old_tag ]
+                    
+                    if new_tag not in tags_to_predicates:
+                        
+                        ( old_pred_type, old_value, old_inclusive ) = old_predicate.GetInfo()
+                        
+                        new_predicate = HydrusData.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
+                        
+                        tags_to_predicates[ new_tag ] = new_predicate
+                        
+                        tags_to_include_in_results.add( new_tag )
+                        
+                    
+                    new_predicate = tags_to_predicates[ new_tag ]
+                    
+                    current_count = old_predicate.GetCount( HC.CURRENT )
+                    pending_count = old_predicate.GetCount( HC.PENDING )
+                    
+                    new_predicate.AddToCount( HC.CURRENT, current_count )
+                    new_predicate.AddToCount( HC.PENDING, pending_count )
+                    
+                else: tags_to_include_in_results.add( tag )
+                
+            
+            results.extend( [ tags_to_predicates[ tag ] for tag in tags_to_include_in_results ] )
+            
+            return results
+            
+        
+    
+    def CollapsePairs( self, pairs ):
+        
+        with self._lock:
+            
+            result = set()
+            
+            for ( a, b ) in pairs:
+                
+                if a in self._siblings: a = self._siblings[ a ]
+                if b in self._siblings: b = self._siblings[ b ]
+                
+                result.add( ( a, b ) )
+                
+            
+            return result
+            
+        
+    
+    def CollapseTags( self, tags ):
+        
+        with self._lock: return { self._siblings[ tag ] if tag in self._siblings else tag for tag in tags }
+        
+    
+    def CollapseTagsToCount( self, tags_to_count ):
+        
+        with self._lock:
+            
+            results = collections.Counter()
+            
+            for ( tag, count ) in tags_to_count.items():
+                
+                if tag in self._siblings: tag = self._siblings[ tag ]
+                
+                results[ tag ] += count
+                
+            
+            return results
             
         
     

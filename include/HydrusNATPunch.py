@@ -24,9 +24,7 @@ def GetExternalIP():
     
     if HydrusData.GetNow() - EXTERNAL_IP[ 'time' ] > 3600 * 24:
         
-        EXTERNAL_IP[ 'time' ] = HydrusData.GetNow()
-        
-        cmd = [ upnpc_path, ' -l' ]
+        cmd = [ upnpc_path, '-l' ]
         
         p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
         
@@ -46,6 +44,8 @@ def GetExternalIP():
                 '''ExternalIPAddress = ip'''
                 
                 ( gumpf, EXTERNAL_IP[ 'ip' ] ) = lines[ i - 1 ].split( ' = ' )
+                
+                EXTERNAL_IP[ 'time' ] = HydrusData.GetNow()
                 
             except: raise Exception( 'Problem while trying to fetch External IP.' )
             

@@ -17,7 +17,9 @@ import ClientGUIDialogs
 import ClientGUIMedia
 import ClientImporting
 import ClientMedia
+import ClientRendering
 import json
+import multipart
 import os
 import threading
 import time
@@ -114,6 +116,10 @@ def CreateManagementControllerImportThreadWatcher():
     
     management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER )
     
+    thread_watcher_import = ClientImporting.ThreadWatcherImport()
+    
+    management_controller.SetVariable( 'thread_watcher_import', thread_watcher_import )
+    
     return management_controller
     
 def CreateManagementControllerPetitions( petition_service_key ):
@@ -155,6 +161,35 @@ def CreateManagementPanel( parent, page, management_controller ):
     management_panel = management_class( parent, page, management_controller )
     
     return management_panel
+    
+def GenerateDumpMultipartFormDataCTAndBody( fields ):
+    
+    m = multipart.Multipart()
+    
+    for ( name, field_type, value ) in fields:
+        
+        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ): m.field( name, HydrusData.ToBytes( value ) )
+        elif field_type == CC.FIELD_CHECKBOX:
+            
+            if value:
+                
+                # spoiler/on -> name : spoiler, value : on
+                # we don't say true/false for checkboxes
+                
+                ( name, value ) = name.split( '/', 1 )
+                
+                m.field( name, value )
+                
+            
+        elif field_type == CC.FIELD_FILE:
+            
+            ( hash, mime, file ) = value
+            
+            m.file( name, hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ], file, { 'Content-Type' : HC.mime_string_lookup[ mime ] } )
+            
+        
+    
+    return m.get()
     
 class CaptchaControl( wx.Panel ):
     
@@ -370,7 +405,7 @@ class CaptchaControl( wx.Panel ):
             
             with open( temp_path, 'wb' ) as f: f.write( jpeg )
             
-            self._bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
+            self._bitmap = ClientRendering.GenerateHydrusBitmap( temp_path )
             
         finally:
             
@@ -784,7 +819,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         # misc
         
-        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = [ 'creator', 'series', 'title', 'volume', 'chapter', 'page', 'character', 'person', 'all others' ] )
+        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = [ 'creator', 'series', 'title', 'volume', 'chapter', 'page', 'character', 'person', 'all others' ] )
         
         # arrange stuff
         
@@ -795,7 +830,7 @@ class ManagementPanelDumper( ManagementPanel ):
         vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._thread_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._post_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -887,7 +922,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         initial += HydrusData.ConvertValueRangeToPrettyString( index + 1, num_files )
         
-        advanced_tag_options = self._advanced_tag_options.GetInfo()
+        advanced_tag_options = self._import_tag_options.GetInfo()
         
         for ( service_key, namespaces ) in advanced_tag_options.items():
             
@@ -1141,7 +1176,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             ( command, data ) = action
             
-            if command == 'advanced_tag_options_changed': self._UpdatePendingInitialComments()
+            if command == 'import_tag_options_changed': self._UpdatePendingInitialComments()
             else: event.Skip()
             
         
@@ -1367,7 +1402,7 @@ class ManagementPanelDumper( ManagementPanel ):
                         
                         post_fields.append( ( self._file_post_name, CC.FIELD_FILE, ( hash, mime, file ) ) )
                         
-                        ( ct, body ) = HydrusNetworking.GenerateDumpMultipartFormDataCTAndBody( post_fields )
+                        ( ct, body ) = GenerateDumpMultipartFormDataCTAndBody( post_fields )
                         
                         headers = {}
                         headers[ 'Content-Type' ] = ct
@@ -2099,10 +2134,10 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
         
         #
         
-        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._pending_import_queues_panel, namespaces )
-        self._advanced_tag_options.SetInfo( ato )
+        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._pending_import_queues_panel, namespaces )
+        self._import_tag_options.SetInfo( ato )
         
-        self._pending_import_queues_panel.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_import_queues_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if self._site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
             
@@ -2114,7 +2149,7 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
     
     def GetAdvancedHentaiFoundryOptions( self ): return self._advanced_hentai_foundry_options.GetInfo()
     
-    def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
+    def GetAdvancedTagOptions( self ): return self._import_tag_options.GetInfo()
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_GALLERY ] = ManagementPanelImportsGallery
 
@@ -2206,7 +2241,10 @@ class ManagementPanelImportHDD( ManagementPanel ):
         
         ( ( overall_status, ( overall_value, overall_range ) ), paused ) = self._hdd_import.GetStatus()
         
-        self._overall_status.SetLabel( overall_status )
+        if self._overall_status.GetLabel() != overall_status:
+            
+            self._overall_status.SetLabel( overall_status )
+            
         
         self._overall_gauge.SetRange( overall_range )
         self._overall_gauge.SetValue( overall_value )
@@ -2253,7 +2291,10 @@ class ManagementPanelImportHDD( ManagementPanel ):
                 
             
         
-        self._current_action.SetLabel( current_action )
+        if self._current_action.GetLabel() != current_action:
+            
+            self._current_action.SetLabel( current_action )
+            
         
     
     def EventPause( self, event ):
@@ -2293,283 +2334,337 @@ class ManagementPanelImportHDD( ManagementPanel ):
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_HDD ] = ManagementPanelImportHDD
 
-class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
+class ManagementPanelImportThreadWatcher( ManagementPanel ):
     
-    def _GenerateImportArgsGeneratorFactory( self ):
+    def __init__( self, parent, page, management_controller ):
         
-        def factory( job_key, item ):
-            
-            import_file_options = HydrusThreading.CallBlockingToWx( self.GetImportFileOptions )
-            advanced_tag_options = HydrusThreading.CallBlockingToWx( self.GetAdvancedTagOptions )
-            
-            # fourchan_board should be on the job_key or whatever. it is stuck on initial queue generation
-            # we should not be getting it from the management_panel
-            # we should have access to this info from the job_key or w/e
-            
-            return ClientDownloading.ImportArgsGeneratorThread( job_key, item, import_file_options, advanced_tag_options )
-            
+        ManagementPanel.__init__( self, parent, page, management_controller )
         
-        return factory
+        self._thread_watcher_panel = ClientGUICommon.StaticBox( self, 'thread watcher' )
         
-    
-    def _GenerateImportQueueBuilderFactory( self ):
+        self._thread_input = wx.TextCtrl( self._thread_watcher_panel, style = wx.TE_PROCESS_ENTER )
+        self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        def factory( job_key, item ):
-            
-            return ClientDownloading.ImportQueueBuilderThread( job_key, item )
-            
+        self._options_panel = wx.Panel( self._thread_watcher_panel )
         
-        return factory
-        
-    
-    def _InitExtraVboxElements( self, vbox ):
-        
-        ManagementPanelImport._InitExtraVboxElements( self, vbox )
-        
-        self._import_cancel_button.Hide()
-        
-        #
-        
-        self._thread_panel = ClientGUICommon.StaticBox( self, 'thread checker' )
-        
-        self._thread_info = wx.StaticText( self._thread_panel, label = 'enter a 4chan thread url' )
+        self._watcher_status = wx.StaticText( self._options_panel )
+        self._overall_status = wx.StaticText( self._options_panel )
+        self._current_action = wx.StaticText( self._options_panel )
+        self._file_gauge = ClientGUICommon.Gauge( self._options_panel )
+        self._overall_gauge = ClientGUICommon.Gauge( self._options_panel )
         
         ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
         
-        self._thread_times_to_check = wx.SpinCtrl( self._thread_panel, size = ( 60, -1 ), min = 0, max = 100 )
+        self._thread_times_to_check = wx.SpinCtrl( self._options_panel, size = ( 60, -1 ), min = 0, max = 100 )
         self._thread_times_to_check.SetValue( times_to_check )
-        self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
+        self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventTimesToCheck )
         
-        self._thread_check_period = wx.SpinCtrl( self._thread_panel, size = ( 60, -1 ), min = 30, max = 86400 )
+        self._thread_check_period = wx.SpinCtrl( self._options_panel, size = ( 60, -1 ), min = 30, max = 86400 )
         self._thread_check_period.SetValue( check_period )
-        self._thread_check_period.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
+        self._thread_check_period.Bind( wx.EVT_SPINCTRL, self.EventCheckPeriod )
         
-        self._thread_input = wx.TextCtrl( self._thread_panel, style = wx.TE_PROCESS_ENTER )
-        self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self._thread_check_now_button = wx.Button( self._options_panel, label = 'check now' )
+        self._thread_check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
         
-        self._thread_pause_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.pause )
-        self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseImportQueueBuilder )
+        self._seed_cache_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.seed_cache )
+        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
-        self._thread_manual_refresh_button = wx.Button( self._thread_panel, label = 'check now' )
-        self._thread_manual_refresh_button.Bind( wx.EVT_BUTTON, self.EventManualRefresh )
+        self._pause_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._thread_watcher_panel )
+        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_watcher_panel, namespaces = [ 'filename' ] )
         
-        hbox.AddF( wx.StaticText( self._thread_panel, label = 'check ' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._thread_times_to_check, CC.FLAGS_MIXED )
-        hbox.AddF( wx.StaticText( self._thread_panel, label = ' more times, every ' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._thread_check_period, CC.FLAGS_MIXED )
-        hbox.AddF( wx.StaticText( self._thread_panel, label = ' seconds' ), CC.FLAGS_MIXED )
-        
-        button_box = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_box.AddF( self._thread_pause_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        button_box.AddF( self._thread_manual_refresh_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._thread_panel )
-        
-        self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_panel, namespaces = [ 'filename' ] )
-        
-        self._thread_panel.AddF( self._thread_info, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._thread_panel.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
-        self._thread_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_panel.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.AddF( self._thread_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Bind( wx.EVT_MENU, self.EventMenu )
         
         #
         
-    
-    def _SetThreadVariables( self ):
+        hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
         
-        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
+        hbox_1.AddF( wx.StaticText( self._options_panel, label = 'check ' ), CC.FLAGS_MIXED )
+        hbox_1.AddF( self._thread_times_to_check, CC.FLAGS_MIXED )
+        hbox_1.AddF( wx.StaticText( self._options_panel, label = ' more times' ), CC.FLAGS_MIXED )
         
-        thread_time = self._thread_check_period.GetValue()
-        thread_times_to_check = self._thread_times_to_check.GetValue()
+        hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
         
-        import_queue_builder_job_key.SetVariable( 'manual_refresh', False )
-        import_queue_builder_job_key.SetVariable( 'thread_time', thread_time )
-        import_queue_builder_job_key.SetVariable( 'thread_times_to_check', thread_times_to_check )
+        hbox_2.AddF( wx.StaticText( self._options_panel, label = 'check every ' ), CC.FLAGS_MIXED )
+        hbox_2.AddF( self._thread_check_period, CC.FLAGS_MIXED )
+        hbox_2.AddF( wx.StaticText( self._options_panel, label = ' seconds' ), CC.FLAGS_MIXED )
         
-    
-    def _UpdateGUI( self ):
+        button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        ManagementPanelImport._UpdateGUI( self )
+        button_sizer.AddF( self._thread_check_now_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
         
-        import_job_key = self._import_controller.GetJobKey( 'import' )
-        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
-        # thread_info
+        vbox.AddF( self._watcher_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._file_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
         
-        status = import_queue_builder_job_key.GetVariable( 'status' )
+        self._options_panel.SetSizer( vbox )
         
-        if status != self._thread_info.GetLabel(): self._thread_info.SetLabel( status )
+        self._thread_watcher_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_watcher_panel.AddF( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._thread_watcher_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_watcher_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        # button
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
-        if import_queue_builder_job_key.IsWorking():
+        vbox.AddF( self._thread_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._MakeCurrentSelectionTagsBox( vbox )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        HydrusGlobals.pubsub.sub( self, 'UpdateStatus', 'update_status' )
+        HydrusGlobals.pubsub.sub( self, 'DecrementTimesToCheck', 'decrement_times_to_check' )
+        
+        self._thread_watcher_import = self._controller.GetVariable( 'thread_watcher_import' )
+        
+        def file_download_hook( gauge_range, gauge_value ):
             
-            self._thread_pause_button.Enable()
+            self._file_gauge.SetRange( gauge_range )
+            self._file_gauge.SetValue( gauge_value )
             
-            if import_queue_builder_job_key.IsPaused():
+        
+        self._thread_watcher_import.SetDownloadHook( file_download_hook )
+        
+        if self._thread_watcher_import.HasThread():
+            
+            ( thread_url, import_file_options, import_tag_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
+            
+            self._thread_input.SetValue( thread_url )
+            self._thread_input.SetEditable( False )
+            
+            self._import_file_options.SetOptions( import_file_options )
+            self._import_tag_options.SetOptions( import_tag_options )
+            
+            self._thread_times_to_check.SetValue( times_to_check )
+            self._thread_check_period.SetValue( check_period )
+            
+            self._thread_watcher_import.Start( self._page_key )
+            
+        
+        self._Update()
+        
+    
+    def _Update( self ):
+        
+        if self._thread_watcher_import.HasThread():
+            
+            if not self._options_panel.IsShown():
                 
-                if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.play:
-                    
-                    self._thread_pause_button.SetBitmap( CC.GlobalBMPs.play )
-                    
+                self._options_panel.Show()
+                
+                self.Layout()
+                
+            
+        else:
+            
+            if self._options_panel.IsShown():
+                
+                self._options_panel.Hide()
+                
+                self.Layout()
+                
+            
+        
+        ( watcher_status, ( overall_status, ( overall_value, overall_range ) ), check_now, paused ) = self._thread_watcher_import.GetStatus()
+        
+        if self._overall_status.GetLabel() != overall_status:
+            
+            self._overall_status.SetLabel( overall_status )
+            
+        
+        self._overall_gauge.SetRange( overall_range )
+        self._overall_gauge.SetValue( overall_value )
+        
+        if overall_value < overall_range:
+            
+            if paused:
+                
+                current_action = 'paused at ' + HydrusData.ConvertValueRangeToPrettyString( overall_value, overall_range )
                 
             else:
                 
-                if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
-                    
-                    self._thread_pause_button.SetBitmap( CC.GlobalBMPs.pause )
-                    
+                current_action = 'processing ' + HydrusData.ConvertValueRangeToPrettyString( overall_value, overall_range )
                 
             
-        else: self._thread_pause_button.Disable()
+        else:
+            
+            current_action = ''
+            
         
-        # times to check
+        if paused:
+            
+            if self._thread_times_to_check.GetValue() > 0 or check_now:
+                
+                watcher_status = 'checking paused'
+                
+            
+            if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
+                
+                self._pause_button.SetBitmap( CC.GlobalBMPs.play )
+                
+            
+        else:
+            
+            if self._pause_button.GetBitmap() != CC.GlobalBMPs.pause:
+                
+                self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
+                
+            
         
-        try:
+        if check_now:
             
-            thread_times_to_check = import_queue_builder_job_key.GetVariable( 'thread_times_to_check' )
+            self._thread_check_now_button.Disable()
             
-            self._thread_times_to_check.SetValue( thread_times_to_check )
+        else:
             
-        except: self._SetThreadVariables()
+            self._thread_check_now_button.Enable()
+            
         
-        try:
+        if self._watcher_status.GetLabel() != watcher_status:
             
-            manual_refresh = import_queue_builder_job_key.GetVariable( 'manual_refresh' )
+            self._watcher_status.SetLabel( watcher_status )
             
-            if not import_queue_builder_job_key.IsWorking() or manual_refresh: self._thread_manual_refresh_button.Disable()
-            else: self._thread_manual_refresh_button.Enable()
+        
+        if self._current_action.GetLabel() != current_action:
             
-        except: self._SetThreadVariables()
+            self._current_action.SetLabel( current_action )
+            
+        
+    
+    def DecrementTimesToCheck( self, page_key ):
+        
+        if page_key == self._page_key:
+            
+            current_value = self._thread_times_to_check.GetValue()
+            
+            new_value = max( 0, current_value - 1 )
+            
+            self._thread_times_to_check.SetValue( new_value )
+            
+        
+    
+    def EventCheckNow( self, event ):
+        
+        self._thread_watcher_import.CheckNow()
+        
+        self._Update()
+        
+    
+    def EventCheckPeriod( self, event ):
+        
+        check_period = self._thread_check_period.GetValue()
+        
+        self._thread_watcher_import.SetCheckPeriod( check_period )
         
     
     def EventKeyDown( self, event ):
         
         if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
-            self._SetThreadVariables()
+            thread_url = self._thread_input.GetValue()
             
-            url = self._thread_input.GetValue()
-            
-            if url == '': return
+            if thread_url == '': return
             
             try:
                 
-                try:
-                    
-                    parse_result = urlparse.urlparse( url )
-                    
-                    host = parse_result.hostname
-                    
-                    request = parse_result.path
-                    
-                    if host is None or request is None: raise Exception()
-                    
-                except: raise Exception ( 'Could not understand that url!' )
-                
-                is_4chan = '4chan.org' in host
-                is_8chan = '8chan.co' in host or '8ch.net' in host
-                
-                if not ( is_4chan or is_8chan ): raise Exception( 'This only works for 4chan and 8chan right now!' )
-                
-                try:
-                    
-                    # 4chan
-                    # /asp/thread/382059/post-your-favourite-martial-arts-video-if-martin
-                    # http://a.4cdn.org/asp/thread/382059.json
-                    # http://i.4cdn.org/asp/ for images
-                    
-                    # 8chan
-                    # /v/res/406061.html
-                    # http://8chan.co/v/res/406061.json
-                    # http://8chan.co/v/src/ for images
-                    
-                    if is_4chan:
-                        
-                        ( board, rest_of_request ) = request[1:].split( '/thread/', 1 )
-                        
-                        if '/' in rest_of_request: ( thread_id, gumpf ) = rest_of_request.split( '/' )
-                        else: thread_id = rest_of_request
-                        
-                        json_url = 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
-                        image_base = 'http://i.4cdn.org/' + board + '/'
-                        
-                    elif is_8chan:
-                        
-                        ( board, rest_of_request ) = request[1:].split( '/res/', 1 )
-                        
-                        json_url = url[:-4] + 'json'
-                        image_base = 'http://8ch.net/' + board + '/src/'
-                        
-                    
-                except: raise Exception( 'Could not understand the board or thread id!' )
+                ClientDownloading.GetImageboardThreadURLs( thread_url )
                 
             except Exception as e:
-                
-                import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
-                
-                import_queue_builder_job_key.SetVariable( 'status', HydrusData.ToString( e ) )
                 
                 HydrusData.ShowException( e )
                 
                 return
                 
             
-            self._thread_input.Disable()
+            self._thread_input.SetEditable( False )
             
-            self._SetThreadVariables()
+            self._thread_watcher_import.SetThreadURL( thread_url )
             
-            self._import_controller.PendImportQueueJob( ( json_url, image_base ) )
+            self._thread_watcher_import.Start( self._page_key )
             
         else: event.Skip()
         
     
-    def EventManualRefresh( self, event ):
+    def EventMenu( self, event ):
         
-        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
-        import_queue_builder_job_key.SetVariable( 'manual_refresh', True )
-        
-        self._thread_manual_refresh_button.Disable()
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'import_file_options_changed':
+                
+                import_file_options = self._import_file_options.GetOptions()
+                
+                self._thread_watcher_import.SetImportFileOptions( import_file_options )
+                
+            elif command == 'import_tag_options_changed':
+                
+                import_tag_options = self._import_tag_options.GetOptions()
+                
+                self._thread_watcher_import.SetImportTagOptions( import_tag_options )
+                
+            else: event.Skip()
+            
         
     
-    def EventPauseImportQueueBuilder( self, event ):
+    def EventPause( self, event ):
         
-        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
+        self._thread_watcher_import.PausePlay()
         
-        import_queue_builder_job_key.PauseResume()
-        
-        self._UpdateGUI()
+        self._Update()
         
     
-    def EventThreadVariable( self, event ): self._SetThreadVariables()
-    
-    def GetImportFileOptions( self ): return self._import_file_options.GetInfo()
-    
-    def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
-    
-    def SetSearchFocus( self, page_key ):
+    def EventSeedCache( self, event ):
         
-        if page_key == self._page_key: self._thread_input.SetFocus()
+        seed_cache = self._thread_watcher_import.GetSeedCache()
+        
+        HydrusGlobals.pubsub.pub( 'show_seed_cache', seed_cache )
+        
+    
+    def EventTimesToCheck( self, event ):
+        
+        times_to_check = self._thread_times_to_check.GetValue()
+        
+        self._thread_watcher_import.SetTimesToCheck( times_to_check )
         
     
     def TestAbleToClose( self ):
         
-        import_queue_builder_position_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
-        
-        if self._thread_times_to_check.GetValue() > 0 and import_queue_builder_position_job_key.IsWorking() and not import_queue_builder_position_job_key.IsPaused():
+        if self._thread_watcher_import.HasThread():
             
-            with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
+            ( watcher_status, ( overall_status, ( overall_value, overall_range ) ), check_now, paused ) = self._thread_watcher_import.GetStatus()
+            
+            if overall_value < overall_range and not paused:
                 
-                if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                    
                 
+            
+        
+    
+    def UpdateStatus( self, page_key ):
+        
+        if page_key == self._page_key:
+            
+            self._Update()
             
         
     

@@ -1,5 +1,4 @@
 #import numpy.core.multiarray # important this comes before cv!
-import ClientFiles
 import cv2
 from flvlib import tags as flv_tags
 import HydrusConstants as HC
@@ -15,7 +14,7 @@ import subprocess
 import traceback
 import threading
 import time
-from wx import wx
+import wx
 
 if HC.PLATFORM_LINUX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
 elif HC.PLATFORM_OSX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
@@ -263,246 +262,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
             result['audio_fps'] = 'unknown'
 
     return result
-
-class VideoContainer( HydrusImageHandling.RasterContainer ):
     
-    BUFFER_SIZE = 1024 * 1024 * 96
-    
-    def __init__( self, media, target_resolution = None, init_position = 0 ):
-        
-        HydrusImageHandling.RasterContainer.__init__( self, media, target_resolution )
-        
-        self._frames = {}
-        self._last_index_asked_for = -1
-        self._buffer_start_index = -1
-        self._buffer_end_index = -1
-        
-        ( x, y ) = self._target_resolution
-        
-        frame_buffer_length = self.BUFFER_SIZE / ( x * y * 3 )
-        
-        self._num_frames_backwards = frame_buffer_length * 2 / 3
-        self._num_frames_forwards = frame_buffer_length / 3
-        
-        hash = self._media.GetHash()
-        mime = self._media.GetMime()
-        
-        path = ClientFiles.GetFilePath( hash, mime )
-        
-        duration = self._media.GetDuration()
-        num_frames = self._media.GetNumFrames()
-        
-        if self._media.GetMime() == HC.IMAGE_GIF:
-            
-            self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
-            
-            self._renderer = GIFRenderer( path, num_frames, target_resolution )
-            
-        else:
-            
-            try:
-                
-                self._frame_duration = GetVideoFrameDuration( self._path )
-                
-            except HydrusExceptions.CantRenderWithCVException:
-                
-                self._frame_duration = float( duration ) / num_frames
-                
-            
-            self._renderer = VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
-            
-        
-        self._render_lock = threading.Lock()
-        
-        self._next_render_index = 0
-        self._render_to_index = -1
-        self._rendered_first_frame = False
-        
-        self.SetFramePosition( init_position )
-        
-    
-    def _MaintainBuffer( self ):
-        
-        deletees = []
-        
-        for index in self._frames.keys():
-            
-            if self._buffer_start_index < self._buffer_end_index:
-                
-                if index < self._buffer_start_index or self._buffer_end_index < index: deletees.append( index )
-                
-            else:
-                
-                if self._buffer_end_index < index and index < self._buffer_start_index: deletees.append( index )
-                
-            
-        
-        for i in deletees: del self._frames[ i ]
-        
-    
-    def _RENDERERSetRenderToPosition( self, index ):
-        
-        with self._render_lock:
-            
-            if self._render_to_index != index:
-                
-                self._render_to_index = index
-                
-                HydrusThreading.CallToThread( self.THREADRender )
-                
-            
-        
-    
-    def _RENDERERSetFramePosition( self, index ):
-        
-        with self._render_lock:
-            
-            if index == self._next_render_index: return
-            else:
-                
-                self._renderer.set_position( index )
-                
-                self._next_render_index = index
-                self._render_to_index = index
-                
-            
-        
-    
-    def THREADRender( self ):
-        
-        num_frames = self._media.GetNumFrames()
-        
-        while True:
-            
-            time.sleep( 0.00001 ) # thread yield
-            
-            with self._render_lock:
-                
-                if not self._rendered_first_frame or self._next_render_index != ( self._render_to_index + 1 ) % num_frames:
-                    
-                    self._rendered_first_frame = True
-                    
-                    frame_index = self._next_render_index # keep this before the get call, as it increments in a clock arithmetic way afterwards
-                    
-                    try: numpy_image = self._renderer.read_frame()
-                    except Exception as e:
-                        
-                        HydrusData.ShowException( e )
-                        
-                        break
-                        
-                    finally: self._next_render_index = ( self._next_render_index + 1 ) % num_frames
-                    
-                    frame = HydrusImageHandling.GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = False )
-                    
-                    wx.CallAfter( self.AddFrame, frame_index, frame )
-                    
-                else: break
-                
-            
-        
-    
-    def AddFrame( self, index, frame ): self._frames[ index ] = frame
-    
-    def GetDuration( self, index ):
-        
-        if self._media.GetMime() == HC.IMAGE_GIF: return self._durations[ index ]
-        else: return self._frame_duration
-        
-    
-    def GetFrame( self, index ):
-        
-        frame = self._frames[ index ]
-        
-        self._last_index_asked_for = index
-        
-        self._MaintainBuffer()
-        
-        return frame
-        
-    
-    def GetHash( self ): return self._media.GetHash()
-    
-    def GetKey( self ): return ( self._media.GetHash(), self._target_resolution )
-    
-    def GetNumFrames( self ): return self._media.GetNumFrames()
-    
-    def GetResolution( self ): return self._media.GetResolution()
-    
-    def GetSize( self ): return self._target_resolution
-    
-    def GetTotalDuration( self ):
-        
-        if self._media.GetMime() == HC.IMAGE_GIF: return sum( self._durations )
-        else: return self._frame_duration * self.GetNumFrames()
-        
-    
-    def GetZoom( self ): return self._zoom
-    
-    def HasFrame( self, index ): return index in self._frames
-    
-    def IsScaled( self ): return self._zoom != 1.0
-    
-    def SetFramePosition( self, index ):
-        
-        num_frames = self.GetNumFrames()
-        
-        if num_frames > self._num_frames_backwards + 1 + self._num_frames_forwards:
-            
-            new_buffer_start_index = max( 0, index - self._num_frames_backwards ) % num_frames
-            
-            new_buffer_end_index = ( index + self._num_frames_forwards ) % num_frames
-            
-            if index == self._last_index_asked_for: return
-            elif index < self._last_index_asked_for:
-                
-                if index < self._buffer_start_index:
-                    
-                    self._buffer_start_index = new_buffer_start_index
-                    
-                    self._RENDERERSetFramePosition( self._buffer_start_index )
-                    
-                    self._buffer_end_index = new_buffer_end_index
-                    
-                    self._RENDERERSetRenderToPosition( self._buffer_end_index )
-                    
-                
-            else: # index > self._last_index_asked_for
-                
-                currently_no_wraparound = self._buffer_start_index < self._buffer_end_index
-                
-                self._buffer_start_index = new_buffer_start_index
-                
-                if currently_no_wraparound:
-                    
-                    if index > self._buffer_end_index:
-                        
-                        self._RENDERERSetFramePosition( self._buffer_start_index )
-                        
-                    
-                
-                self._buffer_end_index = new_buffer_end_index
-                
-                self._RENDERERSetRenderToPosition( self._buffer_end_index )
-                
-            
-        else:
-            
-            if self._buffer_end_index == -1:
-                
-                self._buffer_start_index = 0
-                
-                self._RENDERERSetFramePosition( 0 )
-                
-                self._buffer_end_index = num_frames - 1
-                
-                self._RENDERERSetRenderToPosition( self._buffer_end_index )
-                
-            
-        
-        self._MaintainBuffer()
-        
-
 # This was built from moviepy's FFMPEG_VideoReader
 class VideoRendererFFMPEG( object ):
 
@@ -650,6 +410,7 @@ class VideoRendererFFMPEG( object ):
         else: self.skip_frames( pos - self.pos )
         
     
+# the cv code was initially written by @fluffy_cub
 class GIFRenderer( object ):
     
     def __init__( self, path, num_frames, target_resolution ):

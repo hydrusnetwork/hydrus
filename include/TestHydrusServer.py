@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientData
 import ClientFiles
+import ClientLocalServer
 import ClientMedia
 import hashlib
 import httplib
@@ -58,8 +59,8 @@ class TestServer( unittest.TestCase ):
         def TWISTEDSetup():
             
             reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, HydrusServer.HydrusServiceAdmin( self._admin_service.GetServiceKey(), HC.SERVER_ADMIN, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, HydrusServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, HydrusServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, ClientLocalServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, ClientLocalServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, HydrusServer.HydrusServiceRepositoryFile( self._file_service.GetServiceKey(), HC.FILE_REPOSITORY, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, HydrusServer.HydrusServiceRepositoryTag( self._tag_service.GetServiceKey(), HC.TAG_REPOSITORY, 'hello' ) )
             

@@ -1,4 +1,3 @@
-import ClientConstants as CC
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusSerialisable
@@ -102,43 +101,6 @@ def DoHydrusBandwidth( service_key, method, command, size ):
     service_type = service.GetServiceType()
     
     if ( service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HydrusGlobals.pubsub.pub( 'service_updates_delayed', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, size ) ] } )
-    
-def GenerateDumpMultipartFormDataCTAndBody( fields ):
-    
-    m = multipart.Multipart()
-    
-    for ( name, field_type, value ) in fields:
-        
-        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ): m.field( name, HydrusData.ToBytes( value ) )
-        elif field_type == CC.FIELD_CHECKBOX:
-            
-            if value:
-                
-                # spoiler/on -> name : spoiler, value : on
-                # we don't say true/false for checkboxes
-                
-                ( name, value ) = name.split( '/', 1 )
-                
-                m.field( name, value )
-                
-            
-        elif field_type == CC.FIELD_FILE:
-            
-            ( hash, mime, file ) = value
-            
-            m.file( name, hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ], file, { 'Content-Type' : HC.mime_string_lookup[ mime ] } )
-            
-        
-    
-    return m.get()
-    
-def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
-    
-    m = multipart.Multipart()
-    
-    for ( name, value ) in fields.items(): m.field( name, HydrusData.ToBytes( value ) )
-    
-    return m.get()
     
 def GetLocalConnection( port ):
     
@@ -368,7 +330,15 @@ class HTTPConnection( object ):
         
         content_length = response.getheader( 'Content-Length' )
         
-        if content_length is not None: content_length = int( content_length )
+        if content_length is not None:
+            
+            content_length = int( content_length )
+            
+            for hook in report_hooks:
+                
+                hook( content_length, 0 )
+                
+            
         
         data = ''
         
@@ -378,14 +348,17 @@ class HTTPConnection( object ):
             
             data += block
             
-            if content_length is not None and len( data ) > content_length:
+            if content_length is not None:
                 
-                raise Exception( 'Response was longer than suggested!' )
+                for hook in report_hooks:
+                    
+                    hook( content_length, len( data ) )
+                    
                 
-            
-            for hook in report_hooks:
-                
-                hook( content_length, len( data ) )
+                if len( data ) > content_length:
+                    
+                    raise Exception( 'Response was longer than suggested!' )
+                    
                 
             
         

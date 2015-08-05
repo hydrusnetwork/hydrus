@@ -3070,7 +3070,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tags_info ) for ( service_id, tags_info ) in tags_dict.items() } )
             
-            tags_manager = HydrusTags.TagsManager( service_keys_to_statuses_to_tags )
+            tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
             
             #
             
@@ -3082,7 +3082,7 @@ class DB( HydrusDB.HydrusDB ):
             
             petitioned_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_petitioned_file_service_ids[ hash_id ] }
             
-            file_service_keys_cdpp = ClientFiles.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys )
+            file_service_keys_cdpp = ClientMedia.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys )
             
             #
             

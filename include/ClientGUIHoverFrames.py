@@ -168,9 +168,17 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
         self._archive_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.archive )
         self._archive_button.Bind( wx.EVT_BUTTON, self.EventArchiveButton )
         
-        self._delete_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.delete )
+        self._trash_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.delete )
+        self._trash_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_delete', self._canvas_key ) )
+        self._trash_button.SetToolTipString( 'send to trash' )
+        
+        self._delete_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.trash_delete )
         self._delete_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_delete', self._canvas_key ) )
-        self._delete_button.SetToolTipString( 'delete' )
+        self._delete_button.SetToolTipString( 'delete completely' )
+        
+        self._undelete_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.undelete )
+        self._undelete_button.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_undelete', self._canvas_key ) )
+        self._undelete_button.SetToolTipString( 'undelete' )
         
         self._zoom_text = wx.StaticText( self, label = 'zoom' )
         
@@ -190,6 +198,10 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
         fullscreen_switch.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_fullscreen_switch', self._canvas_key ) )
         fullscreen_switch.SetToolTipString( 'fullscreen switch' )
         
+        open_externally = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.open_externally )
+        open_externally.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_open_externally', self._canvas_key ) )
+        open_externally.SetToolTipString( 'open externally' )
+        
         close = wx.Button( self, label = 'X', style = wx.BU_EXACTFIT )
         close.Bind( wx.EVT_BUTTON, lambda event: HydrusGlobals.pubsub.pub( 'canvas_close', self._canvas_key ) )
         close.SetToolTipString( 'close' )
@@ -206,13 +218,16 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
         self._top_hbox.AddF( self._last_button, CC.FLAGS_MIXED )
         self._top_hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
         self._top_hbox.AddF( self._archive_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._trash_button, CC.FLAGS_MIXED )
         self._top_hbox.AddF( self._delete_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._undelete_button, CC.FLAGS_MIXED )
         self._top_hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
         self._top_hbox.AddF( self._zoom_text, CC.FLAGS_MIXED )
         self._top_hbox.AddF( zoom_in, CC.FLAGS_MIXED )
         self._top_hbox.AddF( zoom_out, CC.FLAGS_MIXED )
         self._top_hbox.AddF( zoom_switch, CC.FLAGS_MIXED )
         self._top_hbox.AddF( fullscreen_switch, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( open_externally, CC.FLAGS_MIXED )
         self._top_hbox.AddF( close, CC.FLAGS_MIXED )
         
         vbox.AddF( self._top_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -258,6 +273,21 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
                 
                 self._archive_button.SetBitmapLabel( CC.GlobalBMPs.to_inbox )
                 self._archive_button.SetToolTipString( 'return to inbox' )
+                
+            
+            current_locations = self._current_media.GetLocationsManager().GetCurrent()
+            
+            if CC.LOCAL_FILE_SERVICE_KEY in current_locations:
+                
+                self._trash_button.Show()
+                self._delete_button.Hide()
+                self._undelete_button.Hide()
+                
+            elif CC.TRASH_SERVICE_KEY in current_locations:
+                
+                self._trash_button.Hide()
+                self._delete_button.Show()
+                self._undelete_button.Show()
                 
             
         
@@ -330,6 +360,10 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             if do_redraw:
                 
                 self._ResetButtons()
+                
+                self.Fit()
+                
+                self._SizeAndPosition()
                 
             
         

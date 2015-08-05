@@ -17,6 +17,7 @@ import ClientConstants as CC
 import ClientDB
 import ClientGUI
 import ClientGUIDialogs
+import ClientLocalServer
 import os
 import random
 import sqlite3
@@ -109,23 +110,7 @@ class Controller( HydrusController.HydrusController ):
             
             media = data
             
-            image_container = wx.GetApp().Cache( 'fullscreen' ).GetImage( media )
-            
-            def THREADWait():
-                
-                # have to do this in thread, because the image rendered needs the wx event queue to render
-                
-                start_time = time.time()
-                
-                while not image_container.IsRendered():
-                    
-                    if HydrusData.TimeHasPassed( start_time + 15 ): raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
-                    
-                    time.sleep( 0.1 )
-                    
-                
-                wx.CallAfter( CopyToClipboard )
-                
+            image_container = wx.GetApp().GetCache( 'fullscreen' ).GetImage( media )
             
             def CopyToClipboard():
                 
@@ -142,6 +127,22 @@ class Controller( HydrusController.HydrusController ):
                     wx.TheClipboard.Close()
                     
                 else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+                
+            
+            def THREADWait():
+                
+                # have to do this in thread, because the image rendered needs the wx event queue to render
+                
+                start_time = time.time()
+                
+                while not image_container.IsRendered():
+                    
+                    if HydrusData.TimeHasPassed( start_time + 15 ): raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
+                    
+                    time.sleep( 0.1 )
+                    
+                
+                wx.CallAfter( CopyToClipboard )
                 
             
             HydrusThreading.CallToThread( THREADWait )
@@ -236,9 +237,9 @@ class Controller( HydrusController.HydrusController ):
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
-        self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
-        self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
-        self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
+        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager()
+        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
+        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager()
         self._managers[ 'undo' ] = ClientData.UndoManager()
         self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
         
@@ -373,7 +374,7 @@ class Controller( HydrusController.HydrusController ):
                         
                     except:
                         
-                        self._booru_service = reactor.listenTCP( port, HydrusServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'This is the local booru.' ) )
+                        self._booru_service = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'This is the local booru.' ) )
                         
                         try:
                             
@@ -433,7 +434,7 @@ class Controller( HydrusController.HydrusController ):
                         
                     except:
                         
-                        self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ) )
+                        self._local_service = reactor.listenTCP( port, ClientLocalServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ) )
                         
                         try:
                             
@@ -610,7 +611,12 @@ class Controller( HydrusController.HydrusController ):
         gui = self.GetGUI()
         
         try: HydrusThreading.CallBlockingToWx( gui.TestAbleToClose )
-        except: return
+        except:
+            
+            HydrusGlobals.pubsub.pub( 'splash_destroy' )
+            
+            return
+            
         
         try:
             

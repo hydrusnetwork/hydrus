@@ -15,7 +15,192 @@ import HydrusData
 import HydrusFileHandling
 import HydrusExceptions
 import HydrusGlobals
+import itertools
 
+def MergeTagsManagers( tags_managers ):
+    
+    def CurrentAndPendingFilter( items ):
+        
+        for ( service_key, statuses_to_tags ) in items:
+            
+            filtered = { status : tags for ( status, tags ) in statuses_to_tags.items() if status in ( HC.CURRENT, HC.PENDING ) }
+            
+            yield ( service_key, filtered )
+            
+        
+    
+    # [[( service_key, statuses_to_tags )]]
+    s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags().items() ) for tags_manager in tags_managers )
+    
+    # [(service_key, statuses_to_tags)]
+    flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
+    
+    # service_key : [ statuses_to_tags ]
+    s_k_s_t_t_dict = HydrusData.BuildKeyToListDict( flattened_s_k_s_t_t )
+    
+    # now let's merge so we have service_key : statuses_to_tags
+    
+    merged_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+    
+    for ( service_key, several_statuses_to_tags ) in s_k_s_t_t_dict.items():
+        
+        # [[( status, tags )]]
+        s_t_t_tupled = ( s_t_t.items() for s_t_t in several_statuses_to_tags )
+        
+        # [( status, tags )]
+        flattened_s_t_t = itertools.chain.from_iterable( s_t_t_tupled )
+        
+        statuses_to_tags = HydrusData.default_dict_set()
+        
+        for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
+        
+        merged_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
+        
+    
+    return TagsManagerSimple( merged_service_keys_to_statuses_to_tags )
+    
+class LocationsManager( object ):
+    
+    LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY }
+    
+    def __init__( self, current, deleted, pending, petitioned ):
+        
+        self._current = current
+        self._deleted = deleted
+        self._pending = pending
+        self._petitioned = petitioned
+        
+    
+    def DeletePending( self, service_key ):
+        
+        self._pending.discard( service_key )
+        self._petitioned.discard( service_key )
+        
+    
+    def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
+    
+    def GetCurrent( self ): return self._current
+    def GetCurrentRemote( self ):
+        
+        return self._current - self.LOCAL_LOCATIONS
+        
+    
+    def GetDeleted( self ): return self._deleted
+    def GetDeletedRemote( self ):
+        
+        return self._deleted - self.LOCAL_LOCATIONS
+        
+    
+    def GetFileRepositoryStrings( self ):
+    
+        current = self.GetCurrentRemote()
+        pending = self.GetPendingRemote()
+        petitioned = self.GetPetitionedRemote()
+        
+        file_repo_services = wx.GetApp().GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
+        
+        file_repo_services = list( file_repo_services )
+        
+        cmp_func = lambda a, b: cmp( a.GetName(), b.GetName() )
+        
+        file_repo_services.sort( cmp = cmp_func )
+        
+        file_repo_service_keys_and_names = [ ( file_repo_service.GetServiceKey(), file_repo_service.GetName() ) for file_repo_service in file_repo_services ]
+        
+        file_repo_strings = []
+        
+        for ( service_key, name ) in file_repo_service_keys_and_names:
+            
+            if service_key in pending:
+                
+                file_repo_strings.append( name + ' (+)' )
+                
+            elif service_key in current:
+                
+                if service_key in petitioned:
+                    
+                    file_repo_strings.append( name + ' (-)' )
+                    
+                else:
+                    
+                    file_repo_strings.append( name )
+                    
+                
+            
+        
+        return file_repo_strings
+        
+    
+    def GetPending( self ): return self._pending
+    def GetPendingRemote( self ):
+        
+        return self._pending - self.LOCAL_LOCATIONS
+        
+    
+    def GetPetitioned( self ): return self._petitioned
+    def GetPetitionedRemote( self ):
+        
+        return self._petitioned - self.LOCAL_LOCATIONS
+        
+    
+    def HasDownloading( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._pending
+    
+    def HasLocal( self ): return len( self._current.intersection( self.LOCAL_LOCATIONS ) ) > 0
+    
+    def ProcessContentUpdate( self, service_key, content_update ):
+        
+        ( data_type, action, row ) = content_update.ToTuple()
+        
+        if action == HC.CONTENT_UPDATE_ADD:
+            
+            self._current.add( service_key )
+            
+            self._deleted.discard( service_key )
+            self._pending.discard( service_key )
+            
+            if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                
+                self._current.discard( CC.TRASH_SERVICE_KEY )
+                
+            
+        elif action == HC.CONTENT_UPDATE_DELETE:
+            
+            self._deleted.add( service_key )
+            
+            self._current.discard( service_key )
+            self._petitioned.discard( service_key )
+            
+            if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                
+                self._current.add( CC.TRASH_SERVICE_KEY )
+                
+            
+        elif action == HC.CONTENT_UPDATE_UNDELETE:
+            
+            self._current.discard( CC.TRASH_SERVICE_KEY )
+            
+            self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
+            
+        elif action == HC.CONTENT_UPDATE_PENDING:
+            
+            if service_key not in self._current: self._pending.add( service_key )
+            
+        elif action == HC.CONTENT_UPDATE_PETITION:
+            
+            if service_key not in self._deleted: self._petitioned.add( service_key )
+            
+        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: self._pending.discard( service_key )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: self._petitioned.discard( service_key )
+        
+    
+    def ResetService( self, service_key ):
+        
+        self._current.discard( service_key )
+        self._pending.discard( service_key )
+        self._deleted.discard( service_key )
+        self._petitioned.discard( service_key )
+        
+    
 class Media( object ):
     
     def __init__( self ):
@@ -543,7 +728,7 @@ class MediaCollection( MediaList, Media ):
         
         tags_managers = [ m.GetTagsManager() for m in self._sorted_media ]
         
-        self._tags_manager = HydrusTags.MergeTagsManagers( tags_managers )
+        self._tags_manager = MergeTagsManagers( tags_managers )
         
         # horrible compromise
         if len( self._sorted_media ) > 0: self._ratings = self._sorted_media[0].GetRatings()
@@ -556,7 +741,7 @@ class MediaCollection( MediaList, Media ):
         pending = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
         petitioned = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
-        self._locations_manager = ClientFiles.LocationsManager( current, deleted, pending, petitioned )
+        self._locations_manager = LocationsManager( current, deleted, pending, petitioned )
         
     
     def DeletePending( self, service_key ):
@@ -1071,8 +1256,217 @@ class SortedList( object ):
         
         self._DirtyIndices()
         
-
-# adding tuple to yaml
-
     
+class TagsManagerSimple( object ):
+    
+    def __init__( self, service_keys_to_statuses_to_tags ):
+        
+        tag_censorship_manager = wx.GetApp().GetManager( 'tag_censorship' )
+        
+        service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
+        
+        self._service_keys_to_statuses_to_tags = service_keys_to_statuses_to_tags
+        
+        self._combined_namespaces_cache = None
+        
+    
+    def GetCombinedNamespaces( self, namespaces ):
+        
+        if self._combined_namespaces_cache is None:
+    
+            combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+            
+            combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+            combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+            
+            self._combined_namespaces_cache = HydrusData.BuildKeyToSetDict( tag.split( ':', 1 ) for tag in combined_current.union( combined_pending ) if ':' in tag )
+            
+        
+        result = { namespace : self._combined_namespaces_cache[ namespace ] for namespace in namespaces }
+        
+        return result
+        
+    
+    def GetComparableNamespaceSlice( self, namespaces, collapse_siblings = False ):
+        
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+        
+        combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+        combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+        
+        combined = combined_current.union( combined_pending )
+        
+        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        
+        slice = []
+        
+        for namespace in namespaces:
+            
+            tags = [ tag for tag in combined if tag.startswith( namespace + ':' ) ]
+            
+            if collapse_siblings: tags = list( siblings_manager.CollapseTags( tags ) )
+            
+            tags = [ tag.split( ':', 1 )[1] for tag in tags ]
+            
+            tags = HydrusTags.SortTags( tags )
+            
+            tags = tuple( ( HydrusTags.ConvertTagToSortable( tag ) for tag in tags ) )
+            
+            slice.append( tags )
+            
+        
+        return tuple( slice )
+        
+    
+    def GetNamespaceSlice( self, namespaces, collapse_siblings = False ):
+        
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+        
+        combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+        combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+        
+        slice = { tag for tag in combined_current.union( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
+        
+        if collapse_siblings:
+            
+            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+            
+            slice = siblings_manager.CollapseTags( slice )
+            
+        
+        slice = frozenset( slice )
+        
+        return slice
+        
+    
+class TagsManager( TagsManagerSimple ):
+    
+    def __init__( self, service_keys_to_statuses_to_tags ):
+        
+        TagsManagerSimple.__init__( self, service_keys_to_statuses_to_tags )
+        
+        self._RecalcCombined()
+        
+    
+    def _RecalcCombined( self ):
+        
+        combined_statuses_to_tags = collections.defaultdict( set )
+        
+        for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
+            
+            if service_key == CC.COMBINED_TAG_SERVICE_KEY: continue
+            
+            combined_statuses_to_tags[ HC.CURRENT ].update( statuses_to_tags[ HC.CURRENT ] )
+            combined_statuses_to_tags[ HC.PENDING ].update( statuses_to_tags[ HC.PENDING ] )
+            
+        
+        self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
+        
+        self._combined_namespaces_cache = None
+        
+    
+    def DeletePending( self, service_key ):
+        
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
+        
+        if len( statuses_to_tags[ HC.PENDING ] ) + len( statuses_to_tags[ HC.PETITIONED ] ) > 0:
+            
+            statuses_to_tags[ HC.PENDING ] = set()
+            statuses_to_tags[ HC.PETITIONED ] = set()
+            
+            self._RecalcCombined()
+            
+        
+    
+    def GetCurrent( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
+        
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
+        
+        return set( statuses_to_tags[ HC.CURRENT ] )
+        
+    
+    def GetDeleted( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
+        
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
+        
+        return set( statuses_to_tags[ HC.DELETED ] )
+        
+    
+    def GetNumTags( self, service_key, include_current_tags = True, include_pending_tags = False ):
+        
+        num_tags = 0
+        
+        statuses_to_tags = self.GetStatusesToTags( service_key )
+        
+        if include_current_tags: num_tags += len( statuses_to_tags[ HC.CURRENT ] )
+        if include_pending_tags: num_tags += len( statuses_to_tags[ HC.PENDING ] )
+        
+        return num_tags
+        
+    
+    def GetPending( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
+        
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
+        
+        return set( statuses_to_tags[ HC.PENDING ] )
+        
+    
+    def GetPetitioned( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
+        
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
+        
+        return set( statuses_to_tags[ HC.PETITIONED ] )
+        
+    
+    def GetServiceKeysToStatusesToTags( self ): return self._service_keys_to_statuses_to_tags
+    
+    def GetStatusesToTags( self, service_key ): return self._service_keys_to_statuses_to_tags[ service_key ]
+    
+    def HasTag( self, tag ):
+        
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
+        
+        return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
+        
+    
+    def ProcessContentUpdate( self, service_key, content_update ):
+        
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
+        
+        ( data_type, action, row ) = content_update.ToTuple()
+        
+        if action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = row
+        else: ( tag, hashes ) = row
+        
+        if action == HC.CONTENT_UPDATE_ADD:
+            
+            statuses_to_tags[ HC.CURRENT ].add( tag )
+            
+            statuses_to_tags[ HC.DELETED ].discard( tag )
+            statuses_to_tags[ HC.PENDING ].discard( tag )
+            
+        elif action == HC.CONTENT_UPDATE_DELETE:
+            
+            statuses_to_tags[ HC.DELETED ].add( tag )
+            
+            statuses_to_tags[ HC.CURRENT ].discard( tag )
+            statuses_to_tags[ HC.PETITIONED ].discard( tag )
+            
+        elif action == HC.CONTENT_UPDATE_PENDING: statuses_to_tags[ HC.PENDING ].add( tag )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: statuses_to_tags[ HC.PENDING ].discard( tag )
+        elif action == HC.CONTENT_UPDATE_PETITION: statuses_to_tags[ HC.PETITIONED ].add( tag )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.PETITIONED ].discard( tag )
+        
+        self._RecalcCombined()
+        
+    
+    def ResetService( self, service_key ):
+        
+        if service_key in self._service_keys_to_statuses_to_tags:
+            
+            del self._service_keys_to_statuses_to_tags[ service_key ]
+            
+            self._RecalcCombined()
+            
+        
     

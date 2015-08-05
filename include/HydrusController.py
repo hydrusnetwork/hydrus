@@ -114,7 +114,7 @@ class HydrusController( wx.App ):
     def Read( self, action, *args, **kwargs ): return self._Read( action, *args, **kwargs )
     
     def ShutdownDB( self ):
-    
+        
         self._db.Shutdown()
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )

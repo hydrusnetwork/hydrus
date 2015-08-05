@@ -15,6 +15,10 @@ class OptionsPanel( wx.Panel ):
     
     def SetInfo( self, info ): raise NotImplementedError()
     
+    def GetOptions( self ): raise NotImplementedError()
+    
+    def SetOptions( self, options ): raise NotImplementedError()
+    
 class OptionsPanelHentaiFoundry( OptionsPanel ):
     
     def __init__( self, parent ):
@@ -194,14 +198,18 @@ class OptionsPanelImportFiles( OptionsPanel ):
         OptionsPanel.__init__( self, parent )
         
         self._auto_archive = wx.CheckBox( self, label = 'archive all imports' )
+        self._auto_archive.Bind( wx.EVT_CHECKBOX, self.EventChanged )
         
         self._exclude_deleted = wx.CheckBox( self, label = 'exclude already deleted files' )
+        self._exclude_deleted.Bind( wx.EVT_CHECKBOX, self.EventChanged )
         
         self._min_size = ClientGUICommon.NoneableSpinCtrl( self, 'minimum size (KB): ', multiplier = 1024 )
         self._min_size.SetValue( 5120 )
+        self._min_size.Bind( wx.EVT_SPINCTRL, self.EventChanged )
         
         self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'minimum resolution: ', num_dimensions = 2 )
         self._min_resolution.SetValue( ( 50, 50 ) )
+        self._min_resolution.Bind( wx.EVT_SPINCTRL, self.EventChanged )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -213,6 +221,13 @@ class OptionsPanelImportFiles( OptionsPanel ):
         self.SetSizer( vbox )
         
         self.SetInfo( ClientDefaults.GetDefaultImportFileOptions() )
+        
+    
+    def EventChanged( self, event ):
+        
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_file_options_changed' ) ) )
+        
+        event.Skip()
         
     
     def GetInfo( self ):
@@ -249,6 +264,16 @@ class OptionsPanelImportFiles( OptionsPanel ):
         self._min_size.SetValue( info[ 'min_size' ] )
         
         self._min_resolution.SetValue( info[ 'min_resolution' ] )
+        
+    
+    def SetOptions( self, import_file_options ):
+        
+        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = import_file_options.ToTuple()
+        
+        self._auto_archive.SetValue( automatic_archive )
+        self._exclude_deleted.SetValue( exclude_deleted )
+        self._min_size.SetValue( min_size )
+        self._min_resolution.SetValue( min_resolution )
         
     
 class OptionsPanelPeriodic( OptionsPanel ):
@@ -366,7 +391,7 @@ class OptionsPanelTags( OptionsPanel ):
     
     def EventChecked( self, event ):
         
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'advanced_tag_options_changed' ) ) )
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_tag_options_changed' ) ) )
         
         event.Skip()
         
@@ -383,6 +408,13 @@ class OptionsPanelTags( OptionsPanel ):
             
         
         return result
+        
+    
+    def GetOptions( self ):
+        
+        import_tag_options = ClientData.ImportTagOptions( service_keys_to_namespaces = self.GetInfo() )
+        
+        return import_tag_options
         
     
     def SetNamespaces( self, namespaces ):
@@ -457,6 +489,29 @@ class OptionsPanelTags( OptionsPanel ):
                         if namespace in new_namespaces: checkbox.SetValue( True )
                         else: checkbox.SetValue( False )
                         
+                    
+                
+            else:
+                
+                for ( namespace, checkbox ) in checkbox_info: checkbox.SetValue( False )
+                
+            
+        
+    
+    def SetOptions( self, import_tag_options ):
+        
+        service_keys_to_namespaces = import_tag_options.GetServiceKeysToNamespaces()
+        
+        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
+            
+            if service_key in service_keys_to_namespaces:
+                
+                namespaces = service_keys_to_namespaces[ service_key ]
+                
+                for ( namespace, checkbox ) in checkbox_info:
+                    
+                    if namespace in namespaces: checkbox.SetValue( True )
+                    else: checkbox.SetValue( False )
                     
                 
             else:

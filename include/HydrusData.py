@@ -652,6 +652,10 @@ def TimeHasPassedPrecise( precise_timestamp ):
     
     return GetNowPrecise() > precise_timestamp
     
+def TimeUntil( timestamp ):
+    
+    return timestamp - GetNow()
+    
 def ToBytes( text_producing_object ):
     
     if type( text_producing_object ) == unicode: return text_producing_object.encode( 'utf-8' )

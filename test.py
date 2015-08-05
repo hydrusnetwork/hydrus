@@ -76,9 +76,9 @@ class App( wx.App ):
         self._services_manager = ClientData.ServicesManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
-        self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
-        self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
-        self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
+        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager()
+        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
+        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager()
         self._managers[ 'undo' ] = ClientData.UndoManager()
         self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
         self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()

@@ -21,6 +21,7 @@ import HydrusNATPunch
 import HydrusNetworking
 import HydrusTags
 import itertools
+import multipart
 import os
 import random
 import re
@@ -43,6 +44,14 @@ COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
 COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
 COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
 
+def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
+    
+    m = multipart.Multipart()
+    
+    for ( name, value ) in fields.items(): m.field( name, HydrusData.ToBytes( value ) )
+    
+    return m.get()
+    
 class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -139,7 +148,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             form_fields[ 'pin' ] = pin
             form_fields[ 'long_login' ] = 'yes'
             
-            ( ct, body ) = HydrusNetworking.GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
+            ( ct, body ) = GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
             
             request_headers = {}
             request_headers[ 'Content-Type' ] = ct
@@ -7067,9 +7076,9 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if potential_parent in current_children:
                 
-                simple_children_to_parents = HydrusTags.BuildSimpleChildrenToParents( current_pairs )
+                simple_children_to_parents = ClientCaches.BuildSimpleChildrenToParents( current_pairs )
                 
-                if HydrusTags.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
+                if ClientCaches.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
                     
                     wx.MessageBox( 'Adding ' + potential_child + '->' + potential_parent + ' would create a loop!' )
                     

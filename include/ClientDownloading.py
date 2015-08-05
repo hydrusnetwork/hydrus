@@ -79,6 +79,59 @@ def GetGalleryParser( site_type, *args ):
     
     return c( *args )
     
+def GetImageboardThreadURLs( thread_url ):
+    
+    try:
+        
+        parse_result = urlparse.urlparse( thread_url )
+        
+        host = parse_result.hostname
+        
+        request = parse_result.path
+        
+        if host is None or request is None: raise Exception()
+        
+    except: raise Exception ( 'Could not understand that url!' )
+    
+    is_4chan = '4chan.org' in host
+    is_8chan = '8chan.co' in host or '8ch.net' in host
+    
+    if not ( is_4chan or is_8chan ): raise Exception( 'This only works for 4chan and 8chan right now!' )
+    
+    try:
+        
+        # 4chan
+        # /asp/thread/382059/post-your-favourite-martial-arts-video-if-martin
+        # http://a.4cdn.org/asp/thread/382059.json
+        # http://i.4cdn.org/asp/ for images
+        
+        # 8chan
+        # /v/res/406061.html
+        # http://8chan.co/v/res/406061.json
+        # http://8chan.co/v/src/ for images
+        
+        if is_4chan:
+            
+            ( board, rest_of_request ) = request[1:].split( '/thread/', 1 )
+            
+            if '/' in rest_of_request: ( thread_id, gumpf ) = rest_of_request.split( '/' )
+            else: thread_id = rest_of_request
+            
+            json_url = 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
+            file_base = 'http://i.4cdn.org/' + board + '/'
+            
+        elif is_8chan:
+            
+            ( board, rest_of_request ) = request[1:].split( '/res/', 1 )
+            
+            json_url = thread_url[:-4] + 'json'
+            file_base = 'http://8ch.net/' + board + '/src/'
+            
+        
+    except: raise Exception( 'Could not understand the board or thread id!' )
+    
+    return ( json_url, file_base )
+    
 def ConvertTagsToServiceKeysToTags( tags, advanced_tag_options ):
     
     tags = [ tag for tag in tags if tag is not None ]
@@ -1344,72 +1397,6 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         else: return ( status, None )
         
     
-class ImportArgsGeneratorThread( ImportArgsGenerator ):
-    
-    def __init__( self, job_key, item, import_file_options, advanced_tag_options ):
-        
-        ImportArgsGenerator.__init__( self, job_key, item, import_file_options )
-        
-        self._advanced_tag_options = advanced_tag_options
-        
-    
-    def _GetArgs( self, temp_path ):
-        
-        self._job_key.SetVariable( 'status', 'downloading' )
-        
-        ( md5, image_url, filename ) = self._item
-        
-        def hook( gauge_range, gauge_value ):
-            
-            self._job_key.SetVariable( 'range', gauge_range )
-            self._job_key.SetVariable( 'value', gauge_value )
-            
-        
-        wx.GetApp().DoHTTP( HC.GET, image_url, report_hooks = [ hook ], temp_path = temp_path )
-        
-        tags = [ 'filename:' + filename ]
-        
-        service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
-        
-        time.sleep( 3 )
-        
-        return ( image_url, service_keys_to_tags, image_url )
-        
-    
-    def _CheckCurrentStatus( self ):
-        
-        self._job_key.SetVariable( 'status', 'checking md5 status' )
-        
-        ( md5, image_url, filename ) = self._item
-        
-        ( status, hash ) = wx.GetApp().Read( 'md5_status', md5 )
-        
-        if status == CC.STATUS_DELETED and not self._import_file_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
-        
-        if status == CC.STATUS_REDUNDANT:
-            
-            ( media_result, ) = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
-            
-            do_tags = len( self._advanced_tag_options ) > 0
-            
-            if do_tags:
-                
-                tags = [ 'filename:' + filename ]
-                
-                service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
-                
-                service_keys_to_content_updates = ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags )
-                
-                wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
-                
-                time.sleep( 3 )
-                
-            
-            return ( status, media_result )
-            
-        else: return ( status, None )
-        
-    
 class ImportArgsGeneratorURLs( ImportArgsGenerator ):
     
     def _GetArgs( self, temp_path ):
@@ -1867,154 +1854,6 @@ class ImportQueueBuilderURLs( ImportQueueBuilder ):
             queue = urls
             
             self._job_key.SetVariable( 'queue', queue )
-            
-        except Exception as e:
-            
-            self._job_key.SetVariable( 'status', HydrusData.ToString( e ) )
-            
-            HydrusData.ShowException( e )
-            
-            time.sleep( 2 )
-            
-        finally: self._job_key.Finish()
-        
-    
-class ImportQueueBuilderThread( ImportQueueBuilder ):
-    
-    def __call__( self ):
-        
-        try:
-            
-            ( json_url, image_base ) = self._item
-            
-            last_thread_check = 0
-            image_infos_already_added = set()
-            
-            first_run = True
-            manual_refresh = False
-            
-            while True:
-                
-                if not first_run:
-                    
-                    thread_times_to_check = self._job_key.GetVariable( 'thread_times_to_check' )
-                    
-                    while thread_times_to_check == 0:
-                        
-                        self._job_key.SetVariable( 'status', 'checking is finished' )
-                        
-                        time.sleep( 1 )
-                        
-                        if self._job_key.IsCancelled(): break
-                        
-                        thread_times_to_check = self._job_key.GetVariable( 'thread_times_to_check' )
-                        
-                    
-                
-                while self._job_key.IsPaused():
-                    
-                    time.sleep( 0.1 )
-                    
-                    self._job_key.SetVariable( 'status', 'paused' )
-                    
-                    if HydrusGlobals.shutdown or self._job_key.IsDone(): break
-                    
-                
-                if HydrusGlobals.shutdown or self._job_key.IsDone(): break
-                
-                thread_time = self._job_key.GetVariable( 'thread_time' )
-                
-                if thread_time < 30: thread_time = 30
-                
-                next_thread_check = last_thread_check + thread_time
-                
-                manual_refresh = self._job_key.GetVariable( 'manual_refresh' )
-                
-                not_too_soon_for_manual_refresh = HydrusData.TimeHasPassed( last_thread_check + 10 )
-                
-                if ( manual_refresh and not_too_soon_for_manual_refresh ) or HydrusData.TimeHasPassed( next_thread_check ):
-                    
-                    self._job_key.SetVariable( 'status', 'checking thread' )
-                    
-                    try:
-                        
-                        raw_json = wx.GetApp().DoHTTP( HC.GET, json_url )
-                        
-                        json_dict = json.loads( raw_json )
-                        
-                        posts_list = json_dict[ 'posts' ]
-                        
-                        image_infos = []
-                        
-                        for post in posts_list:
-                            
-                            if 'md5' not in post:
-                                
-                                continue
-                                
-                            
-                            image_md5 = post[ 'md5' ].decode( 'base64' )
-                            image_url = image_base + HydrusData.ToString( post[ 'tim' ] ) + post[ 'ext' ]
-                            image_original_filename = post[ 'filename' ] + post[ 'ext' ]
-                            
-                            image_infos.append( ( image_md5, image_url, image_original_filename ) )
-                            
-                            if 'extra_files' in post:
-                                
-                                for extra_file in post[ 'extra_files' ]:
-                                    
-                                    if 'md5' not in extra_file:
-                                        
-                                        continue
-                                        
-                                    
-                                    image_md5 = extra_file[ 'md5' ].decode( 'base64' )
-                                    image_url = image_base + HydrusData.ToString( extra_file[ 'tim' ] ) + extra_file[ 'ext' ]
-                                    image_original_filename = extra_file[ 'filename' ] + extra_file[ 'ext' ]
-                                    
-                                    image_infos.append( ( image_md5, image_url, image_original_filename ) )
-                                    
-                                
-                            
-                        
-                        image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in image_infos_already_added ]
-                        
-                        image_infos_already_added.update( image_infos_i_can_add )
-                        
-                        if len( image_infos_i_can_add ) > 0:
-                            
-                            queue = self._job_key.GetVariable( 'queue' )
-                            
-                            queue = list( queue )
-                            
-                            queue.extend( image_infos_i_can_add )
-                            
-                            self._job_key.SetVariable( 'queue', queue )
-                            
-                        
-                    except HydrusExceptions.NotFoundException: raise Exception( 'Thread 404' )
-                    except Exception as e:
-                        
-                        self._job_key.SetVariable( 'status', HydrusData.ToString( e ) )
-                        
-                        HydrusData.ShowException( e )
-                        
-                        time.sleep( 2 )
-                        
-                    
-                    last_thread_check = HydrusData.GetNow()
-                    
-                    if first_run: first_run = False
-                    elif manual_refresh: self._job_key.SetVariable( 'manual_refresh', False )
-                    else:
-                        
-                        if thread_times_to_check > 0: self._job_key.SetVariable( 'thread_times_to_check', thread_times_to_check - 1 )
-                        
-                    
-                else: self._job_key.SetVariable( 'status', 'rechecking thread ' + HydrusData.ConvertTimestampToPrettyPending( next_thread_check ) )
-                
-                time.sleep( 0.1 )
-                
             
         except Exception as e:
             

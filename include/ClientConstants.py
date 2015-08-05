@@ -237,11 +237,14 @@ class GlobalBMPs( object ):
         
         GlobalBMPs.archive = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'archive.png' )
         GlobalBMPs.to_inbox = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'to_inbox.png' )
-        GlobalBMPs.delete = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'delete.png' )
+        GlobalBMPs.delete = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'trash.png' )
+        GlobalBMPs.trash_delete = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'delete.png' )
+        GlobalBMPs.undelete = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'undelete.png' )
         GlobalBMPs.zoom_in = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_in.png' )
         GlobalBMPs.zoom_out = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_out.png' )
         GlobalBMPs.zoom_switch = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'zoom_switch.png' )
         GlobalBMPs.fullscreen_switch = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'fullscreen_switch.png' )
+        GlobalBMPs.open_externally = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'open_externally.png' )
         
         GlobalBMPs.dump_ok = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'dump_ok.png' )
         GlobalBMPs.dump_recoverable = wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'dump_recoverable.png' )

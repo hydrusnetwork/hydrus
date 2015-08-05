@@ -233,39 +233,12 @@ class HydrusService( Site ):
         
         root = Resource()
         
-        root.putChild( '', HydrusServerResources.HydrusResourceWelcome( self._service_key, self._service_type, self._message ) )
+        root.putChild( '', HydrusServerResources.HydrusResourceWelcome( self._service_type, self._message ) )
         root.putChild( 'favicon.ico', HydrusServerResources.hydrus_favicon )
         
         return root
         
 
-class HydrusServiceBooru( HydrusService ):
-    
-    def _InitRoot( self ):
-        
-        root = HydrusService._InitRoot( self )
-        
-        root.putChild( 'gallery', HydrusServerResources.HydrusResourceCommandBooruGallery( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'page', HydrusServerResources.HydrusResourceCommandBooruPage( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandBooruFile( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandBooruThumbnail( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'style.css', HydrusServerResources.local_booru_css )
-        
-        return root
-        
-    
-class HydrusServiceLocal( HydrusService ):
-    
-    def _InitRoot( self ):
-        
-        root = HydrusService._InitRoot( self )
-        
-        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandLocalFile( self._service_key, self._service_type, LOCAL_DOMAIN ) )
-        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandLocalThumbnail( self._service_key, self._service_type, LOCAL_DOMAIN ) )
-        
-        return root
-        
-    
 class HydrusServiceRestricted( HydrusService ):
     
     def __init__( self, service_key, service_type, message ):

@@ -21,13 +21,30 @@ class CollapsibleOptions( ClientGUICommon.StaticBox ):
         self.AddF( self._collapsible_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
-    def ExpandCollapse( self ): self._collapsible_panel.ExpandCollapse()
+    def ExpandCollapse( self ):
+        
+        self._collapsible_panel.ExpandCollapse()
+        
     
-    def GetInfo( self ): return self._options_panel.GetInfo()
+    def GetInfo( self ):
+        
+        return self._options_panel.GetInfo()
+        
     
-    def GetOptions( self ): return self._options_panel.GetOptions()
+    def GetOptions( self ):
+        
+        return self._options_panel.GetOptions()
+        
     
-    def SetInfo( self, info ): self._options_panel.SetInfo( info )
+    def SetInfo( self, info ):
+        
+        self._options_panel.SetInfo( info )
+        
+    
+    def SetOptions( self, options ):
+        
+        self._options_panel.SetOptions( options )
+        
     
 class CollapsibleOptionsHentaiFoundry( CollapsibleOptions ):
     

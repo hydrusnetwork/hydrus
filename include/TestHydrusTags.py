@@ -5,8 +5,10 @@ import os
 import TestConstants
 import unittest
 import HydrusData
-import ClientData
+import ClientCaches
 import ClientConstants as CC
+import ClientData
+import ClientMedia
 import ClientSearch
 import HydrusGlobals
 import wx
@@ -33,7 +35,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ third ][ HC.CURRENT ] = { 'current_duplicate', 'current_duplicate_1' }
         service_keys_to_statuses_to_tags[ third ][ HC.PENDING ] = { 'volume:3' }
         
-        tags_manager_1 = HydrusTags.TagsManager( service_keys_to_statuses_to_tags )
+        tags_manager_1 = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
         
         tags_manager_1._RecalcCombined()
         
@@ -49,7 +51,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         service_keys_to_statuses_to_tags[ third ][ HC.CURRENT ] = { 'current_duplicate' }
         
-        tags_manager_2 = HydrusTags.TagsManager( service_keys_to_statuses_to_tags )
+        tags_manager_2 = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
         
         tags_manager_2._RecalcCombined()
         
@@ -60,7 +62,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ second ][ HC.CURRENT ] = { 'page:4', 'page:5' }
         service_keys_to_statuses_to_tags[ second ][ HC.PENDING ] = { 'title:double page spread' }
         
-        tags_manager_3 = HydrusTags.TagsManager( service_keys_to_statuses_to_tags )
+        tags_manager_3 = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
         
         tags_manager_3._RecalcCombined()
         
@@ -68,7 +70,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         tags_managers = ( tags_manager_1, tags_manager_2, tags_manager_3 )
         
-        tags_manager = HydrusTags.MergeTagsManagers( tags_managers )
+        tags_manager = ClientMedia.MergeTagsManagers( tags_managers )
         
         #
         
@@ -101,7 +103,7 @@ class TestTagsManager( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ self._third_key ][ HC.CURRENT ] = { 'petitioned' }
         service_keys_to_statuses_to_tags[ self._third_key ][ HC.DELETED ] = { 'pending' }
         
-        self._tags_manager = HydrusTags.TagsManager( service_keys_to_statuses_to_tags )
+        self._tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
         
         self._tags_manager._RecalcCombined()
         
@@ -123,7 +125,7 @@ class TestTagsManager( unittest.TestCase ):
         other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.PENDING ] = { 'reset_pending' }
         other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.PETITIONED ] = { 'reset_petitioned' }
         
-        self._other_tags_manager = HydrusTags.TagsManager( other_service_keys_to_statuses_to_tags )
+        self._other_tags_manager = ClientMedia.TagsManager( other_service_keys_to_statuses_to_tags )
         
         self._other_tags_manager._RecalcCombined()
         
@@ -575,7 +577,7 @@ class TestTagParents( unittest.TestCase ):
         
         wx.GetApp().SetRead( 'tag_parents', tag_parents )
         
-        self._tag_parents_manager = HydrusTags.TagParentsManager()
+        self._tag_parents_manager = ClientCaches.TagParentsManager()
         
     
     def test_expand_predicates( self ):
@@ -720,7 +722,7 @@ class TestTagSiblings( unittest.TestCase ):
         
         wx.GetApp().SetRead( 'tag_siblings', tag_siblings )
         
-        self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
+        self._tag_siblings_manager = ClientCaches.TagSiblingsManager()
         
     
     def test_autocomplete( self ):

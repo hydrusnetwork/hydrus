@@ -8,7 +8,6 @@ import os
 import threading
 import time
 import traceback
-import wx
 
 if HC.PLATFORM_WINDOWS: import mp3play
 

@@ -1,4 +1,3 @@
-import ClientFiles
 import cStringIO
 import numpy.core.multiarray # important this comes before cv!
 import cv2
@@ -15,7 +14,6 @@ import struct
 import threading
 import time
 import traceback
-import wx
 import HydrusData
 import HydrusFileHandling
 import HydrusGlobals
@@ -110,30 +108,6 @@ def GenerateNumpyImage( path ):
     
     return numpy_image
     
-def GenerateHydrusBitmap( path, compressed = True ):
-    
-    try:
-        
-        numpy_image = GenerateNumpyImage( path )
-        
-        return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
-        
-    except:
-        
-        pil_image = GeneratePILImage( path )
-        
-        return GenerateHydrusBitmapFromPILImage( pil_image, compressed = compressed )
-        
-    
-def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
-    
-    ( y, x, depth ) = numpy_image.shape
-    
-    if depth == 4: buffer_format = wx.BitmapBufferFormat_RGBA
-    else: buffer_format = wx.BitmapBufferFormat_RGB
-    
-    return HydrusBitmap( numpy_image.data, buffer_format, ( x, y ), compressed = compressed )
-    
 def GenerateNumPyImageFromPILImage( pil_image ):
     
     if pil_image.mode == 'RGBA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
@@ -150,23 +124,6 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     s = pil_image.tostring()
     
     return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
-    
-def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
-    
-    if pil_image.mode == 'RGBA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
-        
-        if pil_image.mode == 'P': pil_image = pil_image.convert( 'RGBA' )
-        
-        format = wx.BitmapBufferFormat_RGBA
-        
-    else:
-        
-        if pil_image.mode != 'RGB': pil_image = pil_image.convert( 'RGB' )
-        
-        format = wx.BitmapBufferFormat_RGB
-        
-    
-    return HydrusBitmap( pil_image.tostring(), format, pil_image.size, compressed = compressed )
     
 def GeneratePerceptualHash( path ):
     
@@ -367,230 +324,4 @@ def GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) ):
     target_y = int( im_y / ratio_to_use )
     
     return ( target_x, target_y )
-    
-''' # old pil code
-
-def _GetCurrentFramePIL( pil_image, target_resolution, canvas ):
-    
-    current_frame = EfficientlyResizePILImage( pil_image, target_resolution )
-    
-    if pil_image.mode == 'P' and 'transparency' in pil_image.info:
-        
-        # I think gif problems are around here somewhere; the transparency info is not converted to RGBA properly, so it starts drawing colours when it should draw nothing
-        
-        current_frame = current_frame.convert( 'RGBA' )
-        
-        if canvas is None: canvas = current_frame
-        else: canvas.paste( current_frame, None, current_frame ) # yeah, use the rgba image as its own mask, wut.
-        
-    else: canvas = current_frame
-    
-    return canvas
-    
-
-def _GetFramePIL( self, index ):
-    
-    pil_image = self._image_object
-    
-    pil_image.seek( index )
-    
-    canvas = self._GetCurrentFramePIL( pil_image, self._target_resolution, canvas )
-    
-    return GenerateHydrusBitmapFromPILImage( canvas )
-    
-
-def _GetFramesPIL( self ):
-    
-    pil_image = self._image_object
-    
-    canvas = None
-    
-    global_palette = pil_image.palette
-    
-    dirty = pil_image.palette.dirty
-    mode = pil_image.palette.mode
-    rawmode = pil_image.palette.rawmode
-    
-    # believe it or not, doing this actually fixed a couple of gifs!
-    pil_image.seek( 1 )
-    pil_image.seek( 0 )
-    
-    while True:
-        
-        canvas = self._GetCurrentFramePIL( pil_image, self._target_resolution, canvas )
-        
-        yield GenerateHydrusBitmapFromPILImage( canvas )
-        
-        try:
-            
-            pil_image.seek( pil_image.tell() + 1 )
-            
-            if pil_image.palette == global_palette: # for some reason, when we fall back to global palette (no local-frame palette), we reset bunch of important variables!
-                
-                pil_image.palette.dirty = dirty
-                pil_image.palette.mode = mode
-                pil_image.palette.rawmode = rawmode
-                
-            
-        except: break
-        
-    
-'''
-
-# the cv code was initially written by @fluffy_cub
-class HydrusBitmap( object ):
-    
-    def __init__( self, data, format, size, compressed = True ):
-        
-        self._compressed = compressed
-        
-        if self._compressed:
-            
-            self._data = lz4.dumps( data )
-            
-        else:
-            
-            self._data = data
-            
-        
-        self._format = format
-        self._size = size
-        
-    
-    def _GetData( self ):
-        
-        if self._compressed:
-            
-            return lz4.loads( self._data )
-            
-        else:
-            
-            return self._data
-            
-        
-    
-    def GetWxBitmap( self ):
-        
-        ( width, height ) = self._size
-        
-        if self._format == wx.BitmapBufferFormat_RGB: return wx.BitmapFromBuffer( width, height, self._GetData() )
-        else: return wx.BitmapFromBufferRGBA( width, height, self._GetData() )
-        
-    
-    def GetWxImage( self ):
-        
-        ( width, height ) = self._size
-        
-        if self._format == wx.BitmapBufferFormat_RGB: return wx.ImageFromBuffer( width, height, self._GetData() )
-        else:
-            
-            bitmap = wx.BitmapFromBufferRGBA( width, height, self._GetData() )
-            
-            image = wx.ImageFromBitmap( bitmap )
-            
-            wx.CallAfter( bitmap.Destroy )
-            
-            return image
-            
-        
-    
-    def GetEstimatedMemoryFootprint( self ): return len( self._data )
-    
-    def GetSize( self ): return self._size
-    
-class RasterContainer( object ):
-    
-    def __init__( self, media, target_resolution = None ):
-        
-        if target_resolution is None: target_resolution = media.GetResolution()
-        
-        ( width, height ) = target_resolution
-        
-        if width == 0 or height == 0: target_resolution = ( 100, 100 )
-        
-        self._media = media
-        self._target_resolution = target_resolution
-        
-        hash = self._media.GetHash()
-        mime = self._media.GetMime()
-        
-        self._path = ClientFiles.GetFilePath( hash, mime )
-        
-        ( original_width, original_height ) = self._media.GetResolution()
-        
-        ( my_width, my_height ) = target_resolution
-        
-        width_zoom = my_width / float( original_width )
-        height_zoom = my_height / float( original_height )
-        
-        self._zoom = min( ( width_zoom, height_zoom ) )
-        
-        if self._zoom > 1.0: self._zoom = 1.0
-        
-    
-class ImageContainer( RasterContainer ):
-    
-    def __init__( self, media, target_resolution = None ):
-        
-        RasterContainer.__init__( self, media, target_resolution )
-        
-        self._hydrus_bitmap = None
-        
-        HydrusThreading.CallToThread( self._InitialiseHydrusBitmap )
-        
-    
-    def _InitialiseHydrusBitmap( self ):
-        
-        time.sleep( 0.00001 )
-        
-        try:
-            
-            numpy_image = GenerateNumpyImage( self._path )
-            
-            resized_numpy_image = EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
-            
-            hydrus_bitmap = GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
-            
-        except:
-            
-            pil_image = GeneratePILImage( self._path )
-            
-            resized_pil_image = EfficientlyResizePILImage( pil_image, self._target_resolution )
-            
-            hydrus_bitmap = GenerateHydrusBitmapFromPILImage( resized_pil_image )
-            
-        
-        self._hydrus_bitmap = hydrus_bitmap
-        
-        HydrusGlobals.pubsub.pub( 'finished_rendering', self.GetKey() )
-        
-    
-    def GetEstimatedMemoryFootprint( self ):
-        
-        if self._hydrus_bitmap is None:
-            
-            ( width, height ) = self._target_resolution
-            
-            return width * height * 3
-            
-        else: return self._hydrus_bitmap.GetEstimatedMemoryFootprint()
-        
-    
-    def GetHash( self ): return self._media.GetHash()
-    
-    def GetHydrusBitmap( self ): return self._hydrus_bitmap
-    
-    def GetKey( self ): return ( self._media.GetHash(), self._target_resolution )
-    
-    def GetNumFrames( self ): return self._media.GetNumFrames()
-    
-    def GetResolution( self ): return self._media.GetResolution()
-    
-    def GetSize( self ): return self._target_resolution
-    
-    def GetZoom( self ): return self._zoom
-    
-    def IsRendered( self ): return self._hydrus_bitmap is not None
-    
-    def IsScaled( self ): return self._zoom != 1.0
     

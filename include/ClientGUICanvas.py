@@ -23,6 +23,7 @@ import traceback
 import urllib
 import wx
 import wx.media
+import ClientRendering
 import HydrusData
 import HydrusFileHandling
 import HydrusGlobals
@@ -122,8 +123,6 @@ class Animation( wx.Window ):
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
         self._timer_video = wx.Timer( self, id = ID_TIMER_VIDEO )
-        
-        self._paused = False
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
@@ -234,7 +233,7 @@ class Animation( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._video_container is None: self._video_container = HydrusVideoHandling.VideoContainer( self._media, ( my_width, my_height ) )
+                if self._video_container is None: self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_width, my_height ) )
                 else:
                     
                     ( image_width, image_height ) = self._video_container.GetSize()
@@ -245,7 +244,7 @@ class Animation( wx.Window ):
                         
                         full_resolution = self._video_container.GetResolution()
                         
-                        self._video_container = HydrusVideoHandling.VideoContainer( self._media, full_resolution )
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, full_resolution )
                         
                         self._video_container.SetFramePosition( self._current_frame_index )
                         
@@ -284,6 +283,11 @@ class Animation( wx.Window ):
     def Play( self ):
         
         self._paused = False
+        
+    
+    def Pause( self ):
+        
+        self._paused = True
         
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
@@ -527,9 +531,15 @@ class Canvas( object ):
         HydrusGlobals.pubsub.sub( self, 'ZoomIn', 'canvas_zoom_in' )
         HydrusGlobals.pubsub.sub( self, 'ZoomOut', 'canvas_zoom_out' )
         HydrusGlobals.pubsub.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
+        HydrusGlobals.pubsub.sub( self, 'OpenExternally', 'canvas_open_externally' )
         
     
     def _Archive( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
+    
+    def _CopyBMPToClipboard( self ):
+        
+        HydrusGlobals.pubsub.pub( 'clipboard', 'bmp', self._current_display_media )
+        
     
     def _CopyHashToClipboard( self, hash_type ):
         
@@ -696,6 +706,11 @@ class Canvas( object ):
             path = ClientFiles.GetFilePath( hash, mime )
             
             HydrusFileHandling.LaunchFile( path )
+            
+            if self._current_display_media.HasDuration() and mime != HC.APPLICATION_FLASH:
+                
+                self._media_container.Pause()
+                
             
         
     
@@ -915,6 +930,14 @@ class Canvas( object ):
         if mouse_x >= x and mouse_x <= x + width and mouse_y >= y and mouse_y <= y + height: return True
         
         return False
+        
+    
+    def OpenExternally( self, canvas_key ):
+        
+        if self._canvas_key == canvas_key:
+            
+            self._OpenExternally()
+            
         
     
     def SetMedia( self, media ):
@@ -1214,6 +1237,7 @@ class CanvasPanel( Canvas, wx.Window ):
                 ( command, data ) = action
                 
                 if command == 'archive': self._Archive()
+                elif command == 'copy_bmp': self._CopyBMPToClipboard()
                 elif command == 'copy_files':
                     with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
@@ -1299,6 +1323,7 @@ class CanvasPanel( Canvas, wx.Window ):
             
             copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
             
+            if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ), 'image' )
             copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
             copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
             
@@ -1934,6 +1959,14 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             
         
     
+    def Undelete( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._Undelete()
+            
+        
+    
 class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
     
     def __init__( self, my_parent, page_key, media_results ):
@@ -1943,6 +1976,7 @@ class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
         HydrusGlobals.pubsub.sub( self, 'Keep', 'canvas_archive' )
         HydrusGlobals.pubsub.sub( self, 'Delete', 'canvas_delete' )
         HydrusGlobals.pubsub.sub( self, 'Skip', 'canvas_show_next' )
+        HydrusGlobals.pubsub.sub( self, 'Undelete', 'canvas_undelete' )
         HydrusGlobals.pubsub.sub( self, 'Back', 'canvas_show_previous' )
         
         self._hover_commands.SetNavigable( False )
@@ -1962,6 +1996,7 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
         HydrusGlobals.pubsub.sub( self, 'ShowLast', 'canvas_show_last' )
         HydrusGlobals.pubsub.sub( self, 'ShowNext', 'canvas_show_next' )
         HydrusGlobals.pubsub.sub( self, 'ShowPrevious', 'canvas_show_previous' )
+        HydrusGlobals.pubsub.sub( self, 'Undelete', 'canvas_undelete' )
         
         self._hover_commands.SetNavigable( True )
         
@@ -2039,6 +2074,14 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
         if canvas_key == self._canvas_key:
             
             self._ShowPrevious()
+            
+        
+    
+    def Undelete( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._Undelete()
             
         
     
@@ -2135,6 +2178,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 ( command, data ) = action
                 
                 if command == 'archive': self._Archive()
+                elif command == 'copy_bmp': self._CopyBMPToClipboard()
                 elif command == 'copy_files':
                     with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
@@ -2284,6 +2328,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
         
+        if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ), 'image' )
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
         
@@ -2552,6 +2597,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 ( command, data ) = action
                 
                 if command == 'archive': self._Archive()
+                elif command == 'copy_bmp': self._CopyBMPToClipboard()
                 elif command == 'copy_files':
                     with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
@@ -2692,6 +2738,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
         
+        if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ), 'image' )
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
         
@@ -2922,6 +2969,14 @@ class MediaContainer( wx.Window ):
             
         
     
+    def Pause( self ):
+        
+        if type( self._media_window ) == Animation:
+            
+            self._media_window.Pause()
+            
+        
+    
 class EmbedButton( wx.Window ):
     
     def __init__( self, parent, size ):
@@ -3099,8 +3154,6 @@ class StaticImage( wx.Window ):
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
         self._timer_render_wait = wx.Timer( self, id = ID_TIMER_RENDER_WAIT )
-        
-        self._paused = False
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
