@@ -275,10 +275,9 @@ def DAEMONFlushServiceUpdates( list_of_service_keys_to_service_updates ):
     
 def DAEMONMaintainTrash():
     
-    max_size = HC.options[ 'trash_max_size' ] * 1048576
-    max_age = HC.options[ 'trash_max_age' ] * 3600
-    
-    if max_size is not None:
+    if HC.options[ 'trash_max_size' ] is not None:
+        
+        max_size = HC.options[ 'trash_max_size' ] * 1048576
         
         service_info = wx.GetApp().Read( 'service_info', CC.TRASH_SERVICE_KEY )
         
@@ -308,7 +307,9 @@ def DAEMONMaintainTrash():
             
         
     
-    if max_age is not None:
+    if HC.options[ 'trash_max_age' ] is not None:
+        
+        max_age = HC.options[ 'trash_max_age' ] * 3600
         
         hashes = wx.GetApp().Read( 'oldest_trash_hashes', minimum_age = max_age )
         

@@ -1565,7 +1565,8 @@ class DialogInputLocalFiles( Dialog ):
         self._processing_queue = []
         self._currently_parsing = False
         
-        self._current_paths = set()
+        self._current_paths = []
+        self._current_paths_set = set()
         
         self._job_key = HydrusData.JobKey()
         
@@ -1621,9 +1622,10 @@ class DialogInputLocalFiles( Dialog ):
         pretty_mime = HC.mime_string_lookup[ mime ]
         pretty_size = HydrusData.ConvertIntToBytes( size )
         
-        if path not in self._current_paths:
+        if path not in self._current_paths_set:
             
-            self._current_paths.add( path )
+            self._current_paths_set.add( path )
+            self._current_paths.append( path )
             
             self._paths_list.Append( ( path, pretty_mime, pretty_size ), ( path, mime, size ) )
             
@@ -1748,7 +1750,8 @@ class DialogInputLocalFiles( Dialog ):
         
         self._paths_list.RemoveAllSelected()
         
-        self._current_paths = { row[0] for row in self._paths_list.GetClientData() }
+        self._current_paths = [ row[0] for row in self._paths_list.GetClientData() ]
+        self._current_paths_set = set( self._current_paths )
         
     
     def SetGaugeInfo( self, gauge_range, gauge_value, text ):
@@ -3311,7 +3314,7 @@ class DialogPathsToTags( Dialog ):
                 
                 #
                 
-                self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for this file' )
+                self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for selected files' )
                 
                 self._paths_to_single_tags = collections.defaultdict( list )
                 
@@ -4386,7 +4389,7 @@ class DialogShortcuts( Dialog ):
                             
                             pretty_service_key = service.GetName()
                             
-                        except KeyError:
+                        except HydrusExceptions.NotFoundException:
                             
                             pretty_service_key = 'service not found'
                             

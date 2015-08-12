@@ -8,52 +8,46 @@
 		<div class="content">
 			<p><a href="getting_started_files.html"><--- Back to files</a></p>
 			<h3>how do we find files?</h3>
-			<p>So, we have stored some media in our database. Everything is hashed and cached. We can search by inbox and resolution and size and so on, but if we really want to find what we are looking for, we shall have to use <i>tags</i>.</p>
-			<p><a href="faq.html#tags">FAQ: hold up, what is a tag?</a></p>
-			<p class="warning">The client starts with a 'local tags' service, which stores tags only on your client's database, where only you can see them. This is useful, and you should keep it in mind for specific jobs as you read the rest of this page, but please do not try to tag everything you own by yourself; unless you have a tiny collection, it will take you hundreds of hours, and your time is better spent helping build tag collections with other people.</p>
-			<p>In order to share tags with others, you must connect to at least one tag repository. You can create your own, if you like, and share access with whoever you like. I run a public tag repository, which you are very welcome to access and contribute to. To add its details, go <i>services->manage services</i>, select 'tags' on the left, and hit the 'add' button. You'll be asked if you have a registration key or an access key; you have an access key.</p>
+			<p>So, you have stored some media in your database. Everything is hashed and cached. You can search by inbox and resolution and size and so on, but if you really want to find what we are looking for, you will have to use <i>tags</i>.</p>
+			<p><a href="faq.html#tags">FAQ: what is a tag?</a></p>
+			<p>Your client starts with a 'local tags' service, which keeps all of its file->tag mappings in your client's database where only you can see them. It is a good place to practise. So, select a file and press F3:</p>
+			<p><a href="sororitas_local.png"><img src="sororitas_local.png" width="960" height="540" /></a></p>
+			<p>The autocomplete dropdown in the manage tags dialog works very like the one in a normal search page—you type part of a tag, and matching results will appear below. You select the tag you want with the arrow keys and hit enter. Since your local tags service doesn't have any tags in it yet, you won't get any results here except the exact match of what you typed. If you want to remove a tag, enter the exact same thing again or double-click it in the box above.</p>
+			<p>Prefixing a tag with a category and a colon will create a <i>namespaced</i> tag. This helps inform the software and other users about what the tag is. Examples of namespaced tags are:</p>
+			<ul>
+				<li>character:batman</li>
+				<li>series:street fighter</li>
+				<li>person:jennifer lawrence</li>
+				<li>title:vitruvian man</li>
+			</ul>
+			<p>The client is set up to draw common namespaces in different colours, just like boorus do. You can change these colours in the options.</p>
+			<p>Once you are happy with your tags, hit 'apply' or just press enter on an empty text box.</p>
+			<p><a href="sororitas_local_done.png"><img src="sororitas_local_done.png" width="960" height="540" /></a></p>
+			<p>The tags are now saved to your database. Searching for any of them will return this file and anything else so tagged:</p>
+			<p><a href="sororitas_search.png"><img src="sororitas_search.png" width="960" height="540" /></a></p>
+			<p>If you add more tags or system predicates to a search, you will limit the results to those files that match every single one:</p>
+			<p><a href="sororitas_hanako.png"><img src="sororitas_hanako.png" width="960" height="540" /></a></p>
+			<p>You can also exclude a tag by prefixing it with a hyphen (e.g. '-heresy').</p>
+			<h3>tag repositories</h3>
+			<p>It can take a long time to tag even this small number of files well, so I created <i>tag repositories</i> so people can share the work.</p>
+			<p>Tag repos store many file->tag relationships. Anyone who has an access key to the repository can sync with it and hence download all these relationships. If any of their own files match up, they will get those tags. Access keys will also usually have permission to upload new tags and ask for existing ones to be deleted.</p>
+			<p>Anyone can run a tag repository, but it is a bit complicated for new users. I run a public tag repository that you are very welcome to access and contribute to. To connect with it, go <i>services->manage services->remote->tag repositories</i> and hit the 'add' button. You'll be asked if you have a <i>registration key</i> or an <i>access key</i>; you have an access key.</p>
 			<p><img src="edit_repos_public_tag_repo.png" /></p>
 			<p>Here's the info so you can copy it:</p>
 			<ul><li>4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f@hydrus.no-ip.org:45871</li></ul>
-			<p><b>Tags are rich, cpu-intensive metadata. My repository has millions of mappings (about 70MB of network data, at last count), so expect your computer to take <i>hours</i> to synchronise fully. You can close the client at any time, and it will continue where it left off when it next boots. If it is slowing your normal browsing, you can pause it at <i>services->pause->repositories synchronisation</i>.</b></p>
-			<p>The client will report its current update processing status in the middle of the status bar, at the bottom of the screen. You can watch more detailed progress in the <i>services->review services</i> dialog as usual.</p>
+			<p>Within a few seconds of applying that dialog, a popup message will announce and report on the synchronisation. Over time, you should see some new tags appear, particularly on famous files that lots of people have.</p>
+			<p><b>Tags are rich, cpu-intensive metadata. My repository has millions of mappings, and your client will download and store them all. It will take a few hundred MB and several <i>hours</i> to fully synchronise. You can close the client at any time, and it will continue where it left off when it next boots. If it is slowing your normal browsing, you can pause it temporarily from the popup message or indefinitely at either the <i>manage services</i> dialog or for all services at <i>services->pause->repositories synchronisation</i>.</b></p>
+			<p>You can watch more detailed synchronisation progress in the <i>services->review services</i> window.</p>
 			<p><img src="tag_repo_review.png" /></p>
-			<h3>adding tags</h3>
-			<p>If you connect to a repository that has a lot of tags, you'll probably see them appearing in your client in any normal search. But if you want tags for your rarer files, or you don't connect to any big repositories, you'll have to add some tags yourself.</p>
-			<p>Select some files. Right click on them and select <i>manage->tags</i>, or hit F3. This will boot the very important <i>manage tags dialog</i>.</p>
-			<p><a href="manage_tags.png"><img src="manage_tags.png" /></a></p>
-			<p>This shows the current selection's tags, and will add/remove tags to/from the entire selection. There's another autocomplete dropdown, just like when you search, that throws what you input at the box above. Submitting a tag that already exists will attempt to remove it, or you can just double-click it. You may be prompted to give a reason for removing a tag from a remote repository, creating a petition that an administrator will review.</p>
-			<p>The tag box will show the current changes with numbers in different sets of parentheses:</p>
-			<ul class="bulletpoints">
-				<li><b>(n)</b> - Tag exists for n files of the selection.</li>
-				<li><b>(+n)</b> - Tag will be pended to n files.</li>
-				<li><b>(-n)</b> - Tag will be petitioned for n files.</li>
-				<li><b>(Xn)</b> - Tag has been applied and deleted for n files; you may or may not have authority to re-apply.</li>
-			</ul>
-			<p>If you edit tags for the local tags service, they will be applied instantly; otherwise, they will be pended, waiting until you are ready to upload. You can re-open the dialog and edit your pending changes as much as you like. When you are ready to upload all your pending tag changes, use the <i>pending</i> menu in the main interface.</p>
-			<p>Please do not upload tags to my public tag repo until you get a rough feel for the <a href="tagging_schema.html">tag schema</a>, or just lurk until you get the idea. I am only interested in objective tags. If you don't like my guidelines, feel free to start your own tag repo!</p>
-			<p>You can synchronise with more than one tag repository. Their different tags will be merged using a <a href="https://en.wikipedia.org/wiki/Union_%28set_theory%29">union</a> operation. Press the up or down arrow keys on an empty autocomplete input to quickly jump between your repositories.</p>
+			<p>Your new service should now be listed on the left of the manage tags dialog. Adding tags to a repository works very similarly to the local tags service except hitting 'apply' will not immediately confirm your changes—it will put them in a queue to be uploaded. These 'pending' tags will be counted with a plus '+' or minus '-' sign:</p>
+			<p><a href="rlm_pending.png"><img src="rlm_pending.png" width="960" height="540" /></a></p>
+			<p>The public tag repo sync popup happened to appear when I was taking that screenshot. Although the initial sync takes a long time, it usually amounts to a few minutes per day after that to keep up to date.</p>
+			<p>Notice that a 'pending' menu has appeared on the main window. This lets you start the upload when you are ready and happy with everything that you have queued.</p>
+			<p>When you upload your pending tags, they will commit and look to you like any other tag. The tag repository will anonymously bundle them into the next update, which everyone else will download in a day or so. They will see your tags just like you saw theirs.</p>
+			<p>If you attempt to remove a tag that has been uploaded, you may be prompted to give a reason, creating a petition that an administrator will review.</p>
+			<p>Please do not spam tags to my public tag repo until you get a rough feel for the <a href="tagging_schema.html">tag schema</a>, or just lurk until you get the idea. I am not very strict about it (it is not difficult to correct mistakes), but I essentially only want factual tags—no subjective opinion.</p>
+			<p>You can connect to many different tag repositories, if you like. When you are in the <i>manage tags</i> dialog, pressing the up or down arrow keys on an empty input switches between your services.</p>
 			<p><a href="faq.html#delays">FAQ: why can my friend not see what I just uploaded?</a></p>
-			<h3>now let's find some files</h3>
-			<p>Once you are all set up, start to type in a tag, and the autocomplete dropdown will offer suggestions for you:</p>
-			<p><a href="hidamari_ac.png"><img src="hidamari_ac.png" width="683" height="384" /></a></p>
-			<p>Becomes:</p>
-			<p><a href="hidamari.png"><img src="hidamari.png" width="683" height="384" /></a></p>
-			<p>More tags will narrow a search:</p>
-			<p><a href="hidamari_miyako.png"><img src="hidamari_miyako.png" width="683" height="384" /></a></p>
-			<p>Or, when prefixed with a hyphen, exclude:</p>
-			<p><a href="hidamari_exclude.png"><img src="hidamari_exclude.png" width="683" height="384" /></a></p>
-			<p>When you are more familiar with namespaces, sorting and collections, you can easily find and display whole books with just a few keystrokes:</p>
-			<p><a href="gunnerkrigg_chapter.png"><img src="gunnerkrigg_chapter.png" width="683" height="384" /></a></p>
-			<h3>typical usage</h3>
-			<p>I find the following import-cycle works well for me:</p>
-			<ul>
-				<li>import anything in my downloaded images folder</li>
-				<li>filter a few hundred from my inbox</li>
-				<li>go system:archive, system:numtags<4 and tag some stuff</li>
-				<li>upload pending tags</li>
-				<li>feel good about myself</li>
-			</ul>
 			<p class="right"><a href="getting_started_ratings.html">Read about ratings ---></a></p>
 			<p class="right"><a href="getting_started_subscriptions.html">Read about subscriptions ---></a></p>
 			<p class="right"><a href="index.html">Go back to the index ---></a></p>

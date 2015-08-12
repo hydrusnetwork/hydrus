@@ -409,15 +409,16 @@ class HydrusResourceCommand( Resource ):
     
     def _errbackHandleEmergencyError( self, failure, request ):
         
-        self._CleanUpTempFile( request )
+        try: self._CleanUpTempFile( request )
+        except: pass
         
-        print( failure.getTraceback() )
+        try: print( failure.getTraceback() )
+        except: pass
         
         try: request.write( failure.getTraceback() )
         except: pass
         
-        try: request.finish()
-        except: pass
+        request.finish()
         
     
     def _errbackHandleProcessingError( self, failure, request ):
@@ -490,6 +491,8 @@ class HydrusResourceCommand( Resource ):
             ( os_file_handle, temp_path ) = request.temp_file_info
             
             HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            
+            del request.temp_file_info
             
         
     

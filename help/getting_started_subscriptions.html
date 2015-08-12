@@ -7,27 +7,35 @@
 	<body>
 		<div class="content">
 			<p><a href="getting_started_tags.html"><--- Back to tags</a></p>
+			<p class="warning">Do not try to create a subscription until you are comfortable with a normal gallery download page! Go <i>F9->download->gallery->[your preference]</i> and run some searches, just so you get a feel before you make a mistake here.</p>
 			<h3>what are subs?</h3>
-			<p>Subscriptions are a way of telling the client to regularly check a particular web search. Any new files will be downloaded and imported, and their tags optionally parsed.</p>
+			<p>Subscriptions are a way of telling the client to stay synchronised with a gallery search. The client will regularly check the gallery and download any new files behind the scenes, just as if you were running the download yourself.</p>
 			<p>You can set up a subscription for any of the gallery websites in the normal <i>new page->download->gallery</i> menu.</p>
 			<p>Here's the dialog, which is under <i>services->manage subscriptions</i>:</p>
 			<p><img src="subs_dialog.png" /></p>
-			<p>Here I have one subscription for Deviant Art, for the artist ChaoyuanXu. The client is set to check this artist for new files every seven days. It will parse <i>creator</i> and <i>title</i> tags and pend them to the tag repository called 'public tag repo'.</p>
-			<p>This works very like hydrus repository synchronisation, in the background, reporting its progress in the middle of the status bar at the bottom of the main window, like so:</p>
-			<p><img src="subs_status.png" /></p>
-			<p>You don't really have to care about this all that much; it just lets you know what it is doing.</p>
+			<p>Here the client is set to search gelbooru for 'blue_eyes' every seven days. It will keep fetching gallery pages, starting at the first page, generating new media urls, until:</p>
+			<ul class="bulletpoint">
+				<li>It has never run before and reaches the last page in the gallery.</li>
+				<li>It has never run before and has found as many files as the 'initial sync file limit'.</li>
+				<li>It has run before and discovers a url it has previously seen.</li>
+			</ul>
+			<p>Since I have set it to stop after 10, it will finish quickly, which is fine for this example.</p>
+			<p>Once it has found enough urls, it will go into them and strip out the file and any tags you have set it.</p>
+			<h3>when they run</h3>
+			<p>When a subscription runs, it will show a popup message:</p>
+			<p><img src="subs_popup.png" /></p>
+			<p>You don't really have to care about this all that much; it just lets you know what it is doing. The 'show x files' button is useful just to quickly make sure it is getting what you meant it to. Once it is done, it will compress down and wait for you to dismiss it with a right click.</p>
 			<p>Serious errors, like server 404s, are recovered from as gracefully as possible. The client will retry those subscriptions the next day.</p>
 			<p>Here's the result of the subscription I set up above:</p>
 			<p><img src="subs_import_done.png" /></p>
-			<p>It took about two minutes to download all that, and it all happened quietly in the background. Notice the 146 pending tags, up top.</p>
+			<p>If I were to leave the subscription in place for seven days, it would recheck blue_eyes and download every single new file until it hit whichever of those ten is the newest.</p>
 			<h3>how could this possibly go wrong?</h3>
 			<p>This is quite a powerful tool, and if you are silly, you will end up spamming a server and likely upsetting someone or breaking something.</p>
-			<p>To initialise a subscription, the client will parse every single currently existing gallery and image page for that particular search. This is fine for the example above, which had 4 gallery pages and 73 image pages, but the search "short hair" on safebooru has about 6,400 gallery pages encompassing >250,000 results! Trying a search like that will take a tremendous amount of time for you and cause a non-trivial CPU and data hit to their server.</p>
+			<p>If you set a subscription to have no initial file limit on a simple query—say, blue_eyes on gelbooru—it will attempt to parse, at current count, 581,509 files. This would take a very long time and it would use a lot of gelbooru's bandwidth—enough that they probably have a system in place to ban your IP for it. Even if you set a reasonable initial file count, the sheer number of new blue_eyes files every week is probably a bit too large.</p>
 			<p><i>Remember: If you are going to scrape anything from a site, be polite about it!</i></p>
-			<p>So, I advise you start with artist searches to begin with. These usually top out at about 1,000 files, and hence don't take all that long. Once you are more confident, try doing multiple-tag queries. I suggest you leave simple single-tag queries for the manual download page, where you can hit 'that's enough' after ten or twenty pages.</p>
+			<p>So, I suggest you start with artist searches to begin with. These usually top out at about 1,000 files total and a handful of new files every week/month, and also hence don't take all that long. Once you are more confident, try doing multiple-tag queries. I suggest you leave simple single-tag queries for the manual download page, where you can hit 'that's enough' yourself.</p>
 			<h3>help! it won't stop!</h3>
-			<p>If you <i>do</i> put in a huge search, and the 'found x new files for subscription y' message is climbing terrifyingly higher and higher with no end in sight, you can pause the subscriptions daemon with <i>services->pause->subscriptions synchronisation</i>.</p>
-			<p>This will give you a breather to reedit your subscriptions in the dialog. Remember to unpause when you are done.</p>
+			<p>If you <i>do</i> put in a huge search, and the 'found x new files for subscription y' message is climbing terrifyingly higher and higher with no end in sight, just hit the pause button on the popup. You can also pause all current subscriptions from even starting at <i>services->pause->subscriptions synchronisation</i>.</p>
 			<p class="right"><a href="index.html">Go back to the index ---></a></p>
 		</div>
 	</body>

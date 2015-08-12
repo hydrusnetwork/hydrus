@@ -65,6 +65,17 @@ def CatchExceptionClient( etype, value, tb ):
             job_key.SetVariable( 'popup_traceback', trace )
             
         
+        text = job_key.ToString()
+        
+        print( '' )
+        print( 'The following uncaught exception occured at ' + HydrusData.ConvertTimestampToPrettyTime( HydrusData.GetNow() ) + ':' )
+        
+        try: print( text )
+        except: print( repr( text ) )
+        
+        sys.stdout.flush()
+        sys.stderr.flush()
+        
         HydrusGlobals.pubsub.pub( 'message', job_key )
         
     except:
@@ -79,6 +90,7 @@ def CatchExceptionClient( etype, value, tb ):
         except: pass
         
         HydrusData.ShowText( text )
+        
     
 def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
     
@@ -168,8 +180,14 @@ def ShowExceptionClient( e ):
     
     text = job_key.ToString()
     
+    print( '' )
+    print( 'The following exception occured at ' + HydrusData.ConvertTimestampToPrettyTime( HydrusData.GetNow() ) + ':' )
+    
     try: print( text )
     except: print( repr( text ) )
+    
+    sys.stdout.flush()
+    sys.stderr.flush()
     
     HydrusGlobals.pubsub.pub( 'message', job_key )
     

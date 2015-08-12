@@ -290,7 +290,24 @@ class GalleryParserBooru( GalleryParser ):
             else: url_index = page_index * self._gallery_advance_num
             
         
-        return self._search_url.replace( '%tags%', self._search_separator.join( [ urllib.quote( tag ) for tag in self._tags ] ) ).replace( '%index%', HydrusData.ToString( url_index ) )
+        tags_to_use = self._tags
+        
+        if 'e621' in self._search_url:
+            
+            tags_to_use = []
+            
+            for tag in self._tags:
+                
+                if '/' in tag:
+                    
+                    tag = tag.replace( '/', '%-2F' )
+                    
+                
+                tags_to_use.append( tag )
+                
+            
+        
+        return self._search_url.replace( '%tags%', self._search_separator.join( [ urllib.quote( tag, '' ) for tag in tags_to_use ] ) ).replace( '%index%', HydrusData.ToString( url_index ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -604,7 +621,7 @@ class GalleryParserGiphy( GalleryParser ):
     
     def __init__( self, tag ):
         
-        self._gallery_url = 'http://giphy.com/api/gifs?tag=' + urllib.quote( tag.replace( ' ', '+' ) ) + '&page='
+        self._gallery_url = 'http://giphy.com/api/gifs?tag=' + urllib.quote( tag.replace( ' ', '+' ), '' ) + '&page='
         
         GalleryParser.__init__( self )
         
@@ -1055,7 +1072,7 @@ class GalleryParserPixiv( GalleryParser ):
             
             tag = self._query
             
-            gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( tag.encode( 'utf-8' ) ) + '&s_mode=s_tag_full&order=date_d'
+            gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( tag.encode( 'utf-8' ), '' ) + '&s_mode=s_tag_full&order=date_d'
             
         
         return gallery_url + '&p=' + HydrusData.ToString( page_index + 1 )

@@ -50,15 +50,42 @@ def ConvertAbsPathToPortablePath( abs_path ):
 
 def CleanUpTempPath( os_file_handle, temp_path ):
     
-    os.close( os_file_handle )
-    
-    try: os.remove( temp_path )
+    try:
+        
+        os.close( os_file_handle )
+        
     except OSError:
         
         gc.collect()
         
-        try: os.remove( temp_path )
-        except OSError: print( 'The client could not delete the temporary file ' + temp_path )
+        try:
+            
+            os.close( os_file_handle )
+            
+        except OSError:
+            
+            print( 'Could not close the temporary file ' + temp_path )
+            
+            return
+            
+        
+    
+    try:
+        
+        os.remove( temp_path )
+        
+    except OSError:
+        
+        gc.collect()
+        
+        try:
+            
+            os.remove( temp_path )
+            
+        except OSError:
+            
+            print( 'Could not delete the temporary file ' + temp_path )
+            
         
     
 def CopyFileLikeToFileLike( f_source, f_dest ):

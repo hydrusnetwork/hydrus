@@ -627,8 +627,14 @@ def ShowExceptionDefault( e ):
     
     message = ToString( etype.__name__ ) + ': ' + ToString( value ) + os.linesep + ToString( trace )
     
+    print( '' )
+    print( 'The following exception occured at ' + ConvertTimestampToPrettyTime( GetNow() ) + ':' )
+    
     try: print( message )
     except: print( repr( message ) )
+    
+    sys.stdout.flush()
+    sys.stderr.flush()
     
 ShowException = ShowExceptionDefault
 

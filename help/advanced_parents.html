@@ -15,13 +15,12 @@
 			<p>Another time, you might tag a file <i>character:eddard stark</i>, and then also have to type in <i>house stark</i> and then <i>series:game of thrones</i>. (you might also think <i>series:game of thrones</i> should actually be <i>series:a song of ice and fire</i>, but that is an issue for <a href="advanced_siblings.html">siblings</a>)</p>
 			<p>Drawing more relationships would make a significantly more complicated venn diagram, so let's draw a family tree instead:</p>
 			<p><img src="tag_parents_got.png" /></p>
-			<p>Wouldn't it be great if we could add these 'parent' tags at the same time?</p>
 			<h3>tag parents</h3>
-			<p>Let's define the relationship 'tag P is tag C's parent' as saying that tag P is the semantic superset/superclass of tag C. <b>All files that have C should have P, without exception.</b> When the user tries to add tag C to a file, tag P is added automatically.</p>
+			<p>Let's define the child-parent relationship 'C->P' as saying that tag P is the semantic superset/superclass of tag C. <b>All files that have C should also have P, without exception.</b> When the user tries to add tag C to a file, tag P is added automatically.</p>
 			<p>Let's expand our weapon example:</p>
 			<p><img src="tag_parents_firearms.png" /></p>
 			<p>In that graph, adding <i>ar-15</i> to a file would also add <i>semi-automatic rifle</i>, <i>rifle</i>, and <i>firearm</i>. Searching for <i>handgun</i> would return everything with <i>m1911</i> and <i>smith and wesson model 10</i>.</p>
-			<p>Although characters are an obvious and convenient step, we need to be careful to make sure we only link characters to series if they have unique names, and only if they are <i>inextricably</i> linked with their series. Series with crossovers and spinoffs (like CSI) make this difficult, so measure twice before you cut.</p>
+			<p>This can obviously get as complicated and autistic as you like, but be careful of being too confident—this is just a fun example, but is an AK-47 truly <i>always</i> an assault rifle? Some people would say no, and beyond its own intellectual neatness, what is the purpose of attempting to create such a complicated and 'perfect' tree? Of course you can create any sort of parent tags on your local tags or your own tag repositories, but this sort of thing can easily lead to arguments between reasonable people. I only mean to say, as someone who does a lot of tag work, to try not to create anything 'perfect', as it usually ends up wasting time. Act from need, not toward purpose.</p>
 			<h3>how you do it</h3>
 			<p>Go to <i>services->manage tag parents</i>:</p>
 			<p><img src="tag_parents_dialog.png" /></p>

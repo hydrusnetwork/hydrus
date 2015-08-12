@@ -7,6 +7,8 @@ ul.bulletpoint li { list-style: disc; margin: 1.0em 0em; }
 th { text-align: center; }
 tr { text-align: center; }
 
+.de { color: #d00 }
+.su { color: #0d0 }
 .dealwithit { color: #ff0000; text-shadow:
 1px 1px 0 #ff7f00,
 2px 2px 0 #ffff00,
