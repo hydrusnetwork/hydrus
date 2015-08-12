@@ -6,31 +6,50 @@
 	</head>
 	<body>
 		<div class="content">
-			<p><a href="introduction.html"><--- Back to the introduction</a></p>
+			<p><a href="introduction.html"><---- Back to the introduction</a></p>
 			<h3>downloading</h3>
-			<p>You can get the latest release at <a href="http://www.mediafire.com/hydrus">my mediafire page</a>.</p>
-			<p>I release a new version every Wednesday at 8pm EST and write an accompanying post on <a href="http://hydrus.tumblr.com/">my tumblr</a>. If you have an rss client, you can use <a href="http://hydrus.tumblr.com/rss">this</a> to keep up.</p>
+			<p>You can get the latest release at <a href="https://github.com/hydrusnetwork/hydrus/releases">my github releases page</a>.</p>
+			<p>I try to release a new version every Wednesday by 8pm EST and write an accompanying post on <a href="http://hydrus.tumblr.com/">my tumblr</a> and a sticky on my <a href="http://8ch.net/hydrus/index.html">8chan board</a>.</p>
 			<h3>installing</h3>
-			<p>If you want the easy solution, download the .exe installer. Run it, hit ok several times.</p>
-			<p>If you know what you are doing and want a little more control, get the .zip.</p>
-			<p>Hydrus stores all its data&#x2014;options, files, subscriptions, <i>everything</i>&#x2014;entirely inside its own directory. This means it needs access to itself, so don't put it in Program Files unless you are willing to run it as administrator every time. I usually go for something like D:\hydrus.</p>
-			<p>Also, make sure your hard drive has enough space for what you intend to store. If you have 100GB of stuff, your C drive might not be appropriate.</p>
-			<p>Because hydrus stores everything inside itself, it is entirely portable. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer will write some unavoidable uninstall registry stuff to windows that'll mess with this, but the client itself will run fine in a different location.</p>
+			<p>for Windows:</p>
+			<ul>
+				<li>If you want the easy solution, download the .exe installer. Run it, hit ok several times.</li>
+				<li>If you know what you are doing and want a little more control, get the .zip. Don't extract it to Program Files unless you are willing to run it as administrator every time. You probably want something like D:\hydrus.</li>
+			</ul>
+			<p>for OS X:</p>
+			<ul>
+				<li>If you want the easy solution, get the .dmg app. Open it and check the readme inside.</li>
+				<li>If you know what you are doing and want a little more control, get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like.</li>
+			</ul>
+			<p>for Linux:</p>
+			<ul>
+				<li>Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. I build on Ubuntu, so if you run something else, compatibility is hit and miss.</li>
+				<li>Try <a href="wine.html">running the Windows version in wine</a>.</li>
+				<li>If you use Arch Linux, you can check out the AUR package a user maintains <a href="https://aur4.archlinux.org/packages/hydrus/">here</a>.</li>
+			</ul>
+			<p>from source:</p>
+			<ul>
+				<li>If you know Python, you can <a href="running_from_source.html">run from source</a>.</li>
+			</ul>
+			<p>Hydrus stores all its data&#x2014;options, files, subscriptions, <i>everything</i>&#x2014;entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine in a different location.</p>
+			<p>When you install, make sure your destination hard drive has enough space for what you intend to store. If you have 100GB of stuff, your system drive might not be appropriate.</p>
 			<h3>updating</h3>
-			<p>You don't <i>have</i> to update every week, but I generally recommend it. The different versions of client and server can talk with each other until I increment the private <i>network protocol version</i> (which happens every couple of months), at which point you will get polite error messages if you try to connect to a newer server with an older client or <i>vice versa</i>. Read my tumblr posts and judge for yourself what you want to do.</p>
-			<p>If the client you want to update is running, remember to close it first!</p>
-			<p>If you use the installer, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.</p>
-			<p>If you extract, then just extract right on top of your current install and overwrite manually. Then run client.exe as normal.</p>
-			<p>All your files and settings and synchronisation progress will be remembered after the update. Unless the update specifically disables something, nothing will be deleted or lost.</p>
-			<p>Whenever you start the client, it checks the version of its database. If the database is old, it makes the appropriate changes, in sequential order (i.e. to do v70->v75, the client would first apply v70->v71, then v71->v72 and so on), until the database is caught up. If this process will take a while (like an hour, sometimes!) I will say so in my tumblr post.</p>
+			<p>You don't <i>have</i> to update every week, but I generally recommend it. If you leave it a while, updating multiple versions in a single step is usually fine, but I suggest skimming every intervening release post just in case there is an important update note in any of them (I usually <b>BOLD AND CAPITALISE</b> this sort of thing). If you run into an error doing a multiple update, try updating to every intervening version in turn (and please let me know, so I can fix the problem!).</p>
+			<p>Clients and servers of different versions can usually connect to one another, but every couple of months or so, I make a change to the network protocol, and you will get polite error messages if you try to connect to a newer server with an older client or <i>vice versa</i>. Read my release posts and judge for yourself what you want to do.</p>
+			<p>The update process:<p>
+			<ul>
+				<li>If the client or server you want to update is running, close it!</li>
+				<li>If you use the installer, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.</li>
+				<li>If you extract, then just extract the new version right on top of your current install and overwrite manually.</li>
+				<li>Start your client or server. It may take a few minutes to update its database.</li>
+			</ul>
+			<p>Unless the update specifically disables or reconfigures something, all your files and tags and settings will be remembered after the update.</p>
 			<h3>backing up</h3>
 			<p>You <i>do</i> backup, right? <i>Right</i>?</p>
-			<p>I run a backup every week so that if my computer blows up, I'll at worst have lost a few days' work. Before I had a backup regime, I once lost an entire drive with tens of thousands of files, and it didn't feel great at all. I only push backups so hard so you might avoid what I felt. ;_;</p>
+			<p>I run a backup every week so that if my computer blows up, I'll at worst have lost a few days' work. Before I did this, I once lost an entire drive with tens of thousands of files, and it didn't feel great at all. I only push backups so hard so you might avoid what I felt. ;_;</p>
 			<p>I use <a href="http://www.abstractspoon.com/tdl_resources.html">ToDoList</a> to remind me of my jobs for the day, including backup tasks, and <a href="http://sourceforge.net/projects/freefilesync/">FreeFileSync</a> to actually mirror over to an external usb drive.</p>
 			<p>If you want to backup hydrus, you can either go <i>database->create database backup</i> or just shut the client down and copy the entire install directory somewhere.</p>
 			<p>I recommend you do it before you update, just in case there is a problem with my code that breaks your database. If that happens, please <a href="contact.html">contact me</a>, describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.</p>
-			<h3>linux and os x</h3>
-			<p>I now make OS X and Linux releases. They are not as good as the Windows releases because I am not as experienced in their OSs' weirdnesses. When I find time, I improve them.</p>
 			<p class="right"><a href="getting_started_files.html">Let's import some files! ----></a></p>
 		</div>
 	</body>

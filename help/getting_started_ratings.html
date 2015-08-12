@@ -7,51 +7,23 @@
 	<body>
 		<div class="content">
 			<p><a href="getting_started_tags.html"><--- Back to tags</a></p>
-			<p class="warning">For now, this is local only! It is planned to add ratings repositories so people can share ratings, but I am still thinking about the best technical way to do it!</p>
-			<h3>what is the difference between tags and ratings?</h3>
-			<p>Tags describe a file. They are words, usually, like 'funny' or 'sexy' or 'wallpaper'. Ratings value a file. They are numbers, usually, like '3' for '3 out of 5 stars', or '0' or '1' for 'dislike' and 'like'.</p>
 			<p>The hydrus client supports two kinds of ratings: <i>like/dislike</i> and <i>numerical</i>. Let's start with the simpler one:</p>
 			<h3>like/dislike</h3>
-			<p>This sets one of two values to a file, the names for which you can set to whatever you want:</p>
+			<p>This can set one of two values to a file. It does not have to represent like or dislike—it can be anything you want. Go to <i>services->manage services->local->like/dislike ratings</i>:</p>
 			<p><img src="ratings_like.png" /></p>
+			<p>You can set a variety of colours and shapes.</p>
 			<h3>numerical</h3>
 			<p>This is '3 out of 5 stars' or '8/10'. You can set the range to whatever whole numbers you like:</p>
 			<p><img src="ratings_numerical.png" /></p>
-			<p>You can change these limits at a later date, and the database will remember existing ratings appropriately. Going from a five star rating to a ten star rating will make anything rated 3/5 become 6/10. Going back again would make a 9/10 become 4.5/5.</p>
+			<p>As well as the shape and colour options, you can set how many 'stars' to display and whether 0/10 is permitted.</p>
+			<p>If you change the star range at a later date, any existing ratings will be 'stretched' across the new range. As values are collapsed to the nearest integer, this is best done for scales that are multiples. 2/5 will neatly become 4/10 on a zero-allowed service, for instance, and 0/4 can nicely become 1/5 if you disallow zero ratings in the same step. If you didn't intuitively understand that, just don't touch the number of stars or zero rating checkbox after you have created the numerical rating service!</p>
 			<h3>now what?</h3>
-			<p>Once you have sorted out some services, you can edit ratings for one or more files with F4:</p>
-			<p><img src="ratings_dialog.png" /></p>
-			<p>If you hit F4 on one file, the dialog will show that file's ratings. If you hit F4 on several files, it'll try its best to show you a summary of all the files' ratings. When you set new ratings with this dialog, the ratings will be applied to all files.</p>
-			<h3>ratings filter</h3>
-			<p class="warning">This runs fine, but I think the <i>process</i> needs work. For now, only do it if you have a lot of files to rate, so you don't run out of potential comparisons!</p>
-			<p>If you would like to rate many files quickly, the client now lets you 'filter' them, like with the inbox/archive filter. You select it from some thumbnails' right-click menu as usual.</p>
-			<p><img src="ratings_menu.png" /></p>
-			<p>If you select a 'like' ratings service, it will show a normal fullscreen filter with the same controls as the inbox/archive filter, with:</p>
-			<ul>
-				<li>Left-click or space: <b>set rating to 'like', move on</b></li>
-				<li>Right-click or delete: <b>set rating to 'dislike', move on</b></li>
-				<li>Arrow key up: <b>Skip this file, move on</b></li>
-				<li>Middle-click or backspace: <b>I didn't mean that, go back one</b></li>
-				<li>Escape, return, or F12: <b>stop filtering now</b></li>
-			</ul>
-			<p>If you select a 'numerical' ratings filter, the menu will launch a new fullscreen window that will show already rated files beside the images you wish to rate, like so:</p>
-			<p><img src="ratings_filter.png" /></p>
-			<p>Once it has exhausted currently rated files, it will try to compare the unrated files with each other. The current controls are:</p>
-			<ul>
-				<li>Arrow key left or left mouse button: <b>the left image is better</b></li>
-				<li>Arrow key right or right mouse button: <b>the right image is better</b></li>
-				<li>Arrow key down or middle mouse button: <b>the files are about equal</b></li>
-				<li>Arrow key up or space: <b>skip decision, and show another random comparison</b></li>
-				<li>Backspace: <b>I didn't mean that, go back one</b></li>
-				<li>Escape or return: <b>stop filtering now</b></li>
-			</ul>
-			<p>Every small decision you make will give the client another clue about how good a file is; e.g. if you say a file is better than a 7/10 file, it must be either 8/10, 9/10 or 10/10. The client will later show you a file in this range to narrow it down further.</p>
-			<h3>so, what now?</h3>
-			<p>Ratings will show in the preview screen and fullscreen views, like so:</p>
-			<p><img src="ratings_preview.png" /></p>
-			<p>You can search with system:rating, and sort in the normal manner:</p>
-			<p><img src="ratings_sort.png" /></p>
-			<p>And that's it! For remote ratings, you'll set what you believe the rating should be, and anything you haven't rated personally will be given the average of what everyone else thinks.</p>
+			<p>Ratings are displayed in the top-right of the media viewer:</p>
+			<p><img src="ratings_ebola_chan.png" /></p>
+			<p>Hovering over each control will pop up its name, in case you forget which is which. You can set then them with a left- or right-click. Like/dislike and numerical have slightly different click behaviour, so have a play with them to get their feel. Pressing F4 on a selection of thumbnails will open a dialog with a very similar layout, which will let you set the same rating to many files simultaneously.</p>
+			<p>Once you have some ratings set, you can search for them using system:rating, which produces this dialog:</p>
+			<p><img src="ratings_system_pred.png" /></p>
+			<p>On my own client, I find it useful to have several like/dislike ratings set up as one-click pseudo-tags, like the 'OP images' above.</p>
 			<p class="right"><a href="index.html">Go back to the index ---></a></p>
 		</div>
 	</body>

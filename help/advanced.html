@@ -6,21 +6,20 @@
 	</head>
 	<body>
 		<div class="content">
+			<h3>this is non-comprehensive</h3>
+			<p>I am always changing and adding little things. The best way to learn is just to look around. If you think a shortcut should probably do something, try it out! If you can't find something, let me know and I'll try to add it!</p>
 			<h3>searching with wildcards</h3>
 			<p>The autocomplete tag dropdown supports wildcard searching with '*'.</p>
 			<p><img src="wildcard_gelion.png"/></p>
-			<p>The '*' will match <i>any</i> number of characters. Every normal search has a secret '*' on the end that you don't see, which is how full words get matched from you only typing in a few letters.</p>
-			<p>This is useful when you can only remember part of a word, or can't spell its first half. You can put the '*' anywhere, but you may want to experiment to get used to the exact way these searches work. Some results can be surprising!</p>
+			<p>The '*' will match any number of characters. Every normal autocomplete search has a secret '*' on the end that you don't see, which is how full words get matched from you only typing in a few letters.</p>
+			<p>This is useful when you can only remember part of a word, or can't spell part of it. You can put the '*' anywhere, but you should experiment to get used to the exact way these searches work. Some results can be surprising!</p>
 			<p><img src="wildcard_vage.png"/></p>
-			<p>You can select the special predicate inserted at the top of your autocomplete results (the highlighted '*vagelion' and '*va*ge*' above), and it will work like any other predicate. <b>It will return all files that match that wildcard,</b> i.e. every file for every other tag in the current dropdown list.</p>
+			<p>You can select the special predicate inserted at the top of your autocomplete results (the highlighted '*gelion' and '*va*ge*' above). <b>It will return all files that match that wildcard,</b> i.e. every file for every other tag in the dropdown list.</p>
 			<p>This is particularly useful if you have a number of files with commonly structured over-informationed tags, like this:</p>
 			<p><img src="wildcard_cool_pic.png"/></p>
 			<p>In this case, selecting the 'title:cool pic*' predicate will return all three images in the same search, where you can conveniently give them some more-easily searched tags like 'series:cool pic' and 'page:1', 'page:2', 'page:3'.</p>
-			<h3>using flash in fullscreen view</h3>
-			<p>Flash files are sometimes interested in inputs (like spacebar or mouse-scrollwheel) that mean something to hydrus's fullscreen view, and the libraries I have to use to show flash don't handle these events like normal windows. I now have it set so if your mouse is inside the flash window, the input will go to the flash, and if it is outside, it goes to the fullscreen window.</p>
-			<p>So, if you want to play a flash game in fullscreen, keep your mouse inside the window.</p>
 			<h3>exclude deleted files</h3>
-			<p>In the client's options is a checkbox to exclude deleted files. It recurs pretty much anywhere you can import, under 'advanced import options'. If you select this, any file you ever deleted will be excluded from all future remote searches and import operations. This can stop you from importing/downloading and filtering out the same bad files several times over. The default is off. You may wish to have it set one way most of the time, but switch it the other just for one specific import or search.</p>
+			<p>In the client's options is a checkbox to exclude deleted files. It recurs pretty much anywhere you can import, under 'import file options'. If you select this, any file you ever deleted will be excluded from all future remote searches and import operations. This can stop you from importing/downloading and filtering out the same bad files several times over. The default is off. You may wish to have it set one way most of the time, but switch it the other just for one specific import or search.</p>
 			<h3>tag censorship</h3>
 			<p>If you do not like a particular tag or namespace, you can easily hide it with <i>services->manage tag censorship</i>:</p>
 			<p><img src="tag_censorship.png" /></p>
@@ -42,21 +41,19 @@
 			<h3>tag archives</h3>
 			<p>A user told me he had scraped all of danbooru's tags, and we got to discussing if his data could be integrated with hydrus.</p>
 			<p>There are some technical limitations that prohibit rawly importing that data into a hydrus tag repository (our different systems use different file hash standards), but I figured it would be possible to import his data into a hydrus <i>client</i>, at least for any locally stored files.</p>
-			<p>After a bit of planning, I developed the concept of a <i>tag archive</i>, which is just a big and efficiently indexed database of hashes and tags that you can share very easily. Storing a tag archive in the right directory in your client's database allows you to <i>synchronise</i> with that archive, importing whatever tags it thinks your files should have to whatever tag service you wish.</p>
+			<p>I developed <i>hydrus tag archives</i>, which are just efficiently indexed databases of hashes and tags. They are normal files, external to hydrus, that you can ftp or move around like any other. Putting a tag archive in the right directory in your client's database allows you to <i>synchronise</i> with that archive, importing whatever tags it thinks your files should have to whatever tag service you want.</p>
 			<p>The folder to place archives is <i>install_dir/db/client_archives</i>. You can get some archives that I have prepared <a href="http://www.mediafire.com/hydrus">here</a>.</p>
 			<p>Once you have put something in your archive folder, start the client, and then go <i>services->manage services</i> and browse to your local tag service or a remote tag repository. You should see a box for managing tag archives.</p>
 			<p><img src="tag_archives.png" /></p>
-			<p>Tag archive sync works a bit like the advanced tag options when you download from a booru or other gallery service; you select the namespaces the archive offers that you are interested in, and then, when you click OK, the client will search the archive for your local files. It will fetch the archive's tags for those files, filter according to your namespace selection, and then add or pend the tags as appropriate, just as if you had entered them in the manage tags dialog.</p>
+			<p>Tag archive sync works a bit like the import tag options when you download from a booru or other gallery service; you select the namespaces the archive offers that you are interested in, and when you click OK, the client will search the archive for your local files. It will fetch the archive's tags for those files, filter according to your namespace selection, and then add or pend the tags as appropriate, just as if you had entered them in the manage tags dialog.</p>
 			<p>New files that you import will also be checked against your archive syncs, keeping you up to date.</p>
-			<p>Be careful with this tool! If you have tens of thousands of files and sync with an archive that has tens of millions of mappings, you may end up adding or pending tens of thousands of tags. It may take several minutes to initialise the sync, as well. Make sure you get your namespaces set exactly how you want before you click OK on the dialog.</p>
+			<p>Be careful with this tool! If you have tens of thousands of files and sync with an archive that has tens of millions of mappings, you may end up adding a whole lot of tags. It may take several minutes to initialise the sync as well. Make sure your namespaces are set exactly how you want before you click OK on the dialog.</p>
 			<h3>custom filter</h3>
 			<p>Once you are comfortable with the client's tagging and rating, you may be interested in performing a <i>custom filter</i>, which is essentially the fullscreen browser with custom shortcuts. You select it from the regular thumbnail right-click menu. First, it will show you a dialog:</p>
-			<p><img src="custom_filter_parent.png" /></p>
-			<p>Which has a sub-dialog to add and edit actions:</p>
-			<p><img src="custom_filter_child.png" /></p>
+			<p><img src="custom_filter.png" /></p>
 			<p>You can reassign the default shortcuts for regular things, like archive/delete and opening tag/ratings dialogs, and also add shortcuts for adding/removing a tag or setting/unsetting a rating. Shortcuts do not yet combine; they overwrite.</p>
-			<p>On the left of the parent dialog, you can save and load favourite patterns of shortcuts.</p>
 			<p>Once you hit ok on the parent dialog, the fullscreen browser will launch. Navigation and zooming happens as normal with the mouse and keyboard, unless you have overwritten a shortcut! Hitting any of the shortcuts you declared should carry out the action. Tags will pend/rescind pend or petition/rescind petition or add/delete as appropriate to the type of tag service and the tag's status for the particular file.</p>
+			<p>I plan to improve custom filters a lot in future. Let me know what you think!</p>
 			<h3>finding duplicates</h3>
 			<p>system:similar_to takes two arguments: a hash and an integer representing max hamming distance (0 means exactly the same, 64 means everything. 5 is good for finding dupes). You can quick-select it from a file's right-click menu. It returns all images that are <i>very</i> similar to the hash. For example:</p>
 			<p>Here are a couple of duplicates, found despite their different resolution.</p>
@@ -70,7 +67,7 @@
 			<p>At some point, you will probably encounter a PIL error when importing a file. PIL is the Python Image Library, the code I use to manipulate image files. Some files are kooky, and just won't load with it. I can't fix these errors, since PIL is not mine. Just gotta deal with it.</p>
 			<p>If the PIL error'ing file is one you particularly care about, I suggest you import it into photoshop or similar and save it again. Photoshop should be clever enough to parse the file's weirdness, and then it'll hopefully save again to a simpler format that PIL, and hence the client, will be able to understand.</p>
 			<h3>busted up gifs</h3>
-			<p>Animated gifs are a real pain in the neck. There are several loopholes in the standard that permit odd palettes and colourspaces, and PIL has a hard time parsing it all. I try my best to compensate, but some still break for reasons I can't fathom.</p>
+			<p>Animated gifs are a real pain in the neck. The standard permits odd palettes and colourspaces, and PIL has a hard time parsing it all. I try my best to compensate, but some still break for reasons I can't fathom. I have fixed most of this on Windows by moving to OpenCV for gif rendering, but it still affects Linux and OS X.</p>
 			<p>So, some gifs will have a coloured first frame but grey frames thereafter; or they will have odd washy noise all over; or they will just be black. The file isn't broken, the client is just looking at it wrong.</p>
 			<h3>setting a password</h3>
 			<p>the client offers a very simple password system, enough to keep out noobs. You can set it at <i>database->set a password</i>. It will thereafter ask for the password every time you start the program, and will not open without it. However none of the database is encrypted, and someone with enough enthusiasm or a tool and access to your computer can still very easily see what files you have. The password is mainly to stop idle snoops checking your images if you are away from your machine.</p>
@@ -82,9 +79,7 @@
 			<p>And here it will attempt to load from the client:</p>
 			<p><img src="http://127.0.0.1:45865/file?hash=6c0ae65894c7a5ffd686f54cc052326b8ea188a691a1895b2f88b7c60a07f13f" /></p>
 			<p>For more information, check the image's two urls. It will of course only display in the second case if you import it to the client and have it running when you load this page. You can copy the second image's url and replace the hash with that of any other file in your collection and it should work.</p>
-			<p>If you run multiple copies of the client, you can change the port number in options.</p>
-			<h3>a note concerning memory usage</h3>
-			<p>the client does a lot of caching. It eats plenty of memory, and if you go crazy you can crash the program. A default-sized 4000-strong thumbnail pane is really just a 250MB-ish bitmap once you've scrolled through it all, so leaving a dozen large searches open will start pushing your OS's 32-bit upper memory limits. If you find the client crashing, slow down a little or reduce the max cache sizes and thumbnail dimensions in options.</p>
+			<p>If you run multiple copies of the client, their local ports will clash. You can change the port number in options.</p>
 		</div>
 	</body>
 </html>
