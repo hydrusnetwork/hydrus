@@ -120,6 +120,11 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusController.HydrusController.OnInit( self )
             
+            if HydrusData.IsAlreadyRunning():
+                
+                raise Exception( 'It looks like this server is already running!' )
+                
+            
             self.InitDB()
             
             self.Bind( wx.EVT_MENU, self.EventExit, id=wx.ID_EXIT )

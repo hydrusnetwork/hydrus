@@ -4,7 +4,6 @@ import ClientFiles
 import ClientMedia
 import ClientRatings
 import collections
-import dircache
 import hashlib
 import httplib
 import itertools
@@ -1170,21 +1169,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Backup( self, path ):
         
-        deletee_filenames = dircache.listdir( path )
+        deletee_filenames = os.listdir( path )
         
         for deletee_filename in deletee_filenames:
-
-            def make_files_deletable( function_called, path, traceback_gumpf ):
-                
-                os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                
-                function_called( path ) # try again
-                
             
             deletee_path = path + os.path.sep + deletee_filename
             
-            if os.path.isdir( deletee_path ): shutil.rmtree( deletee_path, onerror = make_files_deletable )
-            else: os.remove( deletee_path )
+            HydrusData.DeletePath( deletee_path )
             
         
         shutil.copy( self._db_path, path + os.path.sep + 'client.db' )
@@ -1660,10 +1651,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                    except: pass
-                    
-                    os.remove( path )
+                    HydrusData.DeletePath( path )
                     
                 except OSError:
                     
@@ -1707,8 +1695,15 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                if os.path.exists( path ): os.remove( path )
-                if os.path.exists( resized_path ): os.remove( resized_path )
+                if os.path.exists( path ):
+                    
+                    HydrusData.DeletePath( path )
+                    
+                
+                if os.path.exists( resized_path ):
+                    
+                    HydrusData.DeletePath( resized_path )
+                    
                 
             except OSError:
                 
@@ -1770,16 +1765,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                    
-                except:
-                    
-                    pass
-                    
-                
-                try:
-                    
-                    os.remove( path )
+                    HydrusData.DeletePath( path )
                     
                 except OSError:
                     
@@ -3987,7 +3973,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 shutil.copy( path, dest_path )
                 
-                try: os.chmod( dest_path, stat.S_IREAD )
+                try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
                 except: pass
                 
             
@@ -4089,7 +4075,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._tag_archives = {}
         
-        for filename in dircache.listdir( HC.CLIENT_ARCHIVES_DIR ):
+        for filename in os.listdir( HC.CLIENT_ARCHIVES_DIR ):
             
             if filename.endswith( '.db' ):
                 
@@ -4867,7 +4853,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( i, path ) in enumerate( thumbnail_paths ):
                 
-                os.remove( path )
+                HydrusData.DeletePath( path )
                 
                 job_key.SetVariable( 'popup_text_1', prefix + 'done ' + HydrusData.ConvertIntToPrettyString( i ) )
                 
@@ -5083,48 +5069,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
-        
-        if version == 119:
-            
-            i = 0
-            
-            for path in ClientFiles.IterateAllFilePaths():
-                
-                try:
-                    
-                    filename = os.path.basename( path )
-                    
-                    ( hash_encoded, ext ) = filename.split( '.' )
-                    
-                    hash = hash_encoded.decode( 'hex' )
-                    
-                    hash_id = self._GetHashId( hash )
-                    
-                    if ext not in ( 'flv', 'mp4', 'wmv', 'mkv', 'webm' ): continue
-                    
-                    ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
-                    
-                    self._c.execute( 'UPDATE files_info SET duration = ?, num_frames = ? WHERE hash_id = ?;', ( duration, num_frames, hash_id ) )
-                    
-                    thumbnail = HydrusFileHandling.GenerateThumbnail( path )
-                    
-                    thumbnail_path = ClientFiles.GetExpectedThumbnailPath( hash )
-                    
-                    with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
-                    
-                    phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
-                    
-                    self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
-                    
-                    i += 1
-                    
-                    if i % 100 == 0: HydrusGlobals.pubsub.pub( 'splash_set_text', 'creating video thumbs: ' + HydrusData.ConvertIntToPrettyString( i ) )
-                    
-                except:
-                    print( traceback.format_exc())
-                    print( 'When updating to v119, ' + path + '\'s thumbnail or phash could not be calculated.' )
-                
-            
         
         if version == 121:
             
@@ -5518,11 +5462,11 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                 
             
-            for filename in dircache.listdir( HC.CLIENT_UPDATES_DIR ):
+            for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
                 
                 path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
                 
-                os.remove( path )
+                HydrusData.DeletePath( path )
                 
             
         
@@ -5552,7 +5496,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            for filename in dircache.listdir( HC.CLIENT_UPDATES_DIR ):
+            for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
                 
                 path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
                 
@@ -5639,6 +5583,33 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'yande.re', ClientDefaults.GetDefaultBoorus()[ 'yande.re' ] ) )
             
+        
+        if version == 169:
+            
+            result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( '', ) ).fetchone()
+            
+            if result is not None:
+                
+                ( tag_id, ) = result
+                
+                self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
+                
+            
+            #
+            
+            for ( i, path ) in enumerate( ClientFiles.IterateAllFilePaths() ):
+                
+                try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                except: pass
+                
+                if i % 100 == 0:
+                    
+                    HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating file permissions ' + HydrusData.ConvertIntToPrettyString( i ) )
+                    
+                
+            
+        
+        HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
@@ -5984,13 +5955,15 @@ class DB( HydrusDB.HydrusDB ):
                     
                     service_key_hex = server_service_key.encode( 'hex' )
                     
-                    all_update_filenames = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+                    all_update_filenames = os.listdir( HC.CLIENT_UPDATES_DIR )
                     
                     for filename in all_update_filenames:
                         
                         if filename.startswith( service_key_hex ):
                             
-                            os.remove( HC.CLIENT_UPDATES_DIR + os.path.sep + filename )
+                            path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                            
+                            HydrusData.DeletePath( path )
                             
                         
                     
@@ -6060,13 +6033,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_key_hex = service_key.encode( 'hex' )
                 
-                all_update_filenames = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+                all_update_filenames = os.listdir( HC.CLIENT_UPDATES_DIR )
                 
                 for filename in all_update_filenames:
                     
                     if filename.startswith( service_key_hex ):
                         
-                        os.remove( HC.CLIENT_UPDATES_DIR + os.path.sep + filename )
+                        path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                        
+                        HydrusData.DeletePath( path )
                         
                     
                 
@@ -6236,23 +6211,15 @@ class DB( HydrusDB.HydrusDB ):
     
     def RestoreBackup( self, path ):
         
-        deletee_filenames = dircache.listdir( HC.DB_DIR )
+        deletee_filenames = os.listdir( HC.DB_DIR )
         
         for deletee_filename in deletee_filenames:
-            
-            def make_files_deletable( function_called, path, traceback_gumpf ):
-                
-                os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                
-                function_called( path ) # try again
-                
             
             if deletee_filename.startswith( 'client' ):
                 
                 deletee_path = HC.DB_DIR + os.path.sep + deletee_filename
                 
-                if os.path.isdir( deletee_path ): shutil.rmtree( deletee_path, onerror = make_files_deletable )
-                else: os.remove( deletee_path )
+                HydrusData.DeletePath( deletee_path )
                 
             
         

@@ -2,7 +2,6 @@ import ClientConstants as CC
 import ClientFiles
 import collections
 import datetime
-import dircache
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetworking
@@ -2141,6 +2140,8 @@ class UndoManager( object ):
         self._inverted_commands = []
         self._current_index = 0
         
+        self._lock = threading.Lock()
+        
         HydrusGlobals.pubsub.sub( self, 'Undo', 'undo' )
         HydrusGlobals.pubsub.sub( self, 'Redo', 'redo' )
         
@@ -2237,80 +2238,93 @@ class UndoManager( object ):
     
     def AddCommand( self, action, *args, **kwargs ):
         
-        inverted_action = action
-        inverted_args = args
-        inverted_kwargs = kwargs
-        
-        if action == 'content_updates':
+        with self._lock:
             
-            ( service_keys_to_content_updates, ) = args
+            inverted_action = action
+            inverted_args = args
+            inverted_kwargs = kwargs
             
-            service_keys_to_content_updates = self._FilterServiceKeysToContentUpdates( service_keys_to_content_updates )
+            if action == 'content_updates':
+                
+                ( service_keys_to_content_updates, ) = args
+                
+                service_keys_to_content_updates = self._FilterServiceKeysToContentUpdates( service_keys_to_content_updates )
+                
+                if len( service_keys_to_content_updates ) == 0: return
+                
+                inverted_service_keys_to_content_updates = self._InvertServiceKeysToContentUpdates( service_keys_to_content_updates )
+                
+                if len( inverted_service_keys_to_content_updates ) == 0: return
+                
+                inverted_args = ( inverted_service_keys_to_content_updates, )
+                
+            else: return
             
-            if len( service_keys_to_content_updates ) == 0: return
+            self._commands = self._commands[ : self._current_index ]
+            self._inverted_commands = self._inverted_commands[ : self._current_index ]
             
-            inverted_service_keys_to_content_updates = self._InvertServiceKeysToContentUpdates( service_keys_to_content_updates )
+            self._commands.append( ( action, args, kwargs ) )
             
-            if len( inverted_service_keys_to_content_updates ) == 0: return
+            self._inverted_commands.append( ( inverted_action, inverted_args, inverted_kwargs ) )
             
-            inverted_args = ( inverted_service_keys_to_content_updates, )
+            self._current_index += 1
             
-        else: return
-        
-        self._commands = self._commands[ : self._current_index ]
-        self._inverted_commands = self._inverted_commands[ : self._current_index ]
-        
-        self._commands.append( ( action, args, kwargs ) )
-        
-        self._inverted_commands.append( ( inverted_action, inverted_args, inverted_kwargs ) )
-        
-        self._current_index += 1
-        
-        HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+            HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+            
         
     
     def GetUndoRedoStrings( self ):
         
-        ( undo_string, redo_string ) = ( None, None )
-        
-        if self._current_index > 0:
+        with self._lock:
             
-            undo_index = self._current_index - 1
+            ( undo_string, redo_string ) = ( None, None )
             
-            ( action, args, kwargs ) = self._commands[ undo_index ]
-            
-            if action == 'content_updates':
+            if self._current_index > 0:
                 
-                ( service_keys_to_content_updates, ) = args
+                undo_index = self._current_index - 1
                 
-                undo_string = 'undo ' + HydrusData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                ( action, args, kwargs ) = self._commands[ undo_index ]
                 
-            
-        
-        if len( self._commands ) > 0 and self._current_index < len( self._commands ):
-            
-            redo_index = self._current_index
-            
-            ( action, args, kwargs ) = self._commands[ redo_index ]
-            
-            if action == 'content_updates':
-                
-                ( service_keys_to_content_updates, ) = args
-                
-                redo_string = 'redo ' + HydrusData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                if action == 'content_updates':
+                    
+                    ( service_keys_to_content_updates, ) = args
+                    
+                    undo_string = 'undo ' + HydrusData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                    
                 
             
-        
-        return ( undo_string, redo_string )
+            if len( self._commands ) > 0 and self._current_index < len( self._commands ):
+                
+                redo_index = self._current_index
+                
+                ( action, args, kwargs ) = self._commands[ redo_index ]
+                
+                if action == 'content_updates':
+                    
+                    ( service_keys_to_content_updates, ) = args
+                    
+                    redo_string = 'redo ' + HydrusData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                    
+                
+            
+            return ( undo_string, redo_string )
+            
         
     
     def Undo( self ):
         
-        if self._current_index > 0:
+        action = None
+        
+        with self._lock:
             
-            self._current_index -= 1
-            
-            ( action, args, kwargs ) = self._inverted_commands[ self._current_index ]
+            if self._current_index > 0:
+                
+                self._current_index -= 1
+                
+                ( action, args, kwargs ) = self._inverted_commands[ self._current_index ]
+                
+        
+        if action is not None:
             
             wx.GetApp().WriteSynchronous( action, *args, **kwargs )
             
@@ -2320,11 +2334,19 @@ class UndoManager( object ):
     
     def Redo( self ):
         
-        if len( self._commands ) > 0 and self._current_index < len( self._commands ):
+        action = None
+        
+        with self._lock:
             
-            ( action, args, kwargs ) = self._commands[ self._current_index ]
+            if len( self._commands ) > 0 and self._current_index < len( self._commands ):
+                
+                ( action, args, kwargs ) = self._commands[ self._current_index ]
+                
+                self._current_index += 1
+                
             
-            self._current_index += 1
+        
+        if action is not None:
             
             wx.GetApp().WriteSynchronous( action, *args, **kwargs )
             

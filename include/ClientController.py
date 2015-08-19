@@ -19,6 +19,7 @@ import ClientGUI
 import ClientGUIDialogs
 import ClientLocalServer
 import os
+import psutil
 import random
 import sqlite3
 import subprocess
@@ -151,9 +152,19 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyIdle( self ):
         
-        if self._options[ 'idle_period' ] == 0: return False
+        if self._options[ 'idle_period' ] == 0:
+            
+            return False
+            
         
-        return HydrusData.GetNow() - self._timestamps[ 'last_user_action' ] > self._options[ 'idle_period' ]
+        cpu_times = psutil.cpu_percent( percpu = True )
+        
+        if True in ( cpu_time > 50.0 for cpu_time in cpu_times ):
+            
+            return False
+            
+        
+        return HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + self._options[ 'idle_period' ] )
         
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
@@ -190,41 +201,6 @@ class Controller( HydrusController.HydrusController ):
                     if hashlib.sha256( dlg.GetValue() ).digest() == self._options[ 'password' ]: break
                     
                 else: raise HydrusExceptions.PermissionException()
-                
-            
-        
-    
-    def InitDB( self ):
-        
-        db_initialised = False
-        
-        while not db_initialised:
-            
-            try:
-                
-                HydrusController.HydrusController.InitDB( self )
-                
-                db_initialised = True
-                
-            except HydrusExceptions.DBAccessException as e:
-                
-                try: print( HydrusData.ToString( e ) )
-                except: print( repr( HydrusData.ToString( e ) ) )
-                
-                def wx_code():
-                    
-                    message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
-                    message += os.linesep * 2
-                    message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
-                    
-                    with ClientGUIDialogs.DialogYesNo( None, message, 'There was a problem connecting to the database.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
-                        else: raise HydrusExceptions.PermissionException()
-                        
-                    
-                
-                HydrusThreading.CallBlockingToWx( wx_code )
                 
             
         
@@ -566,6 +542,35 @@ class Controller( HydrusController.HydrusController ):
     def THREADBootEverything( self ):
         
         try:
+            
+            while HydrusData.IsAlreadyRunning():
+                
+                HydrusGlobals.pubsub.pub( 'splash_set_text', 'client already running' )
+                
+                def wx_code():
+                    
+                    message = 'It looks like another instance of this client is already running, so this instance cannot start.'
+                    message += os.linesep * 2
+                    message += 'If the old instance is closing and does not quit for a _very_ long time, it is usually safe to force-close it from task manager.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( None, message, 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
+                        
+                        if dlg.ShowModal() != wx.ID_YES:
+                            
+                            raise HydrusExceptions.PermissionException()
+                            
+                        
+                    
+                
+                HydrusThreading.CallBlockingToWx( wx_code )
+                
+                for i in range( 10, 0, -1 ):
+                    
+                    HydrusGlobals.pubsub.pub( 'splash_set_text', 'waiting ' + str( i ) + ' seconds' )
+                    
+                    time.sleep( 1 )
+                    
+                
             
             HydrusGlobals.pubsub.pub( 'splash_set_text', 'booting db' )
             

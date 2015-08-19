@@ -201,7 +201,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 shortcuts = dlg.GetShortcuts()
                 
-                media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ) )
+                media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ), for_media_viewer = True )
                 
                 if len( media_results ) > 0:
                     
@@ -303,7 +303,22 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _FullScreen( self, first_media = None ):
         
-        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL )
+        if self._focussed_media is not None:
+            
+            if HC.options[ 'mime_media_viewer_actions' ][ self._focussed_media.GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+                
+                hash = self._focussed_media.GetHash()
+                mime = self._focussed_media.GetMime()
+                
+                path = ClientFiles.GetFilePath( hash, mime )
+                
+                HydrusFileHandling.LaunchFile( path )
+                
+                return
+                
+            
+        
+        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, for_media_viewer = True )
         
         if len( media_results ) > 0:
             
@@ -318,7 +333,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _Filter( self ):
         
-        media_results = self.GenerateMediaResults( has_location = CC.LOCAL_FILE_SERVICE_KEY, selected_media = set( self._selected_media ) )
+        media_results = self.GenerateMediaResults( has_location = CC.LOCAL_FILE_SERVICE_KEY, selected_media = set( self._selected_media ), for_media_viewer = True )
         
         if len( media_results ) > 0:
             

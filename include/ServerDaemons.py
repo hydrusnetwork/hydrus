@@ -1,5 +1,4 @@
 import collections
-import dircache
 import hashlib
 import httplib
 import HydrusConstants as HC

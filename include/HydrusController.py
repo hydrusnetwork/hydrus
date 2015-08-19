@@ -85,6 +85,8 @@ class HydrusController( wx.App ):
         
         self.SetAssertMode( wx.PYAPP_ASSERT_SUPPRESS )
         
+        HydrusData.IsAlreadyRunning()
+        
         self._currently_doing_pubsub = False
         
         self._caches = {}

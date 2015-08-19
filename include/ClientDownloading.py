@@ -179,6 +179,112 @@ def GetYoutubeFormats( youtube_url ):
     
     return info
     
+def THREADDownloadURL( job_key, url, url_string ):
+    
+    job_key.SetVariable( 'popup_text_1', url_string + ' - initialising' )
+    
+    def hook( gauge_range, gauge_value ):
+        
+        if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
+        else: text = url_string + ' - ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range )
+        
+        job_key.SetVariable( 'popup_text_1', text )
+        job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
+        
+    
+    ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+    
+    try:
+        
+        wx.GetApp().DoHTTP( HC.GET, url, temp_path = temp_path, report_hooks = [ hook ] )
+        
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
+        
+        ( result, hash ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path )
+        
+    finally:
+        
+        HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+        
+    
+    if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
+        
+        if result == CC.STATUS_SUCCESSFUL:
+            
+            job_key.SetVariable( 'popup_text_1', url_string )
+            
+        else:
+            
+            job_key.SetVariable( 'popup_text_1', url_string + ' was already in the database!' )
+            
+        
+        job_key.SetVariable( 'popup_files', { hash } )
+        
+    elif result == CC.STATUS_DELETED:
+        
+        job_key.SetVariable( 'popup_text_1', url_string + ' had already been deleted!' )
+        
+    
+    job_key.Finish()
+    
+def Parse4chanPostScreen( html ):
+    
+    soup = bs4.BeautifulSoup( html )
+    
+    title_tag = soup.find( 'title' )
+    
+    if title_tag.string == 'Post successful!': return ( 'success', None )
+    elif title_tag.string == '4chan - Banned':
+        
+        print( repr( soup ) )
+        
+        text = 'You are banned from this board! html written to log.'
+        
+        HydrusData.ShowText( text )
+        
+        return ( 'big error', text )
+        
+    else:
+        
+        try:
+            
+            problem_tag = soup.find( id = 'errmsg' )
+            
+            if problem_tag is None:
+                
+                try: print( repr( soup ) )
+                except: pass
+                
+                text = 'Unknown problem; html written to log.'
+                
+                HydrusData.ShowText( text )
+                
+                return ( 'error', text )
+                
+            
+            problem = HydrusData.ToString( problem_tag )
+            
+            if 'CAPTCHA' in problem: return ( 'captcha', None )
+            elif 'seconds' in problem: return ( 'too quick', None )
+            elif 'Duplicate' in problem: return ( 'error', 'duplicate file detected' )
+            else: return ( 'error', problem )
+            
+        except: return ( 'error', 'unknown error' )
+        
+    
+def ParsePageForURLs( html, starting_url ):
+    
+    soup = bs4.BeautifulSoup( html )
+    
+    all_links = soup.find_all( 'a' )
+    
+    links_with_images = [ link for link in all_links if len( link.find_all( 'img' ) ) > 0 ]
+    
+    urls = [ urlparse.urljoin( starting_url, link[ 'href' ] ) for link in links_with_images ]
+    
+    return urls
+    
 class GalleryParser( object ):
     
     def __init__( self ):
@@ -537,15 +643,19 @@ class GalleryParserDeviantArt( GalleryParser ):
         
         thumbs_container = soup.find( class_ = 'zones-container' )
         
-        def starts_with_thumb( classname ): return classname is not None and classname.startswith( 'thumb' )
-        
-        links = thumbs_container.find_all( 'a', class_ = starts_with_thumb )
+        links = thumbs_container.find_all( 'a', class_ = 'thumb' )
         
         for link in links:
             
+            url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
+            
+            urls.append( url )
+            
+            tags = []
+            
+            tags.append( 'creator:' + self._artist )
+            
             try: # starts_with_thumb picks up some false positives, but they break
-                
-                url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
                 
                 raw_title = link[ 'title' ] # sweet dolls by AngeniaC, date, blah blah blah
                 
@@ -555,16 +665,11 @@ class GalleryParserDeviantArt( GalleryParser ):
                 
                 title = title_reversed[::-1] # sweet dolls
                 
-                tags = []
-                
                 tags.append( 'title:' + title )
-                tags.append( 'creator:' + self._artist )
-                
-                SetExtraURLInfo( url, tags )
-                
-                urls.append( url )
                 
             except: pass
+            
+            SetExtraURLInfo( url, tags )
             
         
         return urls
@@ -574,19 +679,29 @@ class GalleryParserDeviantArt( GalleryParser ):
         
         soup = bs4.BeautifulSoup( html )
         
-        # if can find download link:
-        if False:
+        img = soup.find( class_ = 'dev-content-full' )
+        
+        if img is None:
             
-            pass # go fetch the popup page using tokens as appropriate. feels like it needs the GET token and a referrer, as middle click just redirects back to image page
+            # this probably means it is mature
+            # DA hide the url pretty much everywhere except the tumblr share thing
+            
+            a_tumblr = soup.find( id = 'gmi-ResourceViewShareTumblr' )
+            
+            tumblr_url = a_tumblr[ 'href' ] # http://www.tumblr.com/share/photo?source=http%3A%2F%2Fimg09.deviantart.net%2Ff19a%2Fi%2F2015%2F054%2Fe%2Fd%2Fass_by_gmgkaiser-d8j7ija.png&amp;caption=%3Ca+href%3D%22http%3A%2F%2Fgmgkaiser.deviantart.com%2Fart%2Fass-515992726%22%3Eass%3C%2Fa%3E+by+%3Ca+href%3D%22http%3A%2F%2Fgmgkaiser.deviantart.com%2F%22%3EGMGkaiser%3C%2Fa%3E&amp;clickthru=http%3A%2F%2Fgmgkaiser.deviantart.com%2Fart%2Fass-515992726
+            
+            parse_result = urlparse.urlparse( tumblr_url )
+            
+            query_parse_result = urlparse.parse_qs( parse_result.query )
+            
+            img_url = query_parse_result[ 'source' ][0] # http://img09.deviantart.net/f19a/i/2015/054/e/d/ass_by_gmgkaiser-d8j7ija.png
             
         else:
             
-            img = soup.find( class_ = 'dev-content-full' )
+            img_url = img[ 'src' ]
             
-            src = img[ 'src' ]
-            
-            return src
-            
+        
+        return img_url
         
     
     def _GetFileURL( self, url ):
@@ -1882,104 +1997,4 @@ class ImportQueueBuilderURLs( ImportQueueBuilder ):
             
         finally: self._job_key.Finish()
         
-    
-def THREADDownloadURL( job_key, url, url_string ):
-    
-    job_key.SetVariable( 'popup_text_1', url_string + ' - initialising' )
-    
-    def hook( gauge_range, gauge_value ):
-        
-        if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
-        else: text = url_string + ' - ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range )
-        
-        job_key.SetVariable( 'popup_text_1', text )
-        job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
-        
-    
-    ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
-    
-    try:
-        
-        wx.GetApp().DoHTTP( HC.GET, url, temp_path = temp_path, report_hooks = [ hook ] )
-        
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
-        
-        ( result, hash ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path )
-        
-    finally:
-        
-        HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
-        
-    
-    if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
-        
-        job_key.SetVariable( 'popup_text_1', url_string )
-        job_key.SetVariable( 'popup_files', { hash } )
-        
-    elif result == CC.STATUS_DELETED:
-        
-        job_key.SetVariable( 'popup_text_1', url_string + ' was already deleted!' )
-        
-    
-    job_key.Finish()
-    
-def Parse4chanPostScreen( html ):
-    
-    soup = bs4.BeautifulSoup( html )
-    
-    title_tag = soup.find( 'title' )
-    
-    if title_tag.string == 'Post successful!': return ( 'success', None )
-    elif title_tag.string == '4chan - Banned':
-        
-        print( repr( soup ) )
-        
-        text = 'You are banned from this board! html written to log.'
-        
-        HydrusData.ShowText( text )
-        
-        return ( 'big error', text )
-        
-    else:
-        
-        try:
-            
-            problem_tag = soup.find( id = 'errmsg' )
-            
-            if problem_tag is None:
-                
-                try: print( repr( soup ) )
-                except: pass
-                
-                text = 'Unknown problem; html written to log.'
-                
-                HydrusData.ShowText( text )
-                
-                return ( 'error', text )
-                
-            
-            problem = HydrusData.ToString( problem_tag )
-            
-            if 'CAPTCHA' in problem: return ( 'captcha', None )
-            elif 'seconds' in problem: return ( 'too quick', None )
-            elif 'Duplicate' in problem: return ( 'error', 'duplicate file detected' )
-            else: return ( 'error', problem )
-            
-        except: return ( 'error', 'unknown error' )
-        
-    
-def ParsePageForURLs( html, starting_url ):
-    
-    soup = bs4.BeautifulSoup( html )
-    
-    all_links = soup.find_all( 'a' )
-    
-    links_with_images = [ link for link in all_links if len( link.find_all( 'img' ) ) > 0 ]
-    
-    urls = [ urlparse.urljoin( starting_url, link[ 'href' ] ) for link in links_with_images ]
-    
-    # old version included (images that don't have a link wrapped around them)'s src
-    
-    return urls
     

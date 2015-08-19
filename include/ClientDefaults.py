@@ -32,6 +32,8 @@ def GetClientDefaultOptions():
     options[ 'trash_max_age' ] = 72
     options[ 'trash_max_size' ] = 512
     options[ 'remove_trashed_files' ] = False
+    options[ 'remove_filtered_files' ] = False
+    options[ 'external_host' ] = None
     
     system_predicates = {}
     
@@ -78,6 +80,34 @@ def GetClientDefaultOptions():
     default_gui_colours[ 'tags_box' ] = ( 255, 255, 255 )
     
     options[ 'gui_colours' ] = default_gui_colours
+    
+    default_mime_media_viewer_actions = {}
+    
+    default_mime_media_viewer_actions[ HC.IMAGE_JPEG ] = CC.MEDIA_VIEWER_SHOW_AS_NORMAL
+    default_mime_media_viewer_actions[ HC.IMAGE_PNG ] = CC.MEDIA_VIEWER_SHOW_AS_NORMAL
+    default_mime_media_viewer_actions[ HC.IMAGE_GIF ] = CC.MEDIA_VIEWER_SHOW_AS_NORMAL
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        default_mime_media_viewer_actions[ HC.APPLICATION_FLASH ] = CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED
+        
+    else:
+        
+        default_mime_media_viewer_actions[ HC.APPLICATION_FLASH ] = CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON
+        
+    
+    default_mime_media_viewer_actions[ HC.APPLICATION_PDF ] = CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON
+    default_mime_media_viewer_actions[ HC.VIDEO_FLV ] = CC.MEDIA_VIEWER_SHOW_AS_NORMAL
+    default_mime_media_viewer_actions[ HC.VIDEO_MP4 ] = CC.MEDIA_VIEWER_SHOW_AS_NORMAL
+    default_mime_media_viewer_actions[ HC.VIDEO_MKV ] = CC.MEDIA_VIEWER_SHOW_AS_NORMAL
+    default_mime_media_viewer_actions[ HC.VIDEO_WEBM ] = CC.MEDIA_VIEWER_SHOW_AS_NORMAL
+    default_mime_media_viewer_actions[ HC.VIDEO_WMV ] = CC.MEDIA_VIEWER_SHOW_AS_NORMAL
+    default_mime_media_viewer_actions[ HC.AUDIO_MP3 ] = CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON
+    default_mime_media_viewer_actions[ HC.AUDIO_OGG ] = CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON
+    default_mime_media_viewer_actions[ HC.AUDIO_FLAC ] = CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON
+    default_mime_media_viewer_actions[ HC.AUDIO_WMA] = CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON
+    
+    options[ 'mime_media_viewer_actions' ] = default_mime_media_viewer_actions
     
     default_sort_by_choices = []
     

@@ -364,7 +364,7 @@ class MediaList( object ):
         for media in self._collected_media: media.DeletePending( service_key )
         
     
-    def GenerateMediaResults( self, has_location = None, discriminant = None, selected_media = None, unrated = None ):
+    def GenerateMediaResults( self, has_location = None, discriminant = None, selected_media = None, unrated = None, for_media_viewer = False ):
         
         media_results = []
         
@@ -382,7 +382,7 @@ class MediaList( object ):
             
             if selected_media is not None and media not in selected_media: continue
             
-            if media.IsCollection(): media_results.extend( media.GenerateMediaResults( has_location = has_location, discriminant = discriminant, selected_media = selected_media, unrated = unrated ) )
+            if media.IsCollection(): media_results.extend( media.GenerateMediaResults( has_location = has_location, discriminant = discriminant, selected_media = selected_media, unrated = unrated, for_media_viewer = True ) )
             else:
                 
                 if discriminant is not None:
@@ -402,6 +402,14 @@ class MediaList( object ):
                     ( local_ratings, remote_ratings ) = media.GetRatings()
                     
                     if local_ratings.GetRating( unrated ) is not None: continue
+                    
+                
+                if for_media_viewer:
+                    
+                    if HC.options[ 'mime_media_viewer_actions' ][ media.GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+                        
+                        continue
+                        
                     
                 
                 media_results.append( media.GetMediaResult() )

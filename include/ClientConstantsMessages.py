@@ -1,5 +1,4 @@
 import collections
-import dircache
 import hashlib
 import httplib
 import ClientConstants as CC

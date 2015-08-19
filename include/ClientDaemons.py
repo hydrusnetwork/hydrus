@@ -1,12 +1,12 @@
 import ClientData
+import ClientDownloading
 import ClientFiles
 import collections
-import dircache
 import hashlib
 import httplib
 import itertools
 import HydrusConstants as HC
-import ClientDownloading
+import HydrusData
 import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
@@ -30,7 +30,6 @@ import time
 import traceback
 import wx
 import yaml
-import HydrusData
 import HydrusNetworking
 import HydrusGlobals
 
@@ -62,7 +61,7 @@ def DAEMONCheckImportFolders():
                 
                 if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                     
-                    filenames = dircache.listdir( folder_path )
+                    filenames = os.listdir( folder_path )
                     
                     raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
                     
@@ -135,8 +134,14 @@ def DAEMONCheckImportFolders():
                                 
                                 if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
                                     
-                                    try: os.remove( path )
-                                    except: details[ 'failed_imported_paths' ].add( path )
+                                    try:
+                                        
+                                        HydrusData.DeletePath( path )
+                                        
+                                    except:
+                                        
+                                        details[ 'failed_imported_paths' ].add( path )
+                                        
                                     
                                 
                             except:

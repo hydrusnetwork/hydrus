@@ -59,8 +59,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._notebook = wx.Notebook( self )
         self._notebook.Bind( wx.EVT_MIDDLE_DOWN, self.EventNotebookMiddleClick )
-        self._notebook.Bind( wx.EVT_RIGHT_DCLICK, self.EventNotebookMiddleClick )
+        self._notebook.Bind( wx.EVT_RIGHT_DOWN, self.EventNotebookMenu )
         self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventNotebookPageChanged )
+        
+        self._tab_right_click_index = -1
         
         wx.GetApp().SetTopWindow( self )
         
@@ -77,7 +79,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HydrusGlobals.pubsub.sub( self, 'NewPageImportGallery', 'new_import_gallery' )
         HydrusGlobals.pubsub.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         HydrusGlobals.pubsub.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
-        HydrusGlobals.pubsub.sub( self, 'NewPageImportURL', 'new_page_import_url' )
+        HydrusGlobals.pubsub.sub( self, 'NewPageImportPageOfImages', 'new_page_import_page_of_images' )
         HydrusGlobals.pubsub.sub( self, 'NewPagePetitions', 'new_page_petitions' )
         HydrusGlobals.pubsub.sub( self, 'NewPageQuery', 'new_page_query' )
         HydrusGlobals.pubsub.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
@@ -441,8 +443,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ClosePage( self, selection, polite = True ):
         
+        if selection == -1 or selection > self._notebook.GetPageCount() - 1:
+            
+            return
+            
+        
         # issue with having all pages closed
-        if HC.PLATFORM_OSX and self._notebook.GetPageCount() == 1: return
+        if HC.PLATFORM_OSX and self._notebook.GetPageCount() == 1:
+            
+            return
+            
         
         page = self._notebook.GetPage( selection )
         
@@ -701,7 +711,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def download():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_url' ), p( '&New URL Download Page' ), p( 'Open a new tab to download files from galleries or threads.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_page_of_images' ), p( '&New Page of Images Download Page' ), p( 'Open a new tab to download files from generic galleries or threads.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
             
             submenu = wx.Menu()
@@ -1233,9 +1243,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._NewPage( 'thread watcher', management_controller )
         
     
-    def _NewPageImportURL( self ):
+    def _NewPageImportPageOfImages( self ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportURL()
+        management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
         
         self._NewPage( 'download', management_controller )
         
@@ -1438,7 +1448,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                                 if os.path.exists( thumbnail_resized_path ):
                                     
-                                    os.remove( thumbnail_resized_path )
+                                    HydrusData.DeletePath( thumbnail_resized_path )
                                     
                                 
                             
@@ -1460,6 +1470,26 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                 
                 HydrusThreading.CallToThread( THREADRegenerateThumbnails )
+                
+            
+        
+    
+    def _RenamePage( self, selection ):
+        
+        if selection == -1 or selection > self._notebook.GetPageCount() - 1:
+            
+            return
+            
+        
+        current_name = self._notebook.GetPageText( selection )
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the new name.', default = current_name, allow_blank = False ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_name = dlg.GetValue()
+                
+                self._notebook.SetPageText( selection, new_name )
                 
             
         
@@ -1975,7 +2005,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 self._NewPageImportGallery( site_type, gallery_type )
                 
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
-            elif command == 'new_import_url': self._NewPageImportURL()
+            elif command == 'new_import_page_of_images': self._NewPageImportPageOfImages()
             elif command == 'new_page':
                 
                 with ClientGUIDialogs.DialogPageChooser( self ) as dlg: dlg.ShowModal()
@@ -2016,6 +2046,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
             elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
+            elif command == 'tab_menu_close_page': self._ClosePage( self._tab_right_click_index )
+            elif command == 'tab_menu_rename_page': self._RenamePage( self._tab_right_click_index )
             elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
             elif command == 'twitter': webbrowser.open( 'http://twitter.com/#!/hydrusnetwork' )
             elif command == 'unclose_page': self._UnclosePage( data )
@@ -2023,6 +2055,25 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'upload_pending': self._UploadPending( data )
             elif command == 'vacuum_db': self._VacuumDatabase()
             else: event.Skip()
+            
+        
+    
+    def EventNotebookMenu( self, event ):
+        
+        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
+        
+        if tab_index != -1:
+            
+            self._tab_right_click_index = tab_index
+            
+            menu = wx.Menu()
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tab_menu_close_page' ), 'close page' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tab_menu_rename_page' ), 'rename page' )
+            
+            self.PopupMenu( menu )
+            
+            wx.CallAfter( menu.Destroy )
             
         
     
@@ -2089,7 +2140,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPageImportThreadWatcher( self ): self._NewPageImportThreadWatcher()
     
-    def NewPageImportURL( self ): self._NewPageImportURL()
+    def NewPageImportPageOfImages( self ): self._NewPageImportPageOfImages()
     
     def NewPagePetitions( self, service_key ): self._NewPagePetitions( service_key )
     

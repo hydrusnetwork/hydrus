@@ -1,4 +1,3 @@
-import dircache
 import HydrusConstants as HC
 import HydrusExceptions
 import itertools
@@ -61,7 +60,7 @@ def GetUpdatePackagePaths( service_key, begin ):
     paths = []
     prefix = service_key.encode( 'hex' ) + '_' + str( int( begin ) )
     
-    for filename in dircache.listdir( HC.SERVER_UPDATES_DIR ):
+    for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
         
         if filename.startswith( prefix ):
             
@@ -85,7 +84,7 @@ def IterateAllPaths( file_type ):
         
         dir = directory + os.path.sep + one + two
         
-        next_paths = dircache.listdir( dir )
+        next_paths = os.listdir( dir )
         
         for path in next_paths: yield dir + os.path.sep + path
         

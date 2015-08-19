@@ -45,9 +45,7 @@ ANIMATED_SCANBAR_CARET_WIDTH = 10
 ZOOMINS = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
 ZOOMOUTS = [ 20.0, 10.0, 5.0, 3.0, 2.0, 1.5, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.15, 0.1, 0.05, 0.01 ]
 
-NON_ZOOMABLE_MIMES = list( HC.AUDIO ) + [ HC.APPLICATION_PDF ]
-
-EMBED_BUTTON_MIMES = [ HC.VIDEO_FLV, HC.APPLICATION_FLASH ]
+OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
 
 def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
@@ -57,7 +55,7 @@ def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
     if ShouldHaveAnimationBar( media ): canvas_height -= ANIMATED_SCANBAR_HEIGHT
     
-    if media.GetMime() in EMBED_BUTTON_MIMES:
+    if media.GetMime() == HC.APPLICATION_FLASH:
         
         canvas_height -= 10
         canvas_width -= 10
@@ -73,17 +71,28 @@ def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
 def CalculateMediaContainerSize( media, zoom ):
     
-    ( media_width, media_height ) = CalculateMediaSize( media, zoom )
+    action = HC.options[ 'mime_media_viewer_actions' ][ media.GetMime() ]
     
-    if ShouldHaveAnimationBar( media ): media_height += ANIMATED_SCANBAR_HEIGHT
-    
-    return ( media_width, media_height )
+    if action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+        
+        raise Exception( 'This media should not be shown in the media viewer!' )
+        
+    elif action == CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON:
+        
+        return OPEN_EXTERNALLY_BUTTON_SIZE
+        
+    else:
+        
+        ( media_width, media_height ) = CalculateMediaSize( media, zoom )
+        
+        if ShouldHaveAnimationBar( media ): media_height += ANIMATED_SCANBAR_HEIGHT
+        
+        return ( media_width, media_height )
+        
     
 def CalculateMediaSize( media, zoom ):
     
-    if media.GetMime() == HC.APPLICATION_PDF: ( original_width, original_height ) = ( 200, 45 )
-    elif media.GetMime() in HC.AUDIO: ( original_width, original_height ) = ( 360, 240 )
-    else: ( original_width, original_height ) = media.GetResolution()
+    ( original_width, original_height ) = media.GetResolution()
     
     media_width = int( round( zoom * original_width ) )
     media_height = int( round( zoom * original_height ) )
@@ -102,7 +111,7 @@ def ShouldHaveAnimationBar( media ):
     
 class Animation( wx.Window ):
     
-    def __init__( self, parent, media, initial_size, initial_position ):
+    def __init__( self, parent, media, initial_size, initial_position, start_paused ):
         
         wx.Window.__init__( self, parent, size = initial_size, pos = initial_position )
         
@@ -118,7 +127,7 @@ class Animation( wx.Window ):
         self._current_frame_drawn_at = 0.0
         self._next_frame_due_at = 0.0
         
-        self._paused = False
+        self._paused = start_paused
         
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
@@ -670,7 +679,7 @@ class Canvas( object ):
     
     def _HydrusShouldNotProcessInput( self ):
         
-        if self._current_display_media.GetMime() in EMBED_BUTTON_MIMES:
+        if self._current_display_media.GetMime() == HC.APPLICATION_FLASH:
             
             if self.MouseIsOverMedia(): return True
             
@@ -679,6 +688,11 @@ class Canvas( object ):
         
     
     def _Inbox( self ): wx.GetApp().Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
+    
+    def _IsZoomable( self ):
+        
+        return HC.options[ 'mime_media_viewer_actions' ][ self._current_display_media.GetMime() ] != CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON
+        
     
     def _ManageRatings( self ):
         
@@ -772,20 +786,22 @@ class Canvas( object ):
     
     def _ZoomIn( self ):
         
-        if self._current_display_media is not None:
-            
-            if self._current_display_media.GetMime() in NON_ZOOMABLE_MIMES: return
+        if self._current_display_media is not None and self._IsZoomable():
             
             my_zoomins = list( ZOOMINS )
-            my_zoomins.append( self._canvas_zoom )
             
-            my_zoomins.sort()
+            if self._canvas_zoom not in my_zoomins:
+                
+                my_zoomins.append( self._canvas_zoom )
+                
+                my_zoomins.sort()
+                
             
             for zoom in my_zoomins:
                 
                 if self._current_zoom < zoom:
                     
-                    if self._current_display_media.GetMime() in EMBED_BUTTON_MIMES:
+                    if self._current_display_media.GetMime() == HC.APPLICATION_FLASH:
                         
                         # because of the event passing under mouse, we want to preserve whitespace around flash
                         
@@ -816,14 +832,16 @@ class Canvas( object ):
     
     def _ZoomOut( self ):
         
-        if self._current_display_media is not None:
-            
-            if self._current_display_media.GetMime() in NON_ZOOMABLE_MIMES: return
+        if self._current_display_media is not None and self._IsZoomable():
             
             my_zoomouts = list( ZOOMOUTS )
-            my_zoomouts.append( self._canvas_zoom )
             
-            my_zoomouts.sort( reverse = True )
+            if self._canvas_zoom not in my_zoomouts:
+                
+                my_zoomouts.append( self._canvas_zoom )
+                
+                my_zoomouts.sort( reverse = True )
+                
             
             for zoom in my_zoomouts:
                 
@@ -849,28 +867,31 @@ class Canvas( object ):
     
     def _ZoomSwitch( self ):
         
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        ( media_width, media_height ) = self._current_display_media.GetResolution()
-        
-        if self._current_display_media.GetMime() not in EMBED_BUTTON_MIMES:
+        if self._current_display_media is not None and self._IsZoomable():
             
-            if self._current_zoom == 1.0: new_zoom = self._canvas_zoom
-            else: new_zoom = 1.0
+            ( my_width, my_height ) = self.GetClientSize()
             
-            if new_zoom != self._current_zoom:
+            ( media_width, media_height ) = self._current_display_media.GetResolution()
+            
+            if self._current_display_media.GetMime() != HC.APPLICATION_FLASH:
                 
-                ( drag_x, drag_y ) = self._total_drag_delta
+                if self._current_zoom == 1.0: new_zoom = self._canvas_zoom
+                else: new_zoom = 1.0
                 
-                zoom_ratio = new_zoom / self._current_zoom
-                
-                self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                
-                self._current_zoom = new_zoom
-                
-                HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
-                
-                self._SetDirty()
+                if new_zoom != self._current_zoom:
+                    
+                    ( drag_x, drag_y ) = self._total_drag_delta
+                    
+                    zoom_ratio = new_zoom / self._current_zoom
+                    
+                    self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
+                    
+                    self._current_zoom = new_zoom
+                    
+                    HydrusGlobals.pubsub.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+                    
+                    self._SetDirty()
+                    
                 
             
         
@@ -947,6 +968,11 @@ class Canvas( object ):
             locations_manager = media.GetLocationsManager()
             
             if not locations_manager.HasLocal():
+                
+                media = None
+                
+            
+            if HC.options[ 'mime_media_viewer_actions' ][ media.GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
                 
                 media = None
                 
@@ -1623,7 +1649,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         ( client_x, client_y ) = self.GetClientSize()
         
-        if self._current_display_media.GetMime() not in EMBED_BUTTON_MIMES: # to stop warping over flash
+        if self._current_display_media.GetMime() != HC.APPLICATION_FLASH: # to stop warping over flash
             
             if x < 20 or x > client_x - 20 or y < 20 or y > client_y -20:
                 
@@ -1768,6 +1794,16 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                             self._deleted = set()
                             
                             self._current_media = self._GetFirst() # so the pubsub on close is better
+                            
+                            if HC.options[ 'remove_filtered_files' ]:
+                                
+                                all_hashes = set()
+                                
+                                all_hashes.update( self._deleted_hashes )
+                                all_hashes.update( self._kept_hashes )
+                                
+                                HydrusGlobals.pubsub.pub( 'remove_media', self._page_key, all_hashes )
+                                
                             
                         
                         CanvasFullscreenMediaList._Close( self )
@@ -2103,8 +2139,23 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
-        if first_hash is None: self.SetMedia( self._GetFirst() )
-        else: self.SetMedia( self._GetMedia( { first_hash } )[0] )
+        if first_hash is None:
+            
+            self.SetMedia( self._GetFirst() )
+            
+        else:
+            
+            try:
+                
+                first_media = self._GetMedia( { first_hash } )[0]
+                
+                self.SetMedia( first_media )
+                
+            except:
+                
+                self.SetMedia( self._GetFirst() )
+                
+            
         
         HydrusGlobals.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
@@ -2254,29 +2305,28 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         menu.AppendSeparator()
         
-        menu.Append( CC.ID_NULL, 'current zoom: ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) )
-        
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
-        
-        #
-        
-        if self._current_display_media.GetMime() not in EMBED_BUTTON_MIMES + NON_ZOOMABLE_MIMES:
+        if self._IsZoomable():
             
-            ( my_width, my_height ) = self.GetClientSize()
+            menu.Append( CC.ID_NULL, 'current zoom: ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) )
             
-            ( media_width, media_height ) = self._current_display_media.GetResolution()
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
             
-            if self._current_zoom == 1.0:
+            if self._current_display_media.GetMime() != HC.APPLICATION_FLASH:
                 
-                if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
+                ( my_width, my_height ) = self.GetClientSize()
                 
-            else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
+                ( media_width, media_height ) = self._current_display_media.GetResolution()
+                
+                if self._current_zoom == 1.0:
+                    
+                    if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
+                    
+                else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
+                
             
-        
-        #
-        
-        menu.AppendSeparator()
+            menu.AppendSeparator()
+            
         
         if i_can_post_ratings:
             
@@ -2664,29 +2714,30 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu.AppendSeparator()
         
-        menu.Append( CC.ID_NULL, 'current zoom: ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) )
-        
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
-        
-        #
-        
-        if self._current_display_media.GetMime() not in EMBED_BUTTON_MIMES + NON_ZOOMABLE_MIMES:
+        if self._IsZoomable():
             
-            ( my_width, my_height ) = self.GetClientSize()
+            menu.Append( CC.ID_NULL, 'current zoom: ' + HydrusData.ConvertZoomToPercentage( self._current_zoom ) )
             
-            ( media_width, media_height ) = self._current_display_media.GetResolution()
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
             
-            if self._current_zoom == 1.0:
+            #
+            
+            if self._current_display_media.GetMime() != HC.APPLICATION_FLASH:
                 
-                if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
+                ( my_width, my_height ) = self.GetClientSize()
                 
-            else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
+                ( media_width, media_height ) = self._current_display_media.GetResolution()
+                
+                if self._current_zoom == 1.0:
+                    
+                    if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
+                    
+                else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
+                
             
-        
-        #
-        
-        menu.AppendSeparator()
+            menu.AppendSeparator()
+            
         
         if i_can_post_ratings:
             
@@ -2827,6 +2878,7 @@ class MediaContainer( wx.Window ):
         self._media = media
         self._media_window = None
         self._embed_button = None
+        self._animation_bar = None
         
         self._MakeMediaWindow()
         
@@ -2840,7 +2892,9 @@ class MediaContainer( wx.Window ):
         
         ( media_initial_size, media_initial_position ) = ( self.GetClientSize(), ( 0, 0 ) )
         
-        if do_embed_button and self._media.GetMime() in EMBED_BUTTON_MIMES:
+        action = HC.options[ 'mime_media_viewer_actions' ][ self._media.GetMime() ]
+        
+        if do_embed_button and action in ( CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED ):
             
             self._embed_button = EmbedButton( self, media_initial_size )
             self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
@@ -2849,51 +2903,49 @@ class MediaContainer( wx.Window ):
             
         elif self._embed_button is not None: self._embed_button.Hide()
         
-        if ShouldHaveAnimationBar( self._media ):
+        if action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
             
-            ( x, y ) = media_initial_size
+            raise Exception( 'This media should not be shown in the media viewer!' )
             
-            media_initial_size = ( x, y - ANIMATED_SCANBAR_HEIGHT )
+        elif action == CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON:
             
-        
-        if self._media.GetMime() in HC.IMAGES:
+            self._media_window = OpenExternallyButton( self, self._media )
             
-            if ShouldHaveAnimationBar( self._media ): self._media_window = Animation( self, self._media, media_initial_size, media_initial_position )
-            else: self._media_window = self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
+        else:
             
-        elif self._media.GetMime() in HC.NATIVE_VIDEO: self._media_window = Animation( self, self._media, media_initial_size, media_initial_position )
-        elif self._media.GetMime() == HC.APPLICATION_FLASH:
+            start_paused = action in ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED )
             
-            self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
-            
-            self._media_window.movie = ClientFiles.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH )
-            
-        elif self._media.GetMime() == HC.VIDEO_FLV:
-            
-            self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
-            
-            flash_vars = []
-            flash_vars.append( ( 'flv', ClientFiles.GetFilePath( self._media.GetHash(), HC.VIDEO_FLV ) ) )
-            flash_vars.append( ( 'margin', '0' ) )
-            flash_vars.append( ( 'autoload', '1' ) )
-            flash_vars.append( ( 'autoplay', '1' ) )
-            flash_vars.append( ( 'showvolume', '1' ) )
-            flash_vars.append( ( 'showtime', '1' ) )
-            flash_vars.append( ( 'loop', '1' ) )
-            
-            f = urllib.urlencode( flash_vars )
-            
-            self._media_window.flashvars = f
-            self._media_window.movie = HC.STATIC_DIR + os.path.sep + 'player_flv_maxi_1.6.0.swf'
-            
-        elif self._media.GetMime() == HC.APPLICATION_PDF: self._media_window = PDFButton( self, self._media.GetHash(), media_initial_size )
-        elif self._media.GetMime() in HC.AUDIO: self._media_window = EmbedWindowAudio( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
-        
-        if ShouldHaveAnimationBar( self._media ):
-            
-            self._animation_bar = AnimationBar( self, self._media, self._media_window )
-            
-            if self._media.GetMime() != HC.APPLICATION_FLASH: self._media_window.SetAnimationBar( self._animation_bar )
+            if ShouldHaveAnimationBar( self._media ) or self._media.GetMime() == HC.APPLICATION_FLASH:
+                
+                if ShouldHaveAnimationBar( self._media ):
+                    
+                    ( x, y ) = media_initial_size
+                    
+                    media_initial_size = ( x, y - ANIMATED_SCANBAR_HEIGHT )
+                    
+                
+                if self._media.GetMime() == HC.APPLICATION_FLASH:
+                    
+                    self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
+                    
+                    self._media_window.movie = ClientFiles.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH )
+                    
+                else:
+                    
+                    self._media_window = Animation( self, self._media, media_initial_size, media_initial_position, start_paused )
+                    
+                
+                if ShouldHaveAnimationBar( self._media ):
+                    
+                    self._animation_bar = AnimationBar( self, self._media, self._media_window )
+                    
+                    if self._media.GetMime() != HC.APPLICATION_FLASH: self._media_window.SetAnimationBar( self._animation_bar )
+                    
+                
+            else:
+                
+                self._media_window = self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
+                
             
         
     
@@ -2921,6 +2973,8 @@ class MediaContainer( wx.Window ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
+        action = HC.options[ 'mime_media_viewer_actions' ][ self._media.GetMime() ]
+        
         if self._media_window is None:
             
             self._embed_button.SetSize( ( my_width, my_height ) )
@@ -2929,7 +2983,7 @@ class MediaContainer( wx.Window ):
             
             ( media_width, media_height ) = ( my_width, my_height )
             
-            if ShouldHaveAnimationBar( self._media ):
+            if self._animation_bar is not None:
                 
                 media_height -= ANIMATED_SCANBAR_HEIGHT
                 
@@ -3072,69 +3126,25 @@ class EmbedButton( wx.Window ):
             
         
     
-class EmbedWindowAudio( wx.Window ):
+class OpenExternallyButton( wx.Button ):
     
-    def __init__( self, parent, hash, mime, size ):
+    def __init__( self, parent, media ):
         
-        wx.Window.__init__( self, parent, size = size )
+        wx.Button.__init__( self, parent, label = 'open externally', size = OPEN_EXTERNALLY_BUTTON_SIZE )
         
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
-        self._hash = hash
-        self._mime = mime
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        ( width, height ) = size
-        
-        media_height = height - 45
-        
-        self._media_ctrl = wx.media.MediaCtrl( self, size = ( width, media_height ) )
-        self._media_ctrl.Hide()
-        
-        self._embed_button = EmbedButton( self, size = ( width, media_height ) )
-        self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
-        
-        launch_button = wx.Button( self, label = 'launch ' + HC.mime_string_lookup[ mime ] + ' externally', size = ( width, 45 ), pos = ( 0, media_height ) )
-        launch_button.Bind( wx.EVT_BUTTON, self.EventLaunchButton )
-        
-    
-    def EventEmbedButton( self, event ):
-        
-        self._embed_button.Hide()
-        
-        self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
-        
-        path = ClientFiles.GetFilePath( self._hash, self._mime )
-        
-        self._media_ctrl.Load( path )
-        
-        self._media_ctrl.Show()
-        
-    
-    def EventLaunchButton( self, event ):
-        
-        path = ClientFiles.GetFilePath( self._hash, self._mime )
-        
-        HydrusFileHandling.LaunchFile( path )
-        
-    
-class PDFButton( wx.Button ):
-    
-    def __init__( self, parent, hash, size ):
-        
-        wx.Button.__init__( self, parent, label = 'launch pdf', size = size )
-        
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-        
-        self._hash = hash
+        self._media = media
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         
     
     def EventButton( self, event ):
         
-        path = ClientFiles.GetFilePath( self._hash, HC.APPLICATION_PDF )
+        hash = self._media.GetHash()
+        mime = self._media.GetMime()
+        
+        path = ClientFiles.GetFilePath( hash, mime )
         
         HydrusFileHandling.LaunchFile( path )
         

@@ -41,7 +41,7 @@ ID_TIMER_UPDATE = wx.NewId()
 
 MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_GALLERY = 1
-MANAGEMENT_TYPE_IMPORT_URL = 2
+MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES = 2
 MANAGEMENT_TYPE_IMPORT_HDD = 3
 MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER = 4
 MANAGEMENT_TYPE_PETITIONS = 5
@@ -96,9 +96,13 @@ def CreateManagementControllerImportGallery( site_type, gallery_type ):
     
     return management_controller
     
-def CreateManagementControllerImportURL():
+def CreateManagementControllerImportPageOfImages():
     
-    management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_URL )
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES )
+    
+    page_of_images_import = ClientImporting.PageOfImagesImport()
+    
+    management_controller.SetVariable( 'page_of_images_import', page_of_images_import )
     
     return management_controller
     
@@ -2153,41 +2157,331 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_GALLERY ] = ManagementPanelImportsGallery
 
-class ManagementPanelImportsURL( ManagementPanelImports ):
+class ManagementPanelImportsPageOfImages( ManagementPanel ):
     
-    def _GenerateImportArgsGeneratorFactory( self ):
+    def __init__( self, parent, page, management_controller ):
         
-        def factory( job_key, item ):
+        ManagementPanel.__init__( self, parent, page, management_controller )
+        
+        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import queue' )
+        
+        self._parser_status = wx.StaticText( self._import_queue_panel )
+        self._overall_status = wx.StaticText( self._import_queue_panel )
+        self._current_action = wx.StaticText( self._import_queue_panel )
+        self._file_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
+        self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
+        
+        self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
+        
+        self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
+        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
+        
+        button_sizer = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
+        
+        self._pending_page_urls_panel = ClientGUICommon.StaticBox( self._import_queue_panel, 'pending page urls' )
+        
+        self._pending_import_queues_listbox = wx.ListBox( self._pending_page_urls_panel, size = ( -1, 200 ) )
+        
+        self._advance_button = wx.Button( self._pending_page_urls_panel, label = u'\u2191' )
+        self._advance_button.Bind( wx.EVT_BUTTON, self.EventAdvance )
+        
+        self._delete_button = wx.Button( self._pending_page_urls_panel, label = 'X' )
+        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        self._delay_button = wx.Button( self._pending_page_urls_panel, label = u'\u2193' )
+        self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
+        
+        self._page_url_input = wx.TextCtrl( self._pending_page_urls_panel, style = wx.TE_PROCESS_ENTER )
+        self._page_url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self._download_image_links = wx.CheckBox( self._import_queue_panel, label = 'download image links' )
+        self._download_image_links.Bind( wx.EVT_CHECKBOX, self.EventDownloadImageLinks )
+        self._download_image_links.SetToolTipString( 'i.e. download the href url of an <a> tag if there is an <img> tag nested beneath it' )
+        
+        self._download_unlinked_images = wx.CheckBox( self._import_queue_panel, label = 'download unlinked images' )
+        self._download_unlinked_images.Bind( wx.EVT_CHECKBOX, self.EventDownloadUnlinkedImages )
+        self._download_unlinked_images.SetToolTipString( 'i.e. download the src url of an <img> tag if there is no parent <a> tag' )
+        
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._import_queue_panel )
+        
+        #
+        
+        queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        queue_buttons_vbox.AddF( self._advance_button, CC.FLAGS_MIXED )
+        queue_buttons_vbox.AddF( self._delete_button, CC.FLAGS_MIXED )
+        queue_buttons_vbox.AddF( self._delay_button, CC.FLAGS_MIXED )
+        
+        queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        queue_hbox.AddF( self._pending_import_queues_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_MIXED )
+        
+        self._pending_page_urls_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._pending_page_urls_panel.AddF( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        self._import_queue_panel.AddF( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._file_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
+        self._import_queue_panel.AddF( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._download_unlinked_images, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._MakeSort( vbox )
+        
+        vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._MakeCurrentSelectionTagsBox( vbox )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+        HydrusGlobals.pubsub.sub( self, 'UpdateStatus', 'update_status' )
+        
+        self._page_of_images_import = self._controller.GetVariable( 'page_of_images_import' )
+        
+        def file_download_hook( gauge_range, gauge_value ):
             
-            import_file_options = HydrusThreading.CallBlockingToWx( self.GetImportFileOptions )
-            
-            return ClientDownloading.ImportArgsGeneratorURLs( job_key, item, import_file_options )
+            self._file_gauge.SetRange( gauge_range )
+            self._file_gauge.SetValue( gauge_value )
             
         
-        return factory
+        self._page_of_images_import.SetDownloadHook( file_download_hook )
+        
+        ( import_file_options, download_image_links, download_unlinked_images ) = self._page_of_images_import.GetOptions()
+        
+        self._import_file_options.SetOptions( import_file_options )
+        
+        self._download_image_links.SetValue( download_image_links )
+        self._download_unlinked_images.SetValue( download_unlinked_images )
+        
+        self._Update()
+        
+        self._page_of_images_import.Start( self._page_key )
         
     
-    def _GenerateImportQueueBuilderFactory( self ):
+    def _Update( self ):
         
-        def factory( job_key, item ):
+        ( pending_page_urls, parser_status, ( overall_status, ( overall_value, overall_range ) ), paused ) = self._page_of_images_import.GetStatus()
+        
+        if self._pending_import_queues_listbox.GetStrings() != pending_page_urls:
             
-            return ClientDownloading.ImportQueueBuilderURLs( job_key, item )
+            selected_string = self._pending_import_queues_listbox.GetStringSelection()
+            
+            self._pending_import_queues_listbox.SetItems( pending_page_urls )
+            
+            selection_index = self._pending_import_queues_listbox.FindString( selected_string )
+            
+            if selection_index != wx.NOT_FOUND:
+                
+                self._pending_import_queues_listbox.Select( selection_index )
+                
             
         
-        return factory
+        if self._overall_status.GetLabel() != overall_status:
+            
+            self._overall_status.SetLabel( overall_status )
+            
+        
+        self._overall_gauge.SetRange( overall_range )
+        self._overall_gauge.SetValue( overall_value )
+        
+        if overall_value < overall_range:
+            
+            if paused:
+                
+                current_action = 'paused at ' + HydrusData.ConvertValueRangeToPrettyString( overall_value, overall_range )
+                
+            else:
+                
+                current_action = 'processing ' + HydrusData.ConvertValueRangeToPrettyString( overall_value, overall_range )
+                
+            
+        else:
+            
+            current_action = ''
+            
+        
+        if paused:
+            
+            if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
+                
+                self._pause_button.SetBitmap( CC.GlobalBMPs.play )
+                
+            
+        else:
+            
+            if self._pause_button.GetBitmap() != CC.GlobalBMPs.pause:
+                
+                self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
+                
+            
+        
+        if self._parser_status.GetLabel() != parser_status:
+            
+            self._parser_status.SetLabel( parser_status )
+            
+        
+        if self._current_action.GetLabel() != current_action:
+            
+            self._current_action.SetLabel( current_action )
+            
         
     
-    def _InitExtraVboxElements( self, vbox ):
+    def EventAdvance( self, event ):
         
-        ManagementPanelImports._InitExtraVboxElements( self, vbox )
+        selection = self._pending_import_queues_listbox.GetSelection()
         
-        self._building_import_queue_pause_button.Hide()
-        self._building_import_queue_cancel_button.Hide()
-        self._get_tags_if_redundant.Hide()
-        self._file_limit.Hide()
+        if selection != wx.NOT_FOUND:
+            
+            page_url = self._pending_import_queues_listbox.GetString( selection )
+            
+            self._page_of_images_import.AdvancePageURL( page_url )
+            
+            self._Update()
+            
         
     
-management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_URL ] = ManagementPanelImportsURL
+    def EventDelay( self, event ):
+        
+        selection = self._pending_import_queues_listbox.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            page_url = self._pending_import_queues_listbox.GetString( selection )
+            
+            self._page_of_images_import.DelayPageURL( page_url )
+            
+            self._Update()
+            
+        
+    
+    def EventDelete( self, event ):
+        
+        selection = self._pending_import_queues_listbox.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            page_url = self._pending_import_queues_listbox.GetString( selection )
+            
+            self._page_of_images_import.DeletePageURL( page_url )
+            
+            self._Update()
+            
+        
+    
+    def EventDownloadImageLinks( self, event ):
+        
+        self._page_of_images_import.SetDownloadImageLinks( self._download_image_links.GetValue() )
+        
+    
+    def EventDownloadUnlinkedImages( self, event ):
+        
+        self._page_of_images_import.SetDownloadUnlinkedImages( self._download_unlinked_images.GetValue() )
+        
+    
+    def EventKeyDown( self, event ):
+        
+        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            page_url = self._page_url_input.GetValue()
+            
+            if page_url != '':
+                
+                self._page_of_images_import.PendPageURL( page_url )
+                
+                self._page_url_input.SetValue( '' )
+                
+                self._Update()
+                
+            
+        else: event.Skip()
+        
+    
+    def EventMenu( self, event ):
+        
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'import_file_options_changed':
+                
+                import_file_options = self._import_file_options.GetOptions()
+                
+                self._page_of_images_import.SetImportFileOptions( import_file_options )
+                
+            else: event.Skip()
+            
+        
+    
+    def EventPause( self, event ):
+        
+        self._page_of_images_import.PausePlay()
+        
+        self._Update()
+        
+    
+    def EventSeedCache( self, event ):
+        
+        seed_cache = self._page_of_images_import.GetSeedCache()
+        
+        HydrusGlobals.pubsub.pub( 'show_seed_cache', seed_cache )
+        
+    
+    def Pause( self, page_key ):
+        
+        ManagementPanel.Pause( self, page_key )
+        
+        if page_key == self._page_key:
+            
+            self._page_of_images_import.Pause()
+            
+        
+    
+    def Resume( self, page_key ):
+        
+        ManagementPanel.Resume( self, page_key )
+        
+        if page_key == self._page_key:
+            
+            self._page_of_images_import.Resume()
+            
+        
+    
+    def SetSearchFocus( self, page_key ):
+        
+        if page_key == self._page_key: self._page_url_input.SetFocus()
+        
+    
+    def UpdateStatus( self, page_key ):
+        
+        if page_key == self._page_key:
+            
+            self._Update()
+            
+        
+    
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES ] = ManagementPanelImportsPageOfImages
 
 class ManagementPanelImportHDD( ManagementPanel ):
     
@@ -2212,6 +2506,8 @@ class ManagementPanelImportHDD( ManagementPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        self._MakeSort( vbox )
+        
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
         button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
@@ -2227,6 +2523,8 @@ class ManagementPanelImportHDD( ManagementPanel ):
         self._MakeCurrentSelectionTagsBox( vbox )
         
         self.SetSizer( vbox )
+        
+        #
         
         HydrusGlobals.pubsub.sub( self, 'UpdateStatus', 'update_status' )
         
@@ -2311,6 +2609,26 @@ class ManagementPanelImportHDD( ManagementPanel ):
         HydrusGlobals.pubsub.pub( 'show_seed_cache', seed_cache )
         
     
+    def Pause( self, page_key ):
+        
+        ManagementPanel.Pause( self, page_key )
+        
+        if page_key == self._page_key:
+            
+            self._hdd_import.Pause()
+            
+        
+    
+    def Resume( self, page_key ):
+        
+        ManagementPanel.Resume( self, page_key )
+        
+        if page_key == self._page_key:
+            
+            self._hdd_import.Resume()
+            
+        
+    
     def TestAbleToClose( self ):
         
         ( ( overall_status, ( overall_value, overall_range ) ), paused ) = self._hdd_import.GetStatus()
@@ -2376,8 +2694,6 @@ class ManagementPanelImportThreadWatcher( ManagementPanel ):
         self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._thread_watcher_panel )
         self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_watcher_panel, namespaces = [ 'filename' ] )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
         #
         
         hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
@@ -2416,7 +2732,11 @@ class ManagementPanelImportThreadWatcher( ManagementPanel ):
         self._thread_watcher_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_watcher_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        #
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._MakeSort( vbox )
         
         vbox.AddF( self._thread_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2425,6 +2745,8 @@ class ManagementPanelImportThreadWatcher( ManagementPanel ):
         self.SetSizer( vbox )
         
         #
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
         
         HydrusGlobals.pubsub.sub( self, 'UpdateStatus', 'update_status' )
         HydrusGlobals.pubsub.sub( self, 'DecrementTimesToCheck', 'decrement_times_to_check' )
@@ -2642,6 +2964,34 @@ class ManagementPanelImportThreadWatcher( ManagementPanel ):
         times_to_check = self._thread_times_to_check.GetValue()
         
         self._thread_watcher_import.SetTimesToCheck( times_to_check )
+        
+    
+    def Pause( self, page_key ):
+        
+        ManagementPanel.Pause( self, page_key )
+        
+        if page_key == self._page_key:
+            
+            self._thread_watcher_import.Pause()
+            
+        
+    
+    def Resume( self, page_key ):
+        
+        ManagementPanel.Resume( self, page_key )
+        
+        if page_key == self._page_key:
+            
+            self._thread_watcher_import.Resume()
+            
+        
+    
+    def SetSearchFocus( self, page_key ):
+        
+        if page_key == self._page_key and self._thread_input.IsEditable():
+            
+            self._thread_input.SetFocus()
+            
         
     
     def TestAbleToClose( self ):

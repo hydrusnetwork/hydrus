@@ -1,5 +1,4 @@
 import collections
-import dircache
 import hashlib
 import httplib
 import HydrusConstants as HC
@@ -724,21 +723,22 @@ class DB( HydrusDB.HydrusDB ):
             local_files_hashes = ServerFiles.GetAllHashes( 'file' )
             thumbnails_hashes = ServerFiles.GetAllHashes( 'thumbnail' )
             
-            for hash in local_files_hashes & deletee_hashes: os.remove( ServerFiles.GetPath( 'file', hash ) )
-            for hash in thumbnails_hashes & deletee_hashes: os.remove( ServerFiles.GetPath( 'thumbnail', hash ) )
+            for hash in local_files_hashes & deletee_hashes:
+                
+                path = ServerFiles.GetPath( 'file', hash )
+                
+                HydrusData.DeletePath( path )
+                
+            
+            for hash in thumbnails_hashes & deletee_hashes:
+                
+                path = ServerFiles.GetPath( 'thumbnail', hash )
+                
+                HydrusData.DeletePath( path )
+                
             
             self._c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HydrusData.SplayListForDB( deletees ) + ';' )
             
-        
-        # messages
-        
-        required_message_keys = { message_key for ( message_key, ) in self._c.execute( 'SELECT DISTINCT message_key FROM messages;' ) }
-        
-        existing_message_keys = ServerFiles.GetAllHashes( 'message' )
-        
-        deletees = existing_message_keys - required_message_keys
-        
-        for message_key in deletees: os.remove( ServerFiles.GetPath( 'message', message_key ) )
         
     
     def _DenyFilePetition( self, service_id, hash_ids ):
@@ -1686,10 +1686,10 @@ class DB( HydrusDB.HydrusDB ):
         
         shutil.copy( self._db_path, self._db_path + '.backup' )
         
-        shutil.rmtree( HC.SERVER_FILES_DIR + '_backup', ignore_errors = True )
-        shutil.rmtree( HC.SERVER_THUMBNAILS_DIR + '_backup', ignore_errors = True )
-        shutil.rmtree( HC.SERVER_MESSAGES_DIR + '_backup', ignore_errors = True )
-        shutil.rmtree( HC.SERVER_UPDATES_DIR + '_backup', ignore_errors = True )
+        HydrusData.DeletePath( HC.SERVER_FILES_DIR + '_backup' )
+        HydrusData.DeletePath( HC.SERVER_THUMBNAILS_DIR + '_backup' )
+        HydrusData.DeletePath( HC.SERVER_MESSAGES_DIR + '_backup' )
+        HydrusData.DeletePath( HC.SERVER_UPDATES_DIR + '_backup' )
         
         shutil.copytree( HC.SERVER_FILES_DIR, HC.SERVER_FILES_DIR + '_backup' )
         shutil.copytree( HC.SERVER_THUMBNAILS_DIR, HC.SERVER_THUMBNAILS_DIR + '_backup' )
@@ -2329,11 +2329,11 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DELETE FROM update_cache;' )
             
-            for filename in dircache.listdir( HC.SERVER_UPDATES_DIR ):
+            for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
                 
                 path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
                 
-                os.remove( path )
+                HydrusData.DeletePath( path )
                 
             
             for ( service_id, end ) in first_ends:
@@ -2346,7 +2346,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 161:
             
-            for filename in dircache.listdir( HC.SERVER_UPDATES_DIR ):
+            for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
                 
                 path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
                 
@@ -2383,6 +2383,24 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+        
+        if version == 169:
+            
+            bad_tag_ids = set()
+            
+            for ( tag_id, tag ) in self._c.execute( 'SELECT tag_id, tag FROM tags;' ):
+                
+                try:
+                    
+                    HydrusTags.CheckTagNotEmpty( tag )
+                    
+                except HydrusExceptions.SizeException:
+                    
+                    bad_tag_ids.add( tag_id )
+                    
+                
+            
+            self._c.executemany( 'DELETE FROM mappings WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in bad_tag_ids ) )
             
         
         print( 'The server has updated to version ' + str( version + 1 ) )

@@ -3024,15 +3024,25 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._proxy_type = ClientGUICommon.BetterChoice( self )
+            self._external_host = wx.TextCtrl( self )
+            self._external_host.SetToolTipString( 'If you have trouble parsing your external ip using UPnP, you can force it to be this.' )
             
-            self._proxy_address = wx.TextCtrl( self )
-            self._proxy_port = wx.SpinCtrl( self, min = 0, max = 65535 )
+            proxy_panel = ClientGUICommon.StaticBox( self, 'proxy settings' )
             
-            self._proxy_username = wx.TextCtrl( self )
-            self._proxy_password = wx.TextCtrl( self )
+            self._proxy_type = ClientGUICommon.BetterChoice( proxy_panel )
+            
+            self._proxy_address = wx.TextCtrl( proxy_panel )
+            self._proxy_port = wx.SpinCtrl( proxy_panel, min = 0, max = 65535 )
+            
+            self._proxy_username = wx.TextCtrl( proxy_panel )
+            self._proxy_password = wx.TextCtrl( proxy_panel )
             
             #
+            
+            if HC.options[ 'external_host' ] is not None:
+                
+                self._external_host.SetValue( HC.options[ 'external_host' ] )
+                
             
             self._proxy_type.Append( 'http', 'http' )
             self._proxy_type.Append( 'socks4', 'socks4' )
@@ -3064,25 +3074,23 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Proxy type: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Proxy type: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._proxy_type, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Address: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Address: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._proxy_address, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Port: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Port: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._proxy_port, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Username (optional): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Username (optional): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._proxy_username, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Password (optional): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Password (optional): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._proxy_password, CC.FLAGS_MIXED )
             
             text = 'You have to restart the client for proxy settings to take effect.'
@@ -3091,8 +3099,22 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             text += os.linesep
             text += 'Please send me your feedback.'
             
-            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            proxy_panel.AddF( wx.StaticText( proxy_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            proxy_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'External IP/host override: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._external_host, CC.FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( proxy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -3116,6 +3138,15 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'proxy' ] = ( proxytype, address, port, username, password )
                 
+            
+            external_host = self._external_host.GetValue()
+            
+            if external_host == '':
+                
+                external_host = None
+                
+            
+            HC.options[ 'external_host' ] = external_host
             
         
     
@@ -3337,6 +3368,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._exclude_deleted_files = wx.CheckBox( self, label = '' )
             
+            self._remove_filtered_files = wx.CheckBox( self, label = '' )
             self._remove_trashed_files = wx.CheckBox( self, label = '' )
             
             self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no age limit', min = 0, max = 8640 )
@@ -3352,6 +3384,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
             
             self._exclude_deleted_files.SetValue( HC.options[ 'exclude_deleted_files' ] )
+            self._remove_filtered_files.SetValue( HC.options[ 'remove_filtered_files' ] )
             self._remove_trashed_files.SetValue( HC.options[ 'remove_trashed_files' ] )
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
             self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
@@ -3370,7 +3403,10 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'By default, do not reimport files that have been previously deleted: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._exclude_deleted_files, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self, label = 'By default, remove files from view when they are sent to the trash: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Remove files from view when they are filtered: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._remove_filtered_files, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Remove files from view when they are sent to the trash: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._remove_trashed_files, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self, label = 'Number of hours a file can be in the trash before being deleted: ' ), CC.FLAGS_MIXED )
@@ -3392,6 +3428,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             HC.options[ 'export_path' ] = HydrusFileHandling.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
             
             HC.options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
+            HC.options[ 'remove_filtered_files' ] = self._remove_filtered_files.GetValue()
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
@@ -3777,31 +3814,73 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._fit_to_canvas = wx.CheckBox( self, label = '' )
             
-            # this is a great place to put mime->defaults page
-            # moreso, it can do fit_to_canvas for each media type!
+            self._mime_media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
-            # fit to canvas
-            # load immediately, or show embed flash window, or show button to launch externally, or never show in media viewer--launch externally when thumbnail 'activated'
+            self._mime_media_viewer_actions = {}
+            
+            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.VIDEO_FLV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
+            
+            for mime in mimes_in_correct_order:
+                
+                dropdown = ClientGUICommon.BetterChoice( self._mime_media_viewer_panel )
+                
+                for action in CC.media_viewer_capabilities[ mime ]:
+                    
+                    dropdown.Append( CC.media_viewer_action_string_lookup[ action ], action )
+                    
+                
+                current_action = HC.options[ 'mime_media_viewer_actions' ][ mime ]
+                
+                dropdown.SelectClientData( current_action )
+                
+                self._mime_media_viewer_actions[ mime ] = dropdown
+                
             
             #
             
             self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
             
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            for mime in mimes_in_correct_order:
+                
+                gridbox.AddF( wx.StaticText( self._mime_media_viewer_panel, label = HC.mime_string_lookup[ mime ] ), CC.FLAGS_MIXED )
+                gridbox.AddF( self._mime_media_viewer_actions[ mime ], CC.FLAGS_MIXED )
+                
+            
+            self._mime_media_viewer_panel.AddF( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
             #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Zoom smaller images to fit media canvas: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Zoom smaller media to fit media canvas: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._fit_to_canvas, CC.FLAGS_MIXED )
             
-            self.SetSizer( gridbox )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._mime_media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
             
         
         def UpdateOptions( self ):
             
             HC.options[ 'fit_to_canvas' ] = self._fit_to_canvas.GetValue()
+            
+            mime_media_viewer_actions = {}
+            
+            for ( mime, dropdown ) in self._mime_media_viewer_actions.items():
+                
+                mime_media_viewer_actions[ mime ] = dropdown.GetChoice()
+                
+            
+            HC.options[ 'mime_media_viewer_actions' ] = mime_media_viewer_actions
             
         
     

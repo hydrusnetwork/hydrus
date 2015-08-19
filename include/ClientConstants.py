@@ -129,6 +129,52 @@ RESTRICTION_MAX_RESOLUTION = 1
 RESTRICTION_MAX_FILE_SIZE = 2
 RESTRICTION_ALLOWED_MIMES = 3
 
+MEDIA_VIEWER_SHOW_AS_NORMAL = 0
+MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED = 1
+MEDIA_VIEWER_SHOW_BEHIND_EMBED = 2
+MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED = 3
+MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON = 4
+MEDIA_VIEWER_DO_NOT_SHOW = 5
+
+media_viewer_action_string_lookup = {}
+
+media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_AS_NORMAL ] = 'show as normal'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED ] = 'show as normal, but start paused'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_BEHIND_EMBED ] = 'show, but initially behind an embed button'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED ] = 'show, but initially behind an embed button, and start paused'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON ] = 'show an \'open externally\' button'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_DO_NOT_SHOW ] = 'do not show in the media viewer. on thumbnail activation, open externally'
+
+static_full_support = [ MEDIA_VIEWER_SHOW_AS_NORMAL, MEDIA_VIEWER_SHOW_BEHIND_EMBED, MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_DO_NOT_SHOW ]
+animated_full_support = [ MEDIA_VIEWER_SHOW_AS_NORMAL, MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED, MEDIA_VIEWER_SHOW_BEHIND_EMBED, MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED, MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_DO_NOT_SHOW ]
+no_support = [ MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_DO_NOT_SHOW ]
+
+media_viewer_capabilities = {}
+
+media_viewer_capabilities[ HC.IMAGE_JPEG ] = static_full_support
+media_viewer_capabilities[ HC.IMAGE_PNG ] = static_full_support
+media_viewer_capabilities[ HC.IMAGE_GIF ] = animated_full_support
+
+if HC.PLATFORM_WINDOWS:
+    
+    media_viewer_capabilities[ HC.APPLICATION_FLASH ] = [ MEDIA_VIEWER_SHOW_AS_NORMAL, MEDIA_VIEWER_SHOW_BEHIND_EMBED, MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_DO_NOT_SHOW ]
+    
+else:
+    
+    media_viewer_capabilities[ HC.APPLICATION_FLASH ] = no_support
+    
+
+media_viewer_capabilities[ HC.APPLICATION_PDF ] = no_support
+media_viewer_capabilities[ HC.VIDEO_FLV ] = animated_full_support
+media_viewer_capabilities[ HC.VIDEO_MP4 ] = animated_full_support
+media_viewer_capabilities[ HC.VIDEO_MKV ] = animated_full_support
+media_viewer_capabilities[ HC.VIDEO_WEBM ] = animated_full_support
+media_viewer_capabilities[ HC.VIDEO_WMV ] = animated_full_support
+media_viewer_capabilities[ HC.AUDIO_MP3 ] = no_support
+media_viewer_capabilities[ HC.AUDIO_OGG ] = no_support
+media_viewer_capabilities[ HC.AUDIO_FLAC ] = no_support
+media_viewer_capabilities[ HC.AUDIO_WMA] = no_support
+
 SHUTDOWN_TIMESTAMP_VACUUM = 0
 SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE = 1
 SHUTDOWN_TIMESTAMP_DELETE_ORPHANS = 2

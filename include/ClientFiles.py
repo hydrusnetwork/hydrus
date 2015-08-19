@@ -1,6 +1,5 @@
 import ClientConstants as CC
 import ClientData
-import dircache
 import gc
 import HydrusConstants as HC
 import HydrusData
@@ -76,7 +75,7 @@ def GetAllPaths( raw_paths ):
             
             if os.path.isdir( path ):
                 
-                subpaths = [ path + os.path.sep + filename for filename in dircache.listdir( path ) ]
+                subpaths = [ path + os.path.sep + filename for filename in os.listdir( path ) ]
                 
                 next_paths_to_process.extend( subpaths )
                 
@@ -236,7 +235,7 @@ def IterateAllFilePaths():
         
         dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
         
-        next_paths = dircache.listdir( dir )
+        next_paths = os.listdir( dir )
         
         for path in next_paths: yield dir + os.path.sep + path
         
@@ -249,7 +248,7 @@ def IterateAllThumbnailPaths():
         
         dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
         
-        next_paths = dircache.listdir( dir )
+        next_paths = os.listdir( dir )
         
         for path in next_paths: yield dir + os.path.sep + path
         
@@ -368,7 +367,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                 
-                existing_filenames = dircache.listdir( folder_path )
+                existing_filenames = os.listdir( folder_path )
                 
                 #
                 
@@ -445,6 +444,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         shutil.copy( source_path, dest_path )
                         shutil.copystat( source_path, dest_path )
+                        
                         try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
                         except: pass
                         
@@ -454,13 +454,13 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
                     
-                    all_filenames = dircache.listdir( folder_path )
+                    all_filenames = os.listdir( folder_path )
                     
                     deletee_paths = { folder_path + os.path.sep + filename for filename in all_filenames if filename not in filenames_used }
                     
                     for deletee_path in deletee_paths:
                         
-                        os.remove( deletee_path )
+                        HydrusData.DeletePath( deletee_path )
                         
                     
                 

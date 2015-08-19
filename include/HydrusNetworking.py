@@ -455,7 +455,10 @@ class HTTPConnection( object ):
                 
                 for hook in report_hooks:
                     
-                    hook( content_length, size_of_response )
+                    if content_length is not None:
+                        
+                        hook( content_length, size_of_response )
+                        
                     
                 
             

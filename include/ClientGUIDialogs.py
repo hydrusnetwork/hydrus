@@ -1516,7 +1516,7 @@ class DialogInputLocalFiles( Dialog ):
         self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
         self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
         
-        self._tag_button = wx.Button( self, label = 'Add tags before importing' )
+        self._tag_button = wx.Button( self, label = 'Add tags based on filename' )
         self._tag_button.Bind( wx.EVT_BUTTON, self.EventTags )
         self._tag_button.SetForegroundColour( ( 0, 128, 0 ) )
         
@@ -2984,7 +2984,7 @@ class DialogPageChooser( Dialog ):
             button.SetLabel( name )
             
         elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
-        elif entry_type == 'page_import_url': button.SetLabel( 'url' )
+        elif entry_type == 'page_import_page_of_images': button.SetLabel( 'page of images' )
         
         button.Show()
         
@@ -3005,7 +3005,7 @@ class DialogPageChooser( Dialog ):
             
             entries = [ ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ), ( 'page_query', CC.TRASH_SERVICE_KEY ) ] + file_repos
             
-        elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
+        elif menu_keyword == 'download': entries = [ ( 'page_import_page_of_images', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery':
             
             entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', HC.SITE_TYPE_GIPHY, None ) ), ( 'page_import_gallery', ( 'deviant art', HC.SITE_TYPE_DEVIANT_ART, 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', HC.SITE_TYPE_NEWGROUNDS, None ) ) ]
@@ -3078,7 +3078,7 @@ class DialogPageChooser( Dialog ):
                     HydrusGlobals.pubsub.pub( 'new_import_gallery', site_type, gallery_type )
                     
                 elif entry_type == 'page_import_thread_watcher': HydrusGlobals.pubsub.pub( 'new_page_import_thread_watcher' )
-                elif entry_type == 'page_import_url': HydrusGlobals.pubsub.pub( 'new_page_import_url' )
+                elif entry_type == 'page_import_page_of_images': HydrusGlobals.pubsub.pub( 'new_page_import_page_of_images' )
                 elif entry_type == 'page_petitions': HydrusGlobals.pubsub.pub( 'new_page_petitions', obj )
                 
                 self.EndModal( wx.ID_OK )

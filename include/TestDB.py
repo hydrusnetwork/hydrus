@@ -65,15 +65,7 @@ class TestClientDB( unittest.TestCase ):
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )
         
-        def make_temp_files_deletable( function_called, path, traceback_gumpf ):
-            
-            os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-            
-            try: function_called( path ) # try again
-            except: pass
-            
-        
-        shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
+        shutil.rmtree( HC.DB_DIR )
         
         HC.DB_DIR = self._old_db_dir
         HC.CLIENT_FILES_DIR = self._old_client_files_dir
@@ -622,7 +614,7 @@ class TestClientDB( unittest.TestCase ):
         
         session.AddPage( 'thread watcher', management_controller, [] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportURL()
+        management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
         
         session.AddPage( 'url download page', management_controller, [] )
         
@@ -1259,15 +1251,7 @@ class TestServerDB( unittest.TestCase ):
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )
         
-        def make_temp_files_deletable( function_called, path, traceback_gumpf ):
-            
-            os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-            
-            try: function_called( path ) # try again
-            except: pass
-            
-        
-        shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
+        shutil.rmtree( HC.DB_DIR )
         
         HC.DB_DIR = self._old_db_dir
         HC.SERVER_FILES_DIR = self._old_server_files_dir

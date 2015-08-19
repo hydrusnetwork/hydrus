@@ -47,6 +47,11 @@ class TestDownloaders( unittest.TestCase ):
         
         expected_gallery_urls = ['http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', 'http://sakimichan.deviantart.com/art/Johnny-Bravo-505601401', 'http://sakimichan.deviantart.com/art/Daphne-505394693', 'http://sakimichan.deviantart.com/art/kim-Possible-505195132', 'http://sakimichan.deviantart.com/art/Levi-s-evil-plan-504966437', 'http://sakimichan.deviantart.com/art/Velma-504483448', 'http://sakimichan.deviantart.com/art/Scoobydoo-504238131', 'http://sakimichan.deviantart.com/art/Kerrigan-chilling-503477012', 'http://sakimichan.deviantart.com/art/Kiki-498525851', 'http://sakimichan.deviantart.com/art/Waiter-Howl-502377515', 'http://sakimichan.deviantart.com/art/Modern-Loki-497985045', 'http://sakimichan.deviantart.com/art/Emma-501919103', 'http://sakimichan.deviantart.com/art/Lola-494941222', 'http://sakimichan.deviantart.com/art/Elsas-501262184', 'http://sakimichan.deviantart.com/art/Tsunade-499517356', 'http://sakimichan.deviantart.com/art/A-little-cold-out-commission-498326494', 'http://sakimichan.deviantart.com/art/Girl-496999831', 'http://sakimichan.deviantart.com/art/Green-elf-496797148', 'http://sakimichan.deviantart.com/art/Itachi-496625357', 'http://sakimichan.deviantart.com/art/Sesshomaru-495474394', 'http://sakimichan.deviantart.com/art/Mononoke-years-later-502160436', 'http://sakimichan.deviantart.com/art/Jinx-488513585', 'http://sakimichan.deviantart.com/art/Alex-in-wonderland-485819661', 'http://sakimichan.deviantart.com/art/Ariels-476991263' ]
         
+        with open( 'C:\\t.txt', 'wb' ) as f:
+            
+            f.write( repr( gallery_urls ) )
+            
+        
         self.assertEqual( gallery_urls, expected_gallery_urls )
         
         #

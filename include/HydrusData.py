@@ -6,6 +6,8 @@ import HydrusGlobals
 import HydrusSerialisable
 import locale
 import os
+import psutil
+import send2trash
 import sqlite3
 import subprocess
 import sys
@@ -497,7 +499,14 @@ def ConvertZoomToPercentage( zoom ):
     
     zoom = zoom * 100.0
     
-    pretty_zoom = '%.0f' % zoom + '%'
+    if zoom == int( zoom ):
+        
+        pretty_zoom = '%i' % zoom + '%'
+        
+    else:
+        
+        pretty_zoom = '%.2f' % zoom + '%'
+        
     
     return pretty_zoom
     
@@ -507,6 +516,10 @@ def DebugPrint( debug_info ):
     
     sys.stdout.flush()
     sys.stderr.flush()
+    
+def DeletePath( path ):
+    
+    send2trash.send2trash( path )
     
 def DeserialisePrettyTags( text ):
     
@@ -593,6 +606,58 @@ def IntelligentMassIntersect( sets_to_reduce ):
     
     if answer is None: return set()
     else: return answer
+    
+def IsAlreadyRunning():
+    
+    me = None
+    
+    my_pid = os.getpid()
+    
+    current_processes = [ p for p in psutil.process_iter() ]
+    
+    for p in current_processes:
+        
+        try:
+            
+            p_pid = p.pid
+            
+        except psutil.Error:
+            
+            continue
+            
+        
+        if p.pid == my_pid:
+            
+            me = p
+            
+        
+    
+    my_exe = me.exe()
+    my_cmd = me.cmdline()
+    
+    for p in current_processes:
+        
+        try:
+            
+            p_pid = p.pid
+            p_exe = p.exe()
+            p_cmd = p.cmdline()
+            
+        except psutil.Error:
+            
+            continue
+            
+        
+        if p_pid != my_pid:
+            
+            if p_exe == my_exe and p_cmd == my_cmd:
+                
+                return True
+                
+            
+        
+    
+    return False
     
 def MergeKeyToListDicts( key_to_list_dicts ):
     
@@ -1356,7 +1421,14 @@ class JobKey( object ):
         
         stuff_to_print = [ ToString( s ) for s in stuff_to_print ]
         
-        return os.linesep.join( stuff_to_print )
+        try:
+            
+            return os.linesep.join( stuff_to_print )
+            
+        except:
+            
+            return repr( stuff_to_print )
+            
         
     
     def WaitIfNeeded( self ):

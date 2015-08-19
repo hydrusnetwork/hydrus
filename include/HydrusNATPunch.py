@@ -1,4 +1,5 @@
 import HydrusConstants as HC
+import HydrusData
 import HydrusExceptions
 import os
 import socket
@@ -8,7 +9,6 @@ import traceback
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.python import log
-import HydrusData
 
 # new stuff starts here
 
@@ -22,7 +22,12 @@ EXTERNAL_IP[ 'time' ] = 0
 
 def GetExternalIP():
     
-    if HydrusData.GetNow() - EXTERNAL_IP[ 'time' ] > 3600 * 24:
+    if HC.options[ 'external_host' ] is not None:
+        
+        return HC.options[ 'external_host' ]
+        
+    
+    if HydrusData.TimeHasPassed( EXTERNAL_IP[ 'time' ] + ( 3600 * 24 ) ):
         
         cmd = [ upnpc_path, '-l' ]
         
@@ -43,83 +48,26 @@ def GetExternalIP():
                 
                 '''ExternalIPAddress = ip'''
                 
-                ( gumpf, EXTERNAL_IP[ 'ip' ] ) = lines[ i - 1 ].split( ' = ' )
+                ( gumpf, external_ip_address ) = lines[ i - 1 ].split( ' = ' )
                 
-                EXTERNAL_IP[ 'time' ] = HydrusData.GetNow()
+            except ValueError:
                 
-            except: raise Exception( 'Problem while trying to fetch External IP.' )
+                raise Exception( 'Could not parse external IP!' )
+                
+            
+            if external_ip_address == '0.0.0.0':
+                
+                raise Exception( 'Your UPnP device returned your external IP as 0.0.0.0! Try rebooting it, or overwrite it in options!' )
+                
+            
+            EXTERNAL_IP[ 'ip' ] = external_ip_address
+            EXTERNAL_IP[ 'time' ] = HydrusData.GetNow()
             
         
     
     return EXTERNAL_IP[ 'ip' ]
     
 def GetLocalIP(): return socket.gethostbyname( socket.gethostname() )
-
-# old, win32 only stuff
-
-'''
-
-if HC.PLATFORM_WINDOWS: import win32com.client
-
-def GetStaticPortMappingCollection():
-    
-    try:
-        
-        dispatcher = win32com.client.Dispatch( 'HNetCfg.NATUPnP' )
-        
-        static_port_mappings = dispatcher.StaticPortMappingCollection
-        
-    except: raise Exception( 'Could not fetch UPnP Manager!' )
-    
-    if static_port_mappings is None: raise Exception( 'Could not fetch UPnP info!' + os.linesep + 'Make sure UPnP is enabled for your computer and router, or try restarting your router.' )
-    
-    return static_port_mappings
-    
-def GetUPnPMappings():
-    
-    static_port_mappings = GetStaticPortMappingCollection()
-    
-    mappings = []
-    
-    for i in range( len( static_port_mappings ) ):
-        
-        static_port_mapping = static_port_mappings[i]
-        
-        description = static_port_mapping.Description
-        
-        internal_client = static_port_mapping.InternalClient
-        internal_port = static_port_mapping.InternalPort
-        
-        external_ip_address = static_port_mapping.ExternalIPAddress
-        external_port = static_port_mapping.ExternalPort
-        
-        protocol = static_port_mapping.Protocol
-        
-        enabled = static_port_mapping.Enabled
-        
-        mappings.append( ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) )
-        
-    
-    return mappings
-    
-def AddUPnPMapping( external_port, protocol, internal_port, description ):
-    
-    internal_client = GetLocalIP()
-    
-    enabled = True
-    
-    static_port_mappings = GetStaticPortMappingCollection()
-    
-    try: static_port_mappings.Add( external_port, protocol, internal_port, internal_client, enabled, description )
-    except: raise Exception( 'Attempt to add a UPnP mapping failed; that mapping probably already exists as a UPnP mapping or static port forward already.' )
-    
-def RemoveUPnPMapping( external_port, protocol ):
-    
-    static_port_mappings = GetStaticPortMappingCollection()
-    
-    try: static_port_mappings.Remove( external_port, protocol )
-    except: raise Exception( 'Attempt to remove UPnP mapping failed.' )
-    '''
 
 def AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = 3600 ):
     
@@ -134,6 +82,8 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToString( error ) )
     
 def GetUPnPMappings():
+    
+    external_ip_address = GetExternalIP()
     
     cmd = [ upnpc_path, '-l' ]
     
@@ -151,11 +101,6 @@ def GetUPnPMappings():
             lines = output.split( os.linesep )
             
             i = lines.index( ' i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
-            
-            '''ExternalIPAddress = ip'''
-            
-            try: ( gumpf, external_ip_address ) = lines[ i - 1 ].split( ' = ' )
-            except ValueError: return
             
             data_lines = []
             
