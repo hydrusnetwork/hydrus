@@ -8,6 +8,47 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 170</h3></li>
+				<ul>
+					<li>added media viewer mime options to file->options->media page</li>
+					<li>you can now set animated mimes to start in a paused state</li>
+					<li>you can now set the client to 'open externally' any media from a thumbnail activation</li>
+					<li>reworked the way the media viewer generalises and displays its media to obey these new options</li>
+					<li>improved some misc zoom code</li>
+					<li>flv video is now rendered natively by default</li>
+					<li>audio now defaults to an 'open externally' button</li>
+					<li>renamed the nebulous 'url' download page option to 'page of images'</li>
+					<li>moved the 'page of images' download page to the new system--it'll now remember its state through a restart, has a the detailed import status button, all that stuff</li>
+					<li>'page of images' download page now supports checkboxes to customise which types of links it will search for</li>
+					<li>you can now close and rename page tabs from a right-click menu!</li>
+					<li>deviant art parser now works for mature images</li>
+					<li>improved deviant art tag and image page parsing</li>
+					<li>added 'remove filtered files' option to file->options->files and trash</li>
+					<li>improved UPnP dialog error reporting for when external IP cannot be parsed and for when external IP is reported as 0.0.0.0</li>
+					<li>added an external ip/host override option to file->options->connection page</li>
+					<li>whenever the client or server deletes a regular file or directory, it will now send it to the recycle bin</li>
+					<li>files stored in the db are no longer read-only</li>
+					<li>existing files stored in the db will attempt to be set read&write on update</li>
+					<li>wrapped undo manager access in a lock, which may stop index bugs when a lot of stuff is going on</li>
+					<li>fixed a bug in download progress->progress gauge hook when content length was absent</li>
+					<li>removed previously entered zero-length namespaced tags (like 'wallpaper:') from client and server</li>
+					<li>moved 'client/server already running' check from db access test to more reliable process list review</li>
+					<li>improved 'client is already running' mini-dialog</li>
+					<li>added cpu percent utilisation check (if any cores >50%, dump out) to idle check</li>
+					<li>if the 'canvas zoom' value exactly matches a default zoom, it will not be inserted into the list of zooms to scroll through</li>
+					<li>the 'canvas zoom' will be displayed with hundreds of a percent accuracy</li>
+					<li>the new thread and hdd import pages will now obey page-global pause/resume events</li>
+					<li>the new thread and hdd import pages now have the 'sort by' dropdown</li>
+					<li>the new thread import page supports set_search_focus event</li>
+					<li>added import tag options info to 'getting started - tags' help page</li>
+					<li>relabelled the path tagging button on the import files dialog to something that made more sense</li>
+					<li>might have patched an unusual subscription error reporting bug</li>
+					<li>updated sqlite on windows--db should be a bit faster</li>
+					<li>updated pillow on all platforms</li>
+					<li>compiled a new python for my os x build with newer openssl library, which should fix some ssl problems people were having</li>
+					<li>updated some deprecated directory parsing code</li>
+					<li>general code cleanup</li>
+				</ul>
 				<li><h3>version 169</h3></li>
 				<ul>
 					<li>revised all the help files</li>
