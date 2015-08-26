@@ -8,6 +8,50 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 171</h3></li>
+				<ul>
+					<li>improved isalreadyrunning code</li>
+					<li>fixed isalreadyrunning code for the Linux frozen build</li>
+					<li>the client's isalreadyrunning splash check will respond more quickly if you choose to wait</li>
+					<li>repository processing sync will no longer update the frontend, which approx doubles its speed</li>
+					<li>repository processing sync now only occurs when the client is idle, so it won't slow your browsing down</li>
+					<li>if you catch the client while it is processing, doing pretty much any action will make it quit out nice and quick</li>
+					<li>repository processing sync now occurs at a lower db level, meaning less laggy popup ui update and overall faster processing time</li>
+					<li>repository popup disappears after a few seconds once it is done--if you leave your client on all the time, you probably won't see it again.</li>
+					<li>split 'maintenance and memory' options panel into 'maintenance and processing' and 'speed and memory'</li>
+					<li>added 'cpu busy' option to options->maintenance and processing</li>
+					<li>added 'run stuff on shutdown' option to options->maintenance and processing to set whether pending db maintenance and repo processing can happen on shutdown</li>
+					<li>added 'max minutes on shutdown' option to options->maintenance and processing to limit how much shutdown processing can be done in one sitting</li>
+					<li>repositories can now sync on shutdown--they will report through the splash window</li>
+					<li>shutdown maintenance is checked and run in a better way</li>
+					<li>moved to a two-stage shutdown procedure</li>
+					<li>daemons are better kept track of, and they talk to the controller in a better way</li>
+					<li>daemons shut down in a better way</li>
+					<li>improved a bunch of idle/busy/just woke from sleep logic</li>
+					<li>improved how the controller maintains the db and memory</li>
+					<li>improved force_idle mode in the client</li>
+					<li>idle calculation is more accurate, and resets on more user-driven events</li>
+					<li>improved responsivity for processing popup</li>
+					<li>fixed a serious bug that was counting some unprocessed content as done when the service processing window was cancelled</li>
+					<li>misc code improvements</li>
+					<li>misc maintenance code improvements</li>
+					<li>fixed a bug with parentless center-positioned dialogs not sizing themselves properly</li>
+					<li>removed delete_orphans timespan param option</li>
+					<li>fixed bugs selecting and media-viewering collected media</li>
+					<li>fixed a missing thumbnail selection bug</li>
+					<li>fixed some os x dialog interaction and z-order problems when the splash screen is open</li>
+					<li>os x splash screen is no longer stay_on_top</li>
+					<li>fixed the 110.00% display bug</li>
+					<li>removed wx from pubsub code</li>
+					<li>pubsubs now route through the controller</li>
+					<li>reduced some pubsub overhead, we'll see if it smooths out some of the gritty stuff</li>
+					<li>misc thread worker pool is now managed by and routed through controller</li>
+					<li>some other thread-wx interaction is now routed through clientcontroller</li>
+					<li>db now interacts with controller directly, not through wx</li>
+					<li>all other indirect references to controller go through hydrusglobals, not wx</li>
+					<li>refactored everything wx away from everything hydrus/server except controller code</li>
+					<li>about window now says the client's network version</li>
+				</ul>
 				<li><h3>version 170</h3></li>
 				<ul>
 					<li>added media viewer mime options to file->options->media page</li>
