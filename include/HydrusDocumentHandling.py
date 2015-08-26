@@ -3,7 +3,6 @@ import PyPDF2
 import re
 import time
 import traceback
-import wx
 
 def GetNumWordsFromString( s ):
     

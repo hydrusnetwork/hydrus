@@ -58,7 +58,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage 4chan pass' )
         
-        ( token, pin, self._timeout ) = wx.GetApp().Read( '4chan_pass' )
+        ( token, pin, self._timeout ) = HydrusGlobals.controller.Read( '4chan_pass' )
         
         self._token = wx.TextCtrl( self )
         self._pin = wx.TextCtrl( self )
@@ -125,7 +125,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         token = self._token.GetValue()
         pin = self._pin.GetValue()
         
-        wx.GetApp().Write( '4chan_pass', ( token, pin, self._timeout ) )
+        HydrusGlobals.controller.Write( '4chan_pass', ( token, pin, self._timeout ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -153,12 +153,12 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             request_headers = {}
             request_headers[ 'Content-Type' ] = ct
             
-            response = wx.GetApp().DoHTTP( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
+            response = HydrusGlobals.controller.DoHTTP( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
             
             self._timeout = HydrusData.GetNow() + 365 * 24 * 3600
             
         
-        wx.GetApp().Write( '4chan_pass', ( token, pin, self._timeout ) )
+        HydrusGlobals.controller.Write( '4chan_pass', ( token, pin, self._timeout ) )
         
         self._SetStatus()
         
@@ -193,7 +193,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
         
-        service = wx.GetApp().GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
         
         response = service.Request( HC.GET, 'account_types' )
         
@@ -359,7 +359,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        service = wx.GetApp().GetServicesManager().GetService( self._service_key )
+        service = HydrusGlobals.controller.GetServicesManager().GetService( self._service_key )
         
         service.Request( HC.POST, 'account_types', { 'edit_log' : self._edit_log } )
         
@@ -397,7 +397,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            boorus = wx.GetApp().Read( 'remote_boorus' )
+            boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
             
             for ( name, booru ) in boorus.items():
                 
@@ -497,7 +497,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             for name in self._names_to_delete:
                 
-                wx.GetApp().Write( 'delete_remote_booru', name )
+                HydrusGlobals.controller.Write( 'delete_remote_booru', name )
                 
             
             for ( name, page ) in self._boorus.GetNamesToActivePages().items():
@@ -506,7 +506,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     booru = page.GetBooru()
                     
-                    wx.GetApp().Write( 'remote_booru', name, booru )
+                    HydrusGlobals.controller.Write( 'remote_booru', name, booru )
                     
                 
             
@@ -885,7 +885,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             self._edit_log = []
             
-            ( identities, contacts, deletable_names ) = wx.GetApp().Read( 'identities_and_contacts' )
+            ( identities, contacts, deletable_names ) = HydrusGlobals.controller.Read( 'identities_and_contacts' )
             
             self._deletable_names = deletable_names
             
@@ -1132,7 +1132,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: wx.GetApp().Write( 'update_contacts', self._edit_log )
+            if len( self._edit_log ) > 0: HydrusGlobals.controller.Write( 'update_contacts', self._edit_log )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -1392,7 +1392,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, use_display_tuple_for_sort = True )
         
-        export_folders = wx.GetApp().Read( 'export_folders' )
+        export_folders = HydrusGlobals.controller.Read( 'export_folders' )
         
         self._original_paths = []
         
@@ -1585,7 +1585,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for export_folder in client_data:
             
-            wx.GetApp().Write( 'export_folder', export_folder )
+            HydrusGlobals.controller.Write( 'export_folder', export_folder )
             
             path = export_folder.GetName()
             
@@ -1594,9 +1594,9 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         deletees = set( self._original_paths ) - paths_set
         
-        for deletee in deletees: wx.GetApp().Write( 'delete_export_folder', deletee )
+        for deletee in deletees: HydrusGlobals.controller.Write( 'delete_export_folder', deletee )
         
-        HydrusGlobals.pubsub.pub( 'notify_new_export_folders' )
+        HydrusGlobals.controller.pub( 'notify_new_export_folders' )
         
         self.EndModal( wx.ID_OK )
         
@@ -1723,8 +1723,8 @@ If you select synchronise, be careful!'''
         
         wx.CallAfter( self._ok.SetFocus )
         
-        HydrusGlobals.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
-        HydrusGlobals.pubsub.sub( self, 'RemovePredicate', 'remove_predicate' )
+        HydrusGlobals.controller.sub( self, 'AddPredicate', 'add_predicate' )
+        HydrusGlobals.controller.sub( self, 'RemovePredicate', 'remove_predicate' )
         
     
     def AddPredicate( self, page_key, predicate ):
@@ -1814,7 +1814,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             self._names_to_delete = []
             
-            sites = wx.GetApp().Read( 'imageboards' )
+            sites = HydrusGlobals.controller.Read( 'imageboards' )
             
             for ( name, imageboards ) in sites.items():
                 
@@ -1914,7 +1914,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             for name in self._names_to_delete:
                 
-                wx.GetApp().Write( 'delete_imageboard', name )
+                HydrusGlobals.controller.Write( 'delete_imageboard', name )
                 
             
             for ( name, page ) in self._sites.GetNamesToActivePages().items():
@@ -1923,7 +1923,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     imageboards = page.GetImageboards()
                     
-                    wx.GetApp().Write( 'imageboard', name, imageboards )
+                    HydrusGlobals.controller.Write( 'imageboard', name, imageboards )
                     
                 
             
@@ -2528,7 +2528,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            self._original_paths_to_details = wx.GetApp().Read( 'import_folders' )
+            self._original_paths_to_details = HydrusGlobals.controller.Read( 'import_folders' )
             
             for ( path, details ) in self._original_paths_to_details.items():
                 
@@ -2688,16 +2688,16 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             details[ 'check_period' ] = check_period
             details[ 'local_tag' ] = local_tag
             
-            wx.GetApp().Write( 'import_folder', path, details )
+            HydrusGlobals.controller.Write( 'import_folder', path, details )
             
             paths.add( path )
             
         
         deletees = set( self._original_paths_to_details.keys() ) - paths
         
-        for deletee in deletees: wx.GetApp().Write( 'delete_import_folder', deletee )
+        for deletee in deletees: HydrusGlobals.controller.Write( 'delete_import_folder', deletee )
         
-        HydrusGlobals.pubsub.pub( 'notify_new_import_folders' )
+        HydrusGlobals.controller.pub( 'notify_new_import_folders' )
         
         self.EndModal( wx.ID_OK )
         
@@ -2829,7 +2829,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         self._listbook.AddPage( 'connection', self._ConnectionPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
-        self._listbook.AddPage( 'maintenance and memory', self._MaintenanceAndMemoryPanel( self._listbook ) )
+        self._listbook.AddPage( 'speed and memory', self._SpeedAndMemoryPanel( self._listbook ) )
+        self._listbook.AddPage( 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media', self._MediaPanel( self._listbook ) )
         self._listbook.AddPage( 'gui', self._GUIPanel( self._listbook ) )
         #self._listbook.AddPage( 'sound', self._SoundPanel( self._listbook ) )
@@ -3150,6 +3151,119 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
         
     
+    class _MaintenanceAndProcessingPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._idle_panel = ClientGUICommon.StaticBox( self, 'idle' )
+            self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance' )
+            self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
+            
+            self._idle_period = wx.SpinCtrl( self._idle_panel, min = 0, max = 1000 )
+            self._idle_cpu_max = wx.SpinCtrl( self._idle_panel, min = 0, max = 100 )
+            
+            self._idle_shutdown = ClientGUICommon.BetterChoice( self._idle_panel )
+            
+            for idle_id in ( CC.IDLE_NOT_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
+                
+                self._idle_shutdown.Append( CC.idle_string_lookup[ idle_id ], idle_id )
+                
+            
+            self._idle_shutdown_max_minutes = wx.SpinCtrl( self._idle_panel, min = 1, max = 1440 )
+            
+            self._maintenance_vacuum_period = wx.SpinCtrl( self._maintenance_panel, min = 0, max = 365 )
+            
+            self._processing_phase = wx.SpinCtrl( self._processing_panel, min = 0, max = 100000 )
+            self._processing_phase.SetToolTipString( 'how long this client will delay processing updates after they are due. useful if you have multiple clients and do not want them to process at the same time' )
+            
+            #
+            
+            self._idle_period.SetValue( HC.options[ 'idle_period' ] / 60 )
+            self._idle_cpu_max.SetValue( HC.options[ 'idle_cpu_max' ] )
+            self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
+            self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
+            
+            self._maintenance_vacuum_period.SetValue( HC.options[ 'maintenance_vacuum_period' ] / 86400 )
+            
+            self._processing_phase.SetValue( HC.options[ 'processing_phase' ] )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of inactivity until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._idle_period, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Do not start a job if any CPU core has more than this percent usage: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._idle_cpu_max, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run jobs on shutdown?: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._idle_shutdown, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Max number of minutes to run shutdown jobs: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._idle_shutdown_max_minutes, CC.FLAGS_MIXED )
+            
+            text = 'CPU-heavy jobs like maintenance routines and repository synchronisation processing will only start by themselves when you are not using the client.'
+            
+            st = wx.StaticText( self._idle_panel, label = text )
+            
+            st.Wrap( 400 )
+            
+            self._idle_panel.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._idle_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._maintenance_panel, label = 'Number of days to wait between vacuums (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._maintenance_vacuum_period, CC.FLAGS_MIXED )
+            
+            self._maintenance_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._processing_panel, label = 'Delay update processing by (s): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._processing_phase, CC.FLAGS_MIXED )
+            
+            self._processing_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'idle_period' ] = 60 * self._idle_period.GetValue()
+            HC.options[ 'idle_cpu_max' ] = self._idle_cpu_max.GetValue()
+            HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
+            HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
+            
+            HC.options[ 'maintenance_vacuum_period' ] = 86400 * self._maintenance_vacuum_period.GetValue()
+            
+            HC.options[ 'processing_phase' ] = self._processing_phase.GetValue()
+            
+        
+    
     class _DefaultFileSystemPredicatesPanel( wx.Panel ):
         
         def __init__( self, parent ):
@@ -3271,7 +3385,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             for ( k, v ) in HC.site_type_string_lookup.items(): pretty_names_to_names[ v ] = k
             
-            boorus = wx.GetApp().Read( 'remote_boorus' )
+            boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
             
             for ( booru_name, booru ) in boorus.items(): pretty_names_to_names[ 'booru: ' + booru_name ] = ( HC.SITE_TYPE_BOORU, booru_name )
             
@@ -3466,7 +3580,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            gui_session_names = wx.GetApp().Read( 'gui_session_names' )
+            gui_session_names = HydrusGlobals.controller.Read( 'gui_session_names' )
             
             if 'last session' not in gui_session_names: gui_session_names.insert( 0, 'last session' )
             
@@ -3488,7 +3602,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
             
-            services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
             
             for service in services: self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
             
@@ -3591,216 +3705,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'rating_dialog_position' ] = ( remember, None )
                 
-            
-        
-    
-    class _MaintenanceAndMemoryPanel( wx.Panel ):
-        
-        def __init__( self, parent ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._thumbnail_width = wx.SpinCtrl( self, min = 20, max = 200 )
-            self._thumbnail_width.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
-            self._thumbnail_height = wx.SpinCtrl( self, min = 20, max = 200 )
-            self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
-            self._thumbnail_cache_size = wx.SpinCtrl( self, min = 5, max = 3000 )
-            self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
-            self._estimated_number_thumbnails = wx.StaticText( self, label = '' )
-            
-            self._preview_cache_size = wx.SpinCtrl( self, min = 5, max = 3000 )
-            self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
-            
-            self._estimated_number_previews = wx.StaticText( self, label = '' )
-            
-            self._fullscreen_cache_size = wx.SpinCtrl( self, min = 25, max = 3000 )
-            self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
-            
-            self._estimated_number_fullscreens = wx.StaticText( self, label = '' )
-            
-            self._maintenance_idle_period = wx.SpinCtrl( self, min = 0, max = 1000 )
-            self._maintenance_vacuum_period = wx.SpinCtrl( self, min = 0, max = 365 )
-            self._maintenance_delete_orphans_period = wx.SpinCtrl( self, min = 0, max = 365 )
-            
-            self._num_autocomplete_chars = wx.SpinCtrl( self, min = 1, max = 100 )
-            self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db' + os.linesep + 'increase this if you find autocomplete results are slow' )
-            
-            self._autocomplete_long_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
-            self._autocomplete_long_wait.SetToolTipString( 'how long the gui will wait, after you enter a character, before it queries the db with what you have entered so far' )
-            
-            self._autocomplete_short_wait_chars = wx.SpinCtrl( self, min = 1, max = 100 )
-            self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
-            
-            self._autocomplete_short_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
-            self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
-            
-            self._processing_phase = wx.SpinCtrl( self, min = 0, max = 100000 )
-            self._processing_phase.SetToolTipString( 'how long this client will delay processing updates after they are due. useful if you have multiple clients and do not want them to process at the same time' )
-            
-            #
-            
-            ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
-            
-            self._thumbnail_width.SetValue( thumbnail_width )
-            
-            self._thumbnail_height.SetValue( thumbnail_height )
-            
-            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
-            
-            self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
-            
-            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
-            
-            self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
-            
-            self._maintenance_idle_period.SetValue( HC.options[ 'idle_period' ] / 60 )
-            self._maintenance_vacuum_period.SetValue( HC.options[ 'maintenance_vacuum_period' ] / 86400 )
-            self._maintenance_delete_orphans_period.SetValue( HC.options[ 'maintenance_delete_orphans_period' ] / 86400 )
-            
-            ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
-            
-            self._autocomplete_long_wait.SetValue( long_wait )
-            
-            self._autocomplete_short_wait_chars.SetValue( char_limit )
-            
-            self._autocomplete_short_wait.SetValue( short_wait )
-            
-            self._processing_phase.SetValue( HC.options[ 'processing_phase' ] )
-            
-            #
-            
-            thumbnails_sizer = wx.BoxSizer( wx.HORIZONTAL )
-            
-            thumbnails_sizer.AddF( self._thumbnail_cache_size, CC.FLAGS_MIXED )
-            thumbnails_sizer.AddF( self._estimated_number_thumbnails, CC.FLAGS_MIXED )
-            
-            previews_sizer = wx.BoxSizer( wx.HORIZONTAL )
-            
-            previews_sizer.AddF( self._preview_cache_size, CC.FLAGS_MIXED )
-            previews_sizer.AddF( self._estimated_number_previews, CC.FLAGS_MIXED )
-            
-            fullscreens_sizer = wx.BoxSizer( wx.HORIZONTAL )
-            
-            fullscreens_sizer.AddF( self._fullscreen_cache_size, CC.FLAGS_MIXED )
-            fullscreens_sizer.AddF( self._estimated_number_fullscreens, CC.FLAGS_MIXED )
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail width: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thumbnail_width, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail height: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thumbnail_height, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( thumbnails_sizer, CC.FLAGS_NONE )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for preview cache: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( previews_sizer, CC.FLAGS_NONE )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for fullscreen cache: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Minutes of inactivity until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._maintenance_idle_period, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Number of days to wait between vacuums (0 for never): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._maintenance_vacuum_period, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Number of days to wait between orphan deletions (0 for never): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._maintenance_delete_orphans_period, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete character threshold: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._num_autocomplete_chars, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait (ms): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._autocomplete_long_wait, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait threshold: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._autocomplete_short_wait_chars, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._autocomplete_short_wait, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Delay update processing by (s): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._processing_phase, CC.FLAGS_MIXED )
-            
-            self.SetSizer( gridbox )
-            
-            #
-            
-            self.EventFullscreensUpdate( None )
-            self.EventPreviewsUpdate( None )
-            self.EventThumbnailsUpdate( None )
-            
-            wx.CallAfter( self.Layout ) # draws the static texts correctly
-            
-        
-        def EventFullscreensUpdate( self, event ):
-            
-            ( width, height ) = wx.GetDisplaySize()
-            
-            estimated_bytes_per_fullscreen = 3 * width * height
-            
-            self._estimated_number_fullscreens.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
-            
-        
-        def EventPreviewsUpdate( self, event ):
-            
-            estimated_bytes_per_preview = 3 * 400 * 400
-            
-            self._estimated_number_previews.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._preview_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_preview ) + ' previews)' )
-            
-        
-        def EventThumbnailsUpdate( self, event ):
-            
-            estimated_bytes_per_thumb = 3 * self._thumbnail_height.GetValue() * self._thumbnail_width.GetValue()
-            
-            self._estimated_number_thumbnails.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
-            
-        
-        def UpdateOptions( self ):
-            
-            new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
-            
-            if new_thumbnail_dimensions != HC.options[ 'thumbnail_dimensions' ]:
-                
-                text = 'You have changed the thumbnail dimensions, which will mean deleting all the old resized thumbnails right now, during which time the database will be locked. If you have tens or hundreds of thousands of files, this could take a long time.'
-                text += os.linesep * 2
-                text += 'Are you sure you want to change your thumbnail dimensions?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES: HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
-                    
-                
-            
-            HC.options[ 'idle_period' ] = 60 * self._maintenance_idle_period.GetValue()
-            HC.options[ 'maintenance_delete_orphans_period' ] = 86400 * self._maintenance_delete_orphans_period.GetValue()
-            HC.options[ 'maintenance_vacuum_period' ] = 86400 * self._maintenance_vacuum_period.GetValue()
-            
-            HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
-            HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
-            HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
-            
-            HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
-            
-            long_wait = self._autocomplete_long_wait.GetValue()
-            
-            char_limit = self._autocomplete_short_wait_chars.GetValue()
-            
-            short_wait = self._autocomplete_short_wait.GetValue()
-            
-            HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
-            
-            HC.options[ 'processing_phase' ] = self._processing_phase.GetValue()
             
         
     
@@ -3916,7 +3820,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             new_local_port = self._local_port.GetValue()
             
-            if new_local_port != HC.options[ 'local_port' ]: HydrusGlobals.pubsub.pub( 'restart_server' )
+            if new_local_port != HC.options[ 'local_port' ]: HydrusGlobals.controller.pub( 'restart_server' )
             
             HC.options[ 'local_port' ] = new_local_port
             
@@ -3947,7 +3851,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
                 for ( key, action ) in key_dict.items():
                     
-                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                    ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
                     
                     pretty_action = action
                     
@@ -3990,7 +3894,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                     
                     ( modifier, key, action ) = dlg.GetInfo()
                     
-                    ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                    ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
                     
                     pretty_action = action
                     
@@ -4020,7 +3924,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                         
                         ( modifier, key, action ) = dlg.GetInfo()
                         
-                        ( pretty_modifier, pretty_key ) = HydrusData.ConvertShortcutToPrettyShortcut( modifier, key )
+                        ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
                         
                         pretty_action = action
                         
@@ -4169,6 +4073,185 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
         
     
+    class _SpeedAndMemoryPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._thumbnail_width = wx.SpinCtrl( self, min = 20, max = 200 )
+            self._thumbnail_width.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
+            
+            self._thumbnail_height = wx.SpinCtrl( self, min = 20, max = 200 )
+            self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
+            
+            self._thumbnail_cache_size = wx.SpinCtrl( self, min = 5, max = 3000 )
+            self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
+            
+            self._estimated_number_thumbnails = wx.StaticText( self, label = '' )
+            
+            self._preview_cache_size = wx.SpinCtrl( self, min = 5, max = 3000 )
+            self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
+            
+            self._estimated_number_previews = wx.StaticText( self, label = '' )
+            
+            self._fullscreen_cache_size = wx.SpinCtrl( self, min = 25, max = 3000 )
+            self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
+            
+            self._estimated_number_fullscreens = wx.StaticText( self, label = '' )
+            
+            self._num_autocomplete_chars = wx.SpinCtrl( self, min = 1, max = 100 )
+            self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db' + os.linesep + 'increase this if you find autocomplete results are slow' )
+            
+            self._autocomplete_long_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
+            self._autocomplete_long_wait.SetToolTipString( 'how long the gui will wait, after you enter a character, before it queries the db with what you have entered so far' )
+            
+            self._autocomplete_short_wait_chars = wx.SpinCtrl( self, min = 1, max = 100 )
+            self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
+            
+            self._autocomplete_short_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
+            self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
+            
+            #
+            
+            ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
+            
+            self._thumbnail_width.SetValue( thumbnail_width )
+            
+            self._thumbnail_height.SetValue( thumbnail_height )
+            
+            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
+            
+            self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
+            
+            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
+            
+            self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
+            
+            ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
+            
+            self._autocomplete_long_wait.SetValue( long_wait )
+            
+            self._autocomplete_short_wait_chars.SetValue( char_limit )
+            
+            self._autocomplete_short_wait.SetValue( short_wait )
+            
+            #
+            
+            thumbnails_sizer = wx.BoxSizer( wx.HORIZONTAL )
+            
+            thumbnails_sizer.AddF( self._thumbnail_cache_size, CC.FLAGS_MIXED )
+            thumbnails_sizer.AddF( self._estimated_number_thumbnails, CC.FLAGS_MIXED )
+            
+            previews_sizer = wx.BoxSizer( wx.HORIZONTAL )
+            
+            previews_sizer.AddF( self._preview_cache_size, CC.FLAGS_MIXED )
+            previews_sizer.AddF( self._estimated_number_previews, CC.FLAGS_MIXED )
+            
+            fullscreens_sizer = wx.BoxSizer( wx.HORIZONTAL )
+            
+            fullscreens_sizer.AddF( self._fullscreen_cache_size, CC.FLAGS_MIXED )
+            fullscreens_sizer.AddF( self._estimated_number_fullscreens, CC.FLAGS_MIXED )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail width: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._thumbnail_width, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail height: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._thumbnail_height, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( thumbnails_sizer, CC.FLAGS_NONE )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for preview cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( previews_sizer, CC.FLAGS_NONE )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for fullscreen cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete character threshold: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._num_autocomplete_chars, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait (ms): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._autocomplete_long_wait, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait threshold: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._autocomplete_short_wait_chars, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._autocomplete_short_wait, CC.FLAGS_MIXED )
+            
+            self.SetSizer( gridbox )
+            
+            #
+            
+            self.EventFullscreensUpdate( None )
+            self.EventPreviewsUpdate( None )
+            self.EventThumbnailsUpdate( None )
+            
+            wx.CallAfter( self.Layout ) # draws the static texts correctly
+            
+        
+        def EventFullscreensUpdate( self, event ):
+            
+            ( width, height ) = wx.GetDisplaySize()
+            
+            estimated_bytes_per_fullscreen = 3 * width * height
+            
+            self._estimated_number_fullscreens.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
+            
+        
+        def EventPreviewsUpdate( self, event ):
+            
+            estimated_bytes_per_preview = 3 * 400 * 400
+            
+            self._estimated_number_previews.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._preview_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_preview ) + ' previews)' )
+            
+        
+        def EventThumbnailsUpdate( self, event ):
+            
+            estimated_bytes_per_thumb = 3 * self._thumbnail_height.GetValue() * self._thumbnail_width.GetValue()
+            
+            self._estimated_number_thumbnails.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
+            
+        
+        def UpdateOptions( self ):
+            
+            new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
+            
+            if new_thumbnail_dimensions != HC.options[ 'thumbnail_dimensions' ]:
+                
+                text = 'You have changed the thumbnail dimensions, which will mean deleting all the old resized thumbnails right now, during which time the database will be locked. If you have tens or hundreds of thousands of files, this could take a long time.'
+                text += os.linesep * 2
+                text += 'Are you sure you want to change your thumbnail dimensions?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES: HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
+                    
+                
+            
+            HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
+            HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
+            HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
+            
+            HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
+            
+            long_wait = self._autocomplete_long_wait.GetValue()
+            
+            char_limit = self._autocomplete_short_wait_chars.GetValue()
+            
+            short_wait = self._autocomplete_short_wait.GetValue()
+            
+            HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
+            
+        
+    
     class _ThreadCheckerPanel( wx.Panel ):
         
         def __init__( self, parent ):
@@ -4218,7 +4301,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             page.UpdateOptions()
             
         
-        try: wx.GetApp().Write( 'save_options', HC.options )
+        try: HydrusGlobals.controller.Write( 'save_options', HC.options )
         except: wx.MessageBox( traceback.format_exc() )
         
         self.EndModal( wx.ID_OK )
@@ -4248,7 +4331,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+            ( id, password ) = HydrusGlobals.controller.Read( 'pixiv_account' )
             
             self._id.SetValue( id )
             self._password.SetValue( password )
@@ -4308,7 +4391,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         id = self._id.GetValue()
         password = self._password.GetValue()
         
-        wx.GetApp().Write( 'pixiv_account', ( id, password ) )
+        HydrusGlobals.controller.Write( 'pixiv_account', ( id, password ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -4329,7 +4412,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         headers = {}
         headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
         
-        ( response_gumpf, cookies ) = wx.GetApp().DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+        ( response_gumpf, cookies ) = HydrusGlobals.controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
         
         # _ only given to logged in php sessions
         if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabel( 'OK!' )
@@ -4344,8 +4427,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            like_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-            numerical_services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+            like_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+            numerical_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
             
             self._panels = []
             
@@ -4451,7 +4534,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                     
                 
             
-            wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
             
             ( remember, position ) = HC.options[ 'rating_dialog_position' ]
             
@@ -4461,7 +4544,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'rating_dialog_position' ] = ( remember, current_position )
                 
-                wx.GetApp().Write( 'save_options', HC.options )
+                HydrusGlobals.controller.Write( 'save_options', HC.options )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -4724,7 +4807,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             self.SetInitialSize( ( 680, y ) )
             
         
-        self._service = wx.GetApp().GetServicesManager().GetService( service_key )
+        self._service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + self._service.GetName() + ' services' )
         
@@ -4819,7 +4902,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 
                 admin_service_key = self._service.GetServiceKey()
                 
-                wx.GetApp().Write( 'update_server_services', admin_service_key, self._services_info, self._edit_log, service_keys_to_access_keys )
+                HydrusGlobals.controller.Write( 'update_server_services', admin_service_key, self._services_info, self._edit_log, service_keys_to_access_keys )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -5043,7 +5126,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 parent_listbook.AddPage( name, listbook )
                 
-                services = wx.GetApp().GetServicesManager().GetServices( ( service_type, ) )
+                services = HydrusGlobals.controller.GetServicesManager().GetServices( ( service_type, ) )
                 
                 for service in services:
                     
@@ -5305,7 +5388,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: wx.GetApp().Write( 'update_services', self._edit_log )
+            if len( self._edit_log ) > 0: HydrusGlobals.controller.Write( 'update_services', self._edit_log )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -5508,7 +5591,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if service_type in HC.TAG_SERVICES:
                     
-                    self._archive_info = wx.GetApp().Read( 'tag_archive_info' )
+                    self._archive_info = HydrusGlobals.controller.Read( 'tag_archive_info' )
                     
                     self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
                     
@@ -5974,7 +6057,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    with wx.BusyCursor(): wx.GetApp().Write( 'reset_service', service_key )
+                    with wx.BusyCursor(): HydrusGlobals.controller.Write( 'reset_service', service_key )
                     
                 
             
@@ -6063,7 +6146,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage subscriptions' )
         
-        self._original_subscription_names = wx.GetApp().Read( 'subscription_names' )
+        self._original_subscription_names = HydrusGlobals.controller.Read( 'subscription_names' )
         
         self._names_to_delete = set()
         
@@ -6147,18 +6230,18 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for name in self._names_to_delete: wx.GetApp().Write( 'delete_subscription', name )
+            for name in self._names_to_delete: HydrusGlobals.controller.Write( 'delete_subscription', name )
             
             for page in all_pages:
                 
                 ( name, info ) = page.GetSubscription()
                 
-                wx.GetApp().Write( 'subscription', name, info )
+                HydrusGlobals.controller.Write( 'subscription', name, info )
                 
             
             HydrusGlobals.subs_changed = True
             
-            HydrusGlobals.pubsub.pub( 'notify_new_subscriptions' )
+            HydrusGlobals.controller.pub( 'notify_new_subscriptions' )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -6338,7 +6421,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
             else:
                 
-                info = wx.GetApp().Read( 'subscription', self._name )
+                info = HydrusGlobals.controller.Read( 'subscription', self._name )
                 
                 self._new_subscription = False
                 
@@ -6372,7 +6455,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 booru_name = self._booru_selector.GetString( selection )
                 
-                booru = wx.GetApp().Read( 'remote_booru', booru_name )
+                booru = HydrusGlobals.controller.Read( 'remote_booru', booru_name )
                 
                 namespaces = booru.GetNamespaces()
                 
@@ -6412,7 +6495,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 if self._booru_selector.GetCount() == 0:
                     
-                    boorus = wx.GetApp().Read( 'remote_boorus' )
+                    boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
                     
                     for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
                     
@@ -6455,7 +6538,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 if self._booru_selector.GetCount() == 0:
                     
-                    boorus = wx.GetApp().Read( 'remote_boorus' )
+                    boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
                     
                     for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
                     
@@ -6586,7 +6669,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = wx.GetApp().GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
@@ -6659,7 +6742,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             info = [ page.GetInfo() for page in self._tag_services.GetNamesToActivePages().values() if page.HasInfo() ]
             
-            wx.GetApp().Write( 'tag_censorship', info )
+            HydrusGlobals.controller.Write( 'tag_censorship', info )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -6689,7 +6772,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             def PopulateControls():
                 
-                ( blacklist, tags ) = wx.GetApp().Read( 'tag_censorship', service_key )
+                ( blacklist, tags ) = HydrusGlobals.controller.Read( 'tag_censorship', service_key )
                 
                 if blacklist: self._blacklist.SetSelection( 0 )
                 else: self._blacklist.SetSelection( 1 )
@@ -6770,7 +6853,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -6793,7 +6876,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            service = wx.GetApp().GetServicesManager().GetService( default_tag_repository_key )
+            service = HydrusGlobals.controller.GetServicesManager().GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( service.GetName() )
             
@@ -6867,7 +6950,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -6951,12 +7034,12 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = wx.GetApp().GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
             
-            self._original_statuses_to_pairs = wx.GetApp().Read( 'tag_parents', service_key )
+            self._original_statuses_to_pairs = HydrusGlobals.controller.Read( 'tag_parents', service_key )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -7301,7 +7384,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._tag_repositories.AddPage( name, page )
             
-            services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -7318,7 +7401,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            service = wx.GetApp().GetServicesManager().GetService( default_tag_repository_key )
+            service = HydrusGlobals.controller.GetServicesManager().GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( service.GetName() )
             
@@ -7392,7 +7475,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            wx.GetApp().Write( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -7482,12 +7565,12 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = wx.GetApp().GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
             
-            self._original_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings', service_key )
+            self._original_statuses_to_pairs = HydrusGlobals.controller.Read( 'tag_siblings', service_key )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -7894,7 +7977,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
             name_to_select = None
             
@@ -7992,7 +8075,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         self.RefreshAcceleratorTable()
         
-        if self._canvas_key is not None: HydrusGlobals.pubsub.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+        if self._canvas_key is not None: HydrusGlobals.controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
         
     
     def _ClearPanels( self ):
@@ -8013,7 +8096,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         if len( service_keys_to_content_updates ) > 0:
             
-            wx.GetApp().WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
         
     
@@ -8061,7 +8144,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 self._CommitCurrentChanges()
                 
-                wx.GetApp().Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+                HydrusGlobals.controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
                 
             
         
@@ -8091,7 +8174,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._ClearPanels()
             
-            HydrusGlobals.pubsub.pub( 'canvas_show_next', self._canvas_key )
+            HydrusGlobals.controller.pub( 'canvas_show_next', self._canvas_key )
             
         
     
@@ -8109,7 +8192,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'tag_dialog_size' ] = ( remember, current_size )
                 
-                wx.GetApp().Write( 'save_options', HC.options )
+                HydrusGlobals.controller.Write( 'save_options', HC.options )
                 
             
             ( remember, position ) = HC.options[ 'tag_dialog_position' ]
@@ -8120,7 +8203,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'tag_dialog_position' ] = ( remember, current_position )
                 
-                wx.GetApp().Write( 'save_options', HC.options )
+                HydrusGlobals.controller.Write( 'save_options', HC.options )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -8134,7 +8217,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._ClearPanels()
             
-            HydrusGlobals.pubsub.pub( 'canvas_show_previous', self._canvas_key )
+            HydrusGlobals.controller.pub( 'canvas_show_previous', self._canvas_key )
             
         
     
@@ -8169,7 +8252,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if not self._i_am_local_tag_service:
                 
-                service = wx.GetApp().GetServicesManager().GetService( tag_service_key )
+                service = HydrusGlobals.controller.GetServicesManager().GetService( tag_service_key )
                 
                 try: self._account = service.GetInfo( 'account' )
                 except: self._account = HydrusData.GetUnknownAccount()
@@ -8234,7 +8317,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             choices = []
             
-            sibling_tag = wx.GetApp().GetManager( 'tag_siblings' ).GetSibling( tag )
+            sibling_tag = HydrusGlobals.controller.GetManager( 'tag_siblings' ).GetSibling( tag )
             
             if sibling_tag is not None:
                 
@@ -8350,7 +8433,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             text = os.linesep.join( tags )
             
-            HydrusGlobals.pubsub.pub( 'clipboard', 'text', text )
+            HydrusGlobals.controller.pub( 'clipboard', 'text', text )
             
         
         def EventModify( self, event ):
@@ -8409,7 +8492,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
             
-            if len( self._hashes ) > 0: media_results = wx.GetApp().Read( 'media_results', self._file_service_key, self._hashes )
+            if len( self._hashes ) > 0: media_results = HydrusGlobals.controller.Read( 'media_results', self._file_service_key, self._hashes )
             else: media_results = []
             
             # this should now be a nice clean copy of the original media

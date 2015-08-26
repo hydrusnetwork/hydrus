@@ -35,11 +35,11 @@ import HydrusGlobals
 
 def DAEMONCheckExportFolders():
     
-    options = wx.GetApp().GetOptions()
+    options = HydrusGlobals.controller.GetOptions()
     
     if not options[ 'pause_export_folders_sync' ]:
         
-        export_folders = wx.GetApp().Read( 'export_folders' )
+        export_folders = HydrusGlobals.controller.Read( 'export_folders' )
         
         for export_folder in export_folders:
             
@@ -49,11 +49,11 @@ def DAEMONCheckExportFolders():
     
 def DAEMONCheckImportFolders():
     
-    options = wx.GetApp().GetOptions()
+    options = HydrusGlobals.controller.GetOptions()
     
     if not options[ 'pause_import_folders_sync' ]:
         
-        import_folders = wx.GetApp().Read( 'import_folders' )
+        import_folders = HydrusGlobals.controller.Read( 'import_folders' )
         
         for ( folder_path, details ) in import_folders.items():
             
@@ -119,7 +119,7 @@ def DAEMONCheckImportFolders():
                                 if details[ 'local_tag' ] is not None: service_keys_to_tags = { CC.LOCAL_TAG_SERVICE_KEY : { details[ 'local_tag' ] } }
                                 else: service_keys_to_tags = {}
                                 
-                                ( result, hash ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path, service_keys_to_tags = service_keys_to_tags )
+                                ( result, hash ) = HydrusGlobals.controller.WriteSynchronous( 'import_file', temp_path, service_keys_to_tags = service_keys_to_tags )
                                 
                                 if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                                     
@@ -167,12 +167,12 @@ def DAEMONCheckImportFolders():
                         job_key.SetVariable( 'popup_text_1', text )
                         job_key.SetVariable( 'popup_files', successful_hashes )
                         
-                        HydrusGlobals.pubsub.pub( 'message', job_key )
+                        HydrusGlobals.controller.pub( 'message', job_key )
                         
                     
                     details[ 'last_checked' ] = HydrusData.GetNow()
                     
-                    wx.GetApp().WriteSynchronous( 'import_folder', folder_path, details )
+                    HydrusGlobals.controller.WriteSynchronous( 'import_folder', folder_path, details )
                     
                 
             
@@ -180,7 +180,7 @@ def DAEMONCheckImportFolders():
     
 def DAEMONDownloadFiles():
     
-    hashes = wx.GetApp().Read( 'downloads' )
+    hashes = HydrusGlobals.controller.Read( 'downloads' )
     
     num_downloads = len( hashes )
     
@@ -192,13 +192,13 @@ def DAEMONDownloadFiles():
         
         job_key.SetVariable( 'popup_text_1', 'initialising downloader' )
         
-        HydrusGlobals.pubsub.pub( 'message', job_key )
+        HydrusGlobals.controller.pub( 'message', job_key )
         
         for hash in hashes:
             
             job_key.SetVariable( 'popup_text_1', 'downloading ' + HydrusData.ConvertIntToPrettyString( num_downloads - len( successful_hashes ) ) + ' files from repositories' )
             
-            ( media_result, ) = wx.GetApp().Read( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = HydrusGlobals.controller.Read( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
             
             service_keys = list( media_result.GetLocationsManager().GetCurrent() )
             
@@ -209,7 +209,7 @@ def DAEMONDownloadFiles():
                 if service_key == CC.LOCAL_FILE_SERVICE_KEY: break
                 elif service_key == CC.TRASH_SERVICE_KEY: continue
                 
-                try: file_repository = wx.GetApp().GetServicesManager().GetService( service_key )
+                try: file_repository = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                 except HydrusExceptions.NotFoundException: continue
                 
                 if file_repository.CanDownload(): 
@@ -224,9 +224,9 @@ def DAEMONDownloadFiles():
                             
                             file_repository.Request( HC.GET, 'file', request_args = request_args, temp_path = temp_path )
                             
-                            wx.GetApp().WaitUntilWXThreadIdle()
+                            HydrusGlobals.controller.WaitUntilPubSubsEmpty()
                             
-                            wx.GetApp().WriteSynchronous( 'import_file', temp_path, override_deleted = True )
+                            HydrusGlobals.controller.WriteSynchronous( 'import_file', temp_path, override_deleted = True )
                             
                             successful_hashes.add( hash )
                             
@@ -245,7 +245,7 @@ def DAEMONDownloadFiles():
                         
                         job_key.Delete()
                         
-                        HydrusGlobals.pubsub.pub( 'notify_new_downloads' )
+                        HydrusGlobals.controller.pub( 'notify_new_downloads' )
                         
                         return
                         
@@ -256,7 +256,7 @@ def DAEMONDownloadFiles():
                         
                     
                 
-                if HydrusGlobals.shutdown: return
+                if HydrusGlobals.view_shutdown: return
                 
             
         
@@ -276,7 +276,7 @@ def DAEMONFlushServiceUpdates( list_of_service_keys_to_service_updates ):
     
     service_keys_to_service_updates = HydrusData.MergeKeyToListDicts( list_of_service_keys_to_service_updates )
     
-    wx.GetApp().WriteSynchronous( 'service_updates', service_keys_to_service_updates )
+    HydrusGlobals.controller.WriteSynchronous( 'service_updates', service_keys_to_service_updates )
     
 def DAEMONMaintainTrash():
     
@@ -284,16 +284,16 @@ def DAEMONMaintainTrash():
         
         max_size = HC.options[ 'trash_max_size' ] * 1048576
         
-        service_info = wx.GetApp().Read( 'service_info', CC.TRASH_SERVICE_KEY )
+        service_info = HydrusGlobals.controller.Read( 'service_info', CC.TRASH_SERVICE_KEY )
         
         while service_info[ HC.SERVICE_INFO_TOTAL_SIZE ] > max_size:
             
-            if HydrusGlobals.shutdown:
+            if HydrusGlobals.view_shutdown:
                 
                 return
                 
             
-            hashes = wx.GetApp().Read( 'oldest_trash_hashes' )
+            hashes = HydrusGlobals.controller.Read( 'oldest_trash_hashes' )
             
             if len( hashes ) == 0:
                 
@@ -304,11 +304,11 @@ def DAEMONMaintainTrash():
             
             service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
             
-            wx.GetApp().WaitUntilWXThreadIdle()
+            HydrusGlobals.controller.WaitUntilPubSubsEmpty()
             
-            wx.GetApp().WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
-            service_info = wx.GetApp().Read( 'service_info', CC.TRASH_SERVICE_KEY )
+            service_info = HydrusGlobals.controller.Read( 'service_info', CC.TRASH_SERVICE_KEY )
             
         
     
@@ -316,11 +316,11 @@ def DAEMONMaintainTrash():
         
         max_age = HC.options[ 'trash_max_age' ] * 3600
         
-        hashes = wx.GetApp().Read( 'oldest_trash_hashes', minimum_age = max_age )
+        hashes = HydrusGlobals.controller.Read( 'oldest_trash_hashes', minimum_age = max_age )
         
         while len( hashes ) > 0:
             
-            if HydrusGlobals.shutdown:
+            if HydrusGlobals.view_shutdown:
                 
                 return
                 
@@ -329,65 +329,19 @@ def DAEMONMaintainTrash():
             
             service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
             
-            wx.GetApp().WaitUntilWXThreadIdle()
+            HydrusGlobals.controller.WaitUntilPubSubsEmpty()
             
-            wx.GetApp().WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
-            hashes = wx.GetApp().Read( 'oldest_trash_hashes', minimum_age = max_age )
+            hashes = HydrusGlobals.controller.Read( 'oldest_trash_hashes', minimum_age = max_age )
             
-        
-    
-def DAEMONResizeThumbnails():
-    
-    if not wx.GetApp().CurrentlyIdle(): return
-    
-    full_size_thumbnail_paths = { path for path in ClientFiles.IterateAllThumbnailPaths() if not path.endswith( '_resized' ) }
-    
-    resized_thumbnail_paths = { path[:-8] for path in ClientFiles.IterateAllThumbnailPaths() if path.endswith( '_resized' ) }
-    
-    thumbnail_paths_to_render = list( full_size_thumbnail_paths.difference( resized_thumbnail_paths ) )
-    
-    random.shuffle( thumbnail_paths_to_render )
-    
-    i = 0
-    
-    limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
-    
-    options = wx.GetApp().GetOptions()
-    
-    for thumbnail_path in thumbnail_paths_to_render:
-        
-        try:
-            
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, options[ 'thumbnail_dimensions' ] )
-            
-            thumbnail_resized_path = thumbnail_path + '_resized'
-            
-            with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
-            
-        except IOError as e: HydrusData.ShowText( 'Thumbnail read error:' + os.linesep + traceback.format_exc() )
-        except Exception as e: HydrusData.ShowText( 'Thumbnail rendering error:' + os.linesep + traceback.format_exc() )
-        
-        if i % 10 == 0: time.sleep( 2 )
-        else:
-            
-            if limit > 10000: time.sleep( 0.05 )
-            elif limit > 1000: time.sleep( 0.25 )
-            else: time.sleep( 0.5 )
-            
-        
-        i += 1
-        
-        if i > limit: break
-        
-        if HydrusGlobals.shutdown: break
         
     
 def DAEMONSynchroniseAccounts():
     
-    services = wx.GetApp().GetServicesManager().GetServices( HC.RESTRICTED_SERVICES )
+    services = HydrusGlobals.controller.GetServicesManager().GetServices( HC.RESTRICTED_SERVICES )
     
-    options = wx.GetApp().GetOptions()
+    options = HydrusGlobals.controller.GetOptions()
     
     do_notify = False
     
@@ -418,7 +372,7 @@ def DAEMONSynchroniseAccounts():
                 
                 account.MakeFresh()
                 
-                wx.GetApp().WriteSynchronous( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
+                HydrusGlobals.controller.WriteSynchronous( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
                 
                 do_notify = True
                 
@@ -431,26 +385,23 @@ def DAEMONSynchroniseAccounts():
             
         
     
-    if do_notify: HydrusGlobals.pubsub.pub( 'notify_new_permissions' )
+    if do_notify: HydrusGlobals.controller.pub( 'notify_new_permissions' )
     
 def DAEMONSynchroniseRepositories():
     
-    HydrusGlobals.repos_changed = False
-    
-    options = wx.GetApp().GetOptions()
+    options = HydrusGlobals.controller.GetOptions()
     
     if not options[ 'pause_repo_sync' ]:
         
-        services = wx.GetApp().GetServicesManager().GetServices( HC.REPOSITORIES )
-        
-        HydrusGlobals.currently_processing_updates = True
+        services = HydrusGlobals.controller.GetServicesManager().GetServices( HC.REPOSITORIES )
         
         for service in services:
             
-            service.Sync()
+            if HydrusGlobals.controller.CurrentlyIdle():
+                
+                service.Sync( only_when_idle = True )
+                
             
-        
-        HydrusGlobals.currently_processing_updates = False
         
         time.sleep( 5 )
         
@@ -459,15 +410,15 @@ def DAEMONSynchroniseSubscriptions():
     
     HydrusGlobals.subs_changed = False
     
-    options = wx.GetApp().GetOptions()
+    options = HydrusGlobals.controller.GetOptions()
     
     if not options[ 'pause_subs_sync' ]:
         
-        subscription_names = wx.GetApp().Read( 'subscription_names' )
+        subscription_names = HydrusGlobals.controller.Read( 'subscription_names' )
         
         for name in subscription_names:
             
-            info = wx.GetApp().Read( 'subscription', name )
+            info = HydrusGlobals.controller.Read( 'subscription', name )
             
             site_type = info[ 'site_type' ]
             query_type = info[ 'query_type' ]
@@ -497,7 +448,7 @@ def DAEMONSynchroniseSubscriptions():
                     job_key.SetVariable( 'popup_title', 'subscriptions - ' + name )
                     job_key.SetVariable( 'popup_text_1', 'checking' )
                     
-                    HydrusGlobals.pubsub.pub( 'message', job_key )
+                    HydrusGlobals.controller.pub( 'message', job_key )
                     
                     do_tags = len( advanced_tag_options ) > 0
                     
@@ -505,7 +456,7 @@ def DAEMONSynchroniseSubscriptions():
                         
                         ( booru_name, booru_query_type ) = query_type
                         
-                        try: booru = wx.GetApp().Read( 'remote_booru', booru_name )
+                        try: booru = HydrusGlobals.controller.Read( 'remote_booru', booru_name )
                         except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
                         
                         tags = query.split( ' ' )
@@ -586,7 +537,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 job_key.Delete()
                                 
-                                HydrusGlobals.pubsub.pub( 'notify_restart_subs_sync_daemon' )
+                                HydrusGlobals.controller.pub( 'notify_restart_subs_sync_daemon' )
                                 
                                 return
                                 
@@ -683,7 +634,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 job_key.Delete()
                                 
-                                HydrusGlobals.pubsub.pub( 'notify_restart_subs_sync_daemon' )
+                                HydrusGlobals.controller.pub( 'notify_restart_subs_sync_daemon' )
                                 
                                 return
                                 
@@ -712,7 +663,7 @@ def DAEMONSynchroniseSubscriptions():
                                 job_key.SetVariable( 'popup_files', job_key_s_h )
                                 
                             
-                            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+                            ( status, hash ) = HydrusGlobals.controller.Read( 'url_status', url )
                             
                             if status == CC.STATUS_DELETED and not import_file_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
                             
@@ -730,7 +681,7 @@ def DAEMONSynchroniseSubscriptions():
                                         
                                         service_keys_to_content_updates = ClientDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags )
                                         
-                                        wx.GetApp().WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                                        HydrusGlobals.controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                                         
                                     except: pass
                                     
@@ -757,7 +708,7 @@ def DAEMONSynchroniseSubscriptions():
                                     
                                     job_key.SetVariable( 'popup_text_1', x_out_of_y + 'importing file' )
                                     
-                                    ( status, hash ) = wx.GetApp().WriteSynchronous( 'import_file', temp_path, import_file_options = import_file_options, service_keys_to_tags = service_keys_to_tags, url = url )
+                                    ( status, hash ) = HydrusGlobals.controller.WriteSynchronous( 'import_file', temp_path, import_file_options = import_file_options, service_keys_to_tags = service_keys_to_tags, url = url )
                                     
                                 finally:
                                     
@@ -789,10 +740,10 @@ def DAEMONSynchroniseSubscriptions():
                             info[ 'url_cache' ] = url_cache
                             info[ 'paused' ] = paused
                             
-                            wx.GetApp().WriteSynchronous( 'subscription', name, info )
+                            HydrusGlobals.controller.WriteSynchronous( 'subscription', name, info )
                             
                         
-                        wx.GetApp().WaitUntilWXThreadIdle()
+                        HydrusGlobals.controller.WaitUntilPubSubsEmpty()
                         
                         time.sleep( 3 )
                         
@@ -841,7 +792,7 @@ def DAEMONSynchroniseSubscriptions():
                 info[ 'url_cache' ] = url_cache
                 info[ 'paused' ] = paused
                 
-                wx.GetApp().WriteSynchronous( 'subscription', name, info )
+                HydrusGlobals.controller.WriteSynchronous( 'subscription', name, info )
                 
             
         
@@ -860,7 +811,7 @@ def DAEMONUPnP():
         
     except: return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
     
-    services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_BOORU, ) )
+    services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_BOORU, ) )
     
     for service in services:
         

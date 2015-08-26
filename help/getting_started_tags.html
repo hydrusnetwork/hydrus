@@ -35,13 +35,12 @@
 			<p><img src="edit_repos_public_tag_repo.png" /></p>
 			<p>Here's the info so you can copy it:</p>
 			<ul><li>4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f@hydrus.no-ip.org:45871</li></ul>
-			<p>Within a few seconds of applying that dialog, a popup message will announce and report on the synchronisation. Over time, you should see some new tags appear, particularly on famous files that lots of people have.</p>
-			<p><b>Tags are rich, cpu-intensive metadata. My repository has millions of mappings, and your client will download and store them all. It will take a few hundred MB and several <i>hours</i> to fully synchronise. You can close the client at any time, and it will continue where it left off when it next boots. If it is slowing your normal browsing, you can pause it temporarily from the popup message or indefinitely at either the <i>manage services</i> dialog or for all services at <i>services->pause->repositories synchronisation</i>.</b></p>
+			<p>Over time, usually when it is idle, your client will download updates from the repository until it is fully synchronised. You can customise when this happens in <i>file->options->maintenance and processing</i>. As the repository synchronises, you should see some new tags appear, particularly on famous files that lots of people have.</p>
+			<p><b>Tags are rich, cpu-intensive metadata. My repository has millions of mappings, and your client will download and store them all. It will take a few hundred MB and several <i>hours</i> total processing time to fully synchronise. It will mostly happen in the background, without you noticing. if you close the client, it will continue where it left off when it next boots.</b></p>
 			<p>You can watch more detailed synchronisation progress in the <i>services->review services</i> window.</p>
 			<p><img src="tag_repo_review.png" /></p>
 			<p>Your new service should now be listed on the left of the manage tags dialog. Adding tags to a repository works very similarly to the local tags service except hitting 'apply' will not immediately confirm your changes—it will put them in a queue to be uploaded. These 'pending' tags will be counted with a plus '+' or minus '-' sign:</p>
 			<p><a href="rlm_pending.png"><img src="rlm_pending.png" width="960" height="540" /></a></p>
-			<p>The public tag repo sync popup happened to appear when I was taking that screenshot. Although the initial sync takes a long time, it usually amounts to a few minutes per day after that to keep up to date.</p>
 			<p>Notice that a 'pending' menu has appeared on the main window. This lets you start the upload when you are ready and happy with everything that you have queued.</p>
 			<p>When you upload your pending tags, they will commit and look to you like any other tag. The tag repository will anonymously bundle them into the next update, which everyone else will download in a day or so. They will see your tags just like you saw theirs.</p>
 			<p>If you attempt to remove a tag that has been uploaded, you may be prompted to give a reason, creating a petition that an administrator will review.</p>

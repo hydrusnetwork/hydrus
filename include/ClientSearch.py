@@ -41,7 +41,7 @@ def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
     
     if search_siblings:
         
-        sibling_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        sibling_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
         
         tags = sibling_manager.GetAllSiblings( tag )
         
@@ -75,7 +75,7 @@ def FilterPredicates( search_entry, predicates, service_key = None, expand_paren
     
     if service_key is not None and expand_parents:
         
-        parents_manager = wx.GetApp().GetManager( 'tag_parents' )
+        parents_manager = HydrusGlobals.controller.GetManager( 'tag_parents' )
         
         matches = parents_manager.ExpandPredicates( service_key, matches )
         
@@ -86,7 +86,7 @@ def SortPredicates( predicates, collapse_siblings = False ):
     
     if collapse_siblings:
         
-        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
         
         predicates = siblings_manager.CollapsePredicates( predicates )
         

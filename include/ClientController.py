@@ -40,6 +40,7 @@ MAINTENANCE_PERIOD = 5 * 60
 class Controller( HydrusController.HydrusController ):
     
     db_class = ClientDB.DB
+    pubsub_binding_errors_to_ignore = [ wx.PyDeadObjectError ]
     
     def BackupDatabase( self ):
         
@@ -64,6 +65,43 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
+        
+    
+    def CallBlockingToWx( self, callable, *args, **kwargs ):
+        
+        def wx_code( job_key ):
+            
+            try:
+                
+                result = callable( *args, **kwargs )
+                
+                job_key.SetVariable( 'result', result )
+                
+            except Exception as e:
+                
+                print( 'CallBlockingToWx just caught this error:' )
+                print( traceback.format_exc() )
+                
+                job_key.SetVariable( 'error', e )
+                
+            finally: job_key.Finish()
+            
+        
+        job_key = HydrusData.JobKey()
+        
+        job_key.Begin()
+        
+        wx.CallAfter( wx_code, job_key )
+        
+        while not job_key.IsDone():
+            
+            if HydrusGlobals.model_shutdown: return
+            
+            time.sleep( 0.05 )
+            
+        
+        if job_key.HasVariable( 'result' ): return job_key.GetVariable( 'result' )
+        else: raise job_key.GetVariable( 'error' )
         
     
     def Clipboard( self, data_type, data ):
@@ -111,7 +149,7 @@ class Controller( HydrusController.HydrusController ):
             
             media = data
             
-            image_container = wx.GetApp().GetCache( 'fullscreen' ).GetImage( media )
+            image_container = self.GetCache( 'fullscreen' ).GetImage( media )
             
             def CopyToClipboard():
                 
@@ -146,7 +184,7 @@ class Controller( HydrusController.HydrusController ):
                 wx.CallAfter( CopyToClipboard )
                 
             
-            HydrusThreading.CallToThread( THREADWait )
+            self.CallToThread( THREADWait )
             
         
     
@@ -157,23 +195,62 @@ class Controller( HydrusController.HydrusController ):
             return False
             
         
-        cpu_times = psutil.cpu_percent( percpu = True )
-        
-        if True in ( cpu_time > 50.0 for cpu_time in cpu_times ):
-            
-            return False
-            
-        
         return HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + self._options[ 'idle_period' ] )
         
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
     
+    def DoIdleShutdownWork( self ):
+        
+        stop_time = HydrusData.GetNow() + ( self._options[ 'idle_shutdown_max_minutes' ] * 60 )
+        
+        self.MaintainDB()
+        
+        if not self._options[ 'pause_repo_sync' ]:
+            
+            services = self.GetServicesManager().GetServices( HC.REPOSITORIES )
+            
+            for service in services:
+                
+                if HydrusData.TimeHasPassed( stop_time ):
+                    
+                    return
+                    
+                
+                service.Sync( only_when_idle = False, stop_time = stop_time )
+                
+            
+        
+    
+    def Exit( self ):
+        
+        try: self._splash = ClientGUI.FrameSplash()
+        except Exception as e:
+            
+            print( 'There was an error trying to start the splash screen!' )
+            
+            print( traceback.format_exc() )
+            
+            try:
+                
+                wx.CallAfter( self._splash.Destroy )
+                
+            except: pass
+            
+            raise e
+            
+        
+        exit_thread = threading.Thread( target = self.THREADExitEverything, name = 'Application Exit Thread' )
+        
+        wx.CallAfter( exit_thread.start )
+        
+    
     def ForceIdle( self ):
         
         self._timestamps[ 'last_user_action' ] = 0
         
-        HydrusGlobals.pubsub.pub( 'refresh_status' )
+        self.pub( 'wake_daemons' )
+        self.pub( 'refresh_status' )
         
     
     def GetGUI( self ): return self._gui
@@ -194,7 +271,7 @@ class Controller( HydrusController.HydrusController ):
         
         while True:
             
-            with wx.PasswordEntryDialog( None, 'Enter your password', 'Enter password' ) as dlg:
+            with wx.PasswordEntryDialog( self._splash, 'Enter your password', 'Enter password' ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
@@ -203,6 +280,22 @@ class Controller( HydrusController.HydrusController ):
                 else: raise HydrusExceptions.PermissionException()
                 
             
+        
+    
+    def InitDaemons( self ):
+        
+        HydrusController.HydrusController.InitDaemons( self )
+        
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ), pre_callable_wait = 0 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 60 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ), period = 360 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_callable_wait = 6 ) )
+        
+        self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 ) )
         
     
     def InitGUI( self ):
@@ -234,9 +327,9 @@ class Controller( HydrusController.HydrusController ):
         
         self._gui = ClientGUI.FrameGUI()
         
-        HydrusGlobals.pubsub.sub( self, 'Clipboard', 'clipboard' )
-        HydrusGlobals.pubsub.sub( self, 'RestartServer', 'restart_server' )
-        HydrusGlobals.pubsub.sub( self, 'RestartBooru', 'restart_booru' )
+        self.sub( self, 'Clipboard', 'clipboard' )
+        self.sub( self, 'RestartServer', 'restart_server' )
+        self.sub( self, 'RestartBooru', 'restart_booru' )
         
         # this is because of some bug in wx C++ that doesn't add these by default
         wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
@@ -247,7 +340,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.RestartServer()
         self.RestartBooru()
-        self.StartDaemons()
+        self.InitDaemons()
         
         self.ResetIdleTimer()
         
@@ -263,9 +356,14 @@ class Controller( HydrusController.HydrusController ):
             if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > self._options[ 'maintenance_vacuum_period' ]: self.Write( 'vacuum' )
             
         
-        if self._timestamps[ 'last_service_info_cache_fatten' ] != 0 and now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
+        if self._timestamps[ 'last_service_info_cache_fatten' ] == 0:
             
-            HydrusGlobals.pubsub.pub( 'splash_set_text', 'fattening service info' )
+            self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
+            
+        
+        if now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
+            
+            self.pub( 'splash_set_text', 'fattening service info' )
             
             services = self.GetServicesManager().GetServices()
             
@@ -278,12 +376,32 @@ class Controller( HydrusController.HydrusController ):
             self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
             
         
-        HydrusGlobals.pubsub.pub( 'clear_closed_pages' )
+    
+    def MaintainMemory( self ):
+        
+        HydrusController.HydrusController.MaintainMemory( self )
+        
+        if self._timestamps[ 'last_page_change' ] == 0:
+            
+            self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
+            
+        
+        if HydrusData.TimeHasPassed( self._timestamps[ 'last_page_change' ] + 30 * 60 ):
+            
+            self.pub( 'clear_closed_pages' )
+            
+            self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
+            
+        
+    
+    def NotifyPubSubs( self ):
+        
+        wx.CallAfter( self.ProcessPubSub )
         
     
     def OnInit( self ):
         
-        HydrusController.HydrusController.OnInit( self )
+        self.InitData()
         
         self._local_service = None
         self._booru_service = None
@@ -292,7 +410,7 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            splash = ClientGUI.FrameSplash()
+            self._splash = ClientGUI.FrameSplash()
             
         except:
             
@@ -300,7 +418,7 @@ class Controller( HydrusController.HydrusController ):
             
             print( traceback.format_exc() )
             
-            try: wx.CallAfter( splash.Destroy )
+            try: wx.CallAfter( self._splash.Destroy )
             except: pass
             
             return False
@@ -320,6 +438,11 @@ class Controller( HydrusController.HydrusController ):
         
     
     def ResetIdleTimer( self ): self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
+    
+    def ResetPageChangeTimer( self ):
+        
+        self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
+        
     
     def RestartBooru( self ):
         
@@ -465,7 +588,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         def THREADRestart():
                             
-                            wx.CallAfter( self._gui.Exit )
+                            wx.CallAfter( self.Exit )
                             
                             while not self._db.LoopIsFinished(): time.sleep( 0.1 )
                             
@@ -488,21 +611,62 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def StartFileQuery( self, query_key, search_context ): HydrusThreading.CallToThread( self.THREADDoFileQuery, query_key, search_context )
+    def StartFileQuery( self, query_key, search_context ):
+        
+        self.CallToThread( self.THREADDoFileQuery, query_key, search_context )
+        
     
-    def StartDaemons( self ):
+    def SystemBusy( self ):
         
-        HydrusThreading.DAEMONWorker( 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 )
-        HydrusThreading.DAEMONWorker( 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 )
-        HydrusThreading.DAEMONWorker( 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ), pre_callable_wait = 0 )
-        HydrusThreading.DAEMONWorker( 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 60 )
-        HydrusThreading.DAEMONWorker( 'ResizeThumbnails', ClientDaemons.DAEMONResizeThumbnails, period = 3600 * 24, init_wait = 600 )
-        HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) )
-        HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
-        HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 )
-        HydrusThreading.DAEMONWorker( 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_callable_wait = 6 )
+        if HydrusData.TimeHasPassed( self._timestamps[ 'last_cpu_check' ] + 60 ):
+            
+            max_cpu = self._options[ 'idle_cpu_max' ]
+            
+            cpu_times = psutil.cpu_percent( percpu = True )
+            
+            if True in ( cpu_time > max_cpu for cpu_time in cpu_times ):
+                
+                self._system_busy = True
+                
+            else:
+                
+                self._system_busy = False
+                
+            
+            self._timestamps[ 'last_cpu_check' ] = HydrusData.GetNow()
+            
         
-        HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
+        return self._system_busy
+        
+    
+    def ThereIsIdleShutdownWorkDue( self ):
+        
+        now = HydrusData.GetNow()
+        
+        shutdown_timestamps = self.Read( 'shutdown_timestamps' )
+        
+        if self._options[ 'maintenance_vacuum_period' ] != 0:
+            
+            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > self._options[ 'maintenance_vacuum_period' ]:
+                
+                return True
+                
+            
+        
+        if not self._options[ 'pause_repo_sync' ]:
+            
+            services = self.GetServicesManager().GetServices( HC.REPOSITORIES )
+            
+            for service in services:
+                
+                if service.CanDownloadUpdate() or service.CanProcessUpdate():
+                    
+                    return True
+                    
+                
+            
+        
+        return False
         
     
     def THREADDoFileQuery( self, query_key, search_context ):
@@ -529,14 +693,14 @@ class Controller( HydrusController.HydrusController ):
             
             media_results.extend( more_media_results )
             
-            HydrusGlobals.pubsub.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
+            self.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
             
-            self.WaitUntilWXThreadIdle()
+            self.WaitUntilPubSubsEmpty()
             
         
         search_context.SetComplete()
         
-        HydrusGlobals.pubsub.pub( 'file_query_done', query_key, media_results )
+        self.pub( 'file_query_done', query_key, media_results )
         
     
     def THREADBootEverything( self ):
@@ -545,7 +709,7 @@ class Controller( HydrusController.HydrusController ):
             
             while HydrusData.IsAlreadyRunning():
                 
-                HydrusGlobals.pubsub.pub( 'splash_set_text', 'client already running' )
+                self.pub( 'splash_set_text', 'client already running' )
                 
                 def wx_code():
                     
@@ -553,7 +717,7 @@ class Controller( HydrusController.HydrusController ):
                     message += os.linesep * 2
                     message += 'If the old instance is closing and does not quit for a _very_ long time, it is usually safe to force-close it from task manager.'
                     
-                    with ClientGUIDialogs.DialogYesNo( None, message, 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
+                    with ClientGUIDialogs.DialogYesNo( self._splash, message, 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
                         
                         if dlg.ShowModal() != wx.ID_YES:
                             
@@ -562,34 +726,39 @@ class Controller( HydrusController.HydrusController ):
                         
                     
                 
-                HydrusThreading.CallBlockingToWx( wx_code )
+                self.CallBlockingToWx( wx_code )
                 
                 for i in range( 10, 0, -1 ):
                     
-                    HydrusGlobals.pubsub.pub( 'splash_set_text', 'waiting ' + str( i ) + ' seconds' )
+                    if not HydrusData.IsAlreadyRunning():
+                        
+                        break
+                        
+                    
+                    self.pub( 'splash_set_text', 'waiting ' + str( i ) + ' seconds' )
                     
                     time.sleep( 1 )
                     
                 
             
-            HydrusGlobals.pubsub.pub( 'splash_set_text', 'booting db' )
+            self.pub( 'splash_set_text', 'booting db' )
             
             self.InitDB() # can't run on wx thread because we need event queue free to update splash text
             
-            self._options = wx.GetApp().Read( 'options' )
+            self._options = self.Read( 'options' )
             
             HC.options = self._options
             
             if self._options[ 'password' ] is not None:
                 
-                HydrusGlobals.pubsub.pub( 'splash_set_text', 'waiting for password' )
+                self.pub( 'splash_set_text', 'waiting for password' )
                 
-                HydrusThreading.CallBlockingToWx( self.InitCheckPassword )
+                self.CallBlockingToWx( self.InitCheckPassword )
                 
             
-            HydrusGlobals.pubsub.pub( 'splash_set_text', 'booting gui' )
+            self.pub( 'splash_set_text', 'booting gui' )
             
-            HydrusThreading.CallBlockingToWx( self.InitGUI )
+            self.CallBlockingToWx( self.InitGUI )
             
         except HydrusExceptions.PermissionException as e: pass
         except:
@@ -605,31 +774,74 @@ class Controller( HydrusController.HydrusController ):
             
         finally:
             
-            HydrusGlobals.pubsub.pub( 'splash_destroy' )
+            self.pub( 'splash_destroy' )
             
         
     
     def THREADExitEverything( self ):
         
-        HydrusGlobals.pubsub.pub( 'splash_set_text', 'exiting gui' )
+        self.pub( 'splash_set_text', 'exiting gui' )
         
-        gui = self.GetGUI()
-        
-        try: HydrusThreading.CallBlockingToWx( gui.TestAbleToClose )
+        try: self.CallBlockingToWx( self._gui.TestAbleToClose )
         except:
             
-            HydrusGlobals.pubsub.pub( 'splash_destroy' )
+            self.pub( 'splash_destroy' )
             
             return
             
         
         try:
             
-            HydrusThreading.CallBlockingToWx( gui.Shutdown )
+            self.CallBlockingToWx( self._gui.Shutdown )
             
-            HydrusGlobals.pubsub.pub( 'splash_set_text', 'exiting db' )
+            HydrusGlobals.view_shutdown = True
             
-            HydrusThreading.CallBlockingToWx( self.MaintainDB )
+            self.pub( 'wake_daemons' )
+            
+            self.pub( 'splash_set_text', 'waiting for daemons to exit' )
+            
+            while True in ( daemon.is_alive() for daemon in self._daemons ):
+                
+                time.sleep( 0.1 )
+                
+            
+            idle_shutdown_action = self._options[ 'idle_shutdown' ]
+            
+            if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
+                
+                self.ResetIdleTimer()
+                
+                self.pub( 'splash_set_text', 'running maintenance' )
+                
+                do_it = True
+                
+                if True and CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
+                    
+                    if self.ThereIsIdleShutdownWorkDue():
+                        
+                        text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( self._options[ 'idle_shutdown_max_minutes' ] ) + ' minutes\' maintenance work?'
+                        
+                        with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
+                            
+                            if dlg_yn.ShowModal() != wx.ID_YES:
+                                
+                                do_it = False
+                                
+                            
+                        
+                    
+                
+                if do_it:
+                    
+                    HydrusGlobals.view_shutdown = False
+                    
+                    self.DoIdleShutdownWork()
+                    
+                    HydrusGlobals.view_shutdown = True
+                    
+                
+            
+            self.pub( 'splash_set_text', 'exiting db' )
             
             self.ShutdownDB() # can't run on wx thread because we need event queue free to update splash text
             
@@ -646,7 +858,7 @@ class Controller( HydrusController.HydrusController ):
             
         finally:
             
-            HydrusGlobals.pubsub.pub( 'splash_destroy' )
+            self.pub( 'splash_destroy' )
             
         
     

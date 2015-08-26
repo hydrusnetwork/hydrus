@@ -1124,8 +1124,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _AddThumbnails( self, thumbnails ):
         
-        options = wx.GetApp().GetOptions()
-        
         for ( hash, thumbnail ) in thumbnails:
             
             thumbnail_path = ClientFiles.GetExpectedThumbnailPath( hash, True )
@@ -1197,7 +1195,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
-        HydrusGlobals.pubsub.pub( 'message', job_key )
+        self._controller.pub( 'message', job_key )
         
         info = self._c.execute( 'SELECT hash_id, mime FROM files_info WHERE service_id IN ( ?, ? );', ( self._local_file_service_id, self._trash_service_id ) ).fetchall()
         
@@ -1611,7 +1609,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeleteOrphans( self ):
         
-        HydrusGlobals.pubsub.pub( 'splash_set_text', 'deleting orphan files' )
+        self._controller.pub( 'splash_set_text', 'deleting orphan files' )
         
         prefix = 'database maintenance - delete orphans: '
         
@@ -1619,7 +1617,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix + 'gathering file information' )
         
-        HydrusGlobals.pubsub.pub( 'message', job_key )
+        self._controller.pub( 'message', job_key )
         
         # files
         
@@ -1849,7 +1847,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
             
-            HydrusGlobals.pubsub.pub( 'refresh_local_booru_shares' )
+            self._controller.pub( 'refresh_local_booru_shares' )
             
         
     
@@ -1863,7 +1861,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
-        HydrusGlobals.pubsub.pub( 'message', job_key )
+        self._controller.pub( 'message', job_key )
         
         service_id = self._GetServiceId( service_key )
         
@@ -2042,7 +2040,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # now fetch siblings, add to results set
         
-        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        siblings_manager = self._controller.GetManager( 'tag_siblings' )
         
         if len( half_complete_tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
         elif len( tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAllSiblings( tag )
@@ -2175,7 +2173,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tags_to_do = { tag for ( tag, current_count, pending_count ) in tag_info }
         
-        tag_censorship_manager = wx.GetApp().GetManager( 'tag_censorship' )
+        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
         
         filtered_tags = tag_censorship_manager.FilterTags( tag_service_key, tags_to_do )
         
@@ -2371,7 +2369,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsFromQuery( self, search_context ):
         
-        wx.GetApp().ResetIdleTimer()
+        self._controller.ResetIdleTimer()
         
         system_predicates = search_context.GetSystemPredicates()
         
@@ -2731,11 +2729,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( statuses ) == 0: return {}
         
-        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        siblings_manager = self._controller.GetManager( 'tag_siblings' )
         
         tags = siblings_manager.GetAllSiblings( tag )
         
-        tag_censorship_manager = wx.GetApp().GetManager( 'tag_censorship' )
+        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
         
         tags = tag_censorship_manager.FilterTags( tag_service_key, tags )
         
@@ -2877,7 +2875,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdStatus( self, hash_id ):
     
-        options = wx.GetApp().GetOptions()
+        options = self._controller.GetOptions()
         
         if options[ 'exclude_deleted_files' ]:
             
@@ -4128,7 +4126,93 @@ class DB( HydrusDB.HydrusDB ):
         else: HydrusData.ShowException( new_e )
         
     
-    def _ProcessContentUpdates( self, service_keys_to_content_updates, pub_immediate = False ):
+    def _ProcessContentUpdatePackage( self, service_key, content_update_package, job_key, only_when_idle ):
+        
+        pending_content_updates = []
+        pending_weight = 0
+        
+        c_u_p_num_rows = content_update_package.GetNumRows()
+        c_u_p_total_weight_processed = 0
+        
+        update_speed_string = ''
+        
+        content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
+        
+        job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing' + update_speed_string )
+        
+        job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
+        
+        for content_update in content_update_package.IterateContentUpdates():
+            
+            options = self._controller.GetOptions()
+            
+            if only_when_idle and not self._controller.CurrentlyIdle():
+                
+                job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing transaction' )
+                
+                return ( False, c_u_p_total_weight_processed )
+                
+            
+            if options[ 'pause_repo_sync' ]:
+                
+                return ( False, c_u_p_total_weight_processed )
+                
+            
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return ( False, c_u_p_total_weight_processed )
+                
+            
+            pending_content_updates.append( content_update )
+            
+            content_update_weight = len( content_update.GetHashes() )
+            
+            pending_weight += content_update_weight
+            
+            if pending_weight > 100:
+                
+                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
+                
+                job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing' + update_speed_string )
+                
+                job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
+                
+                precise_timestamp = HydrusData.GetNowPrecise()
+                
+                self._ProcessContentUpdates( { service_key : pending_content_updates }, continue_pubsub = False )
+                
+                it_took = HydrusData.GetNowPrecise() - precise_timestamp
+                
+                rows_s = pending_weight / it_took
+                
+                update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s'
+                
+                c_u_p_total_weight_processed += pending_weight
+                
+                pending_content_updates = []
+                pending_weight = 0
+                
+            
+        
+        if len( pending_content_updates ) > 0:
+            
+            self._ProcessContentUpdates( { service_key : pending_content_updates }, continue_pubsub = False )
+            
+            c_u_p_total_weight_processed += pending_weight
+            
+        
+        content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_num_rows, c_u_p_num_rows ) + ': '
+        
+        job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing transaction' )
+        
+        job_key.SetVariable( 'popup_gauge_2', ( c_u_p_num_rows, c_u_p_num_rows ) )
+        
+        return ( True, c_u_p_total_weight_processed )
+        
+    
+    def _ProcessContentUpdates( self, service_keys_to_content_updates, continue_pubsub = True ):
         
         notify_new_downloads = False
         notify_new_pending = False
@@ -4570,12 +4654,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if pub_immediate:
-            
-            HydrusGlobals.pubsub.pub( 'content_updates_data', service_keys_to_content_updates )
-            HydrusGlobals.pubsub.pub( 'content_updates_gui', service_keys_to_content_updates )
-            
-        else:
+        if continue_pubsub:
             
             if notify_new_downloads: self.pub_after_commit( 'notify_new_downloads' )
             if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
@@ -4847,7 +4926,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.SetVariable( 'popup_text_1', prefix + 'initialising' )
             
-            HydrusGlobals.pubsub.pub( 'message', job_key )
+            self._controller.pub( 'message', job_key )
             
             thumbnail_paths = ( path for path in ClientFiles.IterateAllThumbnailPaths() if path.endswith( '_resized' ) )
             
@@ -4894,7 +4973,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if password is not None: password = hashlib.sha256( password ).digest()
         
-        options = wx.GetApp().GetOptions()
+        options = self._controller.GetOptions()
         
         options[ 'password' ] = password
         
@@ -4937,11 +5016,11 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
             
-            HydrusGlobals.pubsub.pub( 'refresh_local_booru_shares' )
+            self._controller.pub( 'refresh_local_booru_shares' )
             
         
     
-    def _SyncFileToTagArchive( self, hash_id, hta, adding, namespaces, service_key, pub_immediate = False ):
+    def _SyncFileToTagArchive( self, hash_id, hta, adding, namespaces, service_key, continue_pubsub = False ):
         
         hash_type = hta.GetHashType()
         
@@ -4986,7 +5065,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_keys_to_content_updates = { service_key : content_updates }
             
-            self._ProcessContentUpdates( service_keys_to_content_updates, pub_immediate = pub_immediate )
+            self._ProcessContentUpdates( service_keys_to_content_updates, continue_pubsub = continue_pubsub )
             
         
     
@@ -4998,7 +5077,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
-        HydrusGlobals.pubsub.pub( 'message', job_key )
+        self._controller.pub( 'message', job_key )
         
         hash_type = hta.GetHashType()
         
@@ -5022,7 +5101,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( i, hash_id ) in enumerate( hash_ids ):
             
-            try: self._SyncFileToTagArchive( hash_id, hta, adding, namespaces, service_key, pub_immediate = True )
+            try: self._SyncFileToTagArchive( hash_id, hta, adding, namespaces, service_key, continue_pubsub = False )
             except: pass
             
             if i % 100 == 0:
@@ -5068,25 +5147,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateDB( self, version ):
         
-        HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
-        
-        if version == 121:
-            
-            self._c.execute( 'DROP TABLE booru_shares;' )
-            
-            service_id = self._GetServiceId( CC.LOCAL_BOORU_SERVICE_KEY )
-            
-            ( info, ) = self._c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
-            
-            current_time_struct = time.gmtime()
-            
-            ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
-            
-            info[ 'used_monthly_requests' ] = 0
-            info[ 'current_data_month' ] = ( current_year, current_month )
-            
-            self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-            
+        self._controller.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
         if version == 125:
             
@@ -5204,7 +5265,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'INSERT INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
                 
-                if i % 100 == 0: HydrusGlobals.pubsub.pub( 'splash_set_text', 'generating sha512 hashes: ' + HydrusData.ConvertIntToPrettyString( i ) )
+                if i % 100 == 0: self._controller.pub( 'splash_set_text', 'generating sha512 hashes: ' + HydrusData.ConvertIntToPrettyString( i ) )
                 
             
             #
@@ -5604,12 +5665,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if i % 100 == 0:
                     
-                    HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating file permissions ' + HydrusData.ConvertIntToPrettyString( i ) )
+                    self._controller.pub( 'splash_set_text', 'updating file permissions ' + HydrusData.ConvertIntToPrettyString( i ) )
                     
                 
             
         
-        HydrusGlobals.pubsub.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
+        self._controller.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
@@ -5997,8 +6058,6 @@ class DB( HydrusDB.HydrusDB ):
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
         
-        HydrusGlobals.repos_changed = True
-        
         clear_combined_autocomplete = False
         
         for entry in edit_log:
@@ -6119,7 +6178,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Vacuum( self ):
         
-        HydrusGlobals.pubsub.pub( 'splash_set_text', 'vacuuming db' )
+        self._controller.pub( 'splash_set_text', 'vacuuming db' )
         
         prefix = 'database maintenance - vacuum: '
         
@@ -6127,7 +6186,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix + 'vacuuming' )
         
-        HydrusGlobals.pubsub.pub( 'message', job_key )
+        self._controller.pub( 'message', job_key )
         
         time.sleep( 1 )
         
@@ -6148,13 +6207,14 @@ class DB( HydrusDB.HydrusDB ):
         
         print( job_key.ToString() )
         
-        wx.CallLater( 1000 * 3600, job_key.Delete )
+        wx.CallLater( 1000 * 180, job_key.Delete )
         
     
     def _Write( self, action, *args, **kwargs ):
         
         if action == '4chan_pass': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, '4chan_pass', *args, **kwargs )
         elif action == 'backup': result = self._Backup( *args, **kwargs )
+        elif action == 'content_update_package':result = self._ProcessContentUpdatePackage( *args, **kwargs )
         elif action == 'content_updates':result = self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'copy_files': result = self._CopyFiles( *args, **kwargs )
         elif action == 'delete_export_folder': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, *args, **kwargs )

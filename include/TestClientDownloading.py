@@ -9,22 +9,21 @@ import TestConstants
 import unittest
 import HydrusFileHandling
 import HydrusGlobals
-import wx
 
 class TestDownloaders( unittest.TestCase ):
     
     @classmethod
     def setUpClass( self ):
         
-        self.old_http = wx.GetApp().GetHTTP()
+        self.old_http = HydrusGlobals.controller.GetHTTP()
         
-        wx.GetApp().SetHTTP( TestConstants.FakeHTTPConnectionManager() )
+        HydrusGlobals.controller.SetHTTP( TestConstants.FakeHTTPConnectionManager() )
         
     
     @classmethod
     def tearDownClass( self ):
         
-        wx.GetApp().SetHTTP( self.old_http )
+        HydrusGlobals.controller.SetHTTP( self.old_http )
         
     
     def test_deviantart( self ):
@@ -32,10 +31,10 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_gallery.html' ) as f: da_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_page.html' ) as f: da_page = f.read()
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://sakimichan.deviantart.com/gallery/?catpath=/&offset=0', da_gallery )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', da_page )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://sakimichan.deviantart.com/gallery/?catpath=/&offset=0', da_gallery )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', da_page )
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://fc00.deviantart.net/fs71/f/2015/013/3/c/3c026edbe356b22c802e7be0db6fbd0b-d8dt0go.jpg', 'image file' )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://fc00.deviantart.net/fs71/f/2015/013/3/c/3c026edbe356b22c802e7be0db6fbd0b-d8dt0go.jpg', 'image file' )
         
         #
         
@@ -83,8 +82,8 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_games.html' ) as f: newgrounds_gallery_games = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_movies.html' ) as f: newgrounds_gallery_movies = f.read()
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/games/', newgrounds_gallery_games )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/movies/', newgrounds_gallery_movies )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/games/', newgrounds_gallery_games )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/movies/', newgrounds_gallery_movies )
         
         #
         
@@ -102,9 +101,9 @@ class TestDownloaders( unittest.TestCase ):
         
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_page.html' ) as f: newgrounds_page = f.read()
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://www.newgrounds.com/portal/view/583715', newgrounds_page )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://www.newgrounds.com/portal/view/583715', newgrounds_page )
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://uploads.ungrounded.net/583000/583715_catdust.swf', 'swf file' )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://uploads.ungrounded.net/583000/583715_catdust.swf', 'swf file' )
         
         ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
@@ -131,10 +130,10 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_gallery.html' ) as f: pixiv_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_image_page.html' ) as f: pixiv_page = f.read()
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=51078392', pixiv_page )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=51078392', pixiv_page )
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://i3.pixiv.net/img-original/img/2014/01/25/19/21/56/41171994_p0.jpg', 'image file' )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://i3.pixiv.net/img-original/img/2014/01/25/19/21/56/41171994_p0.jpg', 'image file' )
         
         #
         
@@ -177,12 +176,12 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_gallery.html' ) as f: sankaku_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_page.html' ) as f: sankaku_page = f.read()
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/?tags=animal_ears&page=1', sankaku_gallery )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4324703', sankaku_page )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/?tags=animal_ears&page=1', sankaku_gallery )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4324703', sankaku_page )
         
         #
         
-        wx.GetApp().SetRead( 'remote_booru', ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ] )
+        HydrusGlobals.controller.SetRead( 'remote_booru', ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ] )
         
         downloader = ClientDownloading.GalleryParserBooru( 'sankaku chan', [ 'animal_ears' ] )
         
@@ -196,7 +195,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/c5/c3/c5c3c91ca68bd7662f546cc44fe0d378.jpg?4324703', 'image file' )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/c5/c3/c5c3c91ca68bd7662f546cc44fe0d378.jpg?4324703', 'image file' )
         
         ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
@@ -221,8 +220,8 @@ class TestDownloaders( unittest.TestCase ):
         
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_flash.html' ) as f: sankaku_flash = f.read()
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4318061', sankaku_flash )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/48/ce/48cecd707d8a562d47db74d934505f51.swf?4318061', 'swf file' )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4318061', sankaku_flash )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/48/ce/48cecd707d8a562d47db74d934505f51.swf?4318061', 'swf file' )
         
         ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
@@ -245,12 +244,12 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_gallery.html' ) as f: e621_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_page.html' ) as f: e621_page = f.read()
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'https://e621.net/post/index/1/hair', e621_gallery )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'https://e621.net/post/show/672179/2015-ambiguous_gender-animal_genitalia-anon-balls-', e621_page )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'https://e621.net/post/index/1/hair', e621_gallery )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'https://e621.net/post/show/672179/2015-ambiguous_gender-animal_genitalia-anon-balls-', e621_page )
         
         #
         
-        wx.GetApp().SetRead( 'remote_booru', ClientDefaults.GetDefaultBoorus()[ 'e621' ] )
+        HydrusGlobals.controller.SetRead( 'remote_booru', ClientDefaults.GetDefaultBoorus()[ 'e621' ] )
         
         downloader = ClientDownloading.GalleryParserBooru( 'e621', [ 'hair' ] )
         
@@ -264,7 +263,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'https://static1.e621.net/data/75/88/758892ccca10cef5d242b9f49a0b2a13.png', 'png file' )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'https://static1.e621.net/data/75/88/758892ccca10cef5d242b9f49a0b2a13.png', 'png file' )
         
         ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
         
@@ -295,14 +294,14 @@ class TestDownloaders( unittest.TestCase ):
         
         # what about page/1 or whatever?
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/page/1', picture_gallery )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/scraps/page/1', scrap_gallery )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae', picture_page )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027', scrap_page )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/page/1', picture_gallery )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/scraps/page/1', scrap_gallery )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae', picture_page )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027', scrap_page )
         
         cookies = { 'YII_CSRF_TOKEN' : '19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B' }
         
-        wx.GetApp().SetWebCookies( 'hentai foundry', cookies )
+        HydrusGlobals.controller.SetWebCookies( 'hentai foundry', cookies )
         
         #
         
@@ -349,8 +348,8 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226304.jpg', 'picture' )
-        wx.GetApp().GetHTTP().SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226084.jpg', 'scrap' )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226304.jpg', 'picture' )
+        HydrusGlobals.controller.GetHTTP().SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226084.jpg', 'scrap' )
         
         # ask for specific url
         

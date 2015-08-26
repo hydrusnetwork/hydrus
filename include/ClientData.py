@@ -75,7 +75,7 @@ def CatchExceptionClient( etype, value, tb ):
         sys.stdout.flush()
         sys.stderr.flush()
         
-        HydrusGlobals.pubsub.pub( 'message', job_key )
+        HydrusGlobals.controller.pub( 'message', job_key )
         
     except:
         
@@ -90,6 +90,34 @@ def CatchExceptionClient( etype, value, tb ):
         
         HydrusData.ShowText( text )
         
+    
+def ConvertShortcutToPrettyShortcut( modifier, key ):
+    
+    if modifier == wx.ACCEL_NORMAL: modifier = ''
+    elif modifier == wx.ACCEL_ALT: modifier = 'alt'
+    elif modifier == wx.ACCEL_CTRL: modifier = 'ctrl'
+    elif modifier == wx.ACCEL_SHIFT: modifier = 'shift'
+    
+    if key in range( 65, 91 ): key = chr( key + 32 ) # + 32 for converting ascii A -> a
+    elif key in range( 97, 123 ): key = chr( key )
+    else: key = CC.wxk_code_string_lookup[ key ]
+    
+    return ( modifier, key )
+    
+def ConvertZoomToPercentage( zoom ):
+    
+    zoom_percent = zoom * 100
+    
+    if zoom in CC.ZOOMS:
+        
+        pretty_zoom = '%i' % zoom_percent + '%'
+        
+    else:
+        
+        pretty_zoom = '%.2f' % zoom_percent + '%'
+        
+    
+    return pretty_zoom
     
 def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
     
@@ -188,7 +216,7 @@ def ShowExceptionClient( e ):
     sys.stdout.flush()
     sys.stderr.flush()
     
-    HydrusGlobals.pubsub.pub( 'message', job_key )
+    HydrusGlobals.controller.pub( 'message', job_key )
     
 def ShowTextClient( text ):
     
@@ -201,7 +229,7 @@ def ShowTextClient( text ):
     try: print( text )
     except: print( repr( text ) )
     
-    HydrusGlobals.pubsub.pub( 'message', job_key )
+    HydrusGlobals.controller.pub( 'message', job_key )
     
 class Booru( HydrusData.HydrusYAMLBase ):
     
@@ -279,8 +307,8 @@ class FileQueryResult( object ):
         self._hashes_ordered = [ media_result.GetHash() for media_result in media_results ]
         self._hashes = set( self._hashes_ordered )
         
-        HydrusGlobals.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
-        HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
+        HydrusGlobals.controller.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
+        HydrusGlobals.controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
     def __iter__( self ):
@@ -879,8 +907,8 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
         
         service_keys_to_tags = {}
         
-        siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
-        parents_manager = wx.GetApp().GetManager( 'tag_parents' )
+        siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+        parents_manager = HydrusGlobals.controller.GetManager( 'tag_parents' )
         
         for ( service_key, namespaces ) in self._service_keys_to_namespaces.items():
             
@@ -1093,7 +1121,7 @@ class Service( HydrusData.HydrusYAMLBase ):
         
         self._lock = threading.Lock()
         
-        HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
+        HydrusGlobals.controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
     def __hash__( self ): return self._service_key.__hash__()
@@ -1114,7 +1142,7 @@ class Service( HydrusData.HydrusYAMLBase ):
         
         self.ProcessServiceUpdates( service_keys_to_service_updates )
         
-        wx.GetApp().Write( 'service_updates', service_keys_to_service_updates )
+        HydrusGlobals.controller.Write( 'service_updates', service_keys_to_service_updates )
         
     
     def CanDownload( self ):
@@ -1191,7 +1219,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
             num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
-            num_updates_processed = ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION
+            num_updates_processed = max( 0, ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION )
             
         
         downloaded_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_downloaded, num_updates )
@@ -1348,7 +1376,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             url = 'http://' + host + ':' + HydrusData.ToString( port ) + path_and_query
             
-            ( response, size_of_response, response_headers, cookies ) = wx.GetApp().DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True )
+            ( response, size_of_response, response_headers, cookies ) = HydrusGlobals.controller.DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True )
             
             HydrusNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
             
@@ -1366,12 +1394,12 @@ class Service( HydrusData.HydrusYAMLBase ):
                 
                 if isinstance( e, HydrusExceptions.SessionException ):
                     
-                    session_manager = wx.GetApp().GetManager( 'hydrus_sessions' )
+                    session_manager = HydrusGlobals.controller.GetManager( 'hydrus_sessions' )
                     
                     session_manager.DeleteSessionKey( self._service_key )
                     
                 
-                wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HydrusData.ToString( e ) ) ] } )
+                HydrusGlobals.controller.Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HydrusData.ToString( e ) ) ] } )
                 
                 if isinstance( e, HydrusExceptions.PermissionException ):
                     
@@ -1383,7 +1411,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                         
                     else: unknown_account = HydrusData.GetUnknownAccount()
                     
-                    wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, unknown_account ) ] } )
+                    HydrusGlobals.controller.Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, unknown_account ) ] } )
                     
                 
             
@@ -1401,9 +1429,9 @@ class Service( HydrusData.HydrusYAMLBase ):
         if credentials.HasAccessKey(): self._info[ 'access_key' ] = credentials.GetAccessKey()
         
     
-    def Sync( self ):
+    def Sync( self, only_when_idle = False, stop_time = None ):
         
-        job_key = HydrusData.JobKey( pausable = True, cancellable = True )
+        job_key = HydrusData.JobKey( pausable = False, cancellable = True )
         
         ( i_paused, should_quit ) = job_key.WaitIfNeeded()
         
@@ -1428,45 +1456,35 @@ class Service( HydrusData.HydrusYAMLBase ):
         
         try:
             
-            options = wx.GetApp().GetOptions()
+            options = HydrusGlobals.controller.GetOptions()
             
+            HydrusGlobals.controller.pub( 'splash_set_text', 'synchronising ' + self._name )
             job_key.SetVariable( 'popup_title', 'repository synchronisation - ' + self._name )
             
-            HydrusGlobals.pubsub.pub( 'message', job_key )
+            HydrusGlobals.controller.pub( 'message', job_key )
             
             try:
                 
                 while self.CanDownloadUpdate():
                     
-                    while options[ 'pause_repo_sync' ]:
+                    if only_when_idle:
                         
-                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                        
-                        if should_quit:
+                        if not HydrusGlobals.controller.CurrentlyIdle():
                             
                             break
                             
                         
-                        time.sleep( 0.1 )
+                    else:
                         
-                        job_key.SetVariable( 'popup_text_1', 'all repository synchronisation is paused' )
+                        if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
+                            
+                            break
+                            
                         
-                        if HydrusGlobals.repos_changed:
-                            
-                            job_key.SetVariable( 'popup_text_1', 'repositories were changed during processing; this job was abandoned' )
-                            
-                            print( job_key.ToString() )
-                            
-                            job_key.Cancel()
-                            
-                            time.sleep( 5 )
-                            
-                            job_key.Delete()
-                            
-                            HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                            
-                            return
-                            
+                    
+                    if options[ 'pause_repo_sync' ]:
+                        
+                        break
                         
                     
                     ( i_paused, should_quit ) = job_key.WaitIfNeeded()
@@ -1493,6 +1511,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                     subupdate_index_string = 'service update: '
                     
+                    HydrusGlobals.controller.pub( 'splash_set_text', 'synchronising ' + self._name + ' - ' + update_index_string + 'downloading' )
                     job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'downloading and parsing' )
                     job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
                     
@@ -1536,9 +1555,9 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                     self.ProcessServiceUpdates( service_keys_to_service_updates )
                     
-                    wx.GetApp().Write( 'service_updates', service_keys_to_service_updates )
+                    HydrusGlobals.controller.Write( 'service_updates', service_keys_to_service_updates )
                     
-                    wx.GetApp().WaitUntilWXThreadIdle()
+                    HydrusGlobals.controller.WaitUntilPubSubsEmpty()
                     
                     num_updates_downloaded += 1
                     
@@ -1557,52 +1576,29 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                 
             
-            update_time_tracker = []
-            update_speed_string = ''
-            
-            WEIGHT_THRESHOLD = 200.0
-            
             while self.CanProcessUpdate():
                 
-                while options[ 'pause_repo_sync' ]:
+                if only_when_idle:
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
+                    if not HydrusGlobals.controller.CurrentlyIdle():
                         
                         break
                         
                     
-                    time.sleep( 0.1 )
+                else:
                     
-                    job_key.SetVariable( 'popup_text_1', 'repository synchronisation paused' )
-                    
-                    if HydrusGlobals.repos_changed:
+                    if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
                         
-                        job_key.SetVariable( 'popup_text_1', 'repositories were changed during processing; this job was abandoned' )
-                        
-                        print( job_key.ToString() )
-                        
-                        job_key.Cancel()
-                        
-                        time.sleep( 5 )
-                        
-                        job_key.Delete()
-                        
-                        HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                        
-                        return
+                        break
                         
                     
-                    precise_timestamp = HydrusData.GetNowPrecise()
+                
+                if options[ 'pause_repo_sync' ]:
+                    
+                    break
                     
                 
                 ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                if i_paused:
-                    
-                    precise_timestamp = HydrusData.GetNowPrecise()
-                    
                 
                 if should_quit:
                     
@@ -1617,6 +1613,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                 
                 subupdate_index_string = 'service update: '
                 
+                HydrusGlobals.controller.pub( 'splash_set_text', 'synchronising ' + self._name + ' - ' + update_index_string + 'processing' )
                 job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'loading from disk' )
                 job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
                 
@@ -1635,10 +1632,36 @@ class Service( HydrusData.HydrusYAMLBase ):
                 
                 subindex_count = service_update_package.GetSubindexCount()
                 
-                pending_content_updates = []
-                pending_weight = 0
+                processing_went_ok = True
                 
                 for subindex in range( subindex_count ):
+                    
+                    if only_when_idle:
+                        
+                        if not HydrusGlobals.controller.CurrentlyIdle():
+                            
+                            break
+                            
+                        
+                    else:
+                        
+                        if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
+                            
+                            break
+                            
+                        
+                    
+                    if options[ 'pause_repo_sync' ]:
+                        
+                        break
+                        
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        break
+                        
                     
                     subupdate_index_string = 'content update ' + HydrusData.ConvertValueRangeToPrettyString( subindex + 1, subindex_count ) + ': '
                     
@@ -1661,145 +1684,50 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                     job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'processing' )
                     
-                    c_u_p_num_rows = content_update_package.GetNumRows()
-                    c_u_p_total_weight_processed = 0
-                    precise_timestamp = HydrusData.GetNowPrecise()
+                    ( did_it_all, c_u_p_weight_processed ) = HydrusGlobals.controller.WriteSynchronous( 'content_update_package', self._service_key, content_update_package, job_key, only_when_idle )
                     
-                    for content_update in content_update_package.IterateContentUpdates():
+                    total_content_weight_processed += c_u_p_weight_processed
+                    
+                    if not did_it_all:
                         
-                        while options[ 'pause_repo_sync' ]:
-                            
-                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                            
-                            if should_quit:
-                                
-                                break
-                                
-                            
-                            time.sleep( 0.1 )
-                            
-                            job_key.SetVariable( 'popup_text_2', 'repository synchronisation paused' )
-                            
-                            if HydrusGlobals.repos_changed:
-                                
-                                job_key.SetVariable( 'popup_text_2', 'repositories were changed during processing; this job was abandoned' )
-                                
-                                print( job_key.ToString() )
-                                
-                                job_key.Cancel()
-                                
-                                time.sleep( 5 )
-                                
-                                job_key.Delete()
-                                
-                                HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                                
-                                return
-                                
-                            
-                            precise_timestamp = HydrusData.GetNowPrecise()
-                            
+                        processing_went_ok = False
                         
-                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                        
-                        if i_paused:
-                            
-                            precise_timestamp = HydrusData.GetNowPrecise()
-                            
-                        
-                        if should_quit:
-                            
-                            break
-                            
-                        
-                        pending_content_updates.append( content_update )
-                        
-                        content_update_weight = len( content_update.GetHashes() )
-                        
-                        pending_weight += content_update_weight
-                        
-                        c_u_p_total_weight_processed += content_update_weight
-                        
-                        content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
-                        
-                        job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing' + update_speed_string )
-                        
-                        job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
-                        
-                        if pending_weight > WEIGHT_THRESHOLD:
-                            
-                            wx.GetApp().WaitUntilWXThreadIdle()
-                            
-                            wx.GetApp().WriteSynchronous( 'content_updates', { self._service_key : pending_content_updates } )
-                            
-                            it_took = HydrusData.GetNowPrecise() - precise_timestamp
-                            
-                            precise_timestamp = HydrusData.GetNowPrecise()
-                            
-                            if wx.GetApp().CurrentlyIdle(): ideal_packet_time = 10.0
-                            else: ideal_packet_time = 0.5
-                            
-                            WEIGHT_THRESHOLD = max( 200.0, WEIGHT_THRESHOLD * ideal_packet_time / it_took )
-                            
-                            total_content_weight_processed += pending_weight
-                            
-                            #
-                            
-                            if len( update_time_tracker ) > 10:
-                                
-                                update_time_tracker.pop( 0 )
-                                
-                            
-                            update_time_tracker.append( ( pending_weight, it_took ) )
-                            
-                            recent_total_weight = 0
-                            recent_total_time = 0.0
-                            
-                            for ( weight, it_took ) in update_time_tracker:
-                                
-                                recent_total_weight += weight
-                                recent_total_time += it_took
-                                
-                                recent_speed = int( recent_total_weight / recent_total_time )
-                                
-                                update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( recent_speed ) + ' rows/s'
-                                
-                            
-                            #
-                            
-                            pending_content_updates = []
-                            pending_weight = 0
-                            
+                        break
                         
                     
-                
-                if len( pending_content_updates ) > 0:
-                    
-                    wx.GetApp().WaitUntilWXThreadIdle()
-                    
-                    wx.GetApp().WriteSynchronous( 'content_updates', { self._service_key : pending_content_updates } )
-                    
-                    WEIGHT_THRESHOLD = 200.0
-                    
-                    total_content_weight_processed += pending_weight
+                    HydrusGlobals.controller.WaitUntilPubSubsEmpty()
                     
                 
-                job_key.SetVariable( 'popup_text_2', 'committing service updates' )
+                if options[ 'pause_repo_sync' ]:
+                    
+                    break
+                    
                 
-                service_updates = [ service_update for service_update in service_update_package.IterateServiceUpdates() ]
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                 
-                service_updates.append( HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP, service_update_package.GetNextBegin() ) )
+                if should_quit:
+                    
+                    break
+                    
                 
-                service_keys_to_service_updates = { self._service_key : service_updates }
-                
-                self.ProcessServiceUpdates( service_keys_to_service_updates )
-                
-                wx.GetApp().Write( 'service_updates', service_keys_to_service_updates )
-                
-                HydrusGlobals.pubsub.pub( 'notify_new_pending' )
-                
-                # this waits for pubsubs to flush, so service updates are processed
-                wx.GetApp().WaitUntilWXThreadIdle()
+                if processing_went_ok:
+                    
+                    job_key.SetVariable( 'popup_text_2', 'committing service updates' )
+                    
+                    service_updates = [ service_update for service_update in service_update_package.IterateServiceUpdates() ]
+                    
+                    service_updates.append( HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP, service_update_package.GetNextBegin() ) )
+                    
+                    service_keys_to_service_updates = { self._service_key : service_updates }
+                    
+                    self.ProcessServiceUpdates( service_keys_to_service_updates )
+                    
+                    HydrusGlobals.controller.Write( 'service_updates', service_keys_to_service_updates )
+                    
+                    HydrusGlobals.controller.pub( 'notify_new_pending' )
+                    
+                    HydrusGlobals.controller.WaitUntilPubSubsEmpty()
+                    
                 
                 job_key.SetVariable( 'popup_gauge_2', ( 0, 1 ) )
                 job_key.SetVariable( 'popup_text_2', '' )
@@ -1819,13 +1747,29 @@ class Service( HydrusData.HydrusYAMLBase ):
                 
                 job_key.SetVariable( 'popup_text_1', 'reviewing service thumbnails' )
                 
-                thumbnail_hashes_i_should_have = wx.GetApp().Read( 'thumbnail_hashes_i_should_have', self._service_key )
+                thumbnail_hashes_i_should_have = HydrusGlobals.controller.Read( 'thumbnail_hashes_i_should_have', self._service_key )
                 
                 thumbnail_hashes_i_need = thumbnail_hashes_i_should_have.difference( thumbnail_hashes_i_have )
                 
                 if len( thumbnail_hashes_i_need ) > 0:
                     
-                    while options[ 'pause_repo_sync' ]:
+                    def SaveThumbnails( batch_of_thumbnails ):
+                        
+                        job_key.SetVariable( 'popup_text_1', 'saving thumbnails to database' )
+                        
+                        HydrusGlobals.controller.WriteSynchronous( 'thumbnails', batch_of_thumbnails )
+                        
+                        HydrusGlobals.controller.pub( 'add_thumbnail_count', self._service_key, len( batch_of_thumbnails ) )
+                        
+                    
+                    thumbnails = []
+                    
+                    for ( i, hash ) in enumerate( thumbnail_hashes_i_need ):
+                        
+                        if options[ 'pause_repo_sync' ]:
+                            
+                            break
+                            
                         
                         ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                         
@@ -1833,48 +1777,6 @@ class Service( HydrusData.HydrusYAMLBase ):
                             
                             break
                             
-                        
-                        time.sleep( 0.1 )
-                        
-                        job_key.SetVariable( 'popup_text_1', 'repository synchronisation paused' )
-                        
-                        if HydrusGlobals.repos_changed:
-                            
-                            job_key.SetVariable( 'popup_text_1', 'repositories were changed during processing; this job was abandoned' )
-                            
-                            print( job_key.ToString() )
-                            
-                            job_key.Cancel()
-                            
-                            time.sleep( 5 )
-                            
-                            job_key.Delete()
-                            
-                            HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                            
-                            return
-                            
-                        
-                    
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        return
-                        
-                    
-                    def SaveThumbnails( batch_of_thumbnails ):
-                        
-                        job_key.SetVariable( 'popup_text_1', 'saving thumbnails to database' )
-                        
-                        wx.GetApp().WriteSynchronous( 'thumbnails', batch_of_thumbnails )
-                        
-                        HydrusGlobals.pubsub.pub( 'add_thumbnail_count', self._service_key, len( batch_of_thumbnails ) )
-                        
-                    
-                    thumbnails = []
-                    
-                    for ( i, hash ) in enumerate( thumbnail_hashes_i_need ):
                         
                         job_key.SetVariable( 'popup_text_1', 'downloading thumbnail ' + HydrusData.ConvertValueRangeToPrettyString( i, len( thumbnail_hashes_i_need ) ) )
                         job_key.SetVariable( 'popup_gauge_1', ( i, len( thumbnail_hashes_i_need ) ) )
@@ -1892,7 +1794,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                             thumbnails = []
                             
                         
-                        wx.GetApp().WaitUntilWXThreadIdle()
+                        HydrusGlobals.controller.WaitUntilPubSubsEmpty()
                         
                     
                     if len( thumbnails ) > 0: SaveThumbnails( thumbnails )
@@ -1912,8 +1814,9 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             print( job_key.ToString() )
             
-            if total_content_weight_processed > 0: job_key.Finish()
-            else: job_key.Delete()
+            time.sleep( 3 )
+            
+            job_key.Delete()
             
         except Exception as e:
             
@@ -1941,7 +1844,7 @@ class ServicesManager( object ):
         
         self.RefreshServices()
         
-        HydrusGlobals.pubsub.sub( self, 'RefreshServices', 'notify_new_services_data' )
+        HydrusGlobals.controller.sub( self, 'RefreshServices', 'notify_new_services_data' )
         
     
     def GetService( self, service_key ):
@@ -1962,7 +1865,7 @@ class ServicesManager( object ):
         
         with self._lock:
             
-            services = wx.GetApp().Read( 'services' )
+            services = HydrusGlobals.controller.Read( 'services' )
             
             self._keys_to_services = { service.GetServiceKey() : service for service in services }
             
@@ -2142,8 +2045,8 @@ class UndoManager( object ):
         
         self._lock = threading.Lock()
         
-        HydrusGlobals.pubsub.sub( self, 'Undo', 'undo' )
-        HydrusGlobals.pubsub.sub( self, 'Redo', 'redo' )
+        HydrusGlobals.controller.sub( self, 'Undo', 'undo' )
+        HydrusGlobals.controller.sub( self, 'Redo', 'redo' )
         
     
     def _FilterServiceKeysToContentUpdates( self, service_keys_to_content_updates ):
@@ -2269,7 +2172,7 @@ class UndoManager( object ):
             
             self._current_index += 1
             
-            HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+            HydrusGlobals.controller.pub( 'notify_new_undo' )
             
         
     
@@ -2326,9 +2229,9 @@ class UndoManager( object ):
         
         if action is not None:
             
-            wx.GetApp().WriteSynchronous( action, *args, **kwargs )
+            HydrusGlobals.controller.WriteSynchronous( action, *args, **kwargs )
             
-            HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+            HydrusGlobals.controller.pub( 'notify_new_undo' )
             
         
     
@@ -2348,9 +2251,9 @@ class UndoManager( object ):
         
         if action is not None:
             
-            wx.GetApp().WriteSynchronous( action, *args, **kwargs )
+            HydrusGlobals.controller.WriteSynchronous( action, *args, **kwargs )
             
-            HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+            HydrusGlobals.controller.pub( 'notify_new_undo' )
             
         
     
@@ -2365,7 +2268,7 @@ def GetDefaultAdvancedTagOptions( lookup ):
         if site_type == HC.SITE_TYPE_BOORU: backup_lookup = HC.SITE_TYPE_BOORU
         
     
-    options = wx.GetApp().GetOptions()
+    options = HydrusGlobals.controller.GetOptions()
     
     ato_options = options[ 'default_advanced_tag_options' ]
     

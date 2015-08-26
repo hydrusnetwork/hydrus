@@ -18,7 +18,6 @@ import traceback
 import cStringIO
 import subprocess
 import HydrusData
-import wx
 
 # Mime
 

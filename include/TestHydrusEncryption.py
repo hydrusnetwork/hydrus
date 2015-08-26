@@ -8,7 +8,6 @@ import os
 import potr
 import TestConstants
 import unittest
-import wx
 import HydrusGlobals
 
 class Catcher():
@@ -92,7 +91,7 @@ class TestIM( unittest.TestCase ):
         
         self.assertEqual( alice_context.getCurrentTrust(), 'verified' )
         
-        [ ( args, kwargs ) ] = wx.GetApp().GetWrite( 'otr_trusts' )
+        [ ( args, kwargs ) ] = HydrusGlobals.controller.GetWrite( 'otr_trusts' )
         
         self.assertEqual( args, ( alice, { bob : { alice_context.getCurrentKey().cfingerprint() : 'verified' } } ) )
         
@@ -102,7 +101,7 @@ class TestIM( unittest.TestCase ):
         
         self.assertEqual( bob_context.getCurrentTrust(), 'verified' )
         
-        [ ( args, kwargs ) ] = wx.GetApp().GetWrite( 'otr_trusts' )
+        [ ( args, kwargs ) ] = HydrusGlobals.controller.GetWrite( 'otr_trusts' )
         
         self.assertEqual( args, ( bob, { alice : { bob_context.getCurrentKey().cfingerprint() : 'verified' } } ) )
         

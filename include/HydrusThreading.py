@@ -1,40 +1,48 @@
 import HydrusExceptions
 import Queue
-import random
 import threading
 import time
 import traceback
-import wx
 import HydrusData
 import HydrusGlobals
 
 class DAEMON( threading.Thread ):
     
-    def __init__( self, name, period = 1200 ):
+    def __init__( self, controller, name, period = 1200 ):
         
         threading.Thread.__init__( self, name = name )
         
+        self._controller = controller
         self._name = name
         
         self._event = threading.Event()
         
-        HydrusGlobals.pubsub.sub( self, 'shutdown', 'shutdown' )
+        self._controller.sub( self, 'shutdown', 'shutdown' )
+        self._controller.sub( self, 'wake', 'wake_daemons' )
         
     
-    def shutdown( self ): self._event.set()
+    def shutdown( self ):
+        
+        self._event.set()
+        
+    
+    def wake( self ):
+        
+        self._event.set()
+        
     
 class DAEMONQueue( DAEMON ):
     
-    def __init__( self, name, callable, queue_topic, period = 10 ):
+    def __init__( self, controller, name, callable, queue_topic, period = 10 ):
         
-        DAEMON.__init__( self, name )
+        DAEMON.__init__( self, controller, name )
         
         self._callable = callable
         self._queue = Queue.Queue()
         self._queue_topic = queue_topic
         self._period = period
         
-        HydrusGlobals.pubsub.sub( self, 'put', queue_topic )
+        self._controller.sub( self, 'put', queue_topic )
         
         self.start()
         
@@ -49,16 +57,16 @@ class DAEMONQueue( DAEMON ):
             
             while self._queue.empty():
                 
-                if HydrusGlobals.shutdown: return
+                if HydrusGlobals.view_shutdown: return
                 
                 self._event.wait( self._period )
                 
                 self._event.clear()
                 
             
-            while wx.GetApp().JustWokeFromSleep():
+            while not self._controller.GoodTimeToDoBackgroundWork():
                 
-                if HydrusGlobals.shutdown: return
+                if HydrusGlobals.view_shutdown: return
                 
                 time.sleep( 10 )
                 
@@ -84,11 +92,11 @@ class DAEMONQueue( DAEMON ):
     
 class DAEMONWorker( DAEMON ):
     
-    def __init__( self, name, callable, topics = None, period = 1200, init_wait = 3, pre_callable_wait = 3 ):
+    def __init__( self, controller, name, callable, topics = None, period = 1200, init_wait = 3, pre_callable_wait = 3 ):
         
         if topics is None: topics = []
         
-        DAEMON.__init__( self, name )
+        DAEMON.__init__( self, controller, name )
         
         self._callable = callable
         self._topics = topics
@@ -96,7 +104,7 @@ class DAEMONWorker( DAEMON ):
         self._init_wait = init_wait
         self._pre_callable_wait = pre_callable_wait
         
-        for topic in topics: HydrusGlobals.pubsub.sub( self, 'set', topic )
+        for topic in topics: self._controller.sub( self, 'set', topic )
         
         self.start()
         
@@ -107,15 +115,15 @@ class DAEMONWorker( DAEMON ):
         
         while True:
             
-            if HydrusGlobals.shutdown: return
+            if HydrusGlobals.view_shutdown: return
             
             time.sleep( self._pre_callable_wait )
             
-            if HydrusGlobals.shutdown: return
+            if HydrusGlobals.view_shutdown: return
             
-            while wx.GetApp().JustWokeFromSleep():
+            while not self._controller.GoodTimeToDoBackgroundWork():
                 
-                if HydrusGlobals.shutdown: return
+                if HydrusGlobals.view_shutdown: return
                 
                 time.sleep( 10 )
                 
@@ -135,7 +143,7 @@ class DAEMONWorker( DAEMON ):
                 HydrusData.ShowException( e )
                 
             
-            if HydrusGlobals.shutdown: return
+            if HydrusGlobals.view_shutdown: return
             
             self._event.wait( self._period )
             
@@ -147,9 +155,9 @@ class DAEMONWorker( DAEMON ):
     
 class DAEMONCallToThread( DAEMON ):
     
-    def __init__( self ):
+    def __init__( self, controller ):
         
-        DAEMON.__init__( self, 'CallToThread' )
+        DAEMON.__init__( self, controller, 'CallToThread' )
         
         self._queue = Queue.Queue()
         
@@ -169,7 +177,7 @@ class DAEMONCallToThread( DAEMON ):
             
             while self._queue.empty():
                 
-                if HydrusGlobals.shutdown: return
+                if HydrusGlobals.model_shutdown: return
                 
                 self._event.wait( 1200 )
                 
@@ -196,50 +204,4 @@ class DAEMONCallToThread( DAEMON ):
             time.sleep( 0.00001 )
             
         
-    
-call_to_threads = [ DAEMONCallToThread() for i in range( 10 ) ]
-
-def CallToThread( callable, *args, **kwargs ):
-    
-    call_to_thread = random.choice( call_to_threads )
-    
-    while call_to_thread == threading.current_thread: call_to_thread = random.choice( call_to_threads )
-    
-    call_to_thread.put( callable, *args, **kwargs )
-    
-def CallBlockingToWx( callable, *args, **kwargs ):
-    
-    def wx_code( job_key ):
-        
-        try:
-            
-            result = callable( *args, **kwargs )
-            
-            job_key.SetVariable( 'result', result )
-            
-        except Exception as e:
-            
-            print( 'CallBlockingToWx just caught this error:' )
-            print( traceback.format_exc() )
-            
-            job_key.SetVariable( 'error', e )
-            
-        finally: job_key.Finish()
-        
-    
-    job_key = HydrusData.JobKey()
-    
-    job_key.Begin()
-    
-    wx.CallAfter( wx_code, job_key )
-    
-    while not job_key.IsDone():
-        
-        if HydrusGlobals.shutdown: return
-        
-        time.sleep( 0.05 )
-        
-    
-    if job_key.HasVariable( 'result' ): return job_key.GetVariable( 'result' )
-    else: raise job_key.GetVariable( 'error' )
     

@@ -63,7 +63,7 @@ class DataCache( object ):
             
             if key not in self._keys_to_data:
                 
-                options = wx.GetApp().GetOptions()
+                options = HydrusGlobals.controller.GetOptions()
                 
                 while self._total_estimated_memory_footprint > options[ self._cache_size_key ]:
                     
@@ -139,8 +139,8 @@ class LocalBooruCache( object ):
         
         self._RefreshShares()
         
-        HydrusGlobals.pubsub.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
-        HydrusGlobals.pubsub.sub( self, 'RefreshShares', 'restart_booru' )
+        HydrusGlobals.controller.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
+        HydrusGlobals.controller.sub( self, 'RefreshShares', 'restart_booru' )
         
     
     def _CheckDataUsage( self ):
@@ -180,13 +180,13 @@ class LocalBooruCache( object ):
         
         if info is None:
             
-            info = wx.GetApp().Read( 'local_booru_share', share_key )
+            info = HydrusGlobals.controller.Read( 'local_booru_share', share_key )
             
             hashes = info[ 'hashes' ]
             
             info[ 'hashes_set' ] = set( hashes )
             
-            media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
+            media_results = HydrusGlobals.controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
             
             info[ 'media_results' ] = media_results
             
@@ -202,11 +202,11 @@ class LocalBooruCache( object ):
     
     def _RefreshShares( self ):
         
-        self._local_booru_service = wx.GetApp().GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._local_booru_service = HydrusGlobals.controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         self._keys_to_infos = {}
         
-        share_keys = wx.GetApp().Read( 'local_booru_share_keys' )
+        share_keys = HydrusGlobals.controller.Read( 'local_booru_share_keys' )
         
         for share_key in share_keys: self._keys_to_infos[ share_key ] = None
         
@@ -319,7 +319,7 @@ class RenderedImageCache( object ):
         
         self._keys_being_rendered = {}
         
-        HydrusGlobals.pubsub.sub( self, 'FinishedRendering', 'finished_rendering' )
+        HydrusGlobals.controller.sub( self, 'FinishedRendering', 'finished_rendering' )
         
     
     def Clear( self ): self._data_cache.Clear()
@@ -377,7 +377,7 @@ class ThumbnailCache( object ):
         
         threading.Thread( target = self.DAEMONWaterfall, name = 'Waterfall Daemon' ).start()
         
-        HydrusGlobals.pubsub.sub( self, 'Clear', 'thumbnail_resize' )
+        HydrusGlobals.controller.sub( self, 'Clear', 'thumbnail_resize' )
         
     
     def Clear( self ):
@@ -396,7 +396,7 @@ class ThumbnailCache( object ):
                 
                 path = HC.STATIC_DIR + os.path.sep + name + '.png'
                 
-                options = wx.GetApp().GetOptions()
+                options = HydrusGlobals.controller.GetOptions()
                 
                 thumbnail = HydrusFileHandling.GenerateThumbnail( path, options[ 'thumbnail_dimensions' ] )
                 
@@ -456,7 +456,7 @@ class ThumbnailCache( object ):
         
         last_paused = HydrusData.GetNowPrecise()
         
-        while not HydrusGlobals.shutdown:
+        while not HydrusGlobals.view_shutdown:
             
             try: ( page_key, medias ) = self._queue.get( timeout = 1 )
             except Queue.Empty: continue
@@ -469,7 +469,7 @@ class ThumbnailCache( object ):
                     
                     thumbnail = self.GetThumbnail( media )
                     
-                    HydrusGlobals.pubsub.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
+                    HydrusGlobals.controller.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
                     
                     if HydrusData.GetNowPrecise() - last_paused > 0.005:
                         
@@ -640,7 +640,7 @@ class TagCensorshipManager( object ):
         
         self.RefreshData()
         
-        HydrusGlobals.pubsub.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
+        HydrusGlobals.controller.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
         
     
     def GetInfo( self, service_key ):
@@ -651,7 +651,7 @@ class TagCensorshipManager( object ):
     
     def RefreshData( self ):
         
-        info = wx.GetApp().Read( 'tag_censorship' )
+        info = HydrusGlobals.controller.Read( 'tag_censorship' )
         
         self._service_keys_to_info = {}
         self._service_keys_to_predicates = {}
@@ -721,16 +721,16 @@ class TagParentsManager( object ):
         
         self._lock = threading.Lock()
         
-        HydrusGlobals.pubsub.sub( self, 'RefreshParents', 'notify_new_parents' )
+        HydrusGlobals.controller.sub( self, 'RefreshParents', 'notify_new_parents' )
         
     
     def _RefreshParents( self ):
         
-        service_keys_to_statuses_to_pairs = wx.GetApp().Read( 'tag_parents' )
+        service_keys_to_statuses_to_pairs = HydrusGlobals.controller.Read( 'tag_parents' )
         
         # first collapse siblings
         
-        sibling_manager = wx.GetApp().GetManager( 'tag_siblings' )
+        sibling_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
         
         collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
         
@@ -846,18 +846,18 @@ class TagSiblingsManager( object ):
         
         self._lock = threading.Lock()
         
-        HydrusGlobals.pubsub.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
+        HydrusGlobals.controller.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
         
     
     def _RefreshSiblings( self ):
         
-        service_keys_to_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings' )
+        service_keys_to_statuses_to_pairs = HydrusGlobals.controller.Read( 'tag_siblings' )
         
         processed_siblings = CombineTagSiblingPairs( service_keys_to_statuses_to_pairs )
         
         ( self._siblings, self._reverse_lookup ) = CollapseTagSiblingChains( processed_siblings )
         
-        HydrusGlobals.pubsub.pub( 'new_siblings_gui' )
+        HydrusGlobals.controller.pub( 'new_siblings_gui' )
         
     
     def GetAutocompleteSiblings( self, half_complete_tag ):

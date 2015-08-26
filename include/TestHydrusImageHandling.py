@@ -4,7 +4,6 @@ import HydrusImageHandling
 import os
 import TestConstants
 import unittest
-import wx
 
 class TestImageHandling( unittest.TestCase ):
     

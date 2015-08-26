@@ -8,7 +8,6 @@ import os
 import potr
 import time
 import traceback
-import wx
 import yaml
 import zlib
 from twisted.internet import reactor

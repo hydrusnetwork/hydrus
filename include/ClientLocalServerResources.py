@@ -20,7 +20,7 @@ class HydrusResourceCommandBooru( HydrusServerResources.HydrusResourceCommand ):
             
             num_bytes = request.hydrus_request_data_usage
             
-            HydrusGlobals.pubsub.pub( 'service_updates_delayed', { CC.LOCAL_BOORU_SERVICE_KEY : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, num_bytes ) ] } )
+            HydrusGlobals.controller.pub( 'service_updates_delayed', { CC.LOCAL_BOORU_SERVICE_KEY : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, num_bytes ) ] } )
             
         
     
@@ -42,7 +42,7 @@ class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
+        local_booru_manager = HydrusGlobals.controller.GetManager( 'local_booru' )
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
@@ -62,7 +62,7 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
         
         share_key = request.hydrus_args[ 'share_key' ]
         
-        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
+        local_booru_manager = HydrusGlobals.controller.GetManager( 'local_booru' )
         
         local_booru_manager.CheckShareAuthorised( share_key )
         
@@ -144,7 +144,7 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
+        local_booru_manager = HydrusGlobals.controller.GetManager( 'local_booru' )
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
@@ -233,7 +233,7 @@ class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = wx.GetApp().GetManager( 'local_booru' )
+        local_booru_manager = HydrusGlobals.controller.GetManager( 'local_booru' )
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         

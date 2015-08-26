@@ -107,6 +107,20 @@ class Controller( HydrusController.HydrusController ):
     
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
+    def InitDaemons( self ):
+        
+        HydrusController.HydrusController.InitDaemons( self )
+        
+        self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRequestsMade', ServerDaemons.DAEMONFlushRequestsMade, 'request_made', period = 60 ) )
+        
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckMonthlyData', ServerDaemons.DAEMONCheckMonthlyData, period = 3600 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'ClearBans', ServerDaemons.DAEMONClearBans, period = 3600 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DeleteOrphans', ServerDaemons.DAEMONDeleteOrphans, period = 86400 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'GenerateUpdates', ServerDaemons.DAEMONGenerateUpdates, period = 1200 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckDataUsage', ServerDaemons.DAEMONCheckDataUsage, period = 86400 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'UPnP', ServerDaemons.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 ) )
+        
+    
     def JustWokeFromSleep( self ): return False
     
     def MaintainDB( self ):
@@ -114,11 +128,16 @@ class Controller( HydrusController.HydrusController ):
         pass
         
     
+    def NotifyPubSubs( self ):
+        
+        self.CallToThread( self.ProcessPubSub )
+        
+    
     def OnInit( self ):
         
         try:
             
-            HydrusController.HydrusController.OnInit( self )
+            self.InitData()
             
             if HydrusData.IsAlreadyRunning():
                 
@@ -132,7 +151,7 @@ class Controller( HydrusController.HydrusController ):
             self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
             self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
             
-            HydrusGlobals.pubsub.sub( self, 'ActionService', 'action_service' )
+            self.sub( self, 'ActionService', 'action_service' )
             
             self._services = {}
             
@@ -161,7 +180,7 @@ class Controller( HydrusController.HydrusController ):
             
             for service_key in service_keys: self.ActionService( service_key, 'start' )
             
-            self.StartDaemons()
+            self.InitDaemons()
             
             if HC.PLATFORM_WINDOWS: self._tbicon = TaskBarIcon()
             else:
@@ -189,18 +208,6 @@ class Controller( HydrusController.HydrusController ):
             
             return False
             
-        
-    
-    def StartDaemons( self ):
-        
-        HydrusThreading.DAEMONQueue( 'FlushRequestsMade', ServerDaemons.DAEMONFlushRequestsMade, 'request_made', period = 60 )
-        
-        HydrusThreading.DAEMONWorker( 'CheckMonthlyData', ServerDaemons.DAEMONCheckMonthlyData, period = 3600 )
-        HydrusThreading.DAEMONWorker( 'ClearBans', ServerDaemons.DAEMONClearBans, period = 3600 )
-        HydrusThreading.DAEMONWorker( 'DeleteOrphans', ServerDaemons.DAEMONDeleteOrphans, period = 86400 )
-        HydrusThreading.DAEMONWorker( 'GenerateUpdates', ServerDaemons.DAEMONGenerateUpdates, period = 1200 )
-        HydrusThreading.DAEMONWorker( 'CheckDataUsage', ServerDaemons.DAEMONCheckDataUsage, period = 86400 )
-        HydrusThreading.DAEMONWorker( 'UPnP', ServerDaemons.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 )
         
     
 class TaskBarIcon( wx.TaskBarIcon ):

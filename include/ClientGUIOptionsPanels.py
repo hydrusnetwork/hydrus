@@ -423,7 +423,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         self._service_keys_to_checkbox_info = {}
         
-        services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
         if len( services ) > 0:
             

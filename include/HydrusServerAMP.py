@@ -16,7 +16,6 @@ import ServerFiles
 import SocketServer
 import traceback
 import urllib
-import wx
 import yaml
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
@@ -82,7 +81,7 @@ class MessagingClientProtocol( HydrusAMP ):
         
         def do_it( gumpf ):
             
-            HydrusGlobals.pubsub.pub( 'im_message_received', identifier_from, name_from, identifier_to, name_to, message )
+            HydrusGlobals.controller.pub( 'im_message_received', identifier_from, name_from, identifier_to, name_to, message )
             
             return {}
             
@@ -135,7 +134,7 @@ class MessagingServiceProtocol( HydrusAMP ):
             
             self._check_network_version( network_version )
             
-            session_manager = wx.GetApp().GetManager( 'messaging_sessions' )
+            session_manager = HydrusGlobals.controller.GetManager( 'messaging_sessions' )
             
             ( identifier, name ) = session_manager.GetIdentityAndName( self.factory.service_key, session_key )
             
@@ -219,7 +218,7 @@ class MessagingServiceProtocol( HydrusAMP ):
         
         def do_it( gumpf ):
             
-            session_manager = wx.GetApp().GetManager( 'messaging_sessions' )
+            session_manager = HydrusGlobals.controller.GetManager( 'messaging_sessions' )
             
             d = deferToThread( session_manager.AddSession, self.factory.service_key, access_key, name )
             

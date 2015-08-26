@@ -21,7 +21,6 @@ import threading
 import time
 import traceback
 import yaml
-import wx
 import HydrusData
 import HydrusTags
 import HydrusNetworking

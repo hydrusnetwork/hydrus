@@ -11,7 +11,6 @@ import ClientData
 import ClientMedia
 import ClientSearch
 import HydrusGlobals
-import wx
 
 class TestMergeTagsManagers( unittest.TestCase ):
     
@@ -575,7 +574,7 @@ class TestTagParents( unittest.TestCase ):
         tag_parents[ self._second_key ] = second_dict
         tag_parents[ self._third_key ] = third_dict
         
-        wx.GetApp().SetRead( 'tag_parents', tag_parents )
+        HydrusGlobals.controller.SetRead( 'tag_parents', tag_parents )
         
         self._tag_parents_manager = ClientCaches.TagParentsManager()
         
@@ -720,7 +719,7 @@ class TestTagSiblings( unittest.TestCase ):
         tag_siblings[ self._second_key ] = second_dict
         tag_siblings[ self._third_key ] = third_dict
         
-        wx.GetApp().SetRead( 'tag_siblings', tag_siblings )
+        HydrusGlobals.controller.SetRead( 'tag_siblings', tag_siblings )
         
         self._tag_siblings_manager = ClientCaches.TagSiblingsManager()
         

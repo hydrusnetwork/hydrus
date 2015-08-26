@@ -14,7 +14,6 @@ import subprocess
 import traceback
 import threading
 import time
-import wx
 
 if HC.PLATFORM_LINUX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
 elif HC.PLATFORM_OSX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'

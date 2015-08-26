@@ -129,6 +129,16 @@ RESTRICTION_MAX_RESOLUTION = 1
 RESTRICTION_MAX_FILE_SIZE = 2
 RESTRICTION_ALLOWED_MIMES = 3
 
+IDLE_NOT_ON_SHUTDOWN = 0
+IDLE_ON_SHUTDOWN = 1
+IDLE_ON_SHUTDOWN_ASK_FIRST = 2
+
+idle_string_lookup = {}
+
+idle_string_lookup[ IDLE_NOT_ON_SHUTDOWN ] = 'do not run jobs on shutdown'
+idle_string_lookup[ IDLE_ON_SHUTDOWN ] = 'run jobs on shutdown if needed'
+idle_string_lookup[ IDLE_ON_SHUTDOWN_ASK_FIRST ] = 'run jobs on shutdown if needed, but ask first'
+
 MEDIA_VIEWER_SHOW_AS_NORMAL = 0
 MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED = 1
 MEDIA_VIEWER_SHOW_BEHIND_EMBED = 2
@@ -245,6 +255,68 @@ status_string_lookup[ STATUS_PAUSED ] = 'paused'
 
 THUMBNAIL_MARGIN = 2
 THUMBNAIL_BORDER = 1
+
+wxk_code_string_lookup = {
+    wx.WXK_SPACE: 'space',
+    wx.WXK_BACK: 'backspace',
+    wx.WXK_TAB: 'tab',
+    wx.WXK_RETURN: 'return',
+    wx.WXK_NUMPAD_ENTER: 'enter',
+    wx.WXK_PAUSE: 'pause',
+    wx.WXK_ESCAPE: 'escape',
+    wx.WXK_INSERT: 'insert',
+    wx.WXK_DELETE: 'delete',
+    wx.WXK_UP: 'up',
+    wx.WXK_DOWN: 'down',
+    wx.WXK_LEFT: 'left',
+    wx.WXK_RIGHT: 'right',
+    wx.WXK_HOME: 'home',
+    wx.WXK_END: 'end',
+    wx.WXK_PAGEDOWN: 'page up',
+    wx.WXK_PAGEUP: 'page down',
+    wx.WXK_F1: 'f1',
+    wx.WXK_F2: 'f2',
+    wx.WXK_F3: 'f3',
+    wx.WXK_F4: 'f4',
+    wx.WXK_F5: 'f5',
+    wx.WXK_F6: 'f6',
+    wx.WXK_F7: 'f7',
+    wx.WXK_F8: 'f8',
+    wx.WXK_F9: 'f9',
+    wx.WXK_F10: 'f10',
+    wx.WXK_F11: 'f11',
+    wx.WXK_F12: 'f12',
+    wx.WXK_ADD: '+',
+    wx.WXK_DIVIDE: '/',
+    wx.WXK_SUBTRACT: '-',
+    wx.WXK_MULTIPLY: '*',
+    wx.WXK_NUMPAD1: 'numpad 1',
+    wx.WXK_NUMPAD2: 'numpad 2',
+    wx.WXK_NUMPAD3: 'numpad 3',
+    wx.WXK_NUMPAD4: 'numpad 4',
+    wx.WXK_NUMPAD5: 'numpad 5',
+    wx.WXK_NUMPAD6: 'numpad 6',
+    wx.WXK_NUMPAD7: 'numpad 7',
+    wx.WXK_NUMPAD8: 'numpad 8',
+    wx.WXK_NUMPAD9: 'numpad 9',
+    wx.WXK_NUMPAD0: 'numpad 0',
+    wx.WXK_NUMPAD_UP: 'numpad up',
+    wx.WXK_NUMPAD_DOWN: 'numpad down',
+    wx.WXK_NUMPAD_LEFT: 'numpad left',
+    wx.WXK_NUMPAD_RIGHT: 'numpad right',
+    wx.WXK_NUMPAD_HOME: 'numpad home',
+    wx.WXK_NUMPAD_END: 'numpad end',
+    wx.WXK_NUMPAD_PAGEDOWN: 'numpad page up',
+    wx.WXK_NUMPAD_PAGEUP: 'numpad page down',
+    wx.WXK_NUMPAD_ADD: 'numpad +',
+    wx.WXK_NUMPAD_DIVIDE: 'numpad /',
+    wx.WXK_NUMPAD_SUBTRACT: 'numpad -',
+    wx.WXK_NUMPAD_MULTIPLY: 'numpad *',
+    wx.WXK_NUMPAD_DELETE: 'numpad delete',
+    wx.WXK_NUMPAD_DECIMAL: 'numpad decimal'
+    }
+
+ZOOMS = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
 
 class GlobalBMPs( object ):
     

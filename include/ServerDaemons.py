@@ -18,33 +18,32 @@ import threading
 import time
 import traceback
 import yaml
-import wx
 import HydrusData
 import HydrusGlobals
 
-def DAEMONCheckDataUsage(): wx.GetApp().WriteSynchronous( 'check_data_usage' )
+def DAEMONCheckDataUsage(): HydrusGlobals.controller.WriteSynchronous( 'check_data_usage' )
 
-def DAEMONCheckMonthlyData(): wx.GetApp().WriteSynchronous( 'check_monthly_data' )
+def DAEMONCheckMonthlyData(): HydrusGlobals.controller.WriteSynchronous( 'check_monthly_data' )
 
-def DAEMONClearBans(): wx.GetApp().WriteSynchronous( 'clear_bans' )
+def DAEMONClearBans(): HydrusGlobals.controller.WriteSynchronous( 'clear_bans' )
 
-def DAEMONDeleteOrphans(): wx.GetApp().WriteSynchronous( 'delete_orphans' )
+def DAEMONDeleteOrphans(): HydrusGlobals.controller.WriteSynchronous( 'delete_orphans' )
 
-def DAEMONFlushRequestsMade( all_requests ): wx.GetApp().WriteSynchronous( 'flush_requests_made', all_requests )
+def DAEMONFlushRequestsMade( all_requests ): HydrusGlobals.controller.WriteSynchronous( 'flush_requests_made', all_requests )
 
 def DAEMONGenerateUpdates():
     
-    dirty_updates = wx.GetApp().Read( 'dirty_updates' )
+    dirty_updates = HydrusGlobals.controller.Read( 'dirty_updates' )
     
     for ( service_key, tuples ) in dirty_updates.items():
         
         for ( begin, end ) in tuples:
             
-            wx.GetApp().WriteSynchronous( 'clean_update', service_key, begin, end )
+            HydrusGlobals.controller.WriteSynchronous( 'clean_update', service_key, begin, end )
             
         
     
-    update_ends = wx.GetApp().Read( 'update_ends' )
+    update_ends = HydrusGlobals.controller.Read( 'update_ends' )
     
     for ( service_key, biggest_end ) in update_ends.items():
         
@@ -55,7 +54,7 @@ def DAEMONGenerateUpdates():
         
         while next_end < now:
             
-            wx.GetApp().WriteSynchronous( 'create_update', service_key, next_begin, next_end )
+            HydrusGlobals.controller.WriteSynchronous( 'create_update', service_key, next_begin, next_end )
             
             biggest_end = next_end
             
@@ -78,7 +77,7 @@ def DAEMONUPnP():
         
     except: return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
     
-    services_info = wx.GetApp().Read( 'services_info' )
+    services_info = HydrusGlobals.controller.Read( 'services_info' )
     
     for ( service_key, service_type, options ) in services_info:
         

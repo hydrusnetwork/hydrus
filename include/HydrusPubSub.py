@@ -3,18 +3,21 @@ import Queue
 import threading
 import traceback
 import weakref
-import wx
-import wx.lib.newevent
 import HydrusGlobals
-
-( PubSubEvent, EVT_PUBSUB ) = wx.lib.newevent.NewEvent()
 
 class HydrusPubSub( object ):
     
-    def __init__( self ):
+    def __init__( self, controller, binding_errors_to_ignore = None ):
+        
+        if binding_errors_to_ignore is None:
+            
+            binding_errors_to_ignore = []
+            
+        
+        self._controller = controller
+        self._binding_errors_to_ignore = binding_errors_to_ignore
         
         self._pubsubs = []
-        self._callables = []
         
         self._lock = threading.Lock()
         
@@ -46,10 +49,16 @@ class HydrusPubSub( object ):
                                 
                                 callables.append( callable )
                                 
-                            except wx.PyDeadObjectError: pass
                             except TypeError as e:
                                 
                                 if '_wxPyDeadObject' not in str( e ): raise
+                                
+                            except Exception as e:
+                                
+                                if type( e ) not in self._binding_errors_to_ignore:
+                                    
+                                    raise
+                                    
                                 
                             
                         
@@ -69,38 +78,33 @@ class HydrusPubSub( object ):
             
         
     
-    def WXProcessQueueItem( self ):
+    def Process( self ):
         
+        # only do one list of callables at a time
         # we don't want to map a topic to its callables until the previous topic's callables have been fully executed
         # e.g. when we start a message with a pubsub, it'll take a while (in independant thread-time) for wx to create
         # the dialog and hence map the new callable to the topic. this was leading to messages not being updated
         # because the (short) processing thread finished and entirely pubsubbed before wx had a chance to boot the
         # message.
         
-        do_callable = False
+        callables = []
         
         with self._lock:
             
-            if len( self._callables ) > 0:
-                
-                ( callable, args, kwargs ) = self._callables.pop( 0 )
-                
-                do_callable = True
-                
-            else:
+            if len( self._pubsubs ) > 0:
                 
                 ( topic, args, kwargs ) = self._pubsubs.pop( 0 )
                 
                 callables = self._GetCallables( topic )
                 
-                self._callables = [ ( callable, args, kwargs ) for callable in callables ]
-                
-                for i in range( len( self._callables ) ): wx.PostEvent( wx.GetApp(), PubSubEvent() )
-                
             
         
         # do this _outside_ the lock, lol
-        if do_callable: callable( *args, **kwargs )
+        
+        for callable in callables:
+            
+            callable( *args, **kwargs )
+            
         
     
     def pub( self, topic, *args, **kwargs ):
@@ -109,8 +113,18 @@ class HydrusPubSub( object ):
             
             self._pubsubs.append( ( topic, args, kwargs ) )
             
-            wx.PostEvent( wx.GetApp(), PubSubEvent() )
+        
+        self._controller.NotifyPubSubs()
+        
+    
+    def pubimmediate( self, topic, *args, **kwargs ):
+        
+        with self._lock:
             
+            callables = self._GetCallables( topic )
+            
+        
+        for callable in callables: callable( *args, **kwargs )
         
     
     def sub( self, object, method_name, topic ):
@@ -122,16 +136,6 @@ class HydrusPubSub( object ):
             
             self._topics_to_objects[ topic ].add( object )
             self._topics_to_method_names[ topic ].add( method_name )
-            
-        
-    
-    def WXpubimmediate( self, topic, *args, **kwargs ):
-        
-        with self._lock:
-            
-            callables = self._GetCallables( topic )
-            
-            for callable in callables: callable( *args, **kwargs )
             
         
     

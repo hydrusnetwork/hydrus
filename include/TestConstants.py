@@ -5,7 +5,6 @@ import os
 import random
 import threading
 import weakref
-import wx
 import HydrusData
 import HydrusFileHandling
 
@@ -48,92 +47,4 @@ class FakeHTTPConnectionManager():
 class FakeWebSessionManager():
     
     def GetCookies( self, *args, **kwargs ): return { 'session_cookie' : 'blah' }
-    
-class FakePubSub():
-    
-    def __init__( self ):
-        
-        self._pubsubs = collections.defaultdict( list )
-        
-        self._callables = []
-        
-        self._lock = threading.Lock()
-        
-        self._topics_to_objects = {}
-        self._topics_to_method_names = {}
-        
-    
-    def _GetCallables( self, topic ):
-        
-        callables = []
-        
-        if topic in self._topics_to_objects:
-            
-            try:
-                
-                objects = self._topics_to_objects[ topic ]
-                
-                for object in objects:
-                    
-                    method_names = self._topics_to_method_names[ topic ]
-                    
-                    for method_name in method_names:
-                        
-                        if hasattr( object, method_name ):
-                            
-                            try:
-                                
-                                callable = getattr( object, method_name )
-                                
-                                callables.append( callable )
-                                
-                            except wx.PyDeadObjectError: pass
-                            except TypeError as e:
-                                
-                                if '_wxPyDeadObject' not in str( e ): raise
-                                
-                            
-                        
-                    
-                
-            except: pass
-            
-        
-        return callables
-        
-    
-    def ClearPubSubs( self ): self._pubsubs = collections.defaultdict( list )
-    
-    def GetPubSubs( self, topic ): return self._pubsubs[ topic ]
-    
-    def NoJobsQueued( self ): return True
-    
-    def WXProcessQueueItem( self ): pass
-    
-    def pub( self, topic, *args, **kwargs ):
-        
-        with self._lock:
-            
-            self._pubsubs[ topic ].append( ( args, kwargs ) )
-            
-        
-    
-    def sub( self, object, method_name, topic ):
-        
-        if topic not in self._topics_to_objects: self._topics_to_objects[ topic ] = weakref.WeakSet()
-        if topic not in self._topics_to_method_names: self._topics_to_method_names[ topic ] = set()
-        
-        self._topics_to_objects[ topic ].add( object )
-        self._topics_to_method_names[ topic ].add( method_name )
-        
-    
-    def WXpubimmediate( self, topic, *args, **kwargs ):
-        
-        with self._lock:
-            
-            callables = self._GetCallables( topic )
-            
-            for callable in callables: callable( *args, **kwargs )
-            
-        
     

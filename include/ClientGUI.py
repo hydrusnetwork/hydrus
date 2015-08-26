@@ -45,7 +45,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def __init__( self ):
         
-        ClientGUICommon.FrameThatResizes.__init__( self, None, resize_option_prefix = 'gui_', title = wx.GetApp().PrepStringForDisplay( 'Hydrus Client' ) )
+        ClientGUICommon.FrameThatResizes.__init__( self, None, resize_option_prefix = 'gui_', title = HydrusGlobals.controller.PrepStringForDisplay( 'Hydrus Client' ) )
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles ) )
         
@@ -64,7 +64,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._tab_right_click_index = -1
         
-        wx.GetApp().SetTopWindow( self )
+        HydrusGlobals.controller.SetTopWindow( self )
         
         self.RefreshAcceleratorTable()
         
@@ -74,26 +74,26 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self.Bind( wx.EVT_CLOSE, self.EventExit )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         
-        HydrusGlobals.pubsub.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
-        HydrusGlobals.pubsub.sub( self, 'NewCompose', 'new_compose_frame' )
-        HydrusGlobals.pubsub.sub( self, 'NewPageImportGallery', 'new_import_gallery' )
-        HydrusGlobals.pubsub.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
-        HydrusGlobals.pubsub.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
-        HydrusGlobals.pubsub.sub( self, 'NewPageImportPageOfImages', 'new_page_import_page_of_images' )
-        HydrusGlobals.pubsub.sub( self, 'NewPagePetitions', 'new_page_petitions' )
-        HydrusGlobals.pubsub.sub( self, 'NewPageQuery', 'new_page_query' )
-        HydrusGlobals.pubsub.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
-        HydrusGlobals.pubsub.sub( self, 'NewSimilarTo', 'new_similar_to' )
-        HydrusGlobals.pubsub.sub( self, 'NotifyNewOptions', 'notify_new_options' )
-        HydrusGlobals.pubsub.sub( self, 'NotifyNewPending', 'notify_new_pending' )
-        HydrusGlobals.pubsub.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
-        HydrusGlobals.pubsub.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
-        HydrusGlobals.pubsub.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
-        HydrusGlobals.pubsub.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
-        HydrusGlobals.pubsub.sub( self, 'RefreshStatusBar', 'refresh_status' )
-        HydrusGlobals.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
-        HydrusGlobals.pubsub.sub( self, 'SetMediaFocus', 'set_media_focus' )
-        HydrusGlobals.pubsub.sub( self, 'ShowSeedCache', 'show_seed_cache' )
+        HydrusGlobals.controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
+        HydrusGlobals.controller.sub( self, 'NewCompose', 'new_compose_frame' )
+        HydrusGlobals.controller.sub( self, 'NewPageImportGallery', 'new_import_gallery' )
+        HydrusGlobals.controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
+        HydrusGlobals.controller.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
+        HydrusGlobals.controller.sub( self, 'NewPageImportPageOfImages', 'new_page_import_page_of_images' )
+        HydrusGlobals.controller.sub( self, 'NewPagePetitions', 'new_page_petitions' )
+        HydrusGlobals.controller.sub( self, 'NewPageQuery', 'new_page_query' )
+        HydrusGlobals.controller.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
+        HydrusGlobals.controller.sub( self, 'NewSimilarTo', 'new_similar_to' )
+        HydrusGlobals.controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        HydrusGlobals.controller.sub( self, 'NotifyNewPending', 'notify_new_pending' )
+        HydrusGlobals.controller.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
+        HydrusGlobals.controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
+        HydrusGlobals.controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
+        HydrusGlobals.controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
+        HydrusGlobals.controller.sub( self, 'RefreshStatusBar', 'refresh_status' )
+        HydrusGlobals.controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
+        HydrusGlobals.controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
+        HydrusGlobals.controller.sub( self, 'ShowSeedCache', 'show_seed_cache' )
         
         self._menus = {}
         
@@ -133,7 +133,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         aboutinfo.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         aboutinfo.SetName( 'hydrus client' )
-        aboutinfo.SetVersion( HydrusData.ToString( HC.SOFTWARE_VERSION ) )
+        aboutinfo.SetVersion( HydrusData.ToString( HC.SOFTWARE_VERSION ) + ', using network version ' + HydrusData.ToString( HC.NETWORK_VERSION ) )
         aboutinfo.SetDescription( CC.CLIENT_DESCRIPTION )
         
         with open( HC.BASE_DIR + os.path.sep + 'license.txt', 'rb' ) as f: license = f.read()
@@ -154,7 +154,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 subject_account_key = dlg.GetValue().decode( 'hex' )
                 
-                service = wx.GetApp().GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                 
                 response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key.encode( 'hex' ) } )
                 
@@ -195,7 +195,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
             
-            wx.GetApp().WriteSynchronous( 'update_services', edit_log )
+            HydrusGlobals.controller.WriteSynchronous( 'update_services', edit_log )
             
             HydrusData.ShowText( 'Auto repo setup done! Check services->review services to see your new services.' )
             
@@ -204,7 +204,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HydrusThreading.CallToThread( do_it )
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                HydrusGlobals.controller.CallToThread( do_it )
+                
             
         
     
@@ -310,7 +313,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             edit_log = [ HydrusData.EditLogActionAdd( ( admin_service_key, service_type, name, info ) ) ]
             
-            wx.GetApp().WriteSynchronous( 'update_services', edit_log )
+            HydrusGlobals.controller.WriteSynchronous( 'update_services', edit_log )
             
             time.sleep( 2 )
             
@@ -318,7 +321,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             wx.CallAfter( ClientGUICommon.ShowKeys, 'access', ( access_key, ) )
             
-            admin_service = wx.GetApp().GetServicesManager().GetService( admin_service_key )
+            admin_service = HydrusGlobals.controller.GetServicesManager().GetService( admin_service_key )
             
             #
             
@@ -339,7 +342,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
             
-            wx.GetApp().WriteSynchronous( 'update_server_services', admin_service_key, [], edit_log, service_keys_to_access_keys )
+            HydrusGlobals.controller.WriteSynchronous( 'update_server_services', admin_service_key, [], edit_log, service_keys_to_access_keys )
             
             HydrusData.ShowText( 'Done! Check services->review services to see your new server and its services.' )
             
@@ -348,7 +351,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HydrusThreading.CallToThread( do_it )
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                HydrusGlobals.controller.CallToThread( do_it )
+                
             
         
     
@@ -356,7 +362,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def do_it():
             
-            service = wx.GetApp().GetServicesManager().GetService( service_key )
+            service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
             
             service.Request( HC.POST, 'backup' )
             
@@ -368,7 +374,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             while result == '1':
                 
-                if HydrusGlobals.shutdown:
+                if HydrusGlobals.view_shutdown:
                     
                     return
                     
@@ -387,7 +393,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                HydrusThreading.CallToThread( do_it )
+                HydrusGlobals.controller.CallToThread( do_it )
                 
             
         
@@ -404,7 +410,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             result = dlg.ShowModal()
             
-            if result == wx.ID_YES: wx.GetApp().Write( 'file_integrity', 'quick' )
+            if result == wx.ID_YES: HydrusGlobals.controller.Write( 'file_integrity', 'quick' )
             elif result == wx.ID_NO:
                 
                 text = 'If an existing file is found to be corrupt/incorrect, would you like to move it or delete it?'
@@ -421,13 +427,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                                 path = dlg_3.GetPath()
                                 
-                                wx.GetApp().Write( 'file_integrity', 'thorough', path )
+                                HydrusGlobals.controller.Write( 'file_integrity', 'thorough', path )
                                 
                             
                         
                     elif result == wx.ID_NO:
                         
-                        wx.GetApp().Write( 'file_integrity', 'thorough' )
+                        HydrusGlobals.controller.Write( 'file_integrity', 'thorough' )
                         
                     
                 
@@ -442,6 +448,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
     
     def _ClosePage( self, selection, polite = True ):
+        
+        HydrusGlobals.controller.ResetIdleTimer()
+        HydrusGlobals.controller.ResetPageChangeTimer()
         
         if selection == -1 or selection > self._notebook.GetPageCount() - 1:
             
@@ -474,7 +483,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if self._notebook.GetPageCount() == 0: self._focus_holder.SetFocus()
         
-        HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+        HydrusGlobals.controller.pub( 'notify_new_undo' )
         
     
     def _DeleteAllClosedPages( self ):
@@ -485,7 +494,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._focus_holder.SetFocus()
         
-        HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+        HydrusGlobals.controller.pub( 'notify_new_undo' )
         
     
     def _DeleteOrphans( self ):
@@ -494,17 +503,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_orphans' )
+            if dlg.ShowModal() == wx.ID_YES: HydrusGlobals.controller.Write( 'delete_orphans' )
             
         
     
     def _DeletePending( self, service_key ):
         
-        service = wx.GetApp().GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service.GetName() + '?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_pending', service_key )
+            if dlg.ShowModal() == wx.ID_YES: HydrusGlobals.controller.Write( 'delete_pending', service_key )
             
         
     
@@ -512,7 +521,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to clear the cached service info? Rebuilding it may slow some GUI elements for a little while.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_service_info' )
+            if dlg.ShowModal() == wx.ID_YES: HydrusGlobals.controller.Write( 'delete_service_info' )
             
         
     
@@ -533,7 +542,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 hash = dlg.GetValue().decode( 'hex' )
                 
-                service = wx.GetApp().GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                 
                 with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash.encode( 'hex' ) } )
                 
@@ -553,7 +562,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         menu = wx.Menu()
         
-        p = wx.GetApp().PrepStringForDisplay
+        p = HydrusGlobals.controller.PrepStringForDisplay
         
         def file():
             
@@ -574,7 +583,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             menu.AppendSeparator()
             
-            gui_session_names = wx.GetApp().Read( 'gui_session_names' )
+            gui_session_names = HydrusGlobals.controller.Read( 'gui_session_names' )
             
             sessions = wx.Menu()
             
@@ -618,7 +627,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             have_closed_pages = len( self._closed_pages ) > 0
             
-            undo_manager = wx.GetApp().GetManager( 'undo' )
+            undo_manager = HydrusGlobals.controller.GetManager( 'undo' )
             
             ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
             
@@ -685,7 +694,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def search():
             
-            services = wx.GetApp().GetServicesManager().GetServices()
+            services = HydrusGlobals.controller.GetServicesManager().GetServices()
             
             tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
             
@@ -725,7 +734,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu.AppendMenu( CC.ID_NULL, p( '&Hentai Foundry' ), hf_submenu )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_NEWGROUNDS, None ) ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
             
-            ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+            ( id, password ) = HydrusGlobals.controller.Read( 'pixiv_account' )
             
             if id != '' and password != '':
                 
@@ -769,13 +778,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def pending():
             
-            nums_pending = wx.GetApp().Read( 'nums_pending' )
+            nums_pending = HydrusGlobals.controller.Read( 'nums_pending' )
             
             total_num_pending = 0
             
             for ( service_key, info ) in nums_pending.items():
                 
-                service = wx.GetApp().GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                 
                 service_type = service.GetServiceType()
                 name = service.GetName()
@@ -811,8 +820,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def services():
             
-            tag_services = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
-            file_services = wx.GetApp().GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
+            tag_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            file_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
             
             submenu = wx.Menu()
             
@@ -863,13 +872,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def admin():
             
-            tag_repositories = wx.GetApp().GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            tag_repositories = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             admin_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            file_repositories = wx.GetApp().GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
+            file_repositories = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
             admin_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            servers_admin = wx.GetApp().GetServicesManager().GetServices( ( HC.SERVER_ADMIN, ) )
+            servers_admin = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.SERVER_ADMIN, ) )
             server_admins = [ service for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
             if len( admin_tag_services ) > 0 or len( admin_file_services ) > 0 or len( server_admins ) > 0:
@@ -1004,7 +1013,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 paths = dlg.GetPaths()
                 
-                services = wx.GetApp().GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+                services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
                 
                 service_keys = [ service.GetServiceKey() for service in services ]
                 
@@ -1037,7 +1046,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         try:
             
-            session = wx.GetApp().Read( 'gui_sessions', name )
+            session = HydrusGlobals.controller.Read( 'gui_sessions', name )
             
         except Exception as e:
             
@@ -1068,7 +1077,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     file_service_key = management_controller.GetKey( 'file_service' )
                     
-                    initial_media_results = wx.GetApp().Read( 'media_results', file_service_key, initial_hashes )
+                    initial_media_results = HydrusGlobals.controller.Read( 'media_results', file_service_key, initial_hashes )
                     
                 else:
                     
@@ -1179,7 +1188,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ModifyAccount( self, service_key ):
         
-        service = wx.GetApp().GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account key for the account to be modified.' ) as dlg:
             
@@ -1201,6 +1210,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
     
     def _NewPage( self, page_name, management_controller, initial_media_results = None ):
+        
+        HydrusGlobals.controller.ResetIdleTimer()
+        HydrusGlobals.controller.ResetPageChangeTimer()
         
         if initial_media_results is None:
             
@@ -1258,7 +1270,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
             
-            service = wx.GetApp().GetServicesManager().GetService( service_key )
+            service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
             
             page_name = service.GetName() + ' petitions'
             
@@ -1303,28 +1315,28 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
             
-            HydrusGlobals.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+            HydrusGlobals.controller.pub( 'notify_restart_repo_sync_daemon' )
             
         elif sync_type == 'subs':
             
             HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
             
-            HydrusGlobals.pubsub.pub( 'notify_restart_subs_sync_daemon' )
+            HydrusGlobals.controller.pub( 'notify_restart_subs_sync_daemon' )
             
         elif sync_type == 'export_folders':
             
             HC.options[ 'pause_export_folders_sync' ] = not HC.options[ 'pause_export_folders_sync' ]
             
-            HydrusGlobals.pubsub.pub( 'notify_restart_export_folders_daemon' )
+            HydrusGlobals.controller.pub( 'notify_restart_export_folders_daemon' )
             
         elif sync_type == 'import_folders':
             
             HC.options[ 'pause_import_folders_sync' ] = not HC.options[ 'pause_import_folders_sync' ]
             
-            HydrusGlobals.pubsub.pub( 'notify_restart_import_folders_daemon' )
+            HydrusGlobals.controller.pub( 'notify_restart_import_folders_daemon' )
             
         
-        try: wx.GetApp().Write( 'save_options', HC.options )
+        try: HydrusGlobals.controller.Write( 'save_options', HC.options )
         except: wx.MessageBox( traceback.format_exc() )
         
     
@@ -1336,7 +1348,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 news = dlg.GetValue()
                 
-                service = wx.GetApp().GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'news', { 'news' : news } )
                 
@@ -1350,7 +1362,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         if page is None: media_status = ''
         else: media_status = page.GetPrettyStatus()
         
-        if wx.GetApp().CurrentlyIdle():
+        if HydrusGlobals.controller.CurrentlyIdle():
             
             idle_status = 'idle'
             
@@ -1359,7 +1371,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             idle_status = ''
             
         
-        if wx.GetApp().GetDB().CurrentlyDoingJob():
+        if HydrusGlobals.controller.GetDB().CurrentlyDoingJob():
             
             db_status = 'db locked'
             
@@ -1389,7 +1401,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     job_key.SetVariable( 'popup_text_1', prefix + 'creating directories' )
                     
-                    HydrusGlobals.pubsub.pub( 'message', job_key )
+                    HydrusGlobals.controller.pub( 'message', job_key )
                     
                     if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
                     
@@ -1408,7 +1420,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         try:
                             
-                            while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
+                            while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.view_shutdown:
                                 
                                 time.sleep( 0.1 )
                                 
@@ -1423,7 +1435,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                     return
                                     
                                 
-                                if HydrusGlobals.shutdown: return
+                                if HydrusGlobals.view_shutdown: return
                                 
                             
                             mime = HydrusFileHandling.GetMime( path )
@@ -1469,7 +1481,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     job_key.Finish()
                     
                 
-                HydrusThreading.CallToThread( THREADRegenerateThumbnails )
+                HydrusGlobals.controller.CallToThread( THREADRegenerateThumbnails )
                 
             
         
@@ -1547,9 +1559,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             session.AddPage( page_name, management_controller, hashes )
             
         
-        wx.GetApp().Write( 'gui_session', session )
+        HydrusGlobals.controller.Write( 'gui_session', session )
         
-        HydrusGlobals.pubsub.pub( 'notify_new_sessions' )
+        HydrusGlobals.controller.pub( 'notify_new_sessions' )
         
     
     def _SetPassword( self ):
@@ -1570,7 +1582,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if password == '': password = None
                 
-                wx.GetApp().Write( 'set_password', password )
+                HydrusGlobals.controller.Write( 'set_password', password )
                 
             
         
@@ -1610,9 +1622,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 job_key = HydrusData.JobKey( pausable = True, cancellable = True )
                 
-                HydrusGlobals.pubsub.pub( 'message', job_key )
+                HydrusGlobals.controller.pub( 'message', job_key )
                 
-                HydrusThreading.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
+                HydrusGlobals.controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
                 
             
         
@@ -1636,7 +1648,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _Stats( self, service_key ):
         
-        service = wx.GetApp().GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
         
         response = service.Request( HC.GET, 'stats' )
         
@@ -1657,12 +1669,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._notebook.InsertPage( index, page, name, True )
         
-        HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+        HydrusGlobals.controller.pub( 'notify_new_undo' )
         
     
     def _UploadPending( self, service_key ):
         
-        HydrusThreading.CallToThread( self._THREADUploadPending, service_key )
+        HydrusGlobals.controller.CallToThread( self._THREADUploadPending, service_key )
         
     
     def _VacuumDatabase( self ):
@@ -1671,13 +1683,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'vacuum' )
+            if dlg.ShowModal() == wx.ID_YES: HydrusGlobals.controller.Write( 'vacuum' )
             
         
     
     def _THREADUploadPending( self, service_key ):
         
-        service = wx.GetApp().GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
         
         service_name = service.GetName()
         service_type = service.GetServiceType()
@@ -1690,15 +1702,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             job_key.SetVariable( 'popup_text_1', prefix + 'gathering pending content' )
             
-            HydrusGlobals.pubsub.pub( 'message', job_key )
+            HydrusGlobals.controller.pub( 'message', job_key )
             
-            result = wx.GetApp().Read( 'pending', service_key )
+            result = HydrusGlobals.controller.Read( 'pending', service_key )
             
             if service_type == HC.FILE_REPOSITORY:
                 
                 ( upload_hashes, update ) = result
                 
-                media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
+                media_results = HydrusGlobals.controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
                 
                 job_key.SetVariable( 'popup_text_1', prefix + 'connecting to repository' )
                 
@@ -1708,7 +1720,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 for ( i, media_result ) in enumerate( media_results ):
                     
-                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
+                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.view_shutdown:
                         
                         time.sleep( 0.1 )
                         
@@ -1723,7 +1735,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             return
                             
                         
-                        if HydrusGlobals.shutdown: return
+                        if HydrusGlobals.view_shutdown: return
                         
                     
                     i += 1
@@ -1750,7 +1762,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                         
-                        wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
+                        HydrusGlobals.controller.Write( 'content_updates', { service_key : content_updates } )
                         
                     except HydrusExceptions.ServerBusyException:
                         
@@ -1761,7 +1773,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     time.sleep( 0.1 )
                     
-                    wx.GetApp().WaitUntilWXThreadIdle()
+                    HydrusGlobals.controller.WaitUntilPubSubsEmpty()
                     
                 
                 if not update.IsEmpty():
@@ -1772,7 +1784,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     content_updates = update.GetContentUpdates( for_client = True )
                     
-                    wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
+                    HydrusGlobals.controller.Write( 'content_updates', { service_key : content_updates } )
                     
                 
             elif service_type == HC.TAG_REPOSITORY:
@@ -1783,7 +1795,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 for ( i, update ) in enumerate( updates ):
                     
-                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.shutdown:
+                    while job_key.IsPaused() or job_key.IsCancelled() or HydrusGlobals.view_shutdown:
                         
                         time.sleep( 0.1 )
                         
@@ -1798,7 +1810,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             return
                             
                         
-                        if HydrusGlobals.shutdown: return
+                        if HydrusGlobals.view_shutdown: return
                         
                     
                     job_key.SetVariable( 'popup_text_1', prefix + 'posting update: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( updates ) ) )
@@ -1810,7 +1822,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         content_updates = update.GetContentUpdates( for_client = True )
                         
-                        wx.GetApp().Write( 'content_updates', { service_key : content_updates } )
+                        HydrusGlobals.controller.Write( 'content_updates', { service_key : content_updates } )
                         
                     except HydrusExceptions.ServerBusyException:
                         
@@ -1821,7 +1833,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     time.sleep( 0.1 )
                     
-                    wx.GetApp().WaitUntilWXThreadIdle()
+                    HydrusGlobals.controller.WaitUntilPubSubsEmpty()
                     
                 
             
@@ -1841,7 +1853,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         wx.CallLater( 1000 * 3600, job_key.Delete )
         
-        HydrusGlobals.pubsub.pub( 'notify_new_pending' )
+        HydrusGlobals.controller.pub( 'notify_new_pending' )
         
     
     def ClearClosedPages( self ):
@@ -1862,7 +1874,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._closed_pages = new_closed_pages
         
-        if len( old_closed_pages ) != len( new_closed_pages ): HydrusGlobals.pubsub.pub( 'notify_new_undo' )
+        if len( old_closed_pages ) != len( new_closed_pages ): HydrusGlobals.controller.pub( 'notify_new_undo' )
         
     
     def DoFirstStart( self ):
@@ -1891,7 +1903,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        self.Exit()
+        HydrusGlobals.controller.Exit()
         
     
     def EventFocus( self, event ):
@@ -1912,9 +1924,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             if command == 'account_info': self._AccountInfo( data )
             elif command == 'auto_repo_setup': self._AutoRepoSetup()
             elif command == 'auto_server_setup': self._AutoServerSetup()
-            elif command == 'backup_database': wx.GetApp().BackupDatabase()
+            elif command == 'backup_database': HydrusGlobals.controller.BackupDatabase()
             elif command == 'backup_service': self._BackupService( data )
-            elif command == 'clear_caches': wx.GetApp().ClearCaches()
+            elif command == 'clear_caches': HydrusGlobals.controller.ClearCaches()
             elif command == 'close_page': self._CloseCurrentPage()
             elif command == 'db_profile_mode':
                 
@@ -1960,9 +1972,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
             elif command == 'delete_gui_session':
                 
-                wx.GetApp().Write( 'delete_gui_session', data )
+                HydrusGlobals.controller.Write( 'delete_gui_session', data )
                 
-                HydrusGlobals.pubsub.pub( 'notify_new_sessions' )
+                HydrusGlobals.controller.pub( 'notify_new_sessions' )
                 
             elif command == 'delete_orphans': self._DeleteOrphans()
             elif command == 'delete_pending': self._DeletePending( data )
@@ -1971,7 +1983,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'fetch_ip': self._FetchIP( data )
             elif command == 'force_idle':
                 
-                wx.GetApp().ForceIdle()
+                HydrusGlobals.controller.ForceIdle()
                 
             elif command == '8chan_board': webbrowser.open( 'http://8ch.net/hydrus/index.html' )
             elif command == 'file_integrity': self._CheckFileIntegrity()
@@ -2021,7 +2033,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
             elif command == 'petitions': self._NewPagePetitions( data )
             elif command == 'post_news': self._PostNews( data )
-            elif command == 'redo': HydrusGlobals.pubsub.pub( 'redo' )
+            elif command == 'redo': HydrusGlobals.controller.pub( 'redo' )
             elif command == 'refresh':
                 
                 page = self._notebook.GetCurrentPage()
@@ -2029,7 +2041,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.RefreshQuery()
                 
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
-            elif command == 'restore_database': wx.GetApp().RestoreDatabase()
+            elif command == 'restore_database': HydrusGlobals.controller.RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()
             elif command == 'set_password': self._SetPassword()
@@ -2051,7 +2063,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
             elif command == 'twitter': webbrowser.open( 'http://twitter.com/#!/hydrusnetwork' )
             elif command == 'unclose_page': self._UnclosePage( data )
-            elif command == 'undo': HydrusGlobals.pubsub.pub( 'undo' )
+            elif command == 'undo': HydrusGlobals.controller.pub( 'undo' )
             elif command == 'upload_pending': self._UploadPending( data )
             elif command == 'vacuum_db': self._VacuumDatabase()
             else: event.Skip()
@@ -2099,24 +2111,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._RefreshStatusBar()
         
         event.Skip( True )
-        
-    
-    def Exit( self ):
-        
-        try: splash = FrameSplash()
-        except:
-            
-            print( 'There was an error trying to start the splash screen!' )
-            
-            print( traceback.format_exc() )
-            
-            try: wx.CallAfter( splash.Destroy )
-            except: pass
-            
-        
-        exit_thread = threading.Thread( target = wx.GetApp().THREADExitEverything, name = 'Application Exit Thread' )
-        
-        wx.CallAfter( exit_thread.start )
         
     
     def GetCurrentPage( self ):
@@ -2289,7 +2283,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
             
         
-        wx.GetApp().Write( 'save_options', HC.options )
+        HydrusGlobals.controller.Write( 'save_options', HC.options )
         
         wx.CallAfter( self.Destroy )
         
@@ -2335,13 +2329,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
     def __init__( self ):
         
-        ( pos_x, pos_y ) = wx.GetApp().GetGUI().GetPositionTuple()
+        ( pos_x, pos_y ) = HydrusGlobals.controller.GetGUI().GetPositionTuple()
         
         pos = ( pos_x + 25, pos_y + 50 )
         
-        tlp = wx.GetApp().GetTopWindow()
+        tlp = HydrusGlobals.controller.GetTopWindow()
         
-        ClientGUICommon.Frame.__init__( self, tlp, title = wx.GetApp().PrepStringForDisplay( 'Review Services' ), pos = pos )
+        ClientGUICommon.Frame.__init__( self, tlp, title = HydrusGlobals.controller.PrepStringForDisplay( 'Review Services' ), pos = pos )
         
         self._notebook = wx.Notebook( self )
         
@@ -2373,7 +2367,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         self.Show( True )
         
-        HydrusGlobals.pubsub.sub( self, 'RefreshServices', 'notify_new_services_gui' )
+        HydrusGlobals.controller.sub( self, 'RefreshServices', 'notify_new_services_gui' )
         
         wx.CallAfter( self.Raise )
         
@@ -2387,7 +2381,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         listbook_dict = {}
         
-        services = wx.GetApp().GetServicesManager().GetServices()
+        services = HydrusGlobals.controller.GetServicesManager().GetServices()
         
         for service in services:
             
@@ -2684,7 +2678,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._service_key = service_key
             
-            self._service = wx.GetApp().GetServicesManager().GetService( service_key )
+            self._service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
             
             service_type = self._service.GetServiceType()
             
@@ -2703,9 +2697,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._timer_updates.Start( 1000, wx.TIMER_CONTINUOUS )
                 
             
-            HydrusGlobals.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
-            HydrusGlobals.pubsub.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
-            if service_type == HC.LOCAL_BOORU: HydrusGlobals.pubsub.sub( self, 'RefreshLocalBooruShares', 'refresh_local_booru_shares' )
+            HydrusGlobals.controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+            HydrusGlobals.controller.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
+            if service_type == HC.LOCAL_BOORU: HydrusGlobals.controller.sub( self, 'RefreshLocalBooruShares', 'refresh_local_booru_shares' )
             
         
         def _DisplayAccountInfo( self ):
@@ -2845,7 +2839,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
                 
-                service_info = wx.GetApp().Read( 'service_info', self._service_key )
+                service_info = HydrusGlobals.controller.Read( 'service_info', self._service_key )
                 
                 if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
                     
@@ -2898,7 +2892,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if service_type == HC.LOCAL_BOORU:
                 
-                booru_shares = wx.GetApp().Read( 'local_booru_shares' )
+                booru_shares = HydrusGlobals.controller.Read( 'local_booru_shares' )
                 
                 self._booru_shares.DeleteAllItems()
                 
@@ -2942,7 +2936,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
                 
-                wx.GetApp().Write( 'delete_local_booru_share', share_key )
+                HydrusGlobals.controller.Write( 'delete_local_booru_share', share_key )
                 
             
         
@@ -2972,16 +2966,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                 
             
-            for ( share_key, info ) in writes: wx.GetApp().Write( 'local_booru_share', share_key, info )
+            for ( share_key, info ) in writes: HydrusGlobals.controller.Write( 'local_booru_share', share_key, info )
             
         
         def EventBooruOpenSearch( self, event ):
             
             for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
                 
-                media_results = wx.GetApp().Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
+                media_results = HydrusGlobals.controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
                 
-                HydrusGlobals.pubsub.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+                HydrusGlobals.controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
                 
             
         
@@ -2991,7 +2985,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             account_key_hex = account_key.encode( 'hex' )
             
-            HydrusGlobals.pubsub.pub( 'clipboard', 'text', account_key_hex )
+            HydrusGlobals.controller.pub( 'clipboard', 'text', account_key_hex )
             
         
         def EventCopyExternalShareURL( self, event ):
@@ -3002,7 +2996,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = wx.GetApp().GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+                self._service = HydrusGlobals.controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -3014,7 +3008,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
                 
-                HydrusGlobals.pubsub.pub( 'clipboard', 'text', url )
+                HydrusGlobals.controller.pub( 'clipboard', 'text', url )
                 
             
         
@@ -3026,7 +3020,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = wx.GetApp().GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+                self._service = HydrusGlobals.controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -3036,7 +3030,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
                 
-                HydrusGlobals.pubsub.pub( 'clipboard', 'text', url )
+                HydrusGlobals.controller.pub( 'clipboard', 'text', url )
                 
             
         
@@ -3062,7 +3056,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             edit_log = [ HydrusData.EditLogActionEdit( service_key, ( service_key, service_type, name, info_update ) ) ]
             
-            wx.GetApp().Write( 'update_services', edit_log )
+            HydrusGlobals.controller.Write( 'update_services', edit_log )
             
             ClientGUICommon.ShowKeys( 'access', ( access_key, ) )
             
@@ -3077,7 +3071,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             account.MakeFresh()
             
-            wx.GetApp().Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
+            HydrusGlobals.controller.Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
             
         
         def ProcessServiceUpdates( self, service_keys_to_service_updates ):
@@ -3118,13 +3112,13 @@ class FrameSeedCache( ClientGUICommon.Frame ):
     
     def __init__( self, seed_cache ):
         
-        ( pos_x, pos_y ) = wx.GetApp().GetGUI().GetPositionTuple()
+        ( pos_x, pos_y ) = HydrusGlobals.controller.GetGUI().GetPositionTuple()
         
         pos = ( pos_x + 25, pos_y + 50 )
         
-        tlp = wx.GetApp().GetTopWindow()
+        tlp = HydrusGlobals.controller.GetTopWindow()
         
-        ClientGUICommon.Frame.__init__( self, tlp, title = wx.GetApp().PrepStringForDisplay( 'File Import Status' ), pos = pos )
+        ClientGUICommon.Frame.__init__( self, tlp, title = HydrusGlobals.controller.PrepStringForDisplay( 'File Import Status' ), pos = pos )
         
         self._seed_cache = seed_cache
         
@@ -3142,7 +3136,7 @@ class FrameSeedCache( ClientGUICommon.Frame ):
         
         self.Show( True )
         
-        HydrusGlobals.pubsub.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
+        HydrusGlobals.controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
         
         wx.CallAfter( self.Raise )
         
@@ -3163,7 +3157,16 @@ class FrameSplash( ClientGUICommon.Frame ):
     
     def __init__( self ):
         
-        wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR | wx.STAY_ON_TOP, title = 'hydrus client' )
+        if HC.PLATFORM_OSX:
+            
+            style = wx.FRAME_NO_TASKBAR
+            
+        else:
+            
+            style = wx.FRAME_NO_TASKBAR | wx.STAY_ON_TOP
+            
+        
+        wx.Frame.__init__( self, None, style = style, title = 'hydrus client' )
         
         self._dirty = True
         self._text = ''
@@ -3189,8 +3192,8 @@ class FrameSplash( ClientGUICommon.Frame ):
         
         self.Show( True )
         
-        HydrusGlobals.pubsub.sub( self, 'SetText', 'splash_set_text' )
-        HydrusGlobals.pubsub.sub( self, 'Destroy', 'splash_destroy' )
+        HydrusGlobals.controller.sub( self, 'SetText', 'splash_set_text' )
+        HydrusGlobals.controller.sub( self, 'Destroy', 'splash_destroy' )
         
     
     def _Redraw( self ):

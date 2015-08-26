@@ -40,8 +40,6 @@ try:
             
             app.MainLoop()
             
-            print( 'hydrus server shut down at ' + time.ctime() )
-            
         except:
             
             print( 'hydrus server failed at ' + time.ctime() )
@@ -49,16 +47,21 @@ try:
             import traceback
             print( traceback.format_exc() )
             
+        finally:
+            
+            HydrusGlobals.view_shutdown = True
+            HydrusGlobals.model_shutdown = True
+            
+            app.pubimmediate( 'shutdown' )
+            
+            reactor.callFromThread( reactor.stop )
+            
+            print( 'hydrus server shut down at ' + time.ctime() )
+            
         
     
     sys.stdout = initial_sys_stdout
     sys.stderr = initial_sys_stderr
-    
-    HydrusGlobals.shutdown = True
-    
-    reactor.callFromThread( reactor.stop )
-    
-    HydrusGlobals.pubsub.WXpubimmediate( 'shutdown' )
     
 except:
     

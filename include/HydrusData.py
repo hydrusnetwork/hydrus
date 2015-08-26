@@ -15,7 +15,6 @@ import threading
 import time
 import traceback
 import yaml
-import wx
 import itertools
 
 def default_dict_list(): return collections.defaultdict( list )
@@ -180,7 +179,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
         
         if len( content_updates ) > 0:
             
-            name = wx.GetApp().GetServicesManager().GetService( service_key ).GetName()
+            name = HydrusGlobals.controller.GetServicesManager().GetService( service_key ).GetName()
             
             locations.add( name )
             
@@ -200,19 +199,6 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
     s = ', '.join( locations ) + '->' + ', '.join( actions ) + extra_words + ' ' + ConvertIntToPrettyString( num_files ) + ' files'
     
     return s
-    
-def ConvertShortcutToPrettyShortcut( modifier, key ):
-    
-    if modifier == wx.ACCEL_NORMAL: modifier = ''
-    elif modifier == wx.ACCEL_ALT: modifier = 'alt'
-    elif modifier == wx.ACCEL_CTRL: modifier = 'ctrl'
-    elif modifier == wx.ACCEL_SHIFT: modifier = 'shift'
-    
-    if key in range( 65, 91 ): key = chr( key + 32 ) # + 32 for converting ascii A -> a
-    elif key in range( 97, 123 ): key = chr( key )
-    else: key = HC.wxk_code_string_lookup[ key ]
-    
-    return ( modifier, key )
     
 def ConvertSiteTypeGalleryTypeToPrettyString( site_type, gallery_type ):
     
@@ -495,21 +481,6 @@ def ConvertValueRangeToPrettyString( value, range ):
     
     return ConvertIntToPrettyString( value ) + '/' + ConvertIntToPrettyString( range )
     
-def ConvertZoomToPercentage( zoom ):
-    
-    zoom = zoom * 100.0
-    
-    if zoom == int( zoom ):
-        
-        pretty_zoom = '%i' % zoom + '%'
-        
-    else:
-        
-        pretty_zoom = '%.2f' % zoom + '%'
-        
-    
-    return pretty_zoom
-    
 def DebugPrint( debug_info ):
     
     print( debug_info )
@@ -609,35 +580,45 @@ def IntelligentMassIntersect( sets_to_reduce ):
     
 def IsAlreadyRunning():
     
-    me = None
+    try:
+        
+        me = psutil.Process()
+        
+        my_pid = me.pid
+        my_exe = me.exe()
+        my_cmd = me.cmdline()
+        
+    except psutil.Error:
+        
+        return False
+        
     
-    my_pid = os.getpid()
-    
-    current_processes = [ p for p in psutil.process_iter() ]
-    
-    for p in current_processes:
+    for p in psutil.process_iter():
         
         try:
             
-            p_pid = p.pid
+            if not p.is_running():
+                
+                continue
+                
             
-        except psutil.Error:
+            # this is to skip the linux PyInstaller loader
+            is_my_parent = False
             
-            continue
+            for c in p.children():
+                
+                if c.pid == my_pid:
+                    
+                    is_my_parent = True
+                    
+                    break
+                    
+                
             
-        
-        if p.pid == my_pid:
-            
-            me = p
-            
-        
-    
-    my_exe = me.exe()
-    my_cmd = me.cmdline()
-    
-    for p in current_processes:
-        
-        try:
+            if is_my_parent:
+                
+                continue
+                
             
             p_pid = p.pid
             p_exe = p.exe()
@@ -652,6 +633,7 @@ def IsAlreadyRunning():
             
             if p_exe == my_exe and p_cmd == my_cmd:
                 
+                print( p.children( recursive = True ) )
                 return True
                 
             
@@ -1267,7 +1249,7 @@ class JobDatabase( object ):
         while True:
             
             if self._result_ready.wait( 5 ) == True: break
-            elif HydrusGlobals.shutdown: raise Exception( 'Application quit before db could serve result!' )
+            elif HydrusGlobals.model_shutdown: raise Exception( 'Application quit before db could serve result!' )
             
         
         if isinstance( self._result, HydrusExceptions.DBException ):
@@ -1367,11 +1349,11 @@ class JobKey( object ):
     
     def IsCancellable( self ): return self._cancellable and not self.IsDone()
     
-    def IsCancelled( self ): return HydrusGlobals.shutdown or self._cancelled.is_set()
+    def IsCancelled( self ): return HydrusGlobals.view_shutdown or self._cancelled.is_set()
     
-    def IsDeleted( self ): return HydrusGlobals.shutdown or self._deleted.is_set()
+    def IsDeleted( self ): return HydrusGlobals.view_shutdown or self._deleted.is_set()
     
-    def IsDone( self ): return HydrusGlobals.shutdown or self._done.is_set()
+    def IsDone( self ): return HydrusGlobals.view_shutdown or self._done.is_set()
     
     def IsPausable( self ): return self._pausable and not self.IsDone()
     
@@ -1442,10 +1424,10 @@ class JobKey( object ):
             
             time.sleep( 0.1 )
             
-            if HydrusGlobals.shutdown or self.IsDone(): break
+            if HydrusGlobals.view_shutdown or self.IsDone(): break
             
         
-        if HydrusGlobals.shutdown or self.IsCancelled():
+        if HydrusGlobals.view_shutdown or self.IsCancelled():
             
             should_quit = True
             
@@ -1693,7 +1675,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, value, service_key ) = self._value
                     
-                    service = wx.GetApp().GetServicesManager().GetService( service_key )
+                    service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                     
                     base += u' for ' + service.GetName() + u' ' + operator + u' ' + ToString( value )
                     
@@ -1727,7 +1709,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if current_or_pending == HC.PENDING: base += u' pending to '
                     else: base += u' currently in '
                     
-                    service = wx.GetApp().GetServicesManager().GetService( service_key )
+                    service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
                     
                     base += service.GetName()
                     
@@ -1746,7 +1728,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             base += count_text
             
-            siblings_manager = wx.GetApp().GetManager( 'tag_siblings' )
+            siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
             
             sibling = siblings_manager.GetSibling( tag )
             

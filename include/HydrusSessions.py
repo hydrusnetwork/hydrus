@@ -12,7 +12,6 @@ import threading
 import time
 import traceback
 import urllib
-import wx
 import yaml
 from twisted.internet.threads import deferToThread
 import HydrusData
@@ -24,7 +23,7 @@ class HydrusMessagingSessionManagerServer( object ):
     
     def __init__( self ):
         
-        existing_sessions = wx.GetApp().Read( 'messaging_sessions' )
+        existing_sessions = HydrusGlobals.controller.Read( 'messaging_sessions' )
         
         self._service_keys_to_sessions = collections.defaultdict( dict )
         
@@ -61,9 +60,9 @@ class HydrusMessagingSessionManagerServer( object ):
         
         session_key = HydrusData.GenerateKey()
         
-        account_key = wx.GetApp().Read( 'account_key_from_access_key', service_key, access_key )
+        account_key = HydrusGlobals.controller.Read( 'account_key_from_access_key', service_key, access_key )
         
-        account = wx.GetApp().Read( 'account', service_key, account_key )
+        account = HydrusGlobals.controller.Read( 'account', service_key, account_key )
         
         now = HydrusData.GetNow()
         
@@ -71,7 +70,7 @@ class HydrusMessagingSessionManagerServer( object ):
         
         with self._lock: self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, name, expires )
         
-        wx.GetApp().Write( 'messaging_session', service_key, session_key, account_key, name, expires )
+        HydrusGlobals.controller.Write( 'messaging_session', service_key, session_key, account_key, name, expires )
         
         return session_key
         
@@ -80,7 +79,7 @@ class HydrusSessionManagerClient( object ):
     
     def __init__( self ):
         
-        existing_sessions = wx.GetApp().Read( 'hydrus_sessions' )
+        existing_sessions = HydrusGlobals.controller.Read( 'hydrus_sessions' )
         
         self._service_keys_to_sessions = { service_key : ( session_key, expires ) for ( service_key, session_key, expires ) in existing_sessions }
         
@@ -91,7 +90,7 @@ class HydrusSessionManagerClient( object ):
         
         with self._lock:
             
-            wx.GetApp().Write( 'delete_hydrus_session_key', service_key )
+            HydrusGlobals.controller.Write( 'delete_hydrus_session_key', service_key )
             
             if service_key in self._service_keys_to_sessions: del self._service_keys_to_sessions[ service_key ]
             
@@ -113,7 +112,7 @@ class HydrusSessionManagerClient( object ):
             
             # session key expired or not found
             
-            service = wx.GetApp().GetServicesManager().GetService( service_key )
+            service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
             
             ( response, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
             
@@ -124,7 +123,7 @@ class HydrusSessionManagerClient( object ):
             
             self._service_keys_to_sessions[ service_key ] = ( session_key, expires )
             
-            wx.GetApp().Write( 'hydrus_session', service_key, session_key, expires )
+            HydrusGlobals.controller.Write( 'hydrus_session', service_key, session_key, expires )
             
             return session_key
             
@@ -138,18 +137,18 @@ class HydrusSessionManagerServer( object ):
         
         self.RefreshAllAccounts()
         
-        HydrusGlobals.pubsub.sub( self, 'RefreshAllAccounts', 'update_all_session_accounts' )
+        HydrusGlobals.controller.sub( self, 'RefreshAllAccounts', 'update_all_session_accounts' )
         
     
     def AddSession( self, service_key, access_key ):
         
         with self._lock:
             
-            account_key = wx.GetApp().Read( 'account_key_from_access_key', service_key, access_key )
+            account_key = HydrusGlobals.controller.Read( 'account_key_from_access_key', service_key, access_key )
             
             if account_key not in self._account_keys_to_accounts:
                 
-                account = wx.GetApp().Read( 'account', account_key )
+                account = HydrusGlobals.controller.Read( 'account', account_key )
                 
                 self._account_keys_to_accounts[ account_key ] = account
                 
@@ -164,7 +163,7 @@ class HydrusSessionManagerServer( object ):
             
             expires = now + HYDRUS_SESSION_LIFETIME
             
-            wx.GetApp().Write( 'session', session_key, service_key, account_key, expires )
+            HydrusGlobals.controller.Write( 'session', session_key, service_key, account_key, expires )
         
             self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, expires )
             
@@ -196,7 +195,7 @@ class HydrusSessionManagerServer( object ):
             
             for account_key in account_keys:
                 
-                account = wx.GetApp().Read( 'account', account_key )
+                account = HydrusGlobals.controller.Read( 'account', account_key )
                 
                 self._account_keys_to_accounts[ account_key ] = account
                 
@@ -227,7 +226,7 @@ class HydrusSessionManagerServer( object ):
             
             #
             
-            existing_sessions = wx.GetApp().Read( 'sessions' )
+            existing_sessions = HydrusGlobals.controller.Read( 'sessions' )
             
             for ( session_key, service_key, account, expires ) in existing_sessions:
                 
@@ -246,7 +245,7 @@ class WebSessionManagerClient( object ):
     
     def __init__( self ):
         
-        existing_sessions = wx.GetApp().Read( 'web_sessions' )
+        existing_sessions = HydrusGlobals.controller.Read( 'web_sessions' )
         
         self._names_to_sessions = { name : ( cookies, expires ) for ( name, cookies, expires ) in existing_sessions }
         
@@ -271,13 +270,13 @@ class WebSessionManagerClient( object ):
             
             if name == 'hentai foundry':
                 
-                ( response_gumpf, cookies ) = wx.GetApp().DoHTTP( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
+                ( response_gumpf, cookies ) = HydrusGlobals.controller.DoHTTP( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
                 
                 expires = now + 60 * 60
                 
             elif name == 'pixiv':
                 
-                ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+                ( id, password ) = HydrusGlobals.controller.Read( 'pixiv_account' )
                 
                 if id == '' and password == '':
                     
@@ -296,7 +295,7 @@ class WebSessionManagerClient( object ):
                 headers = {}
                 headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
                 
-                ( response_gumpf, cookies ) = wx.GetApp().DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+                ( response_gumpf, cookies ) = HydrusGlobals.controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
                 
                 # _ only given to logged in php sessions
                 if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Pixiv login credentials not accepted!' )
@@ -306,7 +305,7 @@ class WebSessionManagerClient( object ):
             
             self._names_to_sessions[ name ] = ( cookies, expires )
             
-            wx.GetApp().Write( 'web_session', name, cookies, expires )
+            HydrusGlobals.controller.Write( 'web_session', name, cookies, expires )
             
             return cookies
             

@@ -8,8 +8,10 @@ from include import ClientConstants as CC
 from include import HydrusGlobals
 from include import ClientDefaults
 from include import HydrusNetworking
+from include import HydrusPubSub
 from include import HydrusSessions
 from include import HydrusTags
+from include import HydrusThreading
 from include import TestClientConstants
 from include import TestClientDaemons
 from include import TestClientDownloading
@@ -25,6 +27,7 @@ from include import TestHydrusSessions
 from include import TestHydrusTags
 import collections
 import os
+import random
 import sys
 import threading
 import time
@@ -41,9 +44,14 @@ class App( wx.App ):
     
     def OnInit( self ):
         
+        HydrusGlobals.controller = self
+        self._pubsub = HydrusPubSub.HydrusPubSub( self )
+        
         def show_text( text ): pass
         
         HydrusData.ShowText = show_text
+        
+        self._call_to_threads = [ HydrusThreading.DAEMONCallToThread( self ) for i in range( 10 ) ]
         
         self._http = HydrusNetworking.HTTPConnectionManager()
         
@@ -67,7 +75,6 @@ class App( wx.App ):
         self._reads[ 'web_sessions' ] = {}
         
         HC.options = ClientDefaults.GetClientDefaultOptions()
-        HydrusGlobals.pubsub = TestConstants.FakePubSub()
         
         self._writes = collections.defaultdict( list )
         
@@ -107,15 +114,35 @@ class App( wx.App ):
         
         suite = unittest.TestSuite( suites )
         
-        threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
-        
         runner = unittest.TextTestRunner( verbosity = 1 )
         
         runner.run( suite )
         
-        reactor.callFromThread( reactor.stop )
-        
         return True
+        
+    
+    def pub( self, topic, *args, **kwargs ):
+        
+        pass
+        
+    
+    def pubimmediate( self, topic, *args, **kwargs ):
+        
+        self._pubsub.pubimmediate( topic, *args, **kwargs )
+        
+    
+    def sub( self, object, method_name, topic ):
+        
+        self._pubsub.sub( object, method_name, topic )
+        
+    
+    def CallToThread( self, callable, *args, **kwargs ):
+        
+        call_to_thread = random.choice( self._call_to_threads )
+        
+        while call_to_thread == threading.current_thread: call_to_thread = random.choice( self._call_to_threads )
+        
+        call_to_thread.put( callable, *args, **kwargs )
         
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
@@ -182,14 +209,24 @@ if __name__ == '__main__':
         
     else: only_run = None
     
-    old_pubsub = HydrusGlobals.pubsub
+    try:
+        
+        threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+        
+        app = App()
+        
+    finally:
+        
+        HydrusGlobals.view_shutdown = True
+        
+        app.pubimmediate( 'wake_daemons' )
+        
+        HydrusGlobals.model_shutdown = True
+        
+        app.pubimmediate( 'shutdown' )
+        
+        reactor.callFromThread( reactor.stop )
+        
+        raw_input()
+        
     
-    app = App()
-    
-    HydrusGlobals.shutdown = True
-    
-    HydrusGlobals.pubsub.WXpubimmediate( 'shutdown' )
-    
-    old_pubsub.WXpubimmediate( 'shutdown' )
-    
-    raw_input()

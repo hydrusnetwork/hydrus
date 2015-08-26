@@ -2,7 +2,6 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusSerialisable
 import httplib
-import multipart
 import os
 import socket
 import socks
@@ -11,7 +10,6 @@ import time
 import urllib
 import urlparse
 import yaml
-import wx
 import HydrusData
 import itertools
 import HydrusGlobals
@@ -28,7 +26,7 @@ def AddHydrusCredentialsToHeaders( credentials, request_headers ):
     
 def AddHydrusSessionKeyToHeaders( service_key, request_headers ):
     
-    session_manager = wx.GetApp().GetManager( 'hydrus_sessions' )
+    session_manager = HydrusGlobals.controller.GetManager( 'hydrus_sessions' )
     
     session_key = session_manager.GetSessionKey( service_key )
     
@@ -44,7 +42,7 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
     
     if 'server' not in response_headers or service_string not in response_headers[ 'server' ]:
         
-        wx.GetApp().Write( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HydrusData.GetUnknownAccount() ) ] })
+        HydrusGlobals.controller.Write( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HydrusData.GetUnknownAccount() ) ] })
         
         raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
         
@@ -95,12 +93,12 @@ def ConvertHydrusGETArgsToQuery( request_args ):
     
 def DoHydrusBandwidth( service_key, method, command, size ):
     
-    try: service = wx.GetApp().GetServicesManager().GetService( service_key )
+    try: service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
     except: return
     
     service_type = service.GetServiceType()
     
-    if ( service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HydrusGlobals.pubsub.pub( 'service_updates_delayed', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, size ) ] } )
+    if ( service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HydrusGlobals.controller.pub( 'service_updates_delayed', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, size ) ] } )
     
 def GetLocalConnection( port ):
     
@@ -243,7 +241,7 @@ class HTTPConnectionManager( object ):
         
         while True:
             
-            if HydrusGlobals.shutdown: break
+            if HydrusGlobals.model_shutdown: break
             
             last_checked = 0
             
@@ -344,7 +342,7 @@ class HTTPConnection( object ):
         
         for block in HydrusData.ReadFileLikeAsBlocks( response, self.read_block_size ):
             
-            if HydrusGlobals.shutdown: raise Exception( 'Application is shutting down!' )
+            if HydrusGlobals.model_shutdown: raise Exception( 'Application is shutting down!' )
             
             data += block
             
@@ -442,7 +440,7 @@ class HTTPConnection( object ):
             
             for block in HydrusData.ReadFileLikeAsBlocks( response, self.read_block_size ):
                 
-                if HydrusGlobals.shutdown: raise Exception( 'Application is shutting down!' )
+                if HydrusGlobals.model_shutdown: raise Exception( 'Application is shutting down!' )
                 
                 size_of_response += len( block )
                 

@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientData
 import HydrusConstants as HC
+import HydrusGlobals
 import os
 import wx
 
@@ -26,6 +27,9 @@ def GetClientDefaultOptions():
     options[ 'ac_timings' ] = ( 3, 500, 250 )
     options[ 'thread_checker_timings' ] = ( 3, 1200 )
     options[ 'idle_period' ] = 60 * 30
+    options[ 'idle_cpu_max' ] = 50
+    options[ 'idle_shutdown' ] = CC.IDLE_ON_SHUTDOWN_ASK_FIRST
+    options[ 'idle_shutdown_max_minutes' ] = 30
     options[ 'maintenance_delete_orphans_period' ] = 86400 * 3
     options[ 'maintenance_vacuum_period' ] = 86400 * 5
     options[ 'fit_to_canvas' ] = False
@@ -207,7 +211,7 @@ def GetClientDefaultOptions():
     
 def GetDefaultImportFileOptions():
     
-    options = wx.GetApp().GetOptions()
+    options = HydrusGlobals.controller.GetOptions()
     
     result = {}
     

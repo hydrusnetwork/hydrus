@@ -93,7 +93,7 @@ class RasterContainerImage( RasterContainer ):
         
         self._hydrus_bitmap = None
         
-        HydrusThreading.CallToThread( self._InitialiseHydrusBitmap )
+        HydrusGlobals.controller.CallToThread( self._InitialiseHydrusBitmap )
         
     
     def _InitialiseHydrusBitmap( self ):
@@ -119,7 +119,7 @@ class RasterContainerImage( RasterContainer ):
         
         self._hydrus_bitmap = hydrus_bitmap
         
-        HydrusGlobals.pubsub.pub( 'finished_rendering', self.GetKey() )
+        HydrusGlobals.controller.pub( 'finished_rendering', self.GetKey() )
         
     
     def GetEstimatedMemoryFootprint( self ):
@@ -235,7 +235,7 @@ class RasterContainerVideo( RasterContainer ):
                 
                 self._render_to_index = index
                 
-                HydrusThreading.CallToThread( self.THREADRender )
+                HydrusGlobals.controller.CallToThread( self.THREADRender )
                 
             
         

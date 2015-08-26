@@ -55,8 +55,8 @@ class Page( wx.SplitterWindow ):
         self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
         wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
-        HydrusGlobals.pubsub.sub( self, 'SetPrettyStatus', 'new_page_status' )
-        HydrusGlobals.pubsub.sub( self, 'SwapMediaPanel', 'swap_media_panel' )
+        HydrusGlobals.controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
+        HydrusGlobals.controller.sub( self, 'SwapMediaPanel', 'swap_media_panel' )
         
     
     def CleanBeforeDestroy( self ): self._management_panel.CleanBeforeDestroy()
@@ -92,22 +92,22 @@ class Page( wx.SplitterWindow ):
         return ( x, y )
         
     
-    def PageHidden( self ): HydrusGlobals.pubsub.pub( 'page_hidden', self._page_key )
+    def PageHidden( self ): HydrusGlobals.controller.pub( 'page_hidden', self._page_key )
     
-    def PageShown( self ): HydrusGlobals.pubsub.pub( 'page_shown', self._page_key )
+    def PageShown( self ): HydrusGlobals.controller.pub( 'page_shown', self._page_key )
     
     def Pause( self ):
         
-        HydrusGlobals.pubsub.pub( 'pause', self._page_key )
+        HydrusGlobals.controller.pub( 'pause', self._page_key )
         
-        HydrusGlobals.pubsub.pub( 'set_focus', self._page_key, None )
+        HydrusGlobals.controller.pub( 'set_focus', self._page_key, None )
         
     
-    def RefreshQuery( self ): HydrusGlobals.pubsub.pub( 'refresh_query', self._page_key )
+    def RefreshQuery( self ): HydrusGlobals.controller.pub( 'refresh_query', self._page_key )
     
     def Resume( self ):
         
-        HydrusGlobals.pubsub.pub( 'resume', self._page_key )
+        HydrusGlobals.controller.pub( 'resume', self._page_key )
         
     
     def ShowHideSplit( self ):
@@ -132,13 +132,13 @@ class Page( wx.SplitterWindow ):
             
             self._pretty_status = status
             
-            HydrusGlobals.pubsub.pub( 'refresh_status' )
+            HydrusGlobals.controller.pub( 'refresh_status' )
             
         
     
-    def SetSearchFocus( self ): HydrusGlobals.pubsub.pub( 'set_search_focus', self._page_key )
+    def SetSearchFocus( self ): HydrusGlobals.controller.pub( 'set_search_focus', self._page_key )
     
-    def SetSynchronisedWait( self ): HydrusGlobals.pubsub.pub( 'synchronised_wait_switch', self._page_key )
+    def SetSynchronisedWait( self ): HydrusGlobals.controller.pub( 'synchronised_wait_switch', self._page_key )
     
     def SwapMediaPanel( self, page_key, new_panel ):
         

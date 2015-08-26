@@ -10,7 +10,6 @@ import unittest
 import HydrusData
 import ClientConstants as CC
 import HydrusGlobals
-import wx
 
 class TestDaemons( unittest.TestCase ):
     
@@ -43,7 +42,7 @@ class TestDaemons( unittest.TestCase ):
             
             old_details = dict( details )
             
-            wx.GetApp().SetRead( 'import_folders', { path : details } )
+            HydrusGlobals.controller.SetRead( 'import_folders', { path : details } )
             
             ClientDaemons.DAEMONCheckImportFolders()
             
@@ -51,7 +50,7 @@ class TestDaemons( unittest.TestCase ):
             #(('C:\\code\\Hydrus\\temp\\e0dbdcb1a13c0565ffb73f2f497528adbe1703ca1dfc69680202487187b9fcfa',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
             #(('C:\\code\\Hydrus\\temp\\182c4eecf2a5b4dfc8b74813bcff5d967ed53d92a982d8ae18520e1504fa5902',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
             
-            import_file = wx.GetApp().GetWrite( 'import_file' )
+            import_file = HydrusGlobals.controller.GetWrite( 'import_file' )
             
             self.assertEqual( len( import_file ), 3 )
             
@@ -73,7 +72,7 @@ class TestDaemons( unittest.TestCase ):
             
             # I need to expand tests here with the new file system
             
-            [ ( ( updated_path, updated_details ), kwargs ) ] = wx.GetApp().GetWrite( 'import_folder' )
+            [ ( ( updated_path, updated_details ), kwargs ) ] = HydrusGlobals.controller.GetWrite( 'import_folder' )
             
             self.assertEqual( path, updated_path )
             
@@ -99,7 +98,7 @@ class TestDaemons( unittest.TestCase ):
             
             old_details = dict( details )
             
-            wx.GetApp().SetRead( 'import_folders', { path : details } )
+            HydrusGlobals.controller.SetRead( 'import_folders', { path : details } )
             
             ClientDaemons.DAEMONCheckImportFolders()
             
@@ -111,9 +110,9 @@ class TestDaemons( unittest.TestCase ):
             #(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
             #(('blarg',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
             
-            import_file = wx.GetApp().GetWrite( 'import_file' )
+            import_file = HydrusGlobals.controller.GetWrite( 'import_file' )
             
-            [ ( ( updated_path, updated_details ), kwargs ) ] = wx.GetApp().GetWrite( 'import_folder' )
+            [ ( ( updated_path, updated_details ), kwargs ) ] = HydrusGlobals.controller.GetWrite( 'import_folder' )
             
             self.assertEqual( path, updated_path )
             

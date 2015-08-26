@@ -28,7 +28,6 @@ if sys.platform == 'win32': PLATFORM_WINDOWS = True
 elif sys.platform == 'darwin': PLATFORM_OSX = True
 elif sys.platform == 'linux2': PLATFORM_LINUX = True
 
-import wx
 import sqlite3
 import traceback
 import yaml
@@ -38,7 +37,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 170
+SOFTWARE_VERSION = 171
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -417,66 +416,6 @@ site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY ] = 'hentai foundry'
 site_type_string_lookup[ SITE_TYPE_NEWGROUNDS ] = 'newgrounds'
 site_type_string_lookup[ SITE_TYPE_PIXIV ] = 'pixiv'
 site_type_string_lookup[ SITE_TYPE_TUMBLR ] = 'tumblr'
-
-wxk_code_string_lookup = {
-    wx.WXK_SPACE: 'space',
-    wx.WXK_BACK: 'backspace',
-    wx.WXK_TAB: 'tab',
-    wx.WXK_RETURN: 'return',
-    wx.WXK_NUMPAD_ENTER: 'enter',
-    wx.WXK_PAUSE: 'pause',
-    wx.WXK_ESCAPE: 'escape',
-    wx.WXK_INSERT: 'insert',
-    wx.WXK_DELETE: 'delete',
-    wx.WXK_UP: 'up',
-    wx.WXK_DOWN: 'down',
-    wx.WXK_LEFT: 'left',
-    wx.WXK_RIGHT: 'right',
-    wx.WXK_HOME: 'home',
-    wx.WXK_END: 'end',
-    wx.WXK_PAGEDOWN: 'page up',
-    wx.WXK_PAGEUP: 'page down',
-    wx.WXK_F1: 'f1',
-    wx.WXK_F2: 'f2',
-    wx.WXK_F3: 'f3',
-    wx.WXK_F4: 'f4',
-    wx.WXK_F5: 'f5',
-    wx.WXK_F6: 'f6',
-    wx.WXK_F7: 'f7',
-    wx.WXK_F8: 'f8',
-    wx.WXK_F9: 'f9',
-    wx.WXK_F10: 'f10',
-    wx.WXK_F11: 'f11',
-    wx.WXK_F12: 'f12',
-    wx.WXK_ADD: '+',
-    wx.WXK_DIVIDE: '/',
-    wx.WXK_SUBTRACT: '-',
-    wx.WXK_MULTIPLY: '*',
-    wx.WXK_NUMPAD1: 'numpad 1',
-    wx.WXK_NUMPAD2: 'numpad 2',
-    wx.WXK_NUMPAD3: 'numpad 3',
-    wx.WXK_NUMPAD4: 'numpad 4',
-    wx.WXK_NUMPAD5: 'numpad 5',
-    wx.WXK_NUMPAD6: 'numpad 6',
-    wx.WXK_NUMPAD7: 'numpad 7',
-    wx.WXK_NUMPAD8: 'numpad 8',
-    wx.WXK_NUMPAD9: 'numpad 9',
-    wx.WXK_NUMPAD0: 'numpad 0',
-    wx.WXK_NUMPAD_UP: 'numpad up',
-    wx.WXK_NUMPAD_DOWN: 'numpad down',
-    wx.WXK_NUMPAD_LEFT: 'numpad left',
-    wx.WXK_NUMPAD_RIGHT: 'numpad right',
-    wx.WXK_NUMPAD_HOME: 'numpad home',
-    wx.WXK_NUMPAD_END: 'numpad end',
-    wx.WXK_NUMPAD_PAGEDOWN: 'numpad page up',
-    wx.WXK_NUMPAD_PAGEUP: 'numpad page down',
-    wx.WXK_NUMPAD_ADD: 'numpad +',
-    wx.WXK_NUMPAD_DIVIDE: 'numpad /',
-    wx.WXK_NUMPAD_SUBTRACT: 'numpad -',
-    wx.WXK_NUMPAD_MULTIPLY: 'numpad *',
-    wx.WXK_NUMPAD_DELETE: 'numpad delete',
-    wx.WXK_NUMPAD_DECIMAL: 'numpad decimal'
-    }
 
 # request checking
 

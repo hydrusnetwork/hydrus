@@ -28,12 +28,12 @@ class Conversation( object ):
         self._drafts = drafts
         self._search_context = search_context
         
-        HydrusGlobals.pubsub.sub( self, 'DeleteDraft', 'delete_draft_data' )
-        HydrusGlobals.pubsub.sub( self, 'DeleteMessage', 'delete_message' )
-        HydrusGlobals.pubsub.sub( self, 'DraftSaved', 'draft_saved' )
-        HydrusGlobals.pubsub.sub( self, 'ArchiveConversation', 'archive_conversation_data' )
-        HydrusGlobals.pubsub.sub( self, 'InboxConversation', 'inbox_conversation_data' )
-        HydrusGlobals.pubsub.sub( self, 'UpdateMessageStatuses', 'message_statuses_data' )
+        HydrusGlobals.controller.sub( self, 'DeleteDraft', 'delete_draft_data' )
+        HydrusGlobals.controller.sub( self, 'DeleteMessage', 'delete_message' )
+        HydrusGlobals.controller.sub( self, 'DraftSaved', 'draft_saved' )
+        HydrusGlobals.controller.sub( self, 'ArchiveConversation', 'archive_conversation_data' )
+        HydrusGlobals.controller.sub( self, 'InboxConversation', 'inbox_conversation_data' )
+        HydrusGlobals.controller.sub( self, 'UpdateMessageStatuses', 'message_statuses_data' )
         
     
     def AddDraft( self, draft ): self._drafts.append( draft )
@@ -56,8 +56,8 @@ class Conversation( object ):
         
         if len( self._messages ) + len( self._drafts ) == 0:
             
-            HydrusGlobals.pubsub.pub( 'delete_conversation_data', self._conversation_key )
-            HydrusGlobals.pubsub.pub( 'delete_conversation_gui', self._conversation_key )
+            HydrusGlobals.controller.pub( 'delete_conversation_data', self._conversation_key )
+            HydrusGlobals.controller.pub( 'delete_conversation_gui', self._conversation_key )
             
         
     
@@ -80,8 +80,8 @@ class Conversation( object ):
         
         if len( self._messages ) + len( self._drafts ) == 0:
             
-            HydrusGlobals.pubsub.pub( 'delete_conversation_data', self._conversation_key )
-            HydrusGlobals.pubsub.pub( 'delete_conversation_gui', self._conversation_key )
+            HydrusGlobals.controller.pub( 'delete_conversation_data', self._conversation_key )
+            HydrusGlobals.controller.pub( 'delete_conversation_gui', self._conversation_key )
             
         
     

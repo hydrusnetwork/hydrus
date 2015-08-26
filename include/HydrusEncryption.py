@@ -5,11 +5,11 @@ import Crypto.Signature.PKCS1_v1_5
 import Crypto.PublicKey.RSA
 import hashlib
 import HydrusConstants as HC
+import HydrusGlobals
 import os
 import potr
 import time
 import traceback
-import wx
 import yaml
 import zlib
 import HydrusGlobals
@@ -249,7 +249,7 @@ class HydrusOTRAccount( potr.context.Account ):
     
     def saveTrusts( self ):
         
-        wx.GetApp().Write( 'otr_trusts', self.name, self.trusts )
+        HydrusGlobals.controller.Write( 'otr_trusts', self.name, self.trusts )
         
     
     # I need an accounts manager so there is only ever one copy of an account

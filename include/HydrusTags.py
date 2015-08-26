@@ -5,7 +5,6 @@ import os
 import threading
 import time
 import traceback
-import wx
 import HydrusData
 import HydrusExceptions
 import re

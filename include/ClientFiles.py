@@ -5,6 +5,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusFileHandling
+import HydrusGlobals
 import HydrusSerialisable
 import itertools
 import os
@@ -118,7 +119,7 @@ def GetExpectedFilePath( hash, mime ):
     
 def GetExportPath():
     
-    options = wx.GetApp().GetOptions()
+    options = HydrusGlobals.controller.GetOptions()
     
     path = options[ 'export_path' ]
     
@@ -182,7 +183,7 @@ def GetThumbnailPath( hash, full_size = True ):
             
             full_size_path = GetThumbnailPath( hash, True )
             
-            options = wx.GetApp().GetOptions()
+            options = HydrusGlobals.controller.GetOptions()
             
             thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
             
@@ -371,7 +372,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 #
                 
-                query_hash_ids = wx.GetApp().Read( 'file_query_ids', self._file_search_context )
+                query_hash_ids = HydrusGlobals.controller.Read( 'file_query_ids', self._file_search_context )
                 
                 query_hash_ids = list( query_hash_ids )
                 
@@ -396,7 +397,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     sub_query_hash_ids = query_hash_ids[ last_i : i ]
                     
-                    more_media_results = wx.GetApp().Read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, sub_query_hash_ids )
+                    more_media_results = HydrusGlobals.controller.Read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, sub_query_hash_ids )
                     
                     media_results.extend( more_media_results )
                     
@@ -467,7 +468,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._last_checked = HydrusData.GetNow()
             
-            wx.GetApp().WriteSynchronous( 'export_folder', self )
+            HydrusGlobals.controller.WriteSynchronous( 'export_folder', self )
             
         
     
