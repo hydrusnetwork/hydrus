@@ -578,63 +578,43 @@ def IntelligentMassIntersect( sets_to_reduce ):
     if answer is None: return set()
     else: return answer
     
-def IsAlreadyRunning():
+def IsAlreadyRunning( instance ):
     
-    try:
-        
-        me = psutil.Process()
-        
-        my_pid = me.pid
-        my_exe = me.exe()
-        my_cmd = me.cmdline()
-        
-    except psutil.Error:
-        
-        return False
-        
+    path = HC.BASE_DIR + os.path.sep + instance + '_running'
     
-    for p in psutil.process_iter():
+    if os.path.exists( path ):
         
-        try:
+        with open( path, 'rb' ) as f:
             
-            if not p.is_running():
+            result = f.read()
+            
+            try:
                 
-                continue
+                ( pid, create_time ) = result.split( os.linesep )
+                
+                pid = int( pid )
+                create_time = float( create_time )
+                
+            except ValueError:
+                
+                return False
                 
             
-            # this is to skip the linux PyInstaller loader
-            is_my_parent = False
-            
-            for c in p.children():
+            try:
                 
-                if c.pid == my_pid:
+                if psutil.pid_exists( pid ):
                     
-                    is_my_parent = True
+                    p = psutil.Process( pid )
                     
-                    break
+                    if p.create_time() == create_time and p.is_running():
+                        
+                        return True
+                        
                     
                 
-            
-            if is_my_parent:
+            except psutil.Error:
                 
-                continue
-                
-            
-            p_pid = p.pid
-            p_exe = p.exe()
-            p_cmd = p.cmdline()
-            
-        except psutil.Error:
-            
-            continue
-            
-        
-        if p_pid != my_pid:
-            
-            if p_exe == my_exe and p_cmd == my_cmd:
-                
-                print( p.children( recursive = True ) )
-                return True
+                return False
                 
             
         
@@ -661,6 +641,30 @@ def ReadFileLikeAsBlocks( f, block_size ):
         yield next_block
         
         next_block = f.read( block_size )
+    
+def RecordRunningStart( instance ):
+    
+    path = HC.BASE_DIR + os.path.sep + instance + '_running'
+    
+    record_string = ''
+    
+    try:
+        
+        me = psutil.Process()
+        
+        record_string += str( me.pid )
+        record_string += os.linesep
+        record_string += str( me.create_time() )
+        
+    except psutil.Error:
+        
+        return
+        
+    
+    with open( path, 'wb' ) as f:
+        
+        f.write( record_string )
+        
     
 def ShowExceptionDefault( e ):
     
@@ -1249,7 +1253,7 @@ class JobDatabase( object ):
         while True:
             
             if self._result_ready.wait( 5 ) == True: break
-            elif HydrusGlobals.model_shutdown: raise Exception( 'Application quit before db could serve result!' )
+            elif HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
             
         
         if isinstance( self._result, HydrusExceptions.DBException ):

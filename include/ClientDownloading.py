@@ -413,7 +413,7 @@ class GalleryParserBooru( GalleryParser ):
                 
             
         
-        return self._search_url.replace( '%tags%', self._search_separator.join( [ urllib.quote( tag, '' ) for tag in tags_to_use ] ) ).replace( '%index%', HydrusData.ToString( url_index ) )
+        return self._search_url.replace( '%tags%', self._search_separator.join( [ urllib.quote( tag.encode( 'utf-8' ), '' ) for tag in tags_to_use ] ) ).replace( '%index%', HydrusData.ToString( url_index ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -736,7 +736,7 @@ class GalleryParserGiphy( GalleryParser ):
     
     def __init__( self, tag ):
         
-        self._gallery_url = 'http://giphy.com/api/gifs?tag=' + urllib.quote( tag.replace( ' ', '+' ), '' ) + '&page='
+        self._gallery_url = 'http://giphy.com/api/gifs?tag=' + urllib.quote( tag.encode( 'utf-8' ).replace( ' ', '+' ), '' ) + '&page='
         
         GalleryParser.__init__( self )
         

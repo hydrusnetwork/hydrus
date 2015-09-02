@@ -3,6 +3,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusSerialisable
 import HydrusThreading
 import os
 import ServerFiles
@@ -1014,6 +1015,21 @@ class HydrusResourceCommandRestrictedContentUpdate( HydrusResourceCommandRestric
         HydrusGlobals.controller.WriteSynchronous( 'update', self._service_key, account_key, update )
         
         response_context = ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedImmediateContentUpdate( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.RESOLVE_PETITIONS
+    
+    def _threadDoGETJob( self, request ):
+        
+        content_update = HydrusGlobals.controller.Read( 'immediate_content_update', self._service_key )
+        
+        network_string = HydrusSerialisable.DumpToNetworkString( content_update )
+        
+        response_context = ResponseContext( 200, mime = HC.APPLICATION_JSON, body = network_string )
         
         return response_context
         

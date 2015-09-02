@@ -17,13 +17,7 @@ class DAEMON( threading.Thread ):
         
         self._event = threading.Event()
         
-        self._controller.sub( self, 'shutdown', 'shutdown' )
         self._controller.sub( self, 'wake', 'wake_daemons' )
-        
-    
-    def shutdown( self ):
-        
-        self._event.set()
         
     
     def wake( self ):

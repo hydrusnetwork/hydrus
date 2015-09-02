@@ -1311,7 +1311,10 @@ class ManagementPanelDumper( ManagementPanel ):
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still dumping. Are you sure you want to close it?' ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    raise HydrusExceptions.PermissionException()
+                    
                 
             
         
@@ -1686,7 +1689,10 @@ class ManagementPanelImport( ManagementPanel ):
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    raise HydrusExceptions.PermissionException()
+                    
                 
             
         
@@ -1745,7 +1751,7 @@ class ManagementPanelImports( ManagementPanelImport ):
         self._get_tags_if_redundant.Hide()
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._pending_import_queues_panel, 'file limit', none_phrase = 'no limit', min = 1, max = 1000000 )
-        self._file_limit.SetValue( 500 )
+        self._file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2637,7 +2643,10 @@ class ManagementPanelImportHDD( ManagementPanel ):
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    raise HydrusExceptions.PermissionException()
+                    
                 
             
         
@@ -3004,7 +3013,10 @@ class ManagementPanelImportThreadWatcher( ManagementPanel ):
                 
                 with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                    if dlg.ShowModal() == wx.ID_NO:
+                        
+                        raise HydrusExceptions.PermissionException()
+                        
                     
                 
             

@@ -38,6 +38,8 @@ def GetClientDefaultOptions():
     options[ 'remove_trashed_files' ] = False
     options[ 'remove_filtered_files' ] = False
     options[ 'external_host' ] = None
+    options[ 'gallery_file_limit' ] = 200
+    options[ 'always_embed_autocompletes' ] = HC.PLATFORM_LINUX or HC.PLATFORM_OSX
     
     system_predicates = {}
     

@@ -799,6 +799,53 @@ class DB( HydrusDB.HydrusDB ):
         return [ registration_key for ( registration_key, account_key, access_key ) in keys ]
         
     
+    def _GenerateImmediateContentUpdate( self, service_key ):
+        
+        update_ends = self._GetUpdateEnds()
+        
+        latest_end = update_ends[ service_key ]
+        
+        begin = latest_end + 1
+        
+        end = HydrusData.GetNow()
+        
+        service_id = self._GetServiceId( service_key )
+        
+        service_type = self._GetServiceType( service_id )
+        
+        if service_type == HC.FILE_REPOSITORY:
+            
+            iterator = self._IterateFileUpdateContentData
+            
+        elif service_type == HC.TAG_REPOSITORY:
+            
+            iterator = self._IterateTagUpdateContentData
+            
+        
+        subindex = 0
+        weight = 0
+        
+        content_update_package = HydrusData.ServerToClientContentUpdatePackage()
+        
+        smaller_time_step = max( 10, ( end - begin ) / 100 )
+        
+        sub_begin = begin
+        
+        while sub_begin <= end:
+            
+            sub_end = min( ( sub_begin + smaller_time_step ) - 1, end )
+            
+            for ( data_type, action, rows, hash_ids_to_hashes, rows_weight ) in iterator( service_id, sub_begin, sub_end ):
+                
+                content_update_package.AddContentData( data_type, action, rows, hash_ids_to_hashes )
+                
+            
+            sub_begin += smaller_time_step
+            
+        
+        return content_update_package
+        
+    
     def _GenerateUpdate( self, service_key, begin, end ):
         
         service_id = self._GetServiceId( service_key )
@@ -2060,6 +2107,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'account_key_from_identifier': result = self._GetAccountKeyFromIdentifier( *args, **kwargs )
         elif action == 'account_types': result = self._GetAccountTypes( *args, **kwargs )
         elif action == 'dirty_updates': result = self._GetDirtyUpdates( *args, **kwargs  )
+        elif action == 'immediate_content_update': result = self._GenerateImmediateContentUpdate( *args, **kwargs )
         elif action == 'init': result = self._InitAdmin( *args, **kwargs  )
         elif action == 'ip': result = self._GetIPTimestamp( *args, **kwargs )
         elif action == 'messaging_sessions': result = self._GetMessagingSessions( *args, **kwargs )

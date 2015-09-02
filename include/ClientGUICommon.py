@@ -85,7 +85,7 @@ class AutoCompleteDropdown( wx.Panel ):
         # There's a big bug in wx where FRAME_FLOAT_ON_PARENT Frames don't get passed their mouse events if their parent is a Dialog jej
         # I think it is something to do with the initialisation order; if the frame is init'ed before the ShowModal call, but whatever.
         
-        if issubclass( type( tlp ), wx.Dialog ): self._float_mode = False
+        if issubclass( type( tlp ), wx.Dialog ) or HC.options[ 'always_embed_autocompletes' ]: self._float_mode = False
         else: self._float_mode = True
         
         self._text_ctrl = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
@@ -693,7 +693,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         ( inclusive, search_text, entry_predicate ) = self._ParseSearchText()
         
-        if search_text == '':
+        if search_text in ( '', ':' ):
             
             self._cache_text = ''
             self._current_namespace = ''
@@ -990,7 +990,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         ( search_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
         
-        if search_text == '':
+        if search_text in ( '', ':' ):
             
             self._cache_text = ''
             self._current_namespace = ''

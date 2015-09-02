@@ -936,12 +936,34 @@ class Canvas( object ):
     
     def KeepCursorAlive( self ): pass
     
+    def MouseIsNearAnimationBar( self ):
+        
+        if ShouldHaveAnimationBar( self._current_display_media ):
+            
+            animation_bar = self._media_container.GetAnimationBar()
+            
+            ( x, y ) = animation_bar.GetScreenPosition()
+            ( width, height ) = animation_bar.GetSize()
+            
+            ( mouse_x, mouse_y ) = wx.GetMousePosition()
+            
+            buffer_distance = 75
+            
+            if mouse_x >= x - buffer_distance and mouse_x <= x + width + buffer_distance and mouse_y >= y - buffer_distance and mouse_y <= y + height + buffer_distance:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def MouseIsOverMedia( self ):
         
-        ( x, y ) = self._media_container.GetPosition()
+        ( x, y ) = self._media_container.GetScreenPosition()
         ( width, height ) = self._media_container.GetSize()
         
-        ( mouse_x, mouse_y ) = self.ScreenToClient( wx.GetMousePosition() )
+        ( mouse_x, mouse_y ) = wx.GetMousePosition()
         
         if mouse_x >= x and mouse_x <= x + width and mouse_y >= y and mouse_y <= y + height: return True
         
@@ -1407,7 +1429,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         self.Show( True )
         
-        HydrusGlobals.controller.SetTopWindow( self )
+        wx.GetApp().SetTopWindow( self )
         
         self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
         
@@ -2988,6 +3010,11 @@ class MediaContainer( wx.Window ):
             self._media_window.SetSize( ( media_width, media_height ) )
             self._media_window.SetPosition( ( 0, 0 ) )
             
+        
+    
+    def GetAnimationBar( self ):
+        
+        return self._animation_bar
         
     
     def GotoPreviousOrNextFrame( self, direction ):

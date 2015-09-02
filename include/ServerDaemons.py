@@ -33,35 +33,60 @@ def DAEMONFlushRequestsMade( all_requests ): HydrusGlobals.controller.WriteSynch
 
 def DAEMONGenerateUpdates():
     
-    dirty_updates = HydrusGlobals.controller.Read( 'dirty_updates' )
-    
-    for ( service_key, tuples ) in dirty_updates.items():
+    if not HydrusGlobals.server_busy:
         
-        for ( begin, end ) in tuples:
+        dirty_updates = HydrusGlobals.controller.Read( 'dirty_updates' )
+        
+        for ( service_key, tuples ) in dirty_updates.items():
             
-            HydrusGlobals.controller.WriteSynchronous( 'clean_update', service_key, begin, end )
+            for ( begin, end ) in tuples:
+                
+                if HydrusGlobals.view_shutdown:
+                    
+                    return
+                    
+                
+                HydrusGlobals.server_busy = True
+                
+                HydrusGlobals.controller.WriteSynchronous( 'clean_update', service_key, begin, end )
+                
+                HydrusGlobals.server_busy = False
+                
+                time.sleep( 1 )
+                
             
         
-    
-    update_ends = HydrusGlobals.controller.Read( 'update_ends' )
-    
-    for ( service_key, biggest_end ) in update_ends.items():
+        update_ends = HydrusGlobals.controller.Read( 'update_ends' )
         
-        now = HydrusData.GetNow()
-        
-        next_begin = biggest_end + 1
-        next_end = biggest_end + HC.UPDATE_DURATION
-        
-        while next_end < now:
+        for ( service_key, biggest_end ) in update_ends.items():
             
-            HydrusGlobals.controller.WriteSynchronous( 'create_update', service_key, next_begin, next_end )
-            
-            biggest_end = next_end
+            if HydrusGlobals.view_shutdown:
+                
+                return
+                
             
             now = HydrusData.GetNow()
             
             next_begin = biggest_end + 1
             next_end = biggest_end + HC.UPDATE_DURATION
+            
+            HydrusGlobals.server_busy = True
+            
+            while next_end < now:
+                
+                HydrusGlobals.controller.WriteSynchronous( 'create_update', service_key, next_begin, next_end )
+                
+                biggest_end = next_end
+                
+                now = HydrusData.GetNow()
+                
+                next_begin = biggest_end + 1
+                next_end = biggest_end + HC.UPDATE_DURATION
+                
+            
+            HydrusGlobals.server_busy = False
+            
+            time.sleep( 1 )
             
         
     

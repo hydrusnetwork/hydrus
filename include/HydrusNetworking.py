@@ -537,8 +537,9 @@ class HTTPConnection( object ):
                     
                     # some booru is giving daft redirect responses
                     print( url )
-                    url = urllib.quote( url, safe = '/?=&' )
+                    url = urllib.quote( url.encode( 'utf-8' ), safe = '/?=&' )
                     print( url )
+                    
                 
                 if not url.startswith( self._scheme ):
                     

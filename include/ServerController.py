@@ -2,37 +2,116 @@ import httplib
 import HydrusConstants as HC
 import HydrusController
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals
 import HydrusNetworking
 import HydrusServer
 import HydrusSessions
 import HydrusThreading
+import os
 import ServerDaemons
 import ServerDB
-import os
+import sys
+import time
 import traceback
-import wx
 from twisted.internet import reactor
 from twisted.internet import defer
 
-ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
-
-MAINTENANCE_PERIOD = 5 * 60
-
+def GetStartingAction():
+    
+    action = None
+    
+    args = sys.argv[1:]
+    
+    if len( args ) > 0:
+        
+        command = args[0]
+        
+        while command.startswith( '-' ):
+            
+            command = command[ 1: ]
+            
+        
+        if command == 'help':
+            
+            action = 'help'
+            
+        else:
+            
+            already_running = HydrusData.IsAlreadyRunning( 'server' )
+            
+            if command == 'start':
+                
+                if already_running:
+                    
+                    raise HydrusExceptions.PermissionException( 'The server is already running!' )
+                    
+                else:
+                    
+                    action = None
+                    
+                
+            elif command == 'stop':
+                
+                if already_running:
+                    
+                    action = 'stop'
+                    
+                else:
+                    
+                    raise HydrusExceptions.PermissionException( 'The server is not running, so it cannot be stopped!' )
+                    
+                
+            elif command == 'restart':
+                
+                if already_running:
+                    
+                    action = 'restart'
+                    
+                else:
+                    
+                    action = 'start'
+                    
+                
+            
+        
+    else:
+        
+        already_running = HydrusData.IsAlreadyRunning( 'server' )
+        
+        if not already_running:
+            
+            action = 'start'
+            
+        else:
+            
+            print( 'The server is already running. Would you like to [s]top it, or [r]estart it?' )
+            
+            answer = raw_input()
+            
+            if len( answer ) > 0:
+                
+                answer = answer[0]
+                
+                if answer == 's':
+                    
+                    action = 'stop'
+                    
+                elif answer == 'r':
+                    
+                    action = 'restart'
+                    
+                
+            
+        
+    
+    return action
+    
 class Controller( HydrusController.HydrusController ):
     
-    db_class = ServerDB.DB
-    
-    def _AlreadyRunning( self, port ):
+    def _InitDB( self ):
         
-        try:
-            
-            connection = HydrusNetworking.GetLocalConnection( port )
-            connection.close()
-            
-            return True
-            
-        except: return False
+        return ServerDB.DB( self )
         
     
     def ActionService( self, service_key, action ):
@@ -93,23 +172,55 @@ class Controller( HydrusController.HydrusController ):
                 elif action == 'stop': del self._services[ service_key ]
                 
             
-            
         
         reactor.callFromThread( TWISTEDDoIt )
         
     
-    def EventExit( self, event ):
+    def CheckIfAdminPortInUse( self ):
         
-        wx.CallAfter( self._tbicon.Destroy )
+        ( service_type, options ) = self.Read( 'service_info', HC.SERVER_ADMIN_KEY )
         
-        self.ShutdownDB()
+        port = options[ 'port' ]
+        
+        already_bound = False
+        
+        try:
+            
+            connection = HydrusNetworking.GetLocalConnection( port )
+            connection.close()
+            
+            already_bound = True
+            
+        except: pass
+        
+        if already_bound:
+            
+            raise HydrusExceptions.PermissionException( 'Something was already bound to port ' + HydrusData.ToString( port ) )
+            
         
     
-    def GetManager( self, manager_type ): return self._managers[ manager_type ]
-    
-    def InitDaemons( self ):
+    def Exit( self ):
         
-        HydrusController.HydrusController.InitDaemons( self )
+        self.ShutdownView()
+        
+        self.ShutdownModel()
+        
+    
+    def InitModel( self ):
+        
+        HydrusController.HydrusController.InitModel( self )
+        
+        self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
+        self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
+        
+        self._services = {}
+        
+        self.sub( self, 'ActionService', 'action_service' )
+        
+    
+    def InitView( self ):
+        
+        HydrusController.HydrusController.InitView( self )
         
         self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRequestsMade', ServerDaemons.DAEMONFlushRequestsMade, 'request_made', period = 60 ) )
         
@@ -120,110 +231,48 @@ class Controller( HydrusController.HydrusController ):
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckDataUsage', ServerDaemons.DAEMONCheckDataUsage, period = 86400 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'UPnP', ServerDaemons.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 ) )
         
+        self.CheckIfAdminPortInUse()
+        
+        service_keys = self.Read( 'service_keys' )
+        
+        for service_key in service_keys: self.ActionService( service_key, 'start' )
+        
     
     def JustWokeFromSleep( self ): return False
-    
-    def MaintainDB( self ):
-        
-        pass
-        
     
     def NotifyPubSubs( self ):
         
         self.CallToThread( self.ProcessPubSub )
         
     
-    def OnInit( self ):
+    def Run( self, action ):
         
-        try:
+        if action in ( 'stop', 'restart' ):
             
-            self.InitData()
+            raise HydrusExceptions.PermissionException( 'This isn\'t working yet! You will have to Ctrl+C to quit an existing server for now!' )
             
-            if HydrusData.IsAlreadyRunning():
-                
-                raise Exception( 'It looks like this server is already running!' )
-                
-            
-            self.InitDB()
-            
-            self.Bind( wx.EVT_MENU, self.EventExit, id=wx.ID_EXIT )
-            
-            self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
-            self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
-            
-            self.sub( self, 'ActionService', 'action_service' )
-            
-            self._services = {}
-            
-            #
-            
-            ( service_type, options ) = self.Read( 'service_info', HC.SERVER_ADMIN_KEY )
-            
-            port = options[ 'port' ]
-            
-            try:
-                
-                connection = HydrusNetworking.GetLocalConnection( port )
-                connection.close()
-                
-                message = 'Something was already bound to port ' + HydrusData.ToString( port )
-                
-                wx.MessageBox( message )
-                
-                return False
-                
-            except: pass
-            
-            #
-            
-            service_keys = self.Read( 'service_keys' )
-            
-            for service_key in service_keys: self.ActionService( service_key, 'start' )
-            
-            self.InitDaemons()
-            
-            if HC.PLATFORM_WINDOWS: self._tbicon = TaskBarIcon()
-            else:
-                
-                stay_open_frame = wx.Frame( None, title = 'Hydrus Server' )
-                
-                stay_open_frame.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-                
-                stay_open_frame.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
-                
-                wx.StaticText( stay_open_frame, label = 'The hydrus server is now running.' + os.linesep * 2 + 'Close this window to stop it.' )
-                
-                ( x, y ) = stay_open_frame.GetEffectiveMinSize()
-                
-                stay_open_frame.SetInitialSize( ( x, y ) )
-                
-                stay_open_frame.Show()
-                
-            
-            return True
-            
-        except Exception as e:
-            
-            print( traceback.format_exc() )
-            
-            return False
+            self.ShutdownSiblingInstance()
             
         
-    
-class TaskBarIcon( wx.TaskBarIcon ):
-    
-    def __init__( self ):
-        
-        wx.TaskBarIcon.__init__( self )
-        
-        icon = wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO )
-        
-        self.SetIcon( icon, 'hydrus server' )
-        
-        self._tbmenu = wx.Menu()
-        
-        self._tbmenu.Append( wx.ID_EXIT, 'exit' )
-        
-        self.Bind( wx.EVT_TASKBAR_RIGHT_DOWN, lambda event: self.PopupMenu( self._tbmenu ) )
+        if action in ( 'start', 'restart' ):
+            
+            HydrusData.RecordRunningStart( 'server' )
+            
+            self.InitModel()
+            
+            self.InitView()
+            
+            while not HydrusGlobals.model_shutdown:
+                
+                try:
+                    
+                    time.sleep( 1 )
+                    
+                except KeyboardInterrupt:
+                    
+                    self.Exit()
+                    
+                
+            
         
     

@@ -2840,7 +2840,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         self._listbook.AddPage( 'local server', self._ServerPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'shortcuts', self._ShortcutsPanel( self._listbook ) )
-        self._listbook.AddPage( 'thread checker', self._ThreadCheckerPanel( self._listbook ) )
+        self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook ) )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'Save' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -3148,6 +3148,70 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
             
             HC.options[ 'external_host' ] = external_host
+            
+        
+    
+    class _DownloadingPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            gallery_downloader = ClientGUICommon.StaticBox( self, 'gallery downloader' )
+            
+            self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, 'default file limit', none_phrase = 'no limit', min = 1, max = 1000000 )
+            
+            thread_checker = ClientGUICommon.StaticBox( self, 'thread checker' )
+            
+            self._thread_times_to_check = wx.SpinCtrl( thread_checker, min = 0, max = 100 )
+            self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
+            
+            self._thread_check_period = wx.SpinCtrl( thread_checker, min = 30, max = 86400 )
+            self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
+            
+            #
+            
+            self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
+            
+            ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
+            
+            self._thread_times_to_check.SetValue( times_to_check )
+            
+            self._thread_check_period.SetValue( check_period )
+            
+            #
+            
+            gallery_downloader.AddF( self._gallery_file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( thread_checker, label = 'default number of times to check: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._thread_times_to_check, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( thread_checker, label = 'default wait in seconds between checks: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._thread_check_period, CC.FLAGS_MIXED )
+            
+            thread_checker.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( gallery_downloader, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( thread_checker, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
+            HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
             
         
     
@@ -3561,6 +3625,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._confirm_client_exit = wx.CheckBox( self )
             
+            self._always_embed_autocompletes = wx.CheckBox( self )
+            
             self._gui_capitalisation = wx.CheckBox( self )
             
             self._gui_show_all_tags_in_autocomplete = wx.CheckBox( self )
@@ -3592,6 +3658,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             except: self._default_gui_session.SetSelection( 0 )
             
             self._confirm_client_exit.SetValue( HC.options[ 'confirm_client_exit' ] )
+            
+            self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
             
             self._gui_capitalisation.SetValue( HC.options[ 'gui_capitalisation' ] )
             
@@ -3634,10 +3702,13 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'Confirm client exit:' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._confirm_client_exit, CC.FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( self, label = 'Always embed autocomplete dropdown results window:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._always_embed_autocompletes, CC.FLAGS_MIXED )
+            
             gridbox.AddF( wx.StaticText( self, label = 'Default tag service in manage tag dialogs:' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._default_tag_repository, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default tag sort on management panel:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Default tag sort:' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._default_tag_sort, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self, label = 'Capitalise gui: ' ), CC.FLAGS_MIXED )
@@ -3662,6 +3733,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             HC.options[ 'default_gui_session' ] = self._default_gui_session.GetStringSelection()
             HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
+            HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
             HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
             HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
             HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
@@ -4249,48 +4321,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             short_wait = self._autocomplete_short_wait.GetValue()
             
             HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
-            
-        
-    
-    class _ThreadCheckerPanel( wx.Panel ):
-        
-        def __init__( self, parent ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            self._thread_times_to_check = wx.SpinCtrl( self, min = 0, max = 100 )
-            self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
-            
-            self._thread_check_period = wx.SpinCtrl( self, min = 30, max = 86400 )
-            self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
-            
-            #
-            
-            ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
-            
-            self._thread_times_to_check.SetValue( times_to_check )
-            
-            self._thread_check_period.SetValue( check_period )
-            
-            #
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'default number of times to check: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thread_times_to_check, CC.FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self, label = 'default wait in seconds between checks: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thread_check_period, CC.FLAGS_MIXED )
-            
-            self.SetSizer( gridbox )
-            
-        
-        def UpdateOptions( self ):
-            
-            HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
             
         
     
@@ -5377,6 +5407,16 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             for page in all_pages:
                 
+                page.DoOnOKStuff()
+                
+            
+        
+        for listbook in all_listbooks:
+            
+            all_pages = listbook.GetNamesToActivePages().values()
+            
+            for page in all_pages:
+                
                 if page.HasChanges():
                     
                     ( service_key, service_type, name, info ) = page.GetInfo()
@@ -5514,6 +5554,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             self._original_info = ( service_key, service_type, name, info )
             
+            self._reset_downloading = False
+            self._reset_processing = False
+            
             def InitialiseControls():
                 
                 if service_type not in HC.NONEDITABLE_SERVICES:
@@ -5548,8 +5591,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     self._pause_synchronisation = wx.CheckBox( self._repositories_panel, label = 'pause synchronisation' )
                     
-                    self._reset = wx.Button( self._repositories_panel, label = 'reset cache' )
-                    self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
+                    self._reset_processing_button = wx.Button( self._repositories_panel, label = 'reset processing cache on dialog ok' )
+                    self._reset_processing_button.Bind( wx.EVT_BUTTON, self.EventServiceResetProcessing )
+                    
+                    self._reset_downloading_button = wx.Button( self._repositories_panel, label = 'reset processing and download cache on dialog ok' )
+                    self._reset_downloading_button.Bind( wx.EVT_BUTTON, self.EventServiceResetDownload )
                     
                 
                 if service_type in HC.RATINGS_SERVICES:
@@ -5700,7 +5746,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 if service_type in HC.REPOSITORIES:
                     
                     self._repositories_panel.AddF( self._pause_synchronisation, CC.FLAGS_MIXED )
-                    self._repositories_panel.AddF( self._reset, CC.FLAGS_LONE_BUTTON )
+                    self._repositories_panel.AddF( self._reset_processing_button, CC.FLAGS_LONE_BUTTON )
+                    self._repositories_panel.AddF( self._reset_downloading_button, CC.FLAGS_LONE_BUTTON )
                     
                     vbox.AddF( self._repositories_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
@@ -5814,6 +5861,20 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if len( potential_archives ) == 0: self._archive_sync_add.Disable()
             else: self._archive_sync_add.Enable()
+            
+        
+        def DoOnOKStuff( self ):
+            
+            ( service_key, service_type, name, info ) = self._original_info
+            
+            if self._reset_downloading:
+                
+                HydrusGlobals.controller.Write( 'reset_service', service_key, delete_updates = True )
+                
+            elif self._reset_processing:
+                
+                HydrusGlobals.controller.Write( 'reset_service', service_key )
+                
             
         
         def EventArchiveAdd( self, event ):
@@ -6047,17 +6108,36 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             return ( service_key, service_type, name, info )
             
         
-        def EventServiceReset( self, event ):
+        def EventServiceResetDownload( self, event ):
             
             ( service_key, service_type, name, info ) = self._original_info
             
-            message = 'This will remove all the information for ' + name + ' from the database so it can be reprocessed. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will have to reprocess all the information that was deleted, which will take another long time.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
+            message = 'This will completely reset ' + name + ', deleting all downloaded and processed information from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will have to redownload and reprocess everything, which could take a very long time.' + os.linesep * 2 + 'If you do not understand what this button does, you definitely want to click no!'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    with wx.BusyCursor(): HydrusGlobals.controller.Write( 'reset_service', service_key )
+                    self._reset_downloading_button.SetLabel( 'everything will be reset on dialog ok!' )
+                    
+                    self._reset_downloading = True
+                    
+                
+            
+        
+        def EventServiceResetProcessing( self, event ):
+            
+            ( service_key, service_type, name, info ) = self._original_info
+            
+            message = 'This will remove all the processed information for ' + name + ' from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will have to reprocess all the downloaded updates, which could take a very long time.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._reset_processing_button.SetLabel( 'processing will be reset on dialog ok!' )
+                    
+                    self._reset_processing = True
                     
                 
             
@@ -6410,7 +6490,17 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 info[ 'frequency_type' ] = 86400
                 info[ 'frequency' ] = 7
                 info[ 'get_tags_if_redundant' ] = False
-                info[ 'initial_limit' ] = 500
+                
+                if HC.options[ 'gallery_file_limit' ] is None:
+                    
+                    file_limit = 200
+                    
+                else:
+                    
+                    file_limit = min( 200, HC.options[ 'gallery_file_limit' ] )
+                    
+                
+                info[ 'initial_limit' ] = file_limit
                 info[ 'advanced_tag_options' ] = {}
                 info[ 'advanced_import_options' ] = ClientDefaults.GetDefaultImportFileOptions()
                 info[ 'last_checked' ] = None
@@ -6581,7 +6671,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         def EventBooruSelected( self, event ): self._ConfigureAdvancedTagOptions()
         
         def EventResetCache( self, event ):
-            
             
             message = '''Resetting this subscription's cache will delete ''' + HydrusData.ConvertIntToPrettyString( len( self._original_info[ 'url_cache' ] ) ) + ''' remembered links, meaning when the subscription next runs, it will try to download those all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
             

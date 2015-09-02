@@ -1112,6 +1112,13 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in HC.REPOSITORIES:
             
+            update_dir = ClientFiles.GetExpectedUpdateDir( service_key )
+            
+            if not os.path.exists( update_dir ):
+                
+                os.mkdir( update_dir )
+                
+            
             if 'first_timestamp' not in info: info[ 'first_timestamp' ] = None
             if 'next_download_timestamp' not in info: info[ 'next_download_timestamp' ] = 0
             if 'next_processing_timestamp' not in info: info[ 'next_processing_timestamp' ] = 0
@@ -4629,7 +4636,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._c.execute( 'DELETE FROM local_ratings WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
                             
-                            rowcount = self._GetRowCount()
+                            ratings_added -= self._GetRowCount()
                             
                             if rating is not None:
                                 
@@ -4876,7 +4883,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
         
     
-    def _ResetService( self, service_key ):
+    def _ResetService( self, service_key, delete_updates = False ):
         
         service_id = self._GetServiceId( service_key )
         
@@ -4884,18 +4891,48 @@ class DB( HydrusDB.HydrusDB ):
         
         ( service_key, service_type, name, info ) = service.ToTuple()
         
+        prefix = 'resetting ' + name
+        
+        job_key = HydrusData.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', prefix + ': deleting from main service table' )
+        
+        self._controller.pub( 'message', job_key )
+        
         self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
         if service_id in self._service_cache: del self._service_cache[ service_id ]
         
-        if service_type == HC.TAG_REPOSITORY: self._ClearCombinedAutocompleteTags()
+        if service_type == HC.TAG_REPOSITORY:
+            
+            job_key.SetVariable( 'popup_text_1', prefix + ': recomputing combined tags' )
+            
+            self._ClearCombinedAutocompleteTags()
+            
         
         if service_type in HC.REPOSITORIES:
+            
+            job_key.SetVariable( 'popup_text_1', prefix + ': deleting downloaded updates' )
+            
+            if delete_updates:
+                
+                updates_dir = ClientFiles.GetExpectedUpdateDir( service_key )
+                
+                if os.path.exists( updates_dir ):
+                    
+                    HydrusData.DeletePath( updates_dir )
+                    
+                
+                info[ 'first_timestamp' ] = None
+                info[ 'next_download_timestamp' ] = 0
+                
             
             info[ 'next_processing_timestamp' ] = 0
             
             self.pub_after_commit( 'notify_restart_repo_sync_daemon' )
             
+        
+        job_key.SetVariable( 'popup_text_1', prefix + ': recreating service' )
         
         self._AddService( service_key, service_type, name, info )
         
@@ -4903,7 +4940,10 @@ class DB( HydrusDB.HydrusDB ):
         self.pub_after_commit( 'notify_new_pending' )
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
-        HydrusData.ShowText( 'Service ' + name + ' was reset successfully!' )
+        
+        job_key.SetVariable( 'popup_text_1', prefix + ': done!' )
+        
+        job_key.Finish()
         
     
     def _SaveOptions( self, options ):
@@ -5670,6 +5710,41 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 171:
+            
+            self._controller.pub( 'splash_set_text', 'moving updates about' )
+            
+            for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
+                
+                try:
+                    
+                    ( service_key_encoded, gumpf ) = filename.split( '_', 1 )
+                    
+                except ValueError:
+                    
+                    continue
+                    
+                
+                dest_dir = HC.CLIENT_UPDATES_DIR + os.path.sep + service_key_encoded
+                
+                if not os.path.exists( dest_dir ):
+                    
+                    os.mkdir( dest_dir )
+                    
+                
+                source_path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                dest_path = dest_dir + os.path.sep + gumpf
+                
+                shutil.move( source_path, dest_path )
+                
+            
+            #
+            
+            service_ids = self._GetServiceIds( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            
+            for service_id in service_ids: self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
+            
+        
         self._controller.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6014,18 +6089,11 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self.pub_service_updates_after_commit( service_keys_to_service_updates )
                     
-                    service_key_hex = server_service_key.encode( 'hex' )
+                    update_dir = ClientFiles.GetExpectedUpdateDir( server_service_key )
                     
-                    all_update_filenames = os.listdir( HC.CLIENT_UPDATES_DIR )
-                    
-                    for filename in all_update_filenames:
+                    if os.path.exists( update_dir ):
                         
-                        if filename.startswith( service_key_hex ):
-                            
-                            path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
-                            
-                            HydrusData.DeletePath( path )
-                            
+                        HydrusData.DeletePath( update_dir )
                         
                     
                     if service_type == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
@@ -6078,7 +6146,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service = self._GetService( service_id )
                 
-                if service.GetServiceType() == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
+                service_type = service.GetServiceType()
                 
                 self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
@@ -6090,19 +6158,14 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_service_updates_after_commit( service_keys_to_service_updates )
                 
-                service_key_hex = service_key.encode( 'hex' )
+                update_dir = ClientFiles.GetExpectedUpdateDir( service_key )
                 
-                all_update_filenames = os.listdir( HC.CLIENT_UPDATES_DIR )
+                if os.path.exists( update_dir ):
+                    
+                    HydrusData.DeletePath( update_dir )
+                    
                 
-                for filename in all_update_filenames:
-                    
-                    if filename.startswith( service_key_hex ):
-                        
-                        path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
-                        
-                        HydrusData.DeletePath( path )
-                        
-                    
+                if service_type == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
                 
             elif action == HC.EDIT:
                 

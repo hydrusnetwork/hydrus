@@ -13,12 +13,37 @@ import sys
 import threading
 import time
 import traceback
-import wx
 
-class HydrusController( wx.App ):
+class HydrusController( object ):
     
-    db_class = HydrusDB.HydrusDB
     pubsub_binding_errors_to_ignore = []
+    
+    def __init__( self ):
+        
+        HydrusGlobals.controller = self
+        
+        self._pubsub = HydrusPubSub.HydrusPubSub( self, self.pubsub_binding_errors_to_ignore )
+        
+        self._currently_doing_pubsub = False
+        
+        self._daemons = []
+        self._caches = {}
+        self._managers = {}
+        
+        self._call_to_threads = [ HydrusThreading.DAEMONCallToThread( self ) for i in range( 10 ) ]
+        
+        self._timestamps = collections.defaultdict( lambda: 0 )
+        
+        self._timestamps[ 'boot' ] = HydrusData.GetNow()
+        
+        self._just_woke_from_sleep = False
+        self._system_busy = False
+        
+    
+    def _InitDB( self ):
+        
+        raise NotImplementedError()
+        
     
     def _Read( self, action, *args, **kwargs ):
         
@@ -71,8 +96,6 @@ class HydrusController( wx.App ):
     
     def GetCache( self, name ): return self._caches[ name ]
     
-    def GetDB( self ): return self._db
-    
     def GetManager( self, name ): return self._managers[ name ]
     
     def GoodTimeToDoBackgroundWork( self ):
@@ -87,45 +110,23 @@ class HydrusController( wx.App ):
         return self._just_woke_from_sleep
         
     
-    def InitDaemons( self ):
+    def InitModel( self ):
+        
+        self._db = self._InitDB()
+        
+        threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
+        
+    
+    def InitView( self ):
         
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SleepCheck', HydrusDaemons.DAEMONSleepCheck, period = 120 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemory', HydrusDaemons.DAEMONMaintainMemory, period = 300 ) )
         
     
-    def InitData( self ):
-        
-        self.SetAssertMode( wx.PYAPP_ASSERT_SUPPRESS )
-        
-        HydrusGlobals.controller = self
-        self._pubsub = HydrusPubSub.HydrusPubSub( self, self.pubsub_binding_errors_to_ignore )
-        self._currently_doing_pubsub = False
-        
-        self._daemons = []
-        self._caches = {}
-        self._managers = {}
-        
-        self._call_to_threads = [ HydrusThreading.DAEMONCallToThread( self ) for i in range( 10 ) ]
-        
-        self._timestamps = collections.defaultdict( lambda: 0 )
-        
-        self._timestamps[ 'boot' ] = HydrusData.GetNow()
-        
-        self._just_woke_from_sleep = False
-        self._system_busy = False
-        
-    
-    def InitDB( self ):
-        
-        self._db = self.db_class( self )
-        
-        threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
-        
-    
     def MaintainDB( self ):
         
-        raise NotImplementedError()
+        pass
         
     
     def MaintainMemory( self ):
@@ -151,11 +152,23 @@ class HydrusController( wx.App ):
     
     def Read( self, action, *args, **kwargs ): return self._Read( action, *args, **kwargs )
     
-    def ShutdownDB( self ):
+    def ShutdownModel( self ):
         
-        self._db.Shutdown()
+        HydrusGlobals.model_shutdown = True
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+        
+    
+    def ShutdownView( self ):
+        
+        HydrusGlobals.view_shutdown = True
+        
+        self.pub( 'wake_daemons' )
+        
+        while True in ( daemon.is_alive() for daemon in self._daemons ):
+            
+            time.sleep( 0.1 )
+            
         
     
     def SleepCheck( self ):
@@ -195,7 +208,7 @@ class HydrusController( wx.App ):
         
         while True:
             
-            if HydrusGlobals.view_shutdown: raise Exception( 'Application shutting down!' )
+            if HydrusGlobals.view_shutdown: raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
             elif self._pubsub.NoJobsQueued() and not self._currently_doing_pubsub: return
             else: time.sleep( 0.00001 )
             

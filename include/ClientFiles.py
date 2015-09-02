@@ -10,6 +10,7 @@ import HydrusSerialisable
 import itertools
 import os
 import random
+import re
 import shutil
 import stat
 import wx
@@ -58,6 +59,15 @@ def GenerateExportFilename( media, terms ):
             
             if tags_manager.HasTag( term ): filename += term
             
+        
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        filename = re.sub( '\\\\|/|:|\\*|\\?|"|<|>|\\|', '_', filename, flags = re.UNICODE )
+        
+    else:
+        
+        filename = re.sub( '/', '_', filename, flags = re.UNICODE )
         
     
     return filename
@@ -204,11 +214,15 @@ def GetThumbnailPath( hash, full_size = True ):
     
 def GetExpectedContentUpdatePackagePath( service_key, begin, subindex ):
     
-    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin ) + '_' + str( subindex ) + '.json'
+    return GetExpectedUpdateDir( service_key ) + os.path.sep + str( begin ) + '_' + str( subindex ) + '.json'
     
 def GetExpectedServiceUpdatePackagePath( service_key, begin ):
     
-    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin ) + '_metadata.json'
+    return GetExpectedUpdateDir( service_key ) + os.path.sep + str( begin ) + '_metadata.json'
+    
+def GetExpectedUpdateDir( service_key ):
+    
+    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' )
     
 def IterateAllFileHashes():
     

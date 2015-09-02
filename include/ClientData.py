@@ -1734,6 +1734,8 @@ class Service( HydrusData.HydrusYAMLBase ):
                 
                 num_updates_processed += 1
                 
+                time.sleep( 0.1 )
+                
             
             job_key.DeleteVariable( 'popup_gauge_1' )
             job_key.DeleteVariable( 'popup_text_2' )

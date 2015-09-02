@@ -85,7 +85,6 @@ class FullscreenHoverFrame( wx.Frame ):
             ( mouse_x, mouse_y ) = wx.GetMousePosition()
             
             ( my_width, my_height ) = self.GetSize()
-            ( my_x, my_y ) = self.GetPosition()
             
             ( should_resize, ( my_ideal_width, my_ideal_height ), ( my_ideal_x, my_ideal_y ) ) = self._GetIdealSizeAndPosition()
             
@@ -108,7 +107,11 @@ class FullscreenHoverFrame( wx.Frame ):
             
             in_position = in_x and in_y
             
-            mouse_over_important_media = ( ClientGUICanvas.ShouldHaveAnimationBar( self._current_media ) or mime in HC.VIDEO or mime == HC.APPLICATION_FLASH ) and self.GetParent().MouseIsOverMedia()
+            mouse_is_over_interactable_media = mime == HC.APPLICATION_FLASH and self.GetParent().MouseIsOverMedia()
+            
+            mouse_is_near_animation_bar = self.GetParent().MouseIsNearAnimationBar()
+            
+            mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
             
             current_focus = wx.Window.FindFocus()
             
@@ -123,7 +126,7 @@ class FullscreenHoverFrame( wx.Frame ):
                 tlp = tlp.GetParent()
                 
             
-            ready_to_show = in_position and not mouse_over_important_media and no_dialogs_open and my_parent_in_focus_tree
+            ready_to_show = in_position and not mouse_is_over_something_important and no_dialogs_open and my_parent_in_focus_tree
             ready_to_hide = not in_position or not no_dialogs_open or not my_parent_in_focus_tree
             
             if ready_to_show:

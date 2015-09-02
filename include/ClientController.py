@@ -28,19 +28,17 @@ import threading
 import time
 import traceback
 import wx
-import wx.richtext
 from twisted.internet import reactor
 from twisted.internet import defer
 
-ID_ANIMATED_EVENT_TIMER = wx.NewId()
-ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
-
-MAINTENANCE_PERIOD = 5 * 60
-
 class Controller( HydrusController.HydrusController ):
     
-    db_class = ClientDB.DB
     pubsub_binding_errors_to_ignore = [ wx.PyDeadObjectError ]
+    
+    def _InitDB( self ):
+        
+        return ClientDB.DB( self )
+        
     
     def BackupDatabase( self ):
         
@@ -79,10 +77,10 @@ class Controller( HydrusController.HydrusController ):
                 
             except Exception as e:
                 
-                print( 'CallBlockingToWx just caught this error:' )
-                print( traceback.format_exc() )
-                
                 job_key.SetVariable( 'error', e )
+                
+                print( 'CallBlockingToWx just caught this error:' )
+                HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally: job_key.Finish()
             
@@ -102,6 +100,43 @@ class Controller( HydrusController.HydrusController ):
         
         if job_key.HasVariable( 'result' ): return job_key.GetVariable( 'result' )
         else: raise job_key.GetVariable( 'error' )
+        
+    
+    def CheckAlreadyRunning( self ):
+    
+        while HydrusData.IsAlreadyRunning( 'client' ):
+            
+            self.pub( 'splash_set_text', 'client already running' )
+            
+            def wx_code():
+                
+                message = 'It looks like another instance of this client is already running, so this instance cannot start.'
+                message += os.linesep * 2
+                message += 'If the old instance is closing and does not quit for a _very_ long time, it is usually safe to force-close it from task manager.'
+                
+                with ClientGUIDialogs.DialogYesNo( self._splash, message, 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
+                    
+                    if dlg.ShowModal() != wx.ID_YES:
+                        
+                        raise HydrusExceptions.PermissionException()
+                        
+                    
+                
+            
+            self.CallBlockingToWx( wx_code )
+            
+            for i in range( 10, 0, -1 ):
+                
+                if not HydrusData.IsAlreadyRunning( 'client' ):
+                    
+                    break
+                    
+                
+                self.pub( 'splash_set_text', 'waiting ' + str( i ) + ' seconds' )
+                
+                time.sleep( 1 )
+                
+            
         
     
     def Clipboard( self, data_type, data ):
@@ -224,25 +259,29 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
-        try: self._splash = ClientGUI.FrameSplash()
+        try:
+            
+            self._gui.TestAbleToClose()
+            
+        except HydrusExceptions.PermissionException:
+            
+            return
+            
+        
+        try:
+            
+            self._splash = ClientGUI.FrameSplash()
+            
         except Exception as e:
             
             print( 'There was an error trying to start the splash screen!' )
             
             print( traceback.format_exc() )
             
-            try:
-                
-                wx.CallAfter( self._splash.Destroy )
-                
-            except: pass
-            
-            raise e
-            
         
         exit_thread = threading.Thread( target = self.THREADExitEverything, name = 'Application Exit Thread' )
         
-        wx.CallAfter( exit_thread.start )
+        exit_thread.start()
         
     
     def ForceIdle( self ):
@@ -253,9 +292,17 @@ class Controller( HydrusController.HydrusController ):
         self.pub( 'refresh_status' )
         
     
-    def GetGUI( self ): return self._gui
+    def ForceUnbusy( self ):
+        
+        self._system_busy = False
+        
+        self.pub( 'wake_daemons' )
+        self.pub( 'refresh_status' )
+        
     
-    def GetManager( self, manager_type ): return self._managers[ manager_type ]
+    def GetDB( self ): return self._db
+    
+    def GetGUI( self ): return self._gui
     
     def GetOptions( self ):
         
@@ -267,24 +314,97 @@ class Controller( HydrusController.HydrusController ):
         return self._services_manager
         
     
-    def InitCheckPassword( self ):
+    def InitModel( self ):
         
-        while True:
+        self.pub( 'splash_set_text', 'booting db' )
+        
+        self._http = HydrusNetworking.HTTPConnectionManager()
+        
+        HydrusController.HydrusController.InitModel( self )
+        
+        self._options = self.Read( 'options' )
+        
+        HC.options = self._options
+    
+        self._services_manager = ClientData.ServicesManager()
+        
+        self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
+        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
+        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager()
+        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
+        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager()
+        self._managers[ 'undo' ] = ClientData.UndoManager()
+        self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
+        
+        if HC.options[ 'proxy' ] is not None:
             
-            with wx.PasswordEntryDialog( self._splash, 'Enter your password', 'Enter password' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    if hashlib.sha256( dlg.GetValue() ).digest() == self._options[ 'password' ]: break
-                    
-                else: raise HydrusExceptions.PermissionException()
-                
+            ( proxytype, host, port, username, password ) = HC.options[ 'proxy' ]
             
+            HydrusNetworking.SetProxy( proxytype, host, port, username, password )
+            
+        
+        def wx_code():
+            
+            self._caches[ 'fullscreen' ] = ClientCaches.RenderedImageCache( 'fullscreen' )
+            self._caches[ 'preview' ] = ClientCaches.RenderedImageCache( 'preview' )
+            self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache()
+            
+            CC.GlobalBMPs.STATICInitialise()
+            
+        
+        self.CallBlockingToWx( wx_code )
+        
+        self.sub( self, 'Clipboard', 'clipboard' )
+        self.sub( self, 'RestartServer', 'restart_server' )
+        self.sub( self, 'RestartBooru', 'restart_booru' )
         
     
-    def InitDaemons( self ):
+    def InitView( self ):
         
-        HydrusController.HydrusController.InitDaemons( self )
+        if self._options[ 'password' ] is not None:
+            
+            self.pub( 'splash_set_text', 'waiting for password' )
+            
+            def wx_code_password():
+                
+                while True:
+                    
+                    with wx.PasswordEntryDialog( self._splash, 'Enter your password', 'Enter password' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            if hashlib.sha256( dlg.GetValue() ).digest() == self._options[ 'password' ]: break
+                            
+                        else: raise HydrusExceptions.PermissionException( 'Bad password check' )
+                        
+                    
+                
+            
+            self.CallBlockingToWx( wx_code_password )
+            
+        
+        self.pub( 'splash_set_text', 'booting gui' )
+        
+        def wx_code_gui():
+            
+            self._gui = ClientGUI.FrameGUI()
+            
+            # this is because of some bug in wx C++ that doesn't add these by default
+            wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
+            wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextXMLHandler() )
+            
+            self.ResetIdleTimer()
+            
+        
+        self.CallBlockingToWx( wx_code_gui )
+        
+        HydrusController.HydrusController.InitView( self )
+        
+        self._local_service = None
+        self._booru_service = None
+        
+        self.RestartServer()
+        self.RestartBooru()
         
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )
@@ -297,52 +417,8 @@ class Controller( HydrusController.HydrusController ):
         
         self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 ) )
         
-    
-    def InitGUI( self ):
-        
-        self._managers = {}
-        
-        self._services_manager = ClientData.ServicesManager()
-        
-        self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
-        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
-        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager()
-        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
-        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager()
-        self._managers[ 'undo' ] = ClientData.UndoManager()
-        self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
-        
-        self._caches[ 'fullscreen' ] = ClientCaches.RenderedImageCache( 'fullscreen' )
-        self._caches[ 'preview' ] = ClientCaches.RenderedImageCache( 'preview' )
-        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache()
-        
-        if HC.options[ 'proxy' ] is not None:
-            
-            ( proxytype, host, port, username, password ) = HC.options[ 'proxy' ]
-            
-            HydrusNetworking.SetProxy( proxytype, host, port, username, password )
-            
-        
-        CC.GlobalBMPs.STATICInitialise()
-        
-        self._gui = ClientGUI.FrameGUI()
-        
-        self.sub( self, 'Clipboard', 'clipboard' )
-        self.sub( self, 'RestartServer', 'restart_server' )
-        self.sub( self, 'RestartBooru', 'restart_booru' )
-        
-        # this is because of some bug in wx C++ that doesn't add these by default
-        wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
-        wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextXMLHandler() )
-        
         if HydrusGlobals.is_first_start: wx.CallAfter( self._gui.DoFirstStart )
         if HydrusGlobals.is_db_updated: wx.CallLater( 1, HydrusData.ShowText, 'The client has updated to version ' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + '!' )
-        
-        self.RestartServer()
-        self.RestartBooru()
-        self.InitDaemons()
-        
-        self.ResetIdleTimer()
         
     
     def MaintainDB( self ):
@@ -397,38 +473,6 @@ class Controller( HydrusController.HydrusController ):
     def NotifyPubSubs( self ):
         
         wx.CallAfter( self.ProcessPubSub )
-        
-    
-    def OnInit( self ):
-        
-        self.InitData()
-        
-        self._local_service = None
-        self._booru_service = None
-        
-        self._http = HydrusNetworking.HTTPConnectionManager()
-        
-        try:
-            
-            self._splash = ClientGUI.FrameSplash()
-            
-        except:
-            
-            print( 'There was an error trying to start the splash screen!' )
-            
-            print( traceback.format_exc() )
-            
-            try: wx.CallAfter( self._splash.Destroy )
-            except: pass
-            
-            return False
-            
-        
-        boot_thread = threading.Thread( target = self.THREADBootEverything, name = 'Application Boot Thread' )
-        
-        wx.CallAfter( boot_thread.start )
-        
-        return True
         
     
     def PrepStringForDisplay( self, text ):
@@ -603,11 +647,104 @@ class Controller( HydrusController.HydrusController ):
                         
                         restart_thread = threading.Thread( target = THREADRestart, name = 'Application Restart Thread' )
                         
-                        wx.CallAfter( restart_thread.start )
+                        restart_thread.start()
                         
                         
                     
                 
+            
+        
+    
+    def Run( self ):
+        
+        self._app = wx.App()
+        
+        self._app.SetAssertMode( wx.PYAPP_ASSERT_SUPPRESS )
+        
+        try:
+            
+            self._splash = ClientGUI.FrameSplash()
+            
+        except:
+            
+            print( 'There was an error trying to start the splash screen!' )
+            
+            print( traceback.format_exc() )
+            
+            raise
+            
+        
+        self.pub( 'splash_set_text', 'initialising' )
+        
+        boot_thread = threading.Thread( target = self.THREADBootEverything, name = 'Application Boot Thread' )
+        
+        boot_thread.start()
+        
+        self._app.MainLoop()
+        
+    
+    def ShutdownModel( self ):
+    
+        self.pub( 'splash_set_text', 'exiting db' )
+        
+        HydrusController.HydrusController.ShutdownModel( self )
+        
+    
+    def ShutdownView( self ):
+        
+        self.pub( 'splash_set_text', 'exiting gui' )
+        
+        self.CallBlockingToWx( self._gui.Shutdown )
+        
+        self.pub( 'splash_set_text', 'waiting for daemons to exit' )
+        
+        HydrusController.HydrusController.ShutdownView( self )
+        
+        idle_shutdown_action = self._options[ 'idle_shutdown' ]
+        
+        if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
+            
+            # callblockingtowx needs view_shutdown to be true for the job_key to not quit early lol! fix this!
+            
+            HydrusGlobals.view_shutdown = False
+            
+            self.pub( 'splash_set_text', 'running maintenance' )
+            
+            self.ResetIdleTimer()
+            
+            do_it = True
+            
+            if CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
+                
+                if self.ThereIsIdleShutdownWorkDue():
+                    
+                    def wx_code():
+                        
+                        text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( self._options[ 'idle_shutdown_max_minutes' ] ) + ' minutes\' maintenance work?'
+                        
+                        with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
+                            
+                            if dlg_yn.ShowModal() == wx.ID_YES:
+                                
+                                return True
+                                
+                            else:
+                                
+                                return False
+                                
+                            
+                        
+                    
+                    do_it = self.CallBlockingToWx( wx_code )
+                    
+                
+            
+            if do_it:
+                
+                self.DoIdleShutdownWork()
+                
+            
+            HydrusGlobals.view_shutdown = True
             
         
     
@@ -707,67 +844,25 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            while HydrusData.IsAlreadyRunning():
-                
-                self.pub( 'splash_set_text', 'client already running' )
-                
-                def wx_code():
-                    
-                    message = 'It looks like another instance of this client is already running, so this instance cannot start.'
-                    message += os.linesep * 2
-                    message += 'If the old instance is closing and does not quit for a _very_ long time, it is usually safe to force-close it from task manager.'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self._splash, message, 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
-                        
-                        if dlg.ShowModal() != wx.ID_YES:
-                            
-                            raise HydrusExceptions.PermissionException()
-                            
-                        
-                    
-                
-                self.CallBlockingToWx( wx_code )
-                
-                for i in range( 10, 0, -1 ):
-                    
-                    if not HydrusData.IsAlreadyRunning():
-                        
-                        break
-                        
-                    
-                    self.pub( 'splash_set_text', 'waiting ' + str( i ) + ' seconds' )
-                    
-                    time.sleep( 1 )
-                    
-                
+            self.CheckAlreadyRunning()
             
-            self.pub( 'splash_set_text', 'booting db' )
+            HydrusData.RecordRunningStart( 'client' )
             
-            self.InitDB() # can't run on wx thread because we need event queue free to update splash text
+            self.InitModel()
             
-            self._options = self.Read( 'options' )
+            self.InitView()
             
-            HC.options = self._options
+        except HydrusExceptions.PermissionException as e:
             
-            if self._options[ 'password' ] is not None:
-                
-                self.pub( 'splash_set_text', 'waiting for password' )
-                
-                self.CallBlockingToWx( self.InitCheckPassword )
-                
+            print( e )
             
-            self.pub( 'splash_set_text', 'booting gui' )
-            
-            self.CallBlockingToWx( self.InitGUI )
-            
-        except HydrusExceptions.PermissionException as e: pass
         except:
-            
-            traceback.print_exc()
             
             text = 'A serious error occured while trying to start the program. Its traceback will be shown next. It should have also been written to client.log.'
             
-            print( text )
+            traceback.print_exc()
+            
+            HydrusData.DebugPrint( text )
             
             wx.CallAfter( wx.MessageBox, text )
             wx.CallAfter( wx.MessageBox, traceback.format_exc() )
@@ -780,70 +875,11 @@ class Controller( HydrusController.HydrusController ):
     
     def THREADExitEverything( self ):
         
-        self.pub( 'splash_set_text', 'exiting gui' )
-        
-        try: self.CallBlockingToWx( self._gui.TestAbleToClose )
-        except:
-            
-            self.pub( 'splash_destroy' )
-            
-            return
-            
-        
         try:
             
-            self.CallBlockingToWx( self._gui.Shutdown )
+            self.ShutdownView()
             
-            HydrusGlobals.view_shutdown = True
-            
-            self.pub( 'wake_daemons' )
-            
-            self.pub( 'splash_set_text', 'waiting for daemons to exit' )
-            
-            while True in ( daemon.is_alive() for daemon in self._daemons ):
-                
-                time.sleep( 0.1 )
-                
-            
-            idle_shutdown_action = self._options[ 'idle_shutdown' ]
-            
-            if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
-                
-                self.ResetIdleTimer()
-                
-                self.pub( 'splash_set_text', 'running maintenance' )
-                
-                do_it = True
-                
-                if True and CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
-                    
-                    if self.ThereIsIdleShutdownWorkDue():
-                        
-                        text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( self._options[ 'idle_shutdown_max_minutes' ] ) + ' minutes\' maintenance work?'
-                        
-                        with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
-                            
-                            if dlg_yn.ShowModal() != wx.ID_YES:
-                                
-                                do_it = False
-                                
-                            
-                        
-                    
-                
-                if do_it:
-                    
-                    HydrusGlobals.view_shutdown = False
-                    
-                    self.DoIdleShutdownWork()
-                    
-                    HydrusGlobals.view_shutdown = True
-                    
-                
-            
-            self.pub( 'splash_set_text', 'exiting db' )
-            
-            self.ShutdownDB() # can't run on wx thread because we need event queue free to update splash text
+            self.ShutdownModel()
             
         except HydrusExceptions.PermissionException as e: pass
         except:
@@ -852,7 +888,7 @@ class Controller( HydrusController.HydrusController ):
             
             text = 'A serious error occured while trying to exit the program. Its traceback will be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
             
-            print( text )
+            HydrusData.DebugPrint( text )
             
             wx.CallAfter( wx.MessageBox, text )
             

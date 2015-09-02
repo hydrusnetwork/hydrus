@@ -50,8 +50,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles ) )
         
         self._statusbar = self.CreateStatusBar()
-        self._statusbar.SetFieldsCount( 3 )
-        self._statusbar.SetStatusWidths( [ -1, 25, 50 ] )
+        self._statusbar.SetFieldsCount( 4 )
+        self._statusbar.SetStatusWidths( [ -1, 25, 25, 50 ] )
         
         self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
         
@@ -64,7 +64,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._tab_right_click_index = -1
         
-        HydrusGlobals.controller.SetTopWindow( self )
+        wx.GetApp().SetTopWindow( self )
         
         self.RefreshAcceleratorTable()
         
@@ -242,19 +242,26 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     HydrusData.ShowText( u'Starting server\u2026' )
                     
-                    my_scriptname = sys.argv[0]
+                    if HC.PLATFORM_WINDOWS:
+                        
+                        my_exe = HC.BASE_DIR + os.path.sep + 'client.exe'
+                        
+                    else:
+                        
+                        my_exe = HC.BASE_DIR + os.path.sep + 'client'
+                        
                     
-                    if my_scriptname.endswith( 'pyw' ):
+                    if sys.executable == my_exe:
+                    
+                        if HC.PLATFORM_WINDOWS: subprocess.Popen( [ HC.BASE_DIR + os.path.sep + 'server.exe' ] )
+                        else: subprocess.Popen( [ '.' + HC.BASE_DIR + os.path.sep + 'server' ] )
+                        
+                    else:
                         
                         if HC.PLATFORM_WINDOWS or HC.PLATFORM_OSX: python_bin = 'pythonw'
                         else: python_bin = 'python'
                         
-                        subprocess.Popen( [ python_bin, HC.BASE_DIR + os.path.sep + 'server.pyw' ] )
-                        
-                    else:
-                        
-                        if HC.PLATFORM_WINDOWS: subprocess.Popen( [ HC.BASE_DIR + os.path.sep + 'server.exe' ] )
-                        else: subprocess.Popen( [ './' + HC.BASE_DIR + os.path.sep + 'server' ] )
+                        subprocess.Popen( [ python_bin, HC.BASE_DIR + os.path.sep + 'server.py' ] )
                         
                     
                     time_waited = 0
@@ -468,7 +475,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         if polite:
             
             try: page.TestAbleToClose()
-            except: return
+            except HydrusExceptions.PermissionException:
+                
+                return
+                
             
         
         page.Pause()
@@ -967,6 +977,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'force_idle' ), p( 'Force Idle Mode' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'force_unbusy' ), p( 'Force Unbusy Mode' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ) )
             
@@ -1061,7 +1072,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
             
             try: page.TestAbleToClose()
-            except: return
+            except HydrusExceptions.PermissionException:
+                
+                return
+                
             
         
         while self._notebook.GetPageCount() > 0:
@@ -1371,6 +1385,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             idle_status = ''
             
         
+        if HydrusGlobals.controller.SystemBusy():
+            
+            busy_status = 'busy'
+            
+        else:
+            
+            busy_status = ''
+            
+        
         if HydrusGlobals.controller.GetDB().CurrentlyDoingJob():
             
             db_status = 'db locked'
@@ -1382,7 +1405,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._statusbar.SetStatusText( media_status, number = 0 )
         self._statusbar.SetStatusText( idle_status, number = 1 )
-        self._statusbar.SetStatusText( db_status, number = 2 )
+        self._statusbar.SetStatusText( busy_status, number = 2 )
+        self._statusbar.SetStatusText( db_status, number = 3 )
         
     
     def _RegenerateThumbnails( self ):
@@ -1984,6 +2008,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'force_idle':
                 
                 HydrusGlobals.controller.ForceIdle()
+            elif command == 'force_unbusy':
+                
+                HydrusGlobals.controller.ForceUnbusy()
                 
             elif command == '8chan_board': webbrowser.open( 'http://8ch.net/hydrus/index.html' )
             elif command == 'file_integrity': self._CheckFileIntegrity()
@@ -2333,7 +2360,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         pos = ( pos_x + 25, pos_y + 50 )
         
-        tlp = HydrusGlobals.controller.GetTopWindow()
+        tlp = wx.GetApp().GetTopWindow()
         
         ClientGUICommon.Frame.__init__( self, tlp, title = HydrusGlobals.controller.PrepStringForDisplay( 'Review Services' ), pos = pos )
         
@@ -2444,234 +2471,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def __init__( self, parent, service_key ):
             
-            def InitialiseControls():
-                
-                if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
-                    
-                    self._info_panel = ClientGUICommon.StaticBox( self, 'service information' )
-                    
-                    if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
-                        
-                        self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
-                        self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
-                        if service_type == HC.FILE_REPOSITORY:
-                            
-                            self._num_thumbs = 0
-                            self._num_local_thumbs = 0
-                            
-                            self._thumbnails = ClientGUICommon.Gauge( self._info_panel )
-                            
-                            self._thumbnails_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                            
-                        
-                    elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
-                        
-                        self._tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
-                        if service_type == HC.TAG_REPOSITORY:
-                            
-                            self._deleted_tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                            
-                        
-                    elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                        
-                        self._ratings_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
-                    elif service_type == HC.LOCAL_BOORU:
-                        
-                        self._num_shares = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
-                        self._bytes = ClientGUICommon.Gauge( self._info_panel )
-                        
-                        self._bytes_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
-                    
-                
-                if service_type in HC.RESTRICTED_SERVICES:
-                    
-                    self._permissions_panel = ClientGUICommon.StaticBox( self, 'service permissions' )
-                    
-                    self._account_type = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER )
-                    
-                    self._age = ClientGUICommon.Gauge( self._permissions_panel )
-                    
-                    self._age_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                    self._bytes = ClientGUICommon.Gauge( self._permissions_panel )
-                    
-                    self._bytes_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                    self._requests = ClientGUICommon.Gauge( self._permissions_panel )
-                    
-                    self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                
-                if service_type in HC.REPOSITORIES:
-                    
-                    self._synchro_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
-                    
-                    self._updates = ClientGUICommon.Gauge( self._synchro_panel )
-                    
-                    self._updates_text = wx.StaticText( self._synchro_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                
-                if service_type == HC.LOCAL_BOORU:
-                    
-                    self._booru_shares_panel = ClientGUICommon.StaticBox( self, 'shares' )
-                    
-                    self._booru_shares = ClientGUICommon.SaneListCtrl( self._booru_shares_panel, -1, [ ( 'title', 110 ), ( 'text', -1 ), ( 'expires', 170 ), ( 'num files', 70 ) ], delete_key_callback = self.DeleteBoorus )
-                    
-                    self._booru_open_search = wx.Button( self._booru_shares_panel, label = 'open share in new page' )
-                    self._booru_open_search.Bind( wx.EVT_BUTTON, self.EventBooruOpenSearch )
-                    
-                    self._copy_internal_share_link = wx.Button( self._booru_shares_panel, label = 'copy internal share link' )
-                    self._copy_internal_share_link.Bind( wx.EVT_BUTTON, self.EventCopyInternalShareURL )
-                    
-                    self._copy_external_share_link = wx.Button( self._booru_shares_panel, label = 'copy external share link' )
-                    self._copy_external_share_link.Bind( wx.EVT_BUTTON, self.EventCopyExternalShareURL )
-                    
-                    self._booru_edit = wx.Button( self._booru_shares_panel, label = 'edit' )
-                    self._booru_edit.Bind( wx.EVT_BUTTON, self.EventBooruEdit )
-                    
-                    self._booru_delete = wx.Button( self._booru_shares_panel, label = 'delete' )
-                    self._booru_delete.Bind( wx.EVT_BUTTON, self.EventBooruDelete )
-                    
-                
-                if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
-                    
-                    self._service_wide_update = wx.Button( self, label = 'perform a service-wide operation' )
-                    self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
-                    
-                
-                if service_type == HC.SERVER_ADMIN:
-                    
-                    self._init = wx.Button( self, label = 'initialise server' )
-                    self._init.Bind( wx.EVT_BUTTON, self.EventServerInitialise )
-                    
-                
-                if service_type in HC.RESTRICTED_SERVICES:
-                    
-                    self._refresh = wx.Button( self, label = 'refresh account' )
-                    self._refresh.Bind( wx.EVT_BUTTON, self.EventServiceRefreshAccount )
-                    
-                    self._copy_account_key = wx.Button( self, label = 'copy account key' )
-                    self._copy_account_key.Bind( wx.EVT_BUTTON, self.EventCopyAccountKey )
-                    
-                
-            
-            def PopulateControls():
-                
-                self._DisplayService()
-                
-            
-            def ArrangeControls():
-                
-                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
-                    
-                    if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
-                        
-                        self._info_panel.AddF( self._files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        
-                        self._info_panel.AddF( self._deleted_files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        
-                        if service_type == HC.FILE_REPOSITORY:
-                            
-                            self._info_panel.AddF( self._thumbnails, CC.FLAGS_EXPAND_PERPENDICULAR )
-                            self._info_panel.AddF( self._thumbnails_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                            
-                        
-                    elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
-                        
-                        self._info_panel.AddF( self._tags_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        
-                        if service_type == HC.TAG_REPOSITORY:
-                            
-                            self._info_panel.AddF( self._deleted_tags_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                            
-                        
-                    elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                        
-                        self._info_panel.AddF( self._ratings_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        
-                    elif service_type == HC.LOCAL_BOORU:
-                        
-                        self._info_panel.AddF( self._num_shares, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        self._info_panel.AddF( self._bytes, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        self._info_panel.AddF( self._bytes_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        
-                    
-                    vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-                if service_type in HC.RESTRICTED_SERVICES:
-                    
-                    self._permissions_panel.AddF( self._account_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._age, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._age_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._bytes, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._bytes_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._requests, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._requests_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                    vbox.AddF( self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-                if service_type in HC.REPOSITORIES:
-                    
-                    self._synchro_panel.AddF( self._updates, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._synchro_panel.AddF( self._updates_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                    vbox.AddF( self._synchro_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-                if service_type == HC.LOCAL_BOORU:
-                    
-                    self._booru_shares_panel.AddF( self._booru_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    b_box = wx.BoxSizer( wx.HORIZONTAL )
-                    b_box.AddF( self._booru_open_search, CC.FLAGS_MIXED )
-                    b_box.AddF( self._copy_internal_share_link, CC.FLAGS_MIXED )
-                    b_box.AddF( self._copy_external_share_link, CC.FLAGS_MIXED )
-                    b_box.AddF( self._booru_edit, CC.FLAGS_MIXED )
-                    b_box.AddF( self._booru_delete, CC.FLAGS_MIXED )
-                    
-                    self._booru_shares_panel.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-                    
-                    vbox.AddF( self._booru_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    
-                
-                if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ]:
-                    
-                    repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                    if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
-                        
-                        repo_buttons_hbox.AddF( self._service_wide_update, CC.FLAGS_MIXED )
-                        
-                    
-                    if service_type == HC.SERVER_ADMIN:
-                        
-                        repo_buttons_hbox.AddF( self._init, CC.FLAGS_MIXED )
-                        
-                    
-                    if service_type in HC.RESTRICTED_SERVICES:
-                        
-                        repo_buttons_hbox.AddF( self._refresh, CC.FLAGS_MIXED )
-                        repo_buttons_hbox.AddF( self._copy_account_key, CC.FLAGS_MIXED )
-                        
-                    
-                    vbox.AddF( repo_buttons_hbox, CC.FLAGS_BUTTON_SIZER )
-                    
-                
-                self.SetSizer( vbox )
-                
-            
             wx.ScrolledWindow.__init__( self, parent )
             
             self.SetScrollRate( 0, 20 )
@@ -2682,11 +2481,232 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             service_type = self._service.GetServiceType()
             
-            InitialiseControls()
+            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
+                
+                self._info_panel = ClientGUICommon.StaticBox( self, 'service information' )
+                
+                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
+                    
+                    self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                    self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                    if service_type == HC.FILE_REPOSITORY:
+                        
+                        self._num_thumbs = 0
+                        self._num_local_thumbs = 0
+                        
+                        self._thumbnails = ClientGUICommon.Gauge( self._info_panel )
+                        
+                        self._thumbnails_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
+                    
+                elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                    
+                    self._tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                    if service_type == HC.TAG_REPOSITORY:
+                        
+                        self._deleted_tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
+                    
+                elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                    
+                    self._ratings_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                elif service_type == HC.LOCAL_BOORU:
+                    
+                    self._num_shares = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                    self._bytes = ClientGUICommon.Gauge( self._info_panel )
+                    
+                    self._bytes_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                
             
-            PopulateControls()
+            if service_type in HC.RESTRICTED_SERVICES:
+                
+                self._permissions_panel = ClientGUICommon.StaticBox( self, 'service permissions' )
+                
+                self._account_type = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER )
+                
+                self._age = ClientGUICommon.Gauge( self._permissions_panel )
+                
+                self._age_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                
+                self._bytes = ClientGUICommon.Gauge( self._permissions_panel )
+                
+                self._bytes_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                
+                self._requests = ClientGUICommon.Gauge( self._permissions_panel )
+                
+                self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                
             
-            ArrangeControls()
+            if service_type in HC.REPOSITORIES:
+                
+                self._synchro_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
+                
+                self._updates = ClientGUICommon.Gauge( self._synchro_panel )
+                
+                self._updates_text = wx.StaticText( self._synchro_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                
+                self._immediate_sync = wx.Button( self._synchro_panel, label = 'sync now' )
+                self._immediate_sync.Bind( wx.EVT_BUTTON, self.EventImmediateSync)
+                
+            
+            if service_type == HC.LOCAL_BOORU:
+                
+                self._booru_shares_panel = ClientGUICommon.StaticBox( self, 'shares' )
+                
+                self._booru_shares = ClientGUICommon.SaneListCtrl( self._booru_shares_panel, -1, [ ( 'title', 110 ), ( 'text', -1 ), ( 'expires', 170 ), ( 'num files', 70 ) ], delete_key_callback = self.DeleteBoorus )
+                
+                self._booru_open_search = wx.Button( self._booru_shares_panel, label = 'open share in new page' )
+                self._booru_open_search.Bind( wx.EVT_BUTTON, self.EventBooruOpenSearch )
+                
+                self._copy_internal_share_link = wx.Button( self._booru_shares_panel, label = 'copy internal share link' )
+                self._copy_internal_share_link.Bind( wx.EVT_BUTTON, self.EventCopyInternalShareURL )
+                
+                self._copy_external_share_link = wx.Button( self._booru_shares_panel, label = 'copy external share link' )
+                self._copy_external_share_link.Bind( wx.EVT_BUTTON, self.EventCopyExternalShareURL )
+                
+                self._booru_edit = wx.Button( self._booru_shares_panel, label = 'edit' )
+                self._booru_edit.Bind( wx.EVT_BUTTON, self.EventBooruEdit )
+                
+                self._booru_delete = wx.Button( self._booru_shares_panel, label = 'delete' )
+                self._booru_delete.Bind( wx.EVT_BUTTON, self.EventBooruDelete )
+                
+            
+            if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                
+                self._service_wide_update = wx.Button( self, label = 'perform a service-wide operation' )
+                self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
+                
+            
+            if service_type == HC.SERVER_ADMIN:
+                
+                self._init = wx.Button( self, label = 'initialise server' )
+                self._init.Bind( wx.EVT_BUTTON, self.EventServerInitialise )
+                
+            
+            if service_type in HC.RESTRICTED_SERVICES:
+                
+                self._refresh = wx.Button( self, label = 'refresh account' )
+                self._refresh.Bind( wx.EVT_BUTTON, self.EventServiceRefreshAccount )
+                
+                self._copy_account_key = wx.Button( self, label = 'copy account key' )
+                self._copy_account_key.Bind( wx.EVT_BUTTON, self.EventCopyAccountKey )
+                
+            
+            #
+            
+            self._DisplayService()
+            
+            #
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
+                
+                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
+                    
+                    self._info_panel.AddF( self._files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    self._info_panel.AddF( self._deleted_files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    if service_type == HC.FILE_REPOSITORY:
+                        
+                        self._info_panel.AddF( self._thumbnails, CC.FLAGS_EXPAND_PERPENDICULAR )
+                        self._info_panel.AddF( self._thumbnails_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                        
+                    
+                elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                    
+                    self._info_panel.AddF( self._tags_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    if service_type == HC.TAG_REPOSITORY:
+                        
+                        self._info_panel.AddF( self._deleted_tags_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                        
+                    
+                elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                    
+                    self._info_panel.AddF( self._ratings_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
+                elif service_type == HC.LOCAL_BOORU:
+                    
+                    self._info_panel.AddF( self._num_shares, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    self._info_panel.AddF( self._bytes, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    self._info_panel.AddF( self._bytes_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            if service_type in HC.RESTRICTED_SERVICES:
+                
+                self._permissions_panel.AddF( self._account_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._age, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._age_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._bytes, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._bytes_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._requests, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._requests_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                vbox.AddF( self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            if service_type in HC.REPOSITORIES:
+                
+                self._synchro_panel.AddF( self._updates, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._synchro_panel.AddF( self._updates_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._synchro_panel.AddF( self._immediate_sync, CC.FLAGS_LONE_BUTTON )
+                
+                vbox.AddF( self._synchro_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            if service_type == HC.LOCAL_BOORU:
+                
+                self._booru_shares_panel.AddF( self._booru_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                b_box = wx.BoxSizer( wx.HORIZONTAL )
+                b_box.AddF( self._booru_open_search, CC.FLAGS_MIXED )
+                b_box.AddF( self._copy_internal_share_link, CC.FLAGS_MIXED )
+                b_box.AddF( self._copy_external_share_link, CC.FLAGS_MIXED )
+                b_box.AddF( self._booru_edit, CC.FLAGS_MIXED )
+                b_box.AddF( self._booru_delete, CC.FLAGS_MIXED )
+                
+                self._booru_shares_panel.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+                
+                vbox.AddF( self._booru_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+            
+            if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ]:
+                
+                repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+                if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                    
+                    repo_buttons_hbox.AddF( self._service_wide_update, CC.FLAGS_MIXED )
+                    
+                
+                if service_type == HC.SERVER_ADMIN:
+                    
+                    repo_buttons_hbox.AddF( self._init, CC.FLAGS_MIXED )
+                    
+                
+                if service_type in HC.RESTRICTED_SERVICES:
+                    
+                    repo_buttons_hbox.AddF( self._refresh, CC.FLAGS_MIXED )
+                    repo_buttons_hbox.AddF( self._copy_account_key, CC.FLAGS_MIXED )
+                    
+                
+                vbox.AddF( repo_buttons_hbox, CC.FLAGS_BUTTON_SIZER )
+                
+            
+            self.SetSizer( vbox )
             
             self._timer_updates = wx.Timer( self, id = ID_TIMER_UPDATES )
             
@@ -2814,6 +2834,15 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     
                     self._updates_text.SetLabel( self._service.GetUpdateStatus() )
+                    
+                    if account.HasPermission( HC.RESOLVE_PETITIONS ):
+                        
+                        self._immediate_sync.Show()
+                        
+                    else:
+                        
+                        self._immediate_sync.Hide()
+                        
                     
                 
                 self._refresh.Enable()
@@ -3034,6 +3063,91 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
         
+        def EventImmediateSync( self, event ):
+            
+            def do_it():
+            
+                job_key = HydrusData.JobKey( pausable = True, cancellable = True )
+                
+                job_key.SetVariable( 'popup_title', self._service.GetName() + ': immediate sync' )
+                job_key.SetVariable( 'popup_text_1', 'downloading' )
+                
+                HydrusGlobals.controller.pub( 'message', job_key )
+                
+                content_update_package = self._service.Request( HC.GET, 'immediate_content_update_package' )
+                
+                c_u_p_num_rows = content_update_package.GetNumRows()
+                c_u_p_total_weight_processed = 0
+                
+                pending_content_updates = []
+                pending_weight = 0
+                
+                update_speed_string = ''
+                
+                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
+                
+                job_key.SetVariable( 'popup_text_1', content_update_index_string + 'committing' + update_speed_string )
+                
+                job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
+                
+                for content_update in content_update_package.IterateContentUpdates():
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        job_key.Delete()
+                        
+                        return
+                        
+                    
+                    pending_content_updates.append( content_update )
+                    
+                    content_update_weight = len( content_update.GetHashes() )
+                    
+                    pending_weight += content_update_weight
+                    
+                    if pending_weight > 100:
+                        
+                        content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
+                        
+                        job_key.SetVariable( 'popup_text_1', content_update_index_string + 'committing' + update_speed_string )
+                        
+                        job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
+                        
+                        precise_timestamp = HydrusData.GetNowPrecise()
+                        
+                        HydrusGlobals.controller.WriteSynchronous( 'content_updates', { self._service_key : pending_content_updates } )
+                        
+                        it_took = HydrusData.GetNowPrecise() - precise_timestamp
+                        
+                        rows_s = pending_weight / it_took
+                        
+                        update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s'
+                        
+                        c_u_p_total_weight_processed += pending_weight
+                        
+                        pending_content_updates = []
+                        pending_weight = 0
+                        
+                    
+                
+                if len( pending_content_updates ) > 0:
+                    
+                    HydrusGlobals.controller.WriteSynchronous( { self._service_key : pending_content_updates } )
+                    
+                    c_u_p_total_weight_processed += pending_weight
+                    
+                
+                job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ConvertIntToPrettyString( c_u_p_num_rows ) + ' rows added.' )
+                job_key.DeleteVariable( 'popup_gauge_1' )
+                
+                job_key.Finish()
+                
+            
+            HydrusGlobals.controller.CallToThread( do_it )
+            
+        
         def EventServiceWideUpdate( self, event ):
             
             with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._service_key ) as dlg:
@@ -3116,7 +3230,7 @@ class FrameSeedCache( ClientGUICommon.Frame ):
         
         pos = ( pos_x + 25, pos_y + 50 )
         
-        tlp = HydrusGlobals.controller.GetTopWindow()
+        tlp = wx.GetApp().GetTopWindow()
         
         ClientGUICommon.Frame.__init__( self, tlp, title = HydrusGlobals.controller.PrepStringForDisplay( 'File Import Status' ), pos = pos )
         

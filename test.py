@@ -38,11 +38,13 @@ from include import ClientCaches
 from include import ClientData
 from include import HydrusData
 
+HydrusGlobals.instance = HC.HYDRUS_TEST
+
 only_run = None
 
-class App( wx.App ):
+class Controller( object ):
     
-    def OnInit( self ):
+    def __init__( self ):
         
         HydrusGlobals.controller = self
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
@@ -93,32 +95,6 @@ class App( wx.App ):
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
         
         self._cookies = {}
-        
-        suites = []
-        
-        if only_run is None: run_all = True
-        else: run_all = False
-        
-        if run_all or only_run == 'cc': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
-        if run_all or only_run == 'daemons': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
-        if run_all or only_run == 'dialogs': suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
-        if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
-        if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
-        if run_all or only_run == 'encryption': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusEncryption ) )
-        if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
-        if run_all or only_run == 'image': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusImageHandling ) )
-        if run_all or only_run == 'nat': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
-        if run_all or only_run == 'server': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
-        if run_all or only_run == 'sessions': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
-        if run_all or only_run == 'tags': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
-        
-        suite = unittest.TestSuite( suites )
-        
-        runner = unittest.TextTestRunner( verbosity = 1 )
-        
-        runner.run( suite )
-        
-        return True
         
     
     def pub( self, topic, *args, **kwargs ):
@@ -174,6 +150,33 @@ class App( wx.App ):
     
     def ResetIdleTimer( self ): pass
     
+    def Run( self ):
+        
+        suites = []
+        
+        if only_run is None: run_all = True
+        else: run_all = False
+        
+        if run_all or only_run == 'cc': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
+        if run_all or only_run == 'daemons': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
+        if run_all or only_run == 'dialogs': suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
+        if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
+        if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
+        if run_all or only_run == 'encryption': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusEncryption ) )
+        if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
+        if run_all or only_run == 'image': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusImageHandling ) )
+        if run_all or only_run == 'nat': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
+        if run_all or only_run == 'server': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
+        if run_all or only_run == 'sessions': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
+        if run_all or only_run == 'tags': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
+        
+        suite = unittest.TestSuite( suites )
+        
+        runner = unittest.TextTestRunner( verbosity = 1 )
+        
+        runner.run( suite )
+        
+    
     def SetHTTP( self, http ): self._http = http
     
     def SetRead( self, name, value ): self._reads[ name ] = value
@@ -213,17 +216,28 @@ if __name__ == '__main__':
         
         threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
-        app = App()
+        controller = Controller()
+        
+        app = wx.App()
+        
+        win = wx.Frame( None )
+        
+        wx.CallAfter( controller.Run )
+        #threading.Thread( target = controller.Run ).start()
+        
+        wx.CallAfter( win.Destroy )
+        
+        app.MainLoop()
         
     finally:
         
         HydrusGlobals.view_shutdown = True
         
-        app.pubimmediate( 'wake_daemons' )
+        controller.pubimmediate( 'wake_daemons' )
         
         HydrusGlobals.model_shutdown = True
         
-        app.pubimmediate( 'shutdown' )
+        controller.pubimmediate( 'wake_daemons' )
         
         reactor.callFromThread( reactor.stop )
         

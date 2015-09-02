@@ -21,6 +21,9 @@ try:
     import threading
     from twisted.internet import reactor
     from include import HydrusGlobals
+    import traceback
+    
+    HydrusGlobals.instance = HC.HYDRUS_CLIENT
     
     initial_sys_stdout = sys.stdout
     initial_sys_stderr = sys.stderr
@@ -36,15 +39,14 @@ try:
             
             threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
             
-            app = ClientController.Controller()
+            controller = ClientController.Controller()
             
-            app.MainLoop()
+            controller.Run()
             
         except:
             
             print( 'hydrus client failed at ' + time.ctime() )
             
-            import traceback
             print( traceback.format_exc() )
             
         finally:
@@ -52,7 +54,8 @@ try:
             HydrusGlobals.view_shutdown = True
             HydrusGlobals.model_shutdown = True
             
-            app.pubimmediate( 'shutdown' )
+            try: controller.pubimmediate( 'wake_daemons' )
+            except: pass
             
             reactor.callFromThread( reactor.stop )
             

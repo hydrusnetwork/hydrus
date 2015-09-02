@@ -240,7 +240,7 @@ class GalleryQuery( HydrusSerialisable.SerialisableBase ):
         self._query_type = None
         self._query = None
         self._get_tags_if_redundant = False
-        self._file_limit = 500
+        self._file_limit = HC.options[ 'gallery_file_limit' ]
         self._paused = False
         self._page_index = 0
         self._url_cache = None
@@ -718,7 +718,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._query_type = None
         self._query = None
         self._get_tags_if_redundant = False
-        self._file_limit = 500
+        self._file_limit = HC.options[ 'gallery_file_limit' ]
         self._periodic = None
         self._page_index = 0
         self._url_cache = None

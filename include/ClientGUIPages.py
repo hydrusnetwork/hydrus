@@ -157,7 +157,10 @@ class Page( wx.SplitterWindow ):
             
         
     
-    def TestAbleToClose( self ): self._management_panel.TestAbleToClose()
+    def TestAbleToClose( self ):
+        
+        self._management_panel.TestAbleToClose()
+        
     
 class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
     

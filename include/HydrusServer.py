@@ -290,6 +290,7 @@ class HydrusServiceRepository( HydrusServiceRestricted ):
         root.putChild( 'num_petitions', HydrusServerResources.HydrusResourceCommandRestrictedNumPetitions( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         root.putChild( 'petition', HydrusServerResources.HydrusResourceCommandRestrictedPetition( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         root.putChild( 'content_update_package', HydrusServerResources.HydrusResourceCommandRestrictedContentUpdate( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'immediate_content_update_package', HydrusServerResources.HydrusResourceCommandRestrictedImmediateContentUpdate( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         root.putChild( 'service_update_package', HydrusServerResources.HydrusResourceCommandRestrictedServiceUpdate( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         
         return root

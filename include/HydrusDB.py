@@ -235,7 +235,7 @@ class HydrusDB( object ):
             
             try:
                 
-                ( priority, job ) = self._jobs.get( timeout = 1 )
+                ( priority, job ) = self._jobs.get( timeout = 0.1 )
                 
                 self._currently_doing_job = True
                 
