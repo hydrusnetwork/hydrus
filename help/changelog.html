@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 172</h3></li>
+				<ul>
+					<li>the server no longer needs wx!</li>
+					<li>the server now runs from command line</li>
+					<li>the server is now .py, not .pyw!</li>
+					<li>run 'server help' for more info</li>
+					<li>improved how the controllers start</li>
+					<li>improved how the controllers stop</li>
+					<li>improved controller boot error handling</li>
+					<li>improved how pages close</li>
+					<li>general controller code cleanup</li>
+					<li>general server code cleanup</li>
+					<li>fixed the always_on_shutdown (without asking) option, which was asking anyway</li>
+					<li>removed a debug statement in isalreadyrunning code, whoops!</li>
+					<li>improved isalreadyrunning detection. it should work breddy gud now</li>
+					<li>added gallery file limit to new 'downloading' options page, which folds in the old thread checker options as well</li>
+					<li>added option to always embed the autocomplete dropdown window (rather than having it a floating window), which is now default on for Linux and OS X</li>
+					<li>manage services now supports two kinds of service reset for repositories</li>
+					<li>the service reset buttons now only fire on dialog ok</li>
+					<li>service reset will try, as cpu allows, to update its progress in a message popup window</li>
+					<li>administrators now have a 'sync now' button on the review services window that lets you catch up immediately to the service without having to wait for the normal update time (this will burn cpu time serverside, so be careful!)</li>
+					<li>fixed a bug when searching boorus with unicode-16 characters</li>
+					<li>the client updates directory is neater</li>
+					<li>'system busy' status is now shown on the status bar</li>
+					<li>'force unbusy' added to debug menu</li>
+					<li>invalid characters in export filenames will now be replaced by underscores</li>
+					<li>fixed a bug where rating services' cached file counts were not decrementing on de-ratings</li>
+					<li>rating services' cached file counts are reset on update</li>
+					<li>hover windows will pop in over video again, but will not if the mouse is _near_ the animation bar</li>
+					<li>searching for ':' in the autocomplete dropdown will no longer search the db for every single tag jej</li>
+					<li>improved some server_busy logic</li>
+					<li>improved some  server shutdown logic</li>
+				</ul>
 				<li><h3>version 171</h3></li>
 				<ul>
 					<li>improved isalreadyrunning code</li>
