@@ -5,6 +5,7 @@ import ClientDefaults
 import ClientFiles
 import ClientGUIManagement
 import ClientGUIPages
+import ClientImporting
 import ClientRatings
 import collections
 import HydrusConstants as HC
@@ -403,8 +404,8 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, 1 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGES, 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGE_PNG, 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGE_JPEG, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_PNG, ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_JPEG, ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.VIDEO, 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, 0 ) )
@@ -720,45 +721,36 @@ class TestClientDB( unittest.TestCase ):
     
     def test_import_folders( self ):
         
-        path1 = 'path1'
-        path2 = 'path2'
-        
-        details1 = { 'details' : 1 }
-        details2 = { 'details' : 2 }
-        details3 = { 'details' : 3 }
+        import_folder_1 = ClientImporting.ImportFolder( 'imp 1', path = HC.DB_DIR, mimes = HC.VIDEO, open_popup = False )
+        import_folder_2 = ClientImporting.ImportFolder( 'imp 2', path = HC.DB_DIR, mimes = HC.IMAGES, period = 1200, open_popup = False, tag = 'test' )
         
         #
         
         result = self._read( 'import_folders' )
         
-        self.assertEqual( result, {} )
+        self.assertEqual( result, [] )
         
         #
         
-        self._write( 'import_folder', path1, details1 )
-        self._write( 'import_folder', path2, details2 )
+        self._write( 'import_folder', import_folder_1 )
+        self._write( 'import_folder', import_folder_2 )
         
         result = self._read( 'import_folders' )
         
-        self.assertItemsEqual( { path1 : details1, path2 : details2 }, result )
+        for item in result:
+            
+            self.assertEqual( type( item ), ClientImporting.ImportFolder )
+            
         
         #
         
-        self._write( 'delete_import_folder', path1 )
+        self._write( 'delete_import_folder', 'imp 2' )
         
         result = self._read( 'import_folders' )
         
-        self.assertItemsEqual( { path2 : details2 }, result )
+        ( item, ) = result
         
-        #
-        
-        self._write( 'import_folder', path2, details3 )
-        
-        #
-        
-        result = self._read( 'import_folders' )
-        
-        self.assertItemsEqual( { path2 : details3 }, result )
+        self.assertEqual( item.GetName(), 'imp 1' )
         
     
     def test_init( self ):

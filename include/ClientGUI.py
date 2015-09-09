@@ -777,7 +777,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
             #submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_service_info' ), p( '&Clear Service Info Cache' ), p( 'Delete all cache service info, in case it has become desynchronised.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
             
@@ -979,8 +978,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'force_idle' ), p( 'Force Idle Mode' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'force_unbusy' ), p( 'Force Unbusy Mode' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ) )
-            
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
             
             menu.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_shortcuts' ), p( '&Shortcuts' ) )
@@ -3134,7 +3133,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 if len( pending_content_updates ) > 0:
                     
-                    HydrusGlobals.controller.WriteSynchronous( { self._service_key : pending_content_updates } )
+                    HydrusGlobals.controller.WriteSynchronous( 'content_updates', { self._service_key : pending_content_updates } )
                     
                     c_u_p_total_weight_processed += pending_weight
                     

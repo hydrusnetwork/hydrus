@@ -475,9 +475,13 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:mime is image' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.VIDEO_WEBM )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, ) )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is video/webm' )
+        
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:mime is specified' )
         
         p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : 100 } )
         

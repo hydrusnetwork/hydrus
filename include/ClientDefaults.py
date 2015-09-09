@@ -40,6 +40,9 @@ def GetClientDefaultOptions():
     options[ 'external_host' ] = None
     options[ 'gallery_file_limit' ] = 200
     options[ 'always_embed_autocompletes' ] = HC.PLATFORM_LINUX or HC.PLATFORM_OSX
+    options[ 'website_download_polite_wait' ] = 1
+    options[ 'confirm_trash' ] = True
+    options[ 'confirm_archive' ] = True
     
     system_predicates = {}
     
@@ -223,6 +226,19 @@ def GetDefaultImportFileOptions():
     result[ 'min_resolution' ] = None
     
     return result
+    
+def GetDefaultImportFileOptionsObject():
+    
+    result = GetDefaultImportFileOptions()
+    
+    automatic_archive = result[ 'auto_archive' ]
+    exclude_deleted = result[ 'exclude_deleted_files' ]
+    min_size = result[ 'min_size' ]
+    min_resolution = result[ 'min_resolution' ]
+    
+    import_file_options = ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+    
+    return import_file_options
     
 def GetDefaultBoorus():
     

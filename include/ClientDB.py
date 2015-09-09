@@ -1,6 +1,7 @@
 import ClientData
 import ClientDefaults
 import ClientFiles
+import ClientImporting
 import ClientMedia
 import ClientRatings
 import collections
@@ -4836,7 +4837,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'gui_sessions': result = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
-        elif action == 'import_folders': result = self._GetYAMLDump( YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
+        elif action == 'import_folders': result = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, *args, **kwargs )
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
@@ -5745,6 +5746,75 @@ class DB( HydrusDB.HydrusDB ):
             for service_id in service_ids: self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
             
         
+        if version == 172:
+            
+            delete_actions = {}
+            
+            delete_actions[ CC.STATUS_SUCCESSFUL ] = CC.IMPORT_FOLDER_DELETE
+            delete_actions[ CC.STATUS_REDUNDANT ] = CC.IMPORT_FOLDER_DELETE
+            delete_actions[ CC.STATUS_DELETED ] = CC.IMPORT_FOLDER_DELETE
+            delete_actions[ CC.STATUS_FAILED ] = CC.IMPORT_FOLDER_IGNORE
+            
+            sync_actions = {}
+            
+            sync_actions[ CC.STATUS_SUCCESSFUL ] = CC.IMPORT_FOLDER_IGNORE
+            sync_actions[ CC.STATUS_REDUNDANT ] = CC.IMPORT_FOLDER_IGNORE
+            sync_actions[ CC.STATUS_DELETED ] = CC.IMPORT_FOLDER_IGNORE
+            sync_actions[ CC.STATUS_FAILED ] = CC.IMPORT_FOLDER_IGNORE
+            
+            import_folders = []
+            
+            results = self._c.execute( 'SELECT dump_name, dump FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_IMPORT_FOLDER, ) )
+            
+            for ( i, ( path, details ) ) in enumerate( results ):
+                
+                name = 'import folder ' + str( i )
+                
+                import_file_options = ClientData.ImportFileOptions( automatic_archive = False, exclude_deleted = False, min_size = None, min_resolution = None )
+                
+                if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
+                    
+                    actions = delete_actions
+                    
+                else:
+                    
+                    actions = sync_actions
+                    
+                
+                period = details[ 'check_period' ]
+                tag = details[ 'local_tag' ]
+                
+                import_folder = ClientImporting.ImportFolder( name, path, import_file_options = import_file_options, actions = actions, action_locations = {}, period = period, open_popup = True, tag = tag )
+                
+                import_folder._last_checked = details[ 'last_checked' ]
+                
+                for path in details[ 'cached_imported_paths' ]:
+                    
+                    import_folder._path_cache.AddSeed( path )
+                    import_folder._path_cache.UpdateSeedStatus( path, CC.STATUS_SUCCESSFUL )
+                    
+                
+                for path in details[ 'failed_imported_paths' ]:
+                    
+                    import_folder._path_cache.AddSeed( path )
+                    import_folder._path_cache.UpdateSeedStatus( path, CC.STATUS_FAILED )
+                    
+                
+                import_folder._paused = True
+                
+                import_folders.append( import_folder )
+                
+            
+            for import_folder in import_folders:
+                
+                ( dump_type, dump_name, obj_version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( import_folder )
+                
+                dump = json.dumps( serialisable_info )
+                
+                self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, dump ) VALUES ( ?, ?, ?, ? );', ( dump_type, dump_name, obj_version, sqlite3.Binary( dump ) ) )
+                
+            
+        
         self._controller.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6270,7 +6340,7 @@ class DB( HydrusDB.HydrusDB ):
         
         print( job_key.ToString() )
         
-        wx.CallLater( 1000 * 180, job_key.Delete )
+        wx.CallLater( 1000 * 30, job_key.Delete )
         
     
     def _Write( self, action, *args, **kwargs ):
@@ -6284,7 +6354,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_gui_session': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, *args, **kwargs )
         elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )
         elif action == 'delete_imageboard': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
-        elif action == 'delete_import_folder': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
+        elif action == 'delete_import_folder': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, *args, **kwargs )
         elif action == 'delete_local_booru_share': result = self._DeleteYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'delete_orphans': result = self._DeleteOrphans( *args, **kwargs )
         elif action == 'delete_pending': result = self._DeletePending( *args, **kwargs )
@@ -6299,7 +6369,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'hydrus_session': result = self._AddHydrusSession( *args, **kwargs )
         elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
-        elif action == 'import_folder': result = self._SetYAMLDump( YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
+        elif action == 'import_folder': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'pixiv_account': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
         elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )

@@ -4140,6 +4140,248 @@ class DialogSelectYoutubeURL( Dialog ):
         self.EndModal( wx.ID_OK )
         
     
+class DialogSetupExport( Dialog ):
+    
+    def __init__( self, parent, flat_media ):
+        
+        Dialog.__init__( self, parent, 'setup export' )
+        
+        self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
+        
+        t = ClientGUICommon.ListBoxTagsSelection( self._tags_box, collapse_siblings = True )
+        
+        self._tags_box.SetTagsBox( t )
+        
+        self._tags_box.SetMinSize( ( 220, 300 ) )
+        
+        self._paths = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ], delete_key_callback = self.DeletePaths )
+        self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
+        self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
+        
+        self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
+        
+        self._directory_picker = wx.DirPickerCtrl( self._export_path_box )
+        self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventRecalcPaths )
+        
+        self._open_location = wx.Button( self._export_path_box, label = 'open this location' )
+        self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
+        
+        self._filenames_box = ClientGUICommon.StaticBox( self, 'filenames' )
+        
+        self._pattern = wx.TextCtrl( self._filenames_box )
+        
+        self._update = wx.Button( self._filenames_box, label = 'update' )
+        self._update.Bind( wx.EVT_BUTTON, self.EventRecalcPaths )
+        
+        self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
+        
+        text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
+        
+        self._export_tag_txts = wx.CheckBox( self, label = 'export tags in .txt files?' )
+        self._export_tag_txts.SetToolTipString( text )
+        
+        self._export = wx.Button( self, label = 'export' )
+        self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'close' )
+        
+        #
+        
+        for ( i, media ) in enumerate( flat_media ):
+            
+            mime = media.GetMime()
+            
+            pretty_tuple = ( HydrusData.ToString( i + 1 ), HC.mime_string_lookup[ mime ], '' )
+            data_tuple = ( ( i, media ), mime, '' )
+            
+            self._paths.Append( pretty_tuple, data_tuple )
+            
+        
+        export_path = ClientFiles.GetExportPath()
+        
+        self._directory_picker.SetPath( export_path )
+        
+        self._pattern.SetValue( '{hash}' )
+        
+        #
+        
+        top_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        top_hbox.AddF( self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        top_hbox.AddF( self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._open_location, CC.FLAGS_MIXED )
+        
+        self._export_path_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._update, CC.FLAGS_MIXED )
+        hbox.AddF( self._examples, CC.FLAGS_MIXED )
+        
+        self._filenames_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._export_tag_txts, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._export, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._cancel, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 780: x = 780
+        if y < 480: y = 480
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        wx.CallAfter( self.EventSelectPath, None )
+        wx.CallAfter( self.EventRecalcPaths, None )
+        
+        wx.CallAfter( self._export.SetFocus )
+        
+    
+    def _GetPath( self, media, terms ):
+        
+        directory = self._directory_picker.GetPath()
+        
+        filename = ClientFiles.GenerateExportFilename( media, terms )
+        
+        mime = media.GetMime()
+        
+        ext = HC.mime_ext_lookup[ mime ]
+        
+        return directory + os.path.sep + filename + ext
+        
+    
+    def _RecalcPaths( self ):
+        
+        pattern = self._pattern.GetValue()
+        
+        terms = ClientFiles.ParseExportPhrase( pattern )
+        
+        all_paths = set()
+        
+        for ( index, ( ( ordering_index, media ), mime, old_path ) ) in enumerate( self._paths.GetClientData() ):
+            
+            path = self._GetPath( media, terms )
+            
+            if path in all_paths:
+                
+                i = 1
+                
+                while self._GetPath( media, terms + [ ( 'string', HydrusData.ToString( i ) ) ] ) in all_paths: i += 1
+                
+                path = self._GetPath( media, terms + [ ( 'string', HydrusData.ToString( i ) ) ] )
+                
+            
+            all_paths.add( path )
+            
+            if path != old_path:
+                
+                mime = media.GetMime()
+                
+                self._paths.UpdateRow( index, ( HydrusData.ToString( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
+                
+            
+        
+    
+    def DeletePaths( self ):
+        
+        self._paths.RemoveAllSelected()
+        
+        self._RecalcPaths()
+        
+    
+    def EventExport( self, event ):
+        
+        self._RecalcPaths()
+        
+        export_tag_txts = self._export_tag_txts.GetValue()
+        
+        directory = self._directory_picker.GetPath()
+        
+        pattern = self._pattern.GetValue()
+        
+        terms = ClientFiles.ParseExportPhrase( pattern )
+        
+        for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
+            
+            try:
+                
+                hash = media.GetHash()
+                
+                if export_tag_txts:
+                    
+                    tags_manager = media.GetTagsManager()
+                    
+                    tags = tags_manager.GetCurrent()
+                    
+                    filename = ClientFiles.GenerateExportFilename( media, terms )
+                    
+                    txt_path = directory + os.path.sep + filename + '.txt'
+                    
+                    with open( txt_path, 'wb' ) as f:
+                        
+                        f.write( os.linesep.join( tags ) )
+                        
+                    
+                
+                source_path = ClientFiles.GetFilePath( hash, mime )
+                
+                shutil.copy( source_path, path )
+                shutil.copystat( source_path, path )
+                try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                except: pass
+                
+            except:
+                
+                wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HydrusData.ToString( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
+                
+                break
+                
+            
+        
+    
+    def EventOpenLocation( self, event ):
+        
+        directory = self._directory_picker.GetPath()
+        
+        if directory is not None and directory != '':
+            
+            try:
+                
+                HydrusFileHandling.LaunchDirectory( directory )
+                
+            except: wx.MessageBox( 'Could not open that location!' )
+        
+    
+    def EventRecalcPaths( self, event ): self._RecalcPaths()
+    
+    def EventSelectPath( self, event ):
+        
+        indices = self._paths.GetAllSelected()
+        
+        if len( indices ) == 0:
+            
+            all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in self._paths.GetClientData() ]
+            
+        else:
+            
+            all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in [ self._paths.GetClientData( index ) for index in indices ] ]
+            
+        
+        self._tags_box.SetTagsByMedia( all_media )
+        
+    
 class DialogShortcuts( Dialog ):
     
     def __init__( self, parent ):
@@ -4499,229 +4741,6 @@ class DialogShortcuts( Dialog ):
             
             self._shortcuts.RemoveAllSelected()
             
-        
-    
-class DialogSetupExport( Dialog ):
-    
-    def __init__( self, parent, flat_media ):
-        
-        def InitialiseControls():
-            
-            self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
-            
-            t = ClientGUICommon.ListBoxTagsSelection( self._tags_box, collapse_siblings = True )
-            
-            self._tags_box.SetTagsBox( t )
-            
-            self._tags_box.SetMinSize( ( 220, 300 ) )
-            
-            self._paths = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ], delete_key_callback = self.DeletePaths )
-            self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
-            self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
-            
-            self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
-            
-            self._directory_picker = wx.DirPickerCtrl( self._export_path_box )
-            self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventRecalcPaths )
-            
-            self._open_location = wx.Button( self._export_path_box, label = 'open this location' )
-            self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
-            
-            self._filenames_box = ClientGUICommon.StaticBox( self, 'filenames' )
-            
-            self._pattern = wx.TextCtrl( self._filenames_box )
-            
-            self._update = wx.Button( self._filenames_box, label = 'update' )
-            self._update.Bind( wx.EVT_BUTTON, self.EventRecalcPaths )
-            
-            self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
-            
-            self._export = wx.Button( self, label = 'export' )
-            self._export.Bind( wx.EVT_BUTTON, self.EventExport )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'close' )
-            
-    
-        def PopulateControls():
-            
-            for ( i, media ) in enumerate( flat_media ):
-                
-                mime = media.GetMime()
-                
-                pretty_tuple = ( HydrusData.ToString( i + 1 ), HC.mime_string_lookup[ mime ], '' )
-                data_tuple = ( ( i, media ), mime, '' )
-                
-                self._paths.Append( pretty_tuple, data_tuple )
-                
-            
-            export_path = ClientFiles.GetExportPath()
-            
-            self._directory_picker.SetPath( export_path )
-            
-            self._pattern.SetValue( '{hash}' )
-            
-        
-        def ArrangeControls():
-            
-            top_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            top_hbox.AddF( self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            top_hbox.AddF( self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._open_location, CC.FLAGS_MIXED )
-            
-            self._export_path_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._update, CC.FLAGS_MIXED )
-            hbox.AddF( self._examples, CC.FLAGS_MIXED )
-            
-            self._filenames_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.AddF( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._export, CC.FLAGS_LONE_BUTTON )
-            vbox.AddF( self._cancel, CC.FLAGS_LONE_BUTTON )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 780: x = 780
-            if y < 480: y = 480
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
-        Dialog.__init__( self, parent, 'setup export' )
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        wx.CallAfter( self.EventSelectPath, None )
-        wx.CallAfter( self.EventRecalcPaths, None )
-        
-        wx.CallAfter( self._export.SetFocus )
-        
-    
-    def _GetPath( self, media, terms ):
-        
-        directory = self._directory_picker.GetPath()
-        
-        filename = ClientFiles.GenerateExportFilename( media, terms )
-        
-        mime = media.GetMime()
-        
-        ext = HC.mime_ext_lookup[ mime ]
-        
-        return directory + os.path.sep + filename + ext
-        
-    
-    def _RecalcPaths( self ):
-        
-        pattern = self._pattern.GetValue()
-        
-        terms = ClientFiles.ParseExportPhrase( pattern )
-        
-        all_paths = set()
-        
-        for ( index, ( ( ordering_index, media ), mime, old_path ) ) in enumerate( self._paths.GetClientData() ):
-            
-            path = self._GetPath( media, terms )
-            
-            if path in all_paths:
-                
-                i = 1
-                
-                while self._GetPath( media, terms + [ ( 'string', HydrusData.ToString( i ) ) ] ) in all_paths: i += 1
-                
-                path = self._GetPath( media, terms + [ ( 'string', HydrusData.ToString( i ) ) ] )
-                
-            
-            all_paths.add( path )
-            
-            if path != old_path:
-                
-                mime = media.GetMime()
-                
-                self._paths.UpdateRow( index, ( HydrusData.ToString( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
-                
-            
-        
-    
-    def DeletePaths( self ):
-        
-        self._paths.RemoveAllSelected()
-        
-        self._RecalcPaths()
-        
-    
-    def EventExport( self, event ):
-        
-        self._RecalcPaths()
-        
-        for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
-            
-            try:
-                
-                hash = media.GetHash()
-                
-                source_path = ClientFiles.GetFilePath( hash, mime )
-                
-                shutil.copy( source_path, path )
-                shutil.copystat( source_path, path )
-                try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                except: pass
-                
-            except:
-                
-                wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HydrusData.ToString( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
-                
-                break
-                
-            
-        
-    
-    def EventOpenLocation( self, event ):
-        
-        directory = self._directory_picker.GetPath()
-        
-        if directory is not None and directory != '':
-            
-            try:
-                
-                HydrusFileHandling.LaunchDirectory( directory )
-                
-            except: wx.MessageBox( 'Could not open that location!' )
-        
-    
-    def EventRecalcPaths( self, event ): self._RecalcPaths()
-    
-    def EventSelectPath( self, event ):
-        
-        indices = self._paths.GetAllSelected()
-        
-        if len( indices ) == 0:
-            
-            all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in self._paths.GetClientData() ]
-            
-        else:
-            
-            all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in [ self._paths.GetClientData( index ) for index in indices ] ]
-            
-        
-        self._tags_box.SetTagsByMedia( all_media )
         
     
 class DialogTextEntry( Dialog ):

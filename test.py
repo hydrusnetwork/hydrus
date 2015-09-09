@@ -199,7 +199,8 @@ class Controller( object ):
             with open( path, 'rb' ) as f: file = f.read()
             
             if file == 'blarg': raise Exception( 'File failed to import for some reason!' )
-            else: return ( CC.STATUS_SUCCESSFUL, 'hash' )
+            else: return ( CC.STATUS_SUCCESSFUL, '0123456789abcdef'.decode( 'hex' ) )
+            
         
     
 if __name__ == '__main__':

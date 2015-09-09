@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import ClientGUICommon
+import ClientGUIOptionsPanels
 import ClientRatings
 import HydrusConstants as HC
 import HydrusData
@@ -281,108 +282,32 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._mime_media = wx.Choice( self, choices = [ 'image', 'application', 'audio', 'video' ] )
-        self._mime_media.Bind( wx.EVT_CHOICE, self.EventMime )
-        
-        self._mime_type = wx.Choice( self, choices = [], size = ( 120, -1 ) )
+        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( self, HC.SEARCHABLE_MIMES )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
-        mime = system_predicates[ 'mime' ]
+        mimes = system_predicates[ 'mime' ]
         
-        self.SetMime( mime )
+        if type( mimes ) == int:
+            
+            mimes = ( mimes, )
+            
+        
+        self._mimes.SetInfo( mimes )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.AddF( wx.StaticText( self, label = 'system:mime' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._mime_media, CC.FLAGS_MIXED )
-        hbox.AddF( wx.StaticText( self, label = '/' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._mime_type, CC.FLAGS_MIXED )
+        hbox.AddF( self._mimes, CC.FLAGS_MIXED )
         
         self.SetSizer( hbox )
-        
-        wx.CallAfter( self._mime_media.SetFocus )
-        
-    
-    def EventMime( self, event ):
-        
-        media = self._mime_media.GetStringSelection()
-        
-        self._mime_type.Clear()
-        
-        if media == 'image':
-            
-            self._mime_type.Append( 'any', HC.IMAGES )
-            self._mime_type.Append( 'gif', HC.IMAGE_GIF )
-            self._mime_type.Append( 'jpeg', HC.IMAGE_JPEG )
-            self._mime_type.Append( 'png', HC.IMAGE_PNG )
-            
-        elif media == 'application':
-            
-            self._mime_type.Append( 'any', HC.APPLICATIONS )
-            self._mime_type.Append( 'pdf', HC.APPLICATION_PDF )
-            self._mime_type.Append( 'x-shockwave-flash', HC.APPLICATION_FLASH )
-            
-        elif media == 'audio':
-            
-            self._mime_type.Append( 'any', HC.AUDIO )
-            self._mime_type.Append( 'flac', HC.AUDIO_FLAC )
-            self._mime_type.Append( 'mp3', HC.AUDIO_MP3 )
-            self._mime_type.Append( 'ogg', HC.AUDIO_OGG )
-            self._mime_type.Append( 'x-ms-wma', HC.AUDIO_WMA )
-            
-        elif media == 'video':
-            
-            self._mime_type.Append( 'any', HC.VIDEO )
-            self._mime_type.Append( 'mp4', HC.VIDEO_MP4 )
-            self._mime_type.Append( 'webm', HC.VIDEO_WEBM )
-            self._mime_type.Append( 'x-matroska', HC.VIDEO_MKV )
-            self._mime_type.Append( 'x-ms-wmv', HC.VIDEO_WMV )
-            self._mime_type.Append( 'x-flv', HC.VIDEO_FLV )
-            
-        
-        self._mime_type.SetSelection( 0 )
         
     
     def GetInfo( self ):
         
-        info = self._mime_type.GetClientData( self._mime_type.GetSelection() )
+        mimes = self._mimes.GetInfo()
         
-        return info
-        
-    
-    def SetMime( self, mime ):
-        
-        if mime == HC.IMAGES or mime in HC.IMAGES:
-            
-            self._mime_media.SetSelection( 0 )
-            
-        elif mime == HC.APPLICATIONS or mime in HC.APPLICATIONS:
-            
-            self._mime_media.SetSelection( 1 )
-            
-        elif mime == HC.AUDIO or mime in HC.AUDIO:
-            
-            self._mime_media.SetSelection( 2 )
-            
-        elif mime == HC.VIDEO or mime in HC.VIDEO:
-            
-            self._mime_media.SetSelection( 3 )
-            
-        
-        self.EventMime( None )
-        
-        for i in range( self._mime_type.GetCount() ):
-            
-            client_data = self._mime_type.GetClientData( i )
-            
-            if client_data == mime:
-                
-                self._mime_type.SetSelection( i )
-                
-                break
-                
-            
+        return mimes
         
     
 class PanelPredicateSystemNumPixels( PanelPredicateSystem ):

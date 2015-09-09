@@ -8,6 +8,37 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 173</h3></li>
+				<ul>
+					<li>converted import folders to the new system</li>
+					<li>import folders now have names, so you can have several pointing to the same location</li>
+					<li>import folders can filter by mime</li>
+					<li>import folders now have separate actions for successful, redundant, deleted, and failed files</li>
+					<li>these actions can be 'leave alone', 'delete' or 'move to location'</li>
+					<li>import folders now support import file options</li>
+					<li>import folders can now be individually paused</li>
+					<li>import folders' popups are individually optional</li>
+					<li>import folder edit dialog provides a path cache button, like new download pages, to let you review the paths it is remembering</li>
+					<li>existing import folders will be roughly converted to the new system on update, but they will be in a paused state, so you can check they are what you want</li>
+					<li>created new mime selection control</li>
+					<li>mime selection control added to mime system predicate selection dialog, so you can now search by mime more specifically</li>
+					<li>updated some mime system pred code to deal with this change</li>
+					<li>a single non-dragging left-click on an animation now pause/plays!</li>
+					<li>the animation scanbar will now only resume playing the video/flash after a scanning click/drag if it was playing before the drag began.</li>
+					<li>added a 'polite wait' option to options->downloading. this is temporary until I write a better clientside bandwidth throttling system</li>
+					<li>added a 'remove/petition all tags' button to the manage tags dialog to make mistakes easier to clean up</li>
+					<li>added 'confirm send to trash' to options->gui</li>
+					<li>added 'confirm archive/inbox' to options->gui</li>
+					<li>added a simple 'export tags in .txts?' button to the export dialog. In future, I will expand this to do service-specific exports and also add it to regular export folders</li>
+					<li>fixed some invalid name error handling in the manage dialogs</li>
+					<li>fixed a bug that sometimes occured at the end of an admin immediate sync</li>
+					<li>fixed a rare shutdown-order error in video rendering</li>
+					<li>fixed an animation bar initialisation error that was causing error spam on some videos/flash</li>
+					<li>general import code cleanup</li>
+					<li>cleared up admin-side petition wording and presentation</li>
+					<li>improved the threaded workflow and error reporting of the admin-side petition page</li>
+					<li>the thread watcher now reports its number of next seconds until the next check in properly formatted time</li>
+				</ul>
 				<li><h3>version 172</h3></li>
 				<ul>
 					<li>the server no longer needs wx!</li>
@@ -39,7 +70,7 @@
 					<li>hover windows will pop in over video again, but will not if the mouse is _near_ the animation bar</li>
 					<li>searching for ':' in the autocomplete dropdown will no longer search the db for every single tag jej</li>
 					<li>improved some server_busy logic</li>
-					<li>improved some  server shutdown logic</li>
+					<li>improved some server shutdown logic</li>
 				</ul>
 				<li><h3>version 171</h3></li>
 				<ul>

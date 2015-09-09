@@ -1,4 +1,5 @@
 import ClientDaemons
+import ClientImporting
 import collections
 import HydrusConstants as HC
 import os
@@ -29,20 +30,11 @@ class TestDaemons( unittest.TestCase ):
             
             #
             
-            path = test_dir
+            import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir, tag = 'local tag' )
             
-            details = {}
+            HydrusGlobals.controller.SetRead( 'import_folders', [ import_folder ] )
             
-            details[ 'type' ] = HC.IMPORT_FOLDER_TYPE_SYNCHRONISE
-            details[ 'cached_imported_paths' ] = { test_dir + os.path.sep + '1' }
-            details[ 'failed_imported_paths' ] = { test_dir + os.path.sep + '4' }
-            details[ 'local_tag' ] = 'local tag'
-            details[ 'last_checked' ] = HydrusData.GetNow() - 1500
-            details[ 'check_period' ] = 1000
             
-            old_details = dict( details )
-            
-            HydrusGlobals.controller.SetRead( 'import_folders', { path : details } )
             
             ClientDaemons.DAEMONCheckImportFolders()
             
@@ -54,74 +46,27 @@ class TestDaemons( unittest.TestCase ):
             
             self.assertEqual( len( import_file ), 3 )
             
-            expected_tag_part = { 'service_keys_to_tags' : { CC.LOCAL_TAG_SERVICE_KEY : set( [ 'local tag' ] ) } }
+            expected_kwargs = { 'generate_media_result' : True, 'import_file_options' : 'blah', 'service_keys_to_tags' : { CC.LOCAL_TAG_SERVICE_KEY : [ 'local tag' ] } }
             
             ( one, two, three ) = import_file
             
-            ( temp_path, tag_part ) = one
+            ( temp_path, kwargs ) = one
             
-            self.assertEqual( tag_part, expected_tag_part )
+            self.assertEqual( kwargs[ 'service_keys_to_tags' ], expected_kwargs[ 'service_keys_to_tags' ] )
             
-            ( temp_path, tag_part ) = two
+            ( temp_path, kwargs ) = two
             
-            self.assertEqual( tag_part, expected_tag_part )
+            self.assertEqual( kwargs[ 'service_keys_to_tags' ], expected_kwargs[ 'service_keys_to_tags' ] )
             
-            ( temp_path, tag_part ) = three
+            ( temp_path, kwargs ) = three
             
-            self.assertEqual( tag_part, expected_tag_part )
+            self.assertEqual( kwargs[ 'service_keys_to_tags' ], expected_kwargs[ 'service_keys_to_tags' ] )
             
             # I need to expand tests here with the new file system
             
-            [ ( ( updated_path, updated_details ), kwargs ) ] = HydrusGlobals.controller.GetWrite( 'import_folder' )
+            [ ( ( updated_import_folder, ), empty_dict ) ] = HydrusGlobals.controller.GetWrite( 'import_folder' )
             
-            self.assertEqual( path, updated_path )
-            
-            self.assertEqual( updated_details[ 'type' ], old_details[ 'type' ] )
-            self.assertEqual( updated_details[ 'cached_imported_paths' ], { test_dir + os.path.sep + '0', test_dir + os.path.sep + '1', test_dir + os.path.sep + '2' } )
-            self.assertEqual( updated_details[ 'failed_imported_paths' ], { test_dir + os.path.sep + '3', test_dir + os.path.sep + '4' } )
-            self.assertEqual( updated_details[ 'local_tag' ], old_details[ 'local_tag' ] )
-            self.assertGreater( updated_details[ 'last_checked' ], old_details[ 'last_checked' ] )
-            self.assertEqual( updated_details[ 'check_period' ], old_details[ 'check_period' ] )
-            
-            #
-            
-            path = test_dir
-            
-            details = {}
-            
-            details[ 'type' ] = HC.IMPORT_FOLDER_TYPE_DELETE
-            details[ 'cached_imported_paths' ] = set()
-            details[ 'failed_imported_paths' ] = { test_dir + os.path.sep + '4' }
-            details[ 'local_tag' ] = 'local tag'
-            details[ 'last_checked' ] = HydrusData.GetNow() - 1500
-            details[ 'check_period' ] = 1000
-            
-            old_details = dict( details )
-            
-            HydrusGlobals.controller.SetRead( 'import_folders', { path : details } )
-            
-            ClientDaemons.DAEMONCheckImportFolders()
-            
-            # improve these tests as above
-            
-            # old entries
-            #(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
-            #(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
-            #(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
-            #(('blarg',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
-            
-            import_file = HydrusGlobals.controller.GetWrite( 'import_file' )
-            
-            [ ( ( updated_path, updated_details ), kwargs ) ] = HydrusGlobals.controller.GetWrite( 'import_folder' )
-            
-            self.assertEqual( path, updated_path )
-            
-            self.assertEqual( updated_details[ 'type' ], old_details[ 'type' ] )
-            self.assertEqual( updated_details[ 'cached_imported_paths' ], set() )
-            self.assertEqual( updated_details[ 'failed_imported_paths' ], { test_dir + os.path.sep + '3', test_dir + os.path.sep + '4' } )
-            self.assertEqual( updated_details[ 'local_tag' ], old_details[ 'local_tag' ] )
-            self.assertGreater( updated_details[ 'last_checked' ], old_details[ 'last_checked' ] )
-            self.assertEqual( updated_details[ 'check_period' ], old_details[ 'check_period' ] )
+            self.assertEqual( updated_import_folder, import_folder )
             
             self.assertTrue( not os.path.exists( test_dir + os.path.sep + '0' ) )
             self.assertTrue( not os.path.exists( test_dir + os.path.sep + '1' ) )

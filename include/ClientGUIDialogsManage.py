@@ -8,7 +8,9 @@ import ClientFiles
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIOptionsPanels
 import ClientGUIPredicates
+import ClientImporting
 import ClientMedia
 import ClientRatings
 import collections
@@ -2505,78 +2507,69 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'check period', 120 ), ( 'local tag', 120 ) ], delete_key_callback = self.Delete )
-            
-            self._add_button = wx.Button( self, label = 'add' )
-            self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
-            self._edit_button = wx.Button( self, label = 'edit' )
-            self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
-            
-            self._delete_button = wx.Button( self, label = 'delete' )
-            self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._original_paths_to_details = HydrusGlobals.controller.Read( 'import_folders' )
-            
-            for ( path, details ) in self._original_paths_to_details.items():
-                
-                import_type = details[ 'type' ]
-                check_period = details[ 'check_period' ]
-                local_tag = details[ 'local_tag' ]
-                
-                ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( import_type, check_period, local_tag )
-                
-                self._import_folders.Append( ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, import_type, check_period, local_tag ) )
-                
-            
-        
-        def ArrangeControls():
-            
-            file_buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            file_buttons.AddF( self._add_button, CC.FLAGS_MIXED )
-            file_buttons.AddF( self._edit_button, CC.FLAGS_MIXED )
-            file_buttons.AddF( self._delete_button, CC.FLAGS_MIXED )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_MIXED )
-            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            intro = 'Here you can set the client to regularly check certain folders for new files to import.'
-            
-            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._import_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-        
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage import folders' )
         
-        InitialiseControls()
+        self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ), ( 'local tag', 120 ) ], delete_key_callback = self.Delete )
         
-        PopulateControls()
+        self._add_button = wx.Button( self, label = 'add' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
         
-        ArrangeControls()
+        self._edit_button = wx.Button( self, label = 'edit' )
+        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self._AddFolders ) )
-    
+        self._delete_button = wx.Button( self, label = 'delete' )
+        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._names_to_import_folders = {}
+        
+        import_folders = HydrusGlobals.controller.Read( 'import_folders' )
+        
+        for import_folder in import_folders:
+            
+            ( name, path, check_period, tag ) = import_folder.ToListBoxTuple()
+            
+            ( pretty_check_period, pretty_tag ) = self._GetPrettyVariables( check_period, tag )
+            
+            self._import_folders.Append( ( name, path, pretty_check_period, pretty_tag ), ( name, path, check_period, tag ) )
+            
+            self._names_to_import_folders[ name ] = import_folder
+            
+        
+        #
+        
+        file_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        file_buttons.AddF( self._add_button, CC.FLAGS_MIXED )
+        file_buttons.AddF( self._edit_button, CC.FLAGS_MIXED )
+        file_buttons.AddF( self._delete_button, CC.FLAGS_MIXED )
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_MIXED )
+        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = 'Here you can set the client to regularly check certain folders for new files to import.'
+        
+        vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._import_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
         ( x, y ) = self.GetEffectiveMinSize()
         
         if x < 780: x = 780
@@ -2587,67 +2580,84 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def _AddFolder( self, path ):
+    def _AddImportFolder( self, name ):
         
-        all_existing_client_data = self._import_folders.GetClientData()
-        
-        if path not in ( existing_path for ( existing_path, import_type, check_period, local_tag ) in all_existing_client_data ):
+        if name not in self._names_to_import_folders:
             
-            import_type = HC.IMPORT_FOLDER_TYPE_SYNCHRONISE
-            check_period = 15 * 60
-            local_tag = None
+            import_folder = ClientImporting.ImportFolder( name )
             
-            with DialogManageImportFoldersEdit( self, path, import_type, check_period, local_tag ) as dlg:
+            with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, import_type, check_period, local_tag ) = dlg.GetInfo()
+                    import_folder = dlg.GetInfo()
                     
-                    ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( import_type, check_period, local_tag )
+                    ( name, path, check_period, tag ) = import_folder.ToListBoxTuple()
                     
-                    self._import_folders.Append( ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, import_type, check_period, local_tag ) )
+                    ( pretty_check_period, pretty_tag ) = self._GetPrettyVariables( check_period, tag )
+                    
+                    self._import_folders.Append( ( name, path, pretty_check_period, pretty_tag ), ( name, path, check_period, tag ) )
+                    
+                    self._names_to_import_folders[ name ] = import_folder
                     
                 
             
         
     
-    def _AddFolders( self, paths ):
-        
-        for path in paths:
-            
-            if os.path.isdir( path ): self._AddFolder( path )
-            
-        
-    
-    def _GetPrettyVariables( self, import_type, check_period, local_tag ):
-        
-        if import_type == HC.IMPORT_FOLDER_TYPE_DELETE: pretty_type = 'delete'
-        elif import_type == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: pretty_type = 'synchronise'
+    def _GetPrettyVariables( self, check_period, tag ):
         
         pretty_check_period = HydrusData.ToString( check_period / 60 ) + ' minutes'
         
-        if local_tag == None: pretty_local_tag = ''
-        else: pretty_local_tag = local_tag
+        if tag == None: pretty_tag = ''
+        else: pretty_tag = tag
         
-        return ( pretty_type, pretty_check_period, pretty_local_tag )
+        return ( pretty_check_period, pretty_tag )
         
     
-    def Delete( self ): self._import_folders.RemoveAllSelected()
+    def Delete( self ):
+        
+        self._import_folders.RemoveAllSelected()
+        
     
     def EventAdd( self, event ):
         
-        with wx.DirDialog( self, 'Select a folder to add.' ) as dlg:
+        client_data = self._import_folders.GetClientData()
+        
+        existing_names = set()
+        
+        for ( name, path, check_period, tag ) in client_data:
+            
+            existing_names.add( name )
+            
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the import folder.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = dlg.GetPath()
-                
-                self._AddFolder( path )
+                try:
+                    
+                    name = dlg.GetValue()
+                    
+                    if name in existing_names: raise HydrusExceptions.NameException( 'That name is already in use!' )
+                    
+                    if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the import folder.' )
+                    
+                    self._AddImportFolder( name )
+                    
+                except HydrusExceptions.NameException as e:
+                    
+                    wx.MessageBox( str( e ) )
+                    
+                    self.EventAdd( event )
+                    
                 
             
         
     
-    def EventDelete( self, event ): self.Delete()
+    def EventDelete( self, event ):
+        
+        self.Delete()
+        
     
     def EventEdit( self, event ):
         
@@ -2655,17 +2665,23 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         for index in indices:
             
-            ( path, import_type, check_period, local_tag ) = self._import_folders.GetClientData( index )
+            ( name, path, check_period, tag ) = self._import_folders.GetClientData( index )
             
-            with DialogManageImportFoldersEdit( self, path, import_type, check_period, local_tag ) as dlg:
+            import_folder = self._names_to_import_folders[ name ]
+            
+            with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, import_type, check_period, local_tag ) = dlg.GetInfo()
+                    import_folder = dlg.GetInfo()
                     
-                    ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( import_type, check_period, local_tag )
+                    ( name, path, check_period, tag ) = import_folder.ToListBoxTuple()
                     
-                    self._import_folders.UpdateRow( index, ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, import_type, check_period, local_tag ) )
+                    ( pretty_check_period, pretty_tag ) = self._GetPrettyVariables( check_period, tag )
+                    
+                    self._import_folders.UpdateRow( index, ( name, path, pretty_check_period, pretty_tag ), ( name, path, check_period, tag ) )
+                    
+                    self._names_to_import_folders[ name ] = import_folder
                     
                 
             
@@ -2675,27 +2691,26 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         client_data = self._import_folders.GetClientData()
         
-        import_folders = []
+        names_to_save = set()
         
-        paths = set()
-        
-        for ( path, import_type, check_period, local_tag ) in client_data:
+        for ( name, path, check_period, tag ) in client_data:
             
-            if path in self._original_paths_to_details: details = self._original_paths_to_details[ path ]
-            else: details = { 'last_checked' : 0, 'cached_imported_paths' : set(), 'failed_imported_paths' : set() }
-            
-            details[ 'type' ] = import_type
-            details[ 'check_period' ] = check_period
-            details[ 'local_tag' ] = local_tag
-            
-            HydrusGlobals.controller.Write( 'import_folder', path, details )
-            
-            paths.add( path )
+            names_to_save.add( name )
             
         
-        deletees = set( self._original_paths_to_details.keys() ) - paths
+        names_to_delete = { name for name in self._names_to_import_folders if name not in names_to_save }
         
-        for deletee in deletees: HydrusGlobals.controller.Write( 'delete_import_folder', deletee )
+        for name in names_to_delete:
+            
+            HydrusGlobals.controller.Write( 'delete_import_folder', name )
+            
+        
+        for name in names_to_save:
+            
+            import_folder = self._names_to_import_folders[ name ]
+            
+            HydrusGlobals.controller.Write( 'import_folder', import_folder )
+            
         
         HydrusGlobals.controller.pub( 'notify_new_import_folders' )
         
@@ -2704,119 +2719,342 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
 class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, path, import_type, check_period, local_tag ):
-        
-        def InitialiseControls():
-            
-            self._path_box = ClientGUICommon.StaticBox( self, 'import path' )
-            
-            self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
-            
-            #
-            
-            self._type_box = ClientGUICommon.StaticBox( self, 'type of import folder' )
-            
-            self._type = ClientGUICommon.BetterChoice( self._type_box )
-            self._type.Append( 'delete', HC.IMPORT_FOLDER_TYPE_DELETE )
-            self._type.Append( 'synchronise', HC.IMPORT_FOLDER_TYPE_SYNCHRONISE )
-            
-            #
-            
-            self._period_box = ClientGUICommon.StaticBox( self, 'check period (minutes)' )
-            
-            self._check_period = wx.SpinCtrl( self._period_box )
-            
-            #
-            
-            self._local_tag_box = ClientGUICommon.StaticBox( self, 'local tag to give to all imports' )
-            
-            self._local_tag = wx.TextCtrl( self._local_tag_box )
-            self._local_tag.SetToolTipString( 'add this tag on the local tag service to anything imported from the folder' )
-            
-            #
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._path.SetPath( path )
-            
-            self._type.SelectClientData( import_type )
-            
-            self._check_period.SetRange( 3, 180 )
-            
-            self._check_period.SetValue( check_period / 60 )
-            
-            if local_tag is not None: self._local_tag.SetValue( local_tag )
-            
-        
-        def ArrangeControls():
-            
-            self._path_box.AddF( self._path, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            text = '''delete - try to import all files in folder and delete them if they succeed
-
-synchronise - try to import all new files in folder
-
-If you select delete, make sure that is what you mean!'''
-            
-            st = wx.StaticText( self._type_box, label = text )
-            st.Wrap( 480 )
-            
-            self._type_box.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._type_box.AddF( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._period_box.AddF( self._check_period, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._local_tag_box.AddF( self._local_tag, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_MIXED )
-            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._local_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( 640, y ) )
-            
+    def __init__( self, parent, import_folder ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'edit import folder' )
         
-        InitialiseControls()
+        self._import_folder = import_folder
         
-        PopulateControls()
+        ( name, path, mimes, import_file_options, actions, action_locations, period, open_popup, tag, paused ) = self._import_folder.ToTuple()
         
-        ArrangeControls()
+        self._folder_box = ClientGUICommon.StaticBox( self, 'folder options' )
+        
+        self._name = wx.TextCtrl( self._folder_box )
+        
+        self._path = wx.DirPickerCtrl( self._folder_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._open_popup = wx.CheckBox( self._folder_box )
+        
+        self._tag = wx.TextCtrl( self._folder_box )
+        self._tag.SetToolTipString( 'add this tag on the local tag service to anything imported from the folder' )
+        
+        self._period = wx.SpinCtrl( self._folder_box, min = 3, max = 1440 )
+        
+        self._paused = wx.CheckBox( self._folder_box )
+        
+        self._seed_cache_button = wx.BitmapButton( self._folder_box, bitmap = CC.GlobalBMPs.seed_cache )
+        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
+        
+        #
+        
+        self._file_box = ClientGUICommon.StaticBox( self, 'file options' )
+        
+        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( self._file_box, HC.ALLOWED_MIMES )
+        
+        def create_choice():
+            
+            choice = ClientGUICommon.BetterChoice( self._file_box )
+            
+            for if_id in ( CC.IMPORT_FOLDER_DELETE, CC.IMPORT_FOLDER_IGNORE, CC.IMPORT_FOLDER_MOVE ):
+                
+                choice.Append( CC.import_folder_string_lookup[ if_id ], if_id )
+                
+            
+            choice.Bind( wx.EVT_CHOICE, self.EventCheckLocations )
+            
+            return choice
+            
+        
+        self._action_successful = create_choice()
+        self._location_successful = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._action_redundant = create_choice()
+        self._location_redundant = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._action_deleted = create_choice()
+        self._location_deleted = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._action_failed = create_choice()
+        self._location_failed = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._import_file_options = ClientGUIOptionsPanels.OptionsPanelImportFiles( self._file_box )
+        
+        #
+        
+        self._ok = wx.Button( self, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._name.SetValue( name )
+        self._path.SetPath( path )
+        self._open_popup.SetValue( open_popup )
+        
+        if tag is not None:
+            
+            self._tag.SetValue( tag )
+            
+        
+        self._period.SetValue( period / 60 )
+        self._paused.SetValue( paused )
+        
+        self._mimes.SetInfo( mimes )
+        
+        self._action_successful.SelectClientData( actions[ CC.STATUS_SUCCESSFUL ] )
+        if CC.STATUS_SUCCESSFUL in action_locations:
+            
+            self._location_successful.SetPath( action_locations[ CC.STATUS_SUCCESSFUL ] )
+            
+        
+        self._action_redundant.SelectClientData( actions[ CC.STATUS_REDUNDANT ] )
+        if CC.STATUS_REDUNDANT in action_locations:
+            
+            self._location_redundant.SetPath( action_locations[ CC.STATUS_REDUNDANT ] )
+            
+        
+        self._action_deleted.SelectClientData( actions[ CC.STATUS_DELETED ] )
+        if CC.STATUS_DELETED in action_locations:
+            
+            self._location_deleted.SetPath( action_locations[ CC.STATUS_DELETED ] )
+            
+        
+        self._action_failed.SelectClientData( actions[ CC.STATUS_FAILED ] )
+        if CC.STATUS_FAILED in action_locations:
+            
+            self._location_failed.SetPath( action_locations[ CC.STATUS_FAILED ] )
+            
+        
+        self._import_file_options.SetOptions( import_file_options )
+        
+        #
+        
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.AddF( wx.StaticText( self._folder_box, label = 'name: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._folder_box, label = 'folder path: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._path, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._folder_box, label = 'check period (mins): '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._period, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._folder_box, label = 'currently paused: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._paused, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._folder_box, label = 'local tag to add to all imported files: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._tag, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._folder_box, label = 'open a popup if new files imported: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._open_popup, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._folder_box, label = 'review currently cached import paths: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
+        
+        self._folder_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        gridbox = wx.FlexGridSizer( 0, 3 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'mimes to import: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( ( 20, 20 ), CC.FLAGS_NONE )
+        
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file imports successfully: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._action_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._location_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file is already in the db: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._action_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._location_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file has already been deleted from the db: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._action_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._location_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file fails to import: '), CC.FLAGS_MIXED )
+        gridbox.AddF( self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._file_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._file_box.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_MIXED )
+        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        x = max( 720, x )
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        self._CheckLocations()
         
         wx.CallAfter( self._ok.SetFocus )
         
     
+    def _CheckLocations( self ):
+        
+        if self._action_successful.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            self._location_successful.Enable()
+            
+        else:
+            
+            self._location_successful.Disable()
+            
+        
+        if self._action_redundant.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            self._location_redundant.Enable()
+            
+        else:
+            
+            self._location_redundant.Disable()
+            
+        
+        if self._action_deleted.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            self._location_deleted.Enable()
+            
+        else:
+            
+            self._location_deleted.Disable()
+            
+        
+        if self._action_failed.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            self._location_failed.Enable()
+            
+        else:
+            
+            self._location_failed.Disable()
+            
+        
+    
+    def EventCheckLocations( self, event ):
+        
+        self._CheckLocations()
+        
+    
+    def EventOK( self, event ):
+        
+        if self._path.GetPath() in ( '', None ):
+            
+            wx.MessageBox( 'You must enter a folder path to import from!' )
+            
+            return
+            
+        
+        if self._action_successful.GetChoice() == CC.IMPORT_FOLDER_MOVE and self._location_successful.GetPath() in ( '', None ):
+            
+            wx.MessageBox( 'You must enter a path for your successful file move location!' )
+            
+            return
+            
+        
+        if self._action_redundant.GetChoice() == CC.IMPORT_FOLDER_MOVE and self._location_redundant.GetPath() in ( '', None ):
+            
+            wx.MessageBox( 'You must enter a path for your redundant file move location!' )
+            
+            return
+            
+        
+        if self._action_deleted.GetChoice() == CC.IMPORT_FOLDER_MOVE and self._location_deleted.GetPath() in ( '', None ):
+            
+            wx.MessageBox( 'You must enter a path for your deleted file move location!' )
+            
+            return
+            
+        
+        if self._action_failed.GetChoice() == CC.IMPORT_FOLDER_MOVE and self._location_failed.GetPath() in ( '', None ):
+            
+            wx.MessageBox( 'You must enter a path for your failed file move location!' )
+            
+            return
+            
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def EventSeedCache( self, event ):
+        
+        seed_cache = self._import_folder.GetSeedCache()
+        
+        HydrusGlobals.controller.pub( 'show_seed_cache', seed_cache )
+        
+    
     def GetInfo( self ):
         
+        name = self._name.GetValue()
         path = self._path.GetPath()
+        mimes = self._mimes.GetInfo()
+        import_file_options = self._import_file_options.GetOptions()
         
-        import_type = self._type.GetChoice()
+        actions = {}
+        action_locations = {}
         
-        check_period = self._check_period.GetValue() * 60
+        actions[ CC.STATUS_SUCCESSFUL ] = self._action_successful.GetChoice()
+        if actions[ CC.STATUS_SUCCESSFUL ] == CC.IMPORT_FOLDER_MOVE:
+            
+            action_locations[ CC.STATUS_SUCCESSFUL ] = self._location_successful.GetPath()
+            
         
-        local_tag = self._local_tag.GetValue()
+        actions[ CC.STATUS_REDUNDANT ] = self._action_redundant.GetChoice()
+        if actions[ CC.STATUS_REDUNDANT ] == CC.IMPORT_FOLDER_MOVE:
+            
+            action_locations[ CC.STATUS_REDUNDANT ] = self._location_redundant.GetPath()
+            
         
-        return ( path, import_type, check_period, local_tag )
+        actions[ CC.STATUS_DELETED ] = self._action_deleted.GetChoice()
+        if actions[ CC.STATUS_DELETED] == CC.IMPORT_FOLDER_MOVE:
+            
+            action_locations[ CC.STATUS_DELETED ] = self._location_deleted.GetPath()
+            
+        
+        actions[ CC.STATUS_FAILED ] = self._action_failed.GetChoice()
+        if actions[ CC.STATUS_FAILED ] == CC.IMPORT_FOLDER_MOVE:
+            
+            action_locations[ CC.STATUS_FAILED ] = self._location_failed.GetPath()
+            
+        
+        period = self._period.GetValue() * 60
+        open_popup = self._open_popup.GetValue()
+        
+        tag = self._tag.GetValue()
+        
+        if tag == '':
+            
+            tag = None
+            
+        
+        paused = self._paused.GetValue()
+        
+        self._import_folder.SetTuple( name, path, mimes, import_file_options, actions, action_locations, period, open_popup, tag, paused )
+        
+        return self._import_folder
         
     
 class DialogManageOptions( ClientGUIDialogs.Dialog ):
@@ -2867,8 +3105,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         ( x, y ) = self.GetEffectiveMinSize()
         
-        if x < 800: x = 800
-        if y < 600: y = 600
+        x = max( 800, x )
+        y = max( 800, y )
         
         self.SetInitialSize( ( x, y ) )
         
@@ -3159,9 +3397,17 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
+            general = ClientGUICommon.StaticBox( self, 'general' )
+            
+            self._website_download_polite_wait = wx.SpinCtrl( general, min = 1, max = 30 )
+            
+            #
+            
             gallery_downloader = ClientGUICommon.StaticBox( self, 'gallery downloader' )
             
             self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, 'default file limit', none_phrase = 'no limit', min = 1, max = 1000000 )
+            
+            #
             
             thread_checker = ClientGUICommon.StaticBox( self, 'thread checker' )
             
@@ -3173,6 +3419,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
+            self._website_download_polite_wait.SetValue( HC.options[ 'website_download_polite_wait' ] )
+            
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
             
             ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
@@ -3180,6 +3428,17 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._thread_times_to_check.SetValue( times_to_check )
             
             self._thread_check_period.SetValue( check_period )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( general, label = 'seconds to politely wait between gallery/thread url requests: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._website_download_polite_wait, CC.FLAGS_MIXED )
+            
+            general.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
@@ -3202,6 +3461,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            vbox.AddF( general, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( gallery_downloader, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( thread_checker, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3210,6 +3470,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         def UpdateOptions( self ):
             
+            HC.options[ 'website_download_polite_wait' ] = self._website_download_polite_wait.GetValue()
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
             HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
             
@@ -3624,6 +3885,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._default_gui_session = wx.Choice( self )
             
             self._confirm_client_exit = wx.CheckBox( self )
+            self._confirm_trash = wx.CheckBox( self )
+            self._confirm_archive = wx.CheckBox( self )
             
             self._always_embed_autocompletes = wx.CheckBox( self )
             
@@ -3658,6 +3921,10 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             except: self._default_gui_session.SetSelection( 0 )
             
             self._confirm_client_exit.SetValue( HC.options[ 'confirm_client_exit' ] )
+            
+            self._confirm_trash.SetValue( HC.options[ 'confirm_trash' ] )
+            
+            self._confirm_archive.SetValue( HC.options[ 'confirm_archive' ] )
             
             self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
             
@@ -3702,6 +3969,12 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'Confirm client exit:' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._confirm_client_exit, CC.FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( self, label = 'Confirm sending files to trash:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._confirm_trash, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Confirm sending more than one file to archive or inbox:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._confirm_archive, CC.FLAGS_MIXED )
+            
             gridbox.AddF( wx.StaticText( self, label = 'Always embed autocomplete dropdown results window:' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._always_embed_autocompletes, CC.FLAGS_MIXED )
             
@@ -3733,6 +4006,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             HC.options[ 'default_gui_session' ] = self._default_gui_session.GetStringSelection()
             HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
+            HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
+            HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
             HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
             HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
             HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
@@ -6247,7 +6522,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter name for subscription.' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the subscription.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -6257,7 +6532,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     if self._listbook.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
                     
-                    if name == '': raise Exception( 'Please enter a nickname for the subscription.' )
+                    if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the subscription.' )
                     
                     page = self._Panel( self._listbook, name, new_subscription = True )
                     
@@ -8208,9 +8483,16 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def EventDelete( self, event ):
         
+        do_it = False
+        
         locations_manager = self._current_media.GetLocationsManager()
         
         if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+            
+            if not HC.options[ 'confirm_trash' ]:
+                
+                do_it = True
+                
             
             text = 'Send this file to the trash?'
             
@@ -8227,14 +8509,22 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             return
             
         
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+        if not do_it:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                 
-                self._CommitCurrentChanges()
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    do_it = True
+                    
                 
-                HydrusGlobals.controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
-                
+            
+        
+        if do_it:
+            
+            self._CommitCurrentChanges()
+            
+            HydrusGlobals.controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
             
         
     
@@ -8369,6 +8659,18 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self._paste_tags = wx.Button( self, label = 'paste tags' )
             self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
             
+            if self._i_am_local_tag_service:
+                
+                text = 'remove all tags'
+                
+            else:
+                
+                text = 'petition all tags'
+                
+            
+            self._remove_tags = wx.Button( self, label = text )
+            self._remove_tags.Bind( wx.EVT_BUTTON, self.EventRemoveTags )
+            
             self._tags_box.ChangeTagRepository( self._tag_service_key )
             
             self.SetMedia( media )
@@ -8385,6 +8687,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             copy_paste_hbox.AddF( self._copy_tags, CC.FLAGS_MIXED )
             copy_paste_hbox.AddF( self._paste_tags, CC.FLAGS_MIXED )
+            copy_paste_hbox.AddF( self._remove_tags, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -8396,7 +8699,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self.SetSizer( vbox )
             
         
-        def _AddTag( self, tag, only_add = False ):
+        def _AddTag( self, tag, only_add = False, only_remove = False, reason = None ):
             
             tag_managers = [ m.GetTagsManager() for m in self._media ]
             
@@ -8415,19 +8718,25 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if self._i_am_local_tag_service:
                 
-                if num_current < num_files:
+                if not only_remove:
                     
-                    choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, tag ) ) )
+                    if num_current < num_files:
+                        
+                        choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, tag ) ) )
+                        
+                    
+                    if sibling_tag is not None and num_sibling_current < num_files:
+                        
+                        choices.append( ( 'add ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
+                        
                     
                 
-                if sibling_tag is not None and num_sibling_current < num_files:
+                if not only_add:
                     
-                    choices.append( ( 'add ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
-                    
-                
-                if num_current > 0 and not only_add:
-                    
-                    choices.append( ( 'delete ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current ) + ' files', ( HC.CONTENT_UPDATE_DELETE, tag ) ) )
+                    if num_current > 0:
+                        
+                        choices.append( ( 'delete ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current ) + ' files', ( HC.CONTENT_UPDATE_DELETE, tag ) ) )
+                        
                     
                 
             else:
@@ -8435,21 +8744,31 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_key ) ] )
                 num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_key ) ] )
                 
-                if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PENDING, tag ) ) )
-                
-                if sibling_tag is not None:
+                if not only_remove:
                     
-                    num_sibling_pending = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetPending( self._tag_service_key ) ] )
+                    if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PENDING, tag ) ) )
                     
-                    if num_sibling_current + num_sibling_pending < num_files:
+                    if sibling_tag is not None:
                         
-                        choices.append( ( 'pend ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_PENDING, sibling_tag ) ) )
+                        num_sibling_pending = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetPending( self._tag_service_key ) ] )
+                        
+                        if num_sibling_current + num_sibling_pending < num_files:
+                            
+                            choices.append( ( 'pend ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_PENDING, sibling_tag ) ) )
+                            
                         
                     
                 
-                if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_PETITION, tag ) ) )
-                if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PENDING, tag ) ) )
-                if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) ) )
+                if not only_add:
+                    
+                    if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_PETITION, tag ) ) )
+                    if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PENDING, tag ) ) )
+                    
+                
+                if not only_remove:
+                    
+                    if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) ) )
+                    
                 
             
             if len( choices ) == 0: return
@@ -8478,15 +8797,18 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if choice_action == HC.CONTENT_UPDATE_PETITION:
                 
-                if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
-                else:
+                if reason is None:
                     
-                    message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                    else:
                         
-                        if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
-                        else: return
+                        message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
+                            else: return
+                            
                         
                     
                 
@@ -8560,6 +8882,51 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 except: wx.MessageBox( 'I could not understand what was in the clipboard' )
                 
             else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+        def EventRemoveTags( self, event ):
+            
+            tag_managers = [ m.GetTagsManager() for m in self._media ]
+            
+            removable_tags = set()
+            
+            for tag_manager in tag_managers:
+
+                removable_tags.update( tag_manager.GetCurrent( self._tag_service_key ) )
+                removable_tags.update( tag_manager.GetPending( self._tag_service_key ) )
+                
+            
+            reason = None
+            
+            if not self._i_am_local_tag_service:
+                
+                if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
+                    
+                    reason = 'admin'
+                    
+                else:
+                    
+                    message = 'Enter a reason for all these tags to be removed. A janitor will review your petition.'
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            reason = dlg.GetValue()
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
+                
+            
+            for tag in removable_tags:
+                
+                self._AddTag( tag, only_remove = True, reason = reason )
+                
+            
             
         
         def EventShowDeleted( self, event ):

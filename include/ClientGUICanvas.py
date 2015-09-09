@@ -284,6 +284,11 @@ class Animation( wx.Window ):
         self._paused = True
         
     
+    def IsPlaying( self ):
+        
+        return not self._paused
+        
+    
     def Play( self ):
         
         self._paused = False
@@ -292,6 +297,11 @@ class Animation( wx.Window ):
     def Pause( self ):
         
         self._paused = True
+        
+    
+    def PausePlay( self ):
+        
+        self._paused = not self._paused
         
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
@@ -338,6 +348,7 @@ class AnimationBar( wx.Window ):
         self._current_frame_index = 0
         
         self._currently_in_a_drag = False
+        self._it_was_playing = False
         
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
         self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_ANIMATION_BAR_UPDATE )
@@ -394,6 +405,11 @@ class AnimationBar( wx.Window ):
         
         if event.ButtonIsDown( wx.MOUSE_BTN_ANY ):
             
+            if not self._currently_in_a_drag:
+                
+                self._it_was_playing = self._media_window.IsPlaying()
+                
+            
             ( x, y ) = event.GetPosition()
             
             compensated_x_position = x - ( ANIMATED_SCANBAR_CARET_WIDTH / 2 )
@@ -413,7 +429,10 @@ class AnimationBar( wx.Window ):
             
         elif event.ButtonUp( wx.MOUSE_BTN_ANY ):
             
-            if not self._currently_in_a_drag: self._media_window.Play()
+            if self._it_was_playing:
+                
+                self._media_window.Play()
+                
             
             self._currently_in_a_drag = False
             
@@ -457,7 +476,6 @@ class AnimationBar( wx.Window ):
         self._dirty = True
         
         self.Refresh()
-        
         
     
     def TIMEREventUpdate( self, event ):
@@ -588,6 +606,8 @@ class Canvas( object ):
     
     def _Delete( self, service_key = None ):
         
+        do_it = False
+        
         if service_key is None:
             
             locations_manager = self._current_display_media.GetLocationsManager()
@@ -608,6 +628,11 @@ class Canvas( object ):
         
         if service_key == CC.LOCAL_FILE_SERVICE_KEY:
             
+            if not HC.options[ 'confirm_trash' ]:
+                
+                do_it = True
+                
+            
             text = 'Send this file to the trash?'
             
         elif service_key == CC.TRASH_SERVICE_KEY:
@@ -615,17 +640,26 @@ class Canvas( object ):
             text = 'Permanently delete this file?'
             
         
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+        if not do_it:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                 
-                hashes = { self._current_display_media.GetHash() }
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    do_it = True
+                    
                 
-                HydrusGlobals.controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
-                
+            
+            
+            self.SetFocus() # annoying bug because of the modal dialog
             
         
-        self.SetFocus() # annoying bug because of the modal dialog
+        if do_it:
+            
+            hashes = { self._current_display_media.GetHash() }
+            
+            HydrusGlobals.controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+            
         
     
     def _DrawBackgroundBitmap( self ):
@@ -770,9 +804,26 @@ class Canvas( object ):
         
         if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Undelete this file?' ) as dlg:
+            do_it = False
+            
+            if not HC.options[ 'confirm_trash' ]:
                 
-                if dlg.ShowModal() == wx.ID_YES: HydrusGlobals.controller.Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( self._current_display_media.GetHash(), ) ) ] } )
+                do_it = True
+                
+            else:
+                
+                with ClientGUIDialogs.DialogYesNo( self, 'Undelete this file?' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        do_it = True
+                        
+                    
+                
+            
+            if do_it:
+                
+                HydrusGlobals.controller.Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( self._current_display_media.GetHash(), ) ) ] } )
                 
             
             self.SetFocus() # annoying bug because of the modal dialog
@@ -938,24 +989,7 @@ class Canvas( object ):
     
     def MouseIsNearAnimationBar( self ):
         
-        if ShouldHaveAnimationBar( self._current_display_media ):
-            
-            animation_bar = self._media_container.GetAnimationBar()
-            
-            ( x, y ) = animation_bar.GetScreenPosition()
-            ( width, height ) = animation_bar.GetSize()
-            
-            ( mouse_x, mouse_y ) = wx.GetMousePosition()
-            
-            buffer_distance = 75
-            
-            if mouse_x >= x - buffer_distance and mouse_x <= x + width + buffer_distance and mouse_y >= y - buffer_distance and mouse_y <= y + height + buffer_distance:
-                
-                return True
-                
-            
-        
-        return False
+        return self._media_container.MouseIsNearAnimationBar()
         
     
     def MouseIsOverMedia( self ):
@@ -2896,6 +2930,8 @@ class MediaContainer( wx.Window ):
         self._embed_button = None
         self._animation_bar = None
         
+        self._drag_happened = False
+        
         self._MakeMediaWindow()
         
         self.Bind( wx.EVT_SIZE, self.EventResize )
@@ -2972,7 +3008,35 @@ class MediaContainer( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        if self._media.GetMime() in HC.IMAGES or self._media.GetMime() in HC.VIDEO:
+        mime = self._media.GetMime()
+        
+        if mime in HC.IMAGES or mime in HC.VIDEO:
+            
+            if self._animation_bar is not None:
+                
+                etype = event.GetEventType()
+                
+                if etype == wx.wxEVT_LEFT_DOWN:
+                    
+                    self._drag_happened = False
+                    
+                elif etype == wx.wxEVT_MOTION:
+                    
+                    if event.LeftIsDown():
+                        
+                        self._drag_happened = True
+                        
+                    
+                elif etype == wx.wxEVT_LEFT_UP:
+                    
+                    if not self._drag_happened:
+                        
+                        self._media_window.PausePlay()
+                        
+                        return
+                        
+                    
+                
             
             screen_position = self.ClientToScreen( event.GetPosition() )
             ( x, y ) = self.GetParent().ScreenToClient( screen_position )
@@ -3012,11 +3076,6 @@ class MediaContainer( wx.Window ):
             
         
     
-    def GetAnimationBar( self ):
-        
-        return self._animation_bar
-        
-    
     def GotoPreviousOrNextFrame( self, direction ):
         
         if self._media_window is not None:
@@ -3040,6 +3099,24 @@ class MediaContainer( wx.Window ):
                 
                 self._media_window.GotoFrame( current_frame_index )
                 self._animation_bar.GotoFrame( current_frame_index )
+                
+            
+        
+    
+    def MouseIsNearAnimationBar( self ):
+        
+        if self._animation_bar is not None:
+            
+            ( x, y ) = self._animation_bar.GetScreenPosition()
+            ( width, height ) = self._animation_bar.GetSize()
+            
+            ( mouse_x, mouse_y ) = wx.GetMousePosition()
+            
+            buffer_distance = 100
+            
+            if mouse_x >= x - buffer_distance and mouse_x <= x + width + buffer_distance and mouse_y >= y - buffer_distance and mouse_y <= y + height + buffer_distance:
+                
+                return True
                 
             
         

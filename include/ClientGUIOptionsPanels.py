@@ -4,6 +4,7 @@ import ClientGUICommon
 import ClientCaches
 import ClientData
 import ClientDefaults
+import collections
 import HydrusConstants as HC
 import wx
 import wx.lib.masked.timectrl
@@ -220,7 +221,7 @@ class OptionsPanelImportFiles( OptionsPanel ):
         
         self.SetSizer( vbox )
         
-        self.SetInfo( ClientDefaults.GetDefaultImportFileOptions() )
+        self.SetOptions( ClientDefaults.GetDefaultImportFileOptionsObject() )
         
     
     def EventChanged( self, event ):
@@ -274,6 +275,132 @@ class OptionsPanelImportFiles( OptionsPanel ):
         self._exclude_deleted.SetValue( exclude_deleted )
         self._min_size.SetValue( min_size )
         self._min_resolution.SetValue( min_resolution )
+        
+    
+class OptionsPanelMimes( OptionsPanel ):
+    
+    def __init__( self, parent, selectable_mimes ):
+        
+        OptionsPanel.__init__( self, parent )
+        
+        self._mimes_to_checkboxes = {}
+        self._mime_groups_to_checkboxes = {}
+        self._mime_groups_to_values = {}
+        
+        mime_groups = [ HC.IMAGES, HC.AUDIO, HC.APPLICATIONS, HC.VIDEO ]
+        
+        mime_groups_to_mimes = collections.defaultdict( list )
+        
+        for mime in selectable_mimes:
+            
+            for mime_group in mime_groups:
+                
+                if mime in mime_group:
+                    
+                    mime_groups_to_mimes[ mime_group ].append( mime )
+                    
+                    break
+                    
+                
+            
+        
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        for ( mime_group, mimes ) in mime_groups_to_mimes.items():
+            
+            mg_checkbox = wx.CheckBox( self, label = HC.mime_string_lookup[ mime_group ] )
+            mg_checkbox.Bind( wx.EVT_CHECKBOX, self.EventMimeGroupCheckbox )
+            
+            self._mime_groups_to_checkboxes[ mime_group ] = mg_checkbox
+            self._mime_groups_to_values[ mime_group ] = mg_checkbox.GetValue()
+            
+            gridbox.AddF( mg_checkbox, CC.FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            for mime in mimes:
+                
+                m_checkbox = wx.CheckBox( self, label = HC.mime_string_lookup[ mime ] )
+                m_checkbox.Bind( wx.EVT_CHECKBOX, self.EventMimeCheckbox )
+                
+                self._mimes_to_checkboxes[ mime ] = m_checkbox
+                
+                vbox.AddF( m_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            gridbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+        
+        
+        self.SetSizer( gridbox )
+        
+    
+    def _UpdateMimeGroupCheckboxes( self ):
+        
+        for ( mime_group, mg_checkbox ) in self._mime_groups_to_checkboxes.items():
+            
+            respective_checkbox_values = [ m_checkbox.GetValue() for ( mime, m_checkbox ) in self._mimes_to_checkboxes.items() if mime in mime_group ]
+            
+            all_true = False not in respective_checkbox_values
+            
+            mg_checkbox.SetValue( all_true )
+            self._mime_groups_to_values[ mime_group ] = all_true
+            
+        
+    
+    def EventMimeCheckbox( self, event ):
+        
+        self._UpdateMimeGroupCheckboxes()
+        
+    
+    def EventMimeGroupCheckbox( self, event ):
+        
+        # this is a commandevent, which won't give up the checkbox object, so we have to do some jiggery pokery
+        
+        for ( mime_group, mg_checkbox ) in self._mime_groups_to_checkboxes.items():
+            
+            expected_value = self._mime_groups_to_values[ mime_group ]
+            actual_value = mg_checkbox.GetValue()
+            
+            if actual_value != expected_value:
+                
+                for ( mime, m_checkbox ) in self._mimes_to_checkboxes.items():
+                    
+                    if mime in mime_group:
+                        
+                        m_checkbox.SetValue( actual_value )
+                        
+                    
+                
+                self._mime_groups_to_values[ mime_group ] = actual_value
+                
+            
+        
+    
+    def GetInfo( self ):
+        
+        mimes = tuple( [ mime for ( mime, checkbox ) in self._mimes_to_checkboxes.items() if checkbox.GetValue() == True ] )
+        
+        return mimes
+        
+    
+    def SetInfo( self, mimes ):
+        
+        for ( mime, checkbox ) in self._mimes_to_checkboxes.items():
+            
+            if mime in mimes:
+                
+                checkbox.SetValue( True )
+                
+            else:
+                
+                checkbox.SetValue( False )
+                
+            
+        
+        self._UpdateMimeGroupCheckboxes()
         
     
 class OptionsPanelPeriodic( OptionsPanel ):
@@ -459,10 +586,6 @@ class OptionsPanelTags( OptionsPanel ):
                 
             
             self._vbox.AddF( outer_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-        else:
-            
-            self._vbox.AddF( wx.StaticText( self, label = 'no tag repositories' ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
         
     

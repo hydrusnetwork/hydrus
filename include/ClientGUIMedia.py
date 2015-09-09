@@ -100,13 +100,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( hashes ) > 0:
             
-            if len( hashes ) > 1:
+            if HC.options[ 'confirm_archive' ]:
                 
-                message = 'Archive ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                if len( hashes ) > 1:
                     
-                    if dlg.ShowModal() != wx.ID_YES: return
+                    message = 'Archive ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files?'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                        
+                        if dlg.ShowModal() != wx.ID_YES: return
+                        
                     
                 
             
@@ -239,7 +242,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if num_to_delete > 0:
             
+            do_it = False
+            
             if file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                
+                if not HC.options[ 'confirm_trash' ]:
+                    
+                    do_it = True
+                    
                 
                 if num_to_delete == 1: text = 'Are you sure you want to send this file to the trash?'
                 else: text = 'Are you sure you want send these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files to the trash?'
@@ -255,24 +265,32 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 else: text = 'Are you sure you want to admin-delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
                 
             
-            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+            if not do_it:
                 
-                if dlg.ShowModal() == wx.ID_YES:
+                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                     
-                    local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY )
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        do_it = True
+                        
                     
-                    if file_service_key in local_file_services:
-                        
-                        HydrusGlobals.controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
-                        
-                    else:
-                        
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) )
-                        
-                        service_keys_to_content_updates = { file_service_key : ( content_update, ) }
-                        
-                        HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
-                        
+                
+            
+            if do_it:
+                
+                local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY )
+                
+                if file_service_key in local_file_services:
+                    
+                    HydrusGlobals.controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+                    
+                else:
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) )
+                    
+                    service_keys_to_content_updates = { file_service_key : ( content_update, ) }
+                    
+                    HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
                     
                 
             
@@ -474,13 +492,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( hashes ) > 0:
             
-            if len( hashes ) > 1:
+            if HC.options[ 'confirm_archive' ]:
                 
-                message = 'Send ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files to inbox?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                if len( hashes ) > 1:
                     
-                    if dlg.ShowModal() != wx.ID_YES: return
+                    message = 'Send ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files to inbox?'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                        
+                        if dlg.ShowModal() != wx.ID_YES: return
+                        
                     
                 
             
@@ -750,15 +771,29 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if num_to_undelete > 0:
             
-            if num_to_undelete == 1: text = 'Are you sure you want to undelete this file?'
-            else: text = 'Are you sure you want to undelete these ' + HydrusData.ConvertIntToPrettyString( num_to_undelete ) + ' files?'
+            do_it = False
             
-            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+            if not HC.options[ 'confirm_trash' ]:
                 
-                if dlg.ShowModal() == wx.ID_YES:
+                do_it = True
+                
+            else:
+                
+                if num_to_undelete == 1: text = 'Are you sure you want to undelete this file?'
+                else: text = 'Are you sure you want to undelete these ' + HydrusData.ConvertIntToPrettyString( num_to_undelete ) + ' files?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                     
-                    HydrusGlobals.controller.Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] } )
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        do_it = True
+                        
                     
+                
+            
+            if do_it:
+                
+                HydrusGlobals.controller.Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] } )
                 
             
         

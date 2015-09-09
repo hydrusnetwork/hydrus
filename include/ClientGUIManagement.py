@@ -3182,22 +3182,20 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventGetPetition( self, event ):
         
-        try:
+        def do_it():
             
             response = self._service.Request( HC.GET, 'petition' )
             
             self._current_petition = response[ 'petition' ]
             
-            self._DrawCurrentPetition()
+            wx.CallAfter( self._DrawCurrentPetition )
             
-        except:
-            
-            wx.MessageBox( traceback.format_exc() )
-            
-            self._current_petition = None
-            
-            self._DrawCurrentPetition()
-            
+        
+        self._current_petition = None
+        
+        self._DrawCurrentPetition()
+        
+        HydrusGlobals.controller.CallToThread( do_it )
         
     
     def EventModifyPetitioner( self, event ):
@@ -3207,22 +3205,32 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventRefreshNumPetitions( self, event ):
         
+        def do_it():
+            
+            try:
+                
+                response = self._service.Request( HC.GET, 'num_petitions' )
+                
+                self._num_petitions = response[ 'num_petitions' ]
+                
+                wx.CallAfter( self._DrawNumPetitions )
+                
+                if self._num_petitions > 0 and self._current_petition is None:
+                    
+                    wx.CallAfter( self.EventGetPetition, None )
+                    
+                
+            except Exception as e:
+                
+                wx.CallAfter( self._num_petitions_text.SetLabel, 'Error' )
+                
+                raise
+                
+            
+        
         self._num_petitions_text.SetLabel( u'Fetching\u2026' )
         
-        try:
-            
-            response = self._service.Request( HC.GET, 'num_petitions' )
-            
-            self._num_petitions = response[ 'num_petitions' ]
-            
-            self._DrawNumPetitions()
-            
-            if self._num_petitions > 0: self.EventGetPetition( event )
-            
-        except Exception as e:
-            
-            self._num_petitions_text.SetLabel( HydrusData.ToString( e ) )
-            
+        HydrusGlobals.controller.CallToThread( do_it )
         
     
     def RefreshQuery( self, page_key ):

@@ -1448,6 +1448,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if counts is None: counts = {}
         
+        if type( value ) == list:
+            
+            value = tuple( value )
+            
+        
         self._predicate_type = predicate_type
         self._value = value
         
@@ -1666,9 +1671,27 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if self._value is not None:
                     
-                    mime = self._value
+                    mimes = self._value
                     
-                    base += u' is ' + HC.mime_string_lookup[ mime ]
+                    if mimes in HC.mime_string_lookup or len( mimes ) == 1:
+                        
+                        if mimes in HC.mime_string_lookup:
+                            
+                            mime_text = HC.mime_string_lookup[ mimes ]
+                            
+                        else:
+                            
+                            mime = mimes[0]
+                            
+                            mime_text = HC.mime_string_lookup[ mime ]
+                            
+                        
+                        base += u' is ' + mime_text
+                        
+                    else:
+                        
+                        base += u' is specified'
+                        
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
@@ -1856,12 +1879,14 @@ class ServerToClientPetition( HydrusYAMLBase ):
     
     def GetPetitionString( self ):
         
-        if self._action == HC.CONTENT_UPDATE_PENDING: action_word = 'Add '
-        elif self._action == HC.CONTENT_UPDATE_PETITION: action_word = 'Remove '
+        if self._action == HC.CONTENT_UPDATE_PENDING: action_phrase = 'Add '
+        elif self._action == HC.CONTENT_UPDATE_PETITION: action_phrase = 'Remove '
         
         if self._petition_type == HC.CONTENT_DATA_TYPE_FILES:
             
             hashes = self._petition_data
+            
+            action_phrase += 'files'
             
             content_phrase = ConvertIntToPrettyString( len( hashes ) ) + ' files'
             
@@ -1869,22 +1894,48 @@ class ServerToClientPetition( HydrusYAMLBase ):
             
             ( tag, hashes ) = self._petition_data
             
-            content_phrase = tag + ' for ' + ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            action_phrase += 'a tag:'
+            
+            content_phrase = '    ' + tag
+            content_phrase += os.linesep * 2
+            content_phrase += 'For ' + ConvertIntToPrettyString( len( hashes ) ) + ' files'
             
         elif self._petition_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS:
             
             ( old_tag, new_tag ) = self._petition_data
             
-            content_phrase = 'sibling ' + old_tag + '->' + new_tag
+            action_phrase += 'a sibling:'
+            
+            content_phrase = '    ' + old_tag
+            content_phrase += os.linesep * 2
+            content_phrase += 'Being replaced with:'
+            content_phrase += os.linesep * 2
+            content_phrase += '    ' + new_tag
             
         elif self._petition_type == HC.CONTENT_DATA_TYPE_TAG_PARENTS:
             
             ( old_tag, new_tag ) = self._petition_data
             
-            content_phrase = 'parent ' + old_tag + '->' + new_tag
+            action_phrase += 'a parent:'
+            
+            content_phrase = '    ' + old_tag
+            content_phrase += os.linesep * 2
+            content_phrase += 'Always inheriting:'
+            content_phrase += os.linesep * 2
+            content_phrase += '    ' + new_tag
             
         
-        return action_word + content_phrase + os.linesep * 2 + self._reason
+        reason_phrase = 'Because:'
+        reason_phrase += os.linesep * 2
+        reason_phrase += '    ' + self._reason
+        
+        result = action_phrase
+        result += os.linesep * 2
+        result += content_phrase
+        result += os.linesep * 2
+        result += reason_phrase
+        
+        return result
         
     
 class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):

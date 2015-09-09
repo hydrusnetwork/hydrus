@@ -352,9 +352,12 @@ class VideoRendererFFMPEG( object ):
         
         for i in range( n ):
             
-            self.process.stdout.read( self.depth * w * h )
-            
-            self.process.stdout.flush()
+            if self.process is not None:
+                
+                self.process.stdout.read( self.depth * w * h )
+                
+                self.process.stdout.flush()
+                
             
             self.pos += 1
             

@@ -139,6 +139,16 @@ idle_string_lookup[ IDLE_NOT_ON_SHUTDOWN ] = 'do not run jobs on shutdown'
 idle_string_lookup[ IDLE_ON_SHUTDOWN ] = 'run jobs on shutdown if needed'
 idle_string_lookup[ IDLE_ON_SHUTDOWN_ASK_FIRST ] = 'run jobs on shutdown if needed, but ask first'
 
+IMPORT_FOLDER_DELETE = 0
+IMPORT_FOLDER_IGNORE = 1
+IMPORT_FOLDER_MOVE = 2
+
+import_folder_string_lookup = {}
+
+import_folder_string_lookup[ IMPORT_FOLDER_DELETE ] = 'delete the file'
+import_folder_string_lookup[ IMPORT_FOLDER_IGNORE ] = 'leave the file alone, do not reattempt it'
+import_folder_string_lookup[ IMPORT_FOLDER_MOVE ] = 'move the file'
+
 MEDIA_VIEWER_SHOW_AS_NORMAL = 0
 MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED = 1
 MEDIA_VIEWER_SHOW_BEHIND_EMBED = 2
@@ -241,7 +251,9 @@ STATUS_REDUNDANT = 2
 STATUS_DELETED = 3
 STATUS_FAILED = 4
 STATUS_NEW = 5
-STATUS_PAUSED = 5
+STATUS_PAUSED = 6
+STATUS_UNINTERESTING_MIME = 7
+STATUS_SKIPPED = 8
 
 status_string_lookup = {}
 
@@ -252,6 +264,8 @@ status_string_lookup[ STATUS_DELETED ] = 'deleted'
 status_string_lookup[ STATUS_FAILED ] = 'failed'
 status_string_lookup[ STATUS_NEW ] = 'new'
 status_string_lookup[ STATUS_PAUSED ] = 'paused'
+status_string_lookup[ STATUS_UNINTERESTING_MIME ] = 'uninteresting mime'
+status_string_lookup[ STATUS_SKIPPED ] = 'skipped'
 
 THUMBNAIL_MARGIN = 2
 THUMBNAIL_BORDER = 1

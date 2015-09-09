@@ -1430,7 +1430,7 @@ class ImportArgsGenerator( object ):
             
             HydrusData.ShowException( e )
             
-            time.sleep( 2 )
+            time.sleep( 5 )
             
             self._job_key.Cancel()
             
@@ -1488,7 +1488,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
         
-        time.sleep( 3 )
+        time.sleep( HC.options[ 'website_download_polite_wait' ] )
         
         return ( url, service_keys_to_tags, url )
         
@@ -1521,7 +1521,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
                 
                 HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
                 
-                time.sleep( 3 )
+                time.sleep( HC.options[ 'website_download_polite_wait' ] )
                 
             
             return ( status, media_result )
@@ -1886,10 +1886,10 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                     
                     if HydrusGlobals.view_shutdown or self._job_key.IsDone(): break
                     
-                    self._job_key.SetVariable( 'status', 'found ' + urls_in_pages + '. waiting a few seconds' )
+                    self._job_key.SetVariable( 'status', 'found ' + urls_in_pages + '.' )
                     
                     if first_run: first_run = False
-                    else: time.sleep( 5 )
+                    else: time.sleep( HC.options[ 'website_download_polite_wait' ] )
                     
                     self._job_key.SetVariable( 'status', 'found ' + urls_in_pages + '. looking for next page' )
                     
@@ -1950,7 +1950,7 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
             
             self._job_key.SetVariable( 'status', 'finished. found ' + urls_in_pages )
             
-            time.sleep( 5 )
+            time.sleep( HC.options[ 'website_download_polite_wait' ] )
             
             self._job_key.SetVariable( 'status', '' )
             
@@ -1960,7 +1960,7 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
             
             HydrusData.ShowException( e )
             
-            time.sleep( 2 )
+            time.sleep( 5 )
             
         finally: self._job_key.Finish()
         
@@ -1993,7 +1993,7 @@ class ImportQueueBuilderURLs( ImportQueueBuilder ):
             
             HydrusData.ShowException( e )
             
-            time.sleep( 2 )
+            time.sleep( 5 )
             
         finally: self._job_key.Finish()
         
