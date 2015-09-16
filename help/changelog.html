@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 174</h3></li>
+				<ul>
+					<li>'server stop' and 'server restart' now work!</li>
+					<li>server will now log everything to console as well as server.log</li>
+					<li>server log entries will always be prefixed by the time they were made</li>
+					<li>server shutdown will close services more neatly</li>
+					<li>server shutdown cannot be triggered multiple times with multiple keyboard interrupts</li>
+					<li>server initialisation and shutdown is more verbose</li>
+					<li>server now accepts POST '/shutdown' requests from localhost</li>
+					<li>fixed a server shutdown bug</li>
+					<li>mousewheel events that hit the command and ratings hover windows will be propagated to the media viewer (e.g. if you click a rating, you can now scroll immediately to move to the next file without having to refocus the media viewer window)</li>
+					<li>fixed a bug where zooming out would go immediately to 1% if the media's exact fit zoom was already in the list of default zooms</li>
+					<li>added 'check db integrity' to database maintenance menu</li>
+					<li>multiple drag-and-dropped thumbnails will now be listed inside the drag-and-drop object in their hydrus thumbnail order (was previously random)</li>
+					<li>animations will now pause/play correctly during inbox filtering</li>
+					<li>most client errors now cause a 1 second wait on behalf of the caller, which should bottleneck error spam when it happens</li>
+					<li>fixed some buggy display and rescind behaviour with pre-dialog-existing petitions in the manage parents and siblings dialogs</li>
+					<li>the manage parents and siblings dialogs will now not attempt to remove/petition/rescind a pair if the entered list of pairs has entirely new entries</li>
+					<li>the manage parents and siblings dialogs will now attempt to maintain their sort order after you change some pairs</li>
+					<li>generally cleaned some parent and sibling dialog code</li>
+					<li>added option to options->files and trash for whether to use your OS's recycle bin</li>
+					<li>system:mime text now specifies specific mime group if appropriate, or otherwise lists every mime if >1 selected ('system:mime is specified' is dropped)</li>
+					<li>hydrus repositories will sometimes catch and recover from zero-length update files</li>
+					<li>hydrus repositories will catch processing parsing errors and pause when they happen</li>
+					<li>the new hdd, page of images, and thread watcher import daemons will tidy themselves up if their accompanying pages are completely deleted</li>
+					<li>improved how daemons shut down</li>
+					<li>improved client shutdown logic and speed</li>
+					<li>some misc code cleaning</li>
+					<li>more general code cleanup</li>
+				</ul>
 				<li><h3>version 173</h3></li>
 				<ul>
 					<li>converted import folders to the new system</li>
