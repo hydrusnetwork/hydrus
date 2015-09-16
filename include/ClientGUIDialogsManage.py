@@ -60,7 +60,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage 4chan pass' )
         
-        ( token, pin, self._timeout ) = HydrusGlobals.controller.Read( '4chan_pass' )
+        ( token, pin, self._timeout ) = HydrusGlobals.client_controller.Read( '4chan_pass' )
         
         self._token = wx.TextCtrl( self )
         self._pin = wx.TextCtrl( self )
@@ -127,7 +127,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         token = self._token.GetValue()
         pin = self._pin.GetValue()
         
-        HydrusGlobals.controller.Write( '4chan_pass', ( token, pin, self._timeout ) )
+        HydrusGlobals.client_controller.Write( '4chan_pass', ( token, pin, self._timeout ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -155,12 +155,12 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             request_headers = {}
             request_headers[ 'Content-Type' ] = ct
             
-            response = HydrusGlobals.controller.DoHTTP( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
+            response = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
             
             self._timeout = HydrusData.GetNow() + 365 * 24 * 3600
             
         
-        HydrusGlobals.controller.Write( '4chan_pass', ( token, pin, self._timeout ) )
+        HydrusGlobals.client_controller.Write( '4chan_pass', ( token, pin, self._timeout ) )
         
         self._SetStatus()
         
@@ -195,7 +195,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
         
-        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
         response = service.Request( HC.GET, 'account_types' )
         
@@ -361,7 +361,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        service = HydrusGlobals.controller.GetServicesManager().GetService( self._service_key )
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
         
         service.Request( HC.POST, 'account_types', { 'edit_log' : self._edit_log } )
         
@@ -399,7 +399,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
+            boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
             
             for ( name, booru ) in boorus.items():
                 
@@ -499,7 +499,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             for name in self._names_to_delete:
                 
-                HydrusGlobals.controller.Write( 'delete_remote_booru', name )
+                HydrusGlobals.client_controller.Write( 'delete_remote_booru', name )
                 
             
             for ( name, page ) in self._boorus.GetNamesToActivePages().items():
@@ -508,7 +508,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     booru = page.GetBooru()
                     
-                    HydrusGlobals.controller.Write( 'remote_booru', name, booru )
+                    HydrusGlobals.client_controller.Write( 'remote_booru', name, booru )
                     
                 
             
@@ -887,7 +887,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             self._edit_log = []
             
-            ( identities, contacts, deletable_names ) = HydrusGlobals.controller.Read( 'identities_and_contacts' )
+            ( identities, contacts, deletable_names ) = HydrusGlobals.client_controller.Read( 'identities_and_contacts' )
             
             self._deletable_names = deletable_names
             
@@ -1134,7 +1134,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: HydrusGlobals.controller.Write( 'update_contacts', self._edit_log )
+            if len( self._edit_log ) > 0: HydrusGlobals.client_controller.Write( 'update_contacts', self._edit_log )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -1394,7 +1394,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, use_display_tuple_for_sort = True )
         
-        export_folders = HydrusGlobals.controller.Read( 'export_folders' )
+        export_folders = HydrusGlobals.client_controller.Read( 'export_folders' )
         
         self._original_paths = []
         
@@ -1587,7 +1587,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for export_folder in client_data:
             
-            HydrusGlobals.controller.Write( 'export_folder', export_folder )
+            HydrusGlobals.client_controller.Write( 'export_folder', export_folder )
             
             path = export_folder.GetName()
             
@@ -1596,9 +1596,9 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         deletees = set( self._original_paths ) - paths_set
         
-        for deletee in deletees: HydrusGlobals.controller.Write( 'delete_export_folder', deletee )
+        for deletee in deletees: HydrusGlobals.client_controller.Write( 'delete_export_folder', deletee )
         
-        HydrusGlobals.controller.pub( 'notify_new_export_folders' )
+        HydrusGlobals.client_controller.pub( 'notify_new_export_folders' )
         
         self.EndModal( wx.ID_OK )
         
@@ -1725,8 +1725,8 @@ If you select synchronise, be careful!'''
         
         wx.CallAfter( self._ok.SetFocus )
         
-        HydrusGlobals.controller.sub( self, 'AddPredicate', 'add_predicate' )
-        HydrusGlobals.controller.sub( self, 'RemovePredicate', 'remove_predicate' )
+        HydrusGlobals.client_controller.sub( self, 'AddPredicate', 'add_predicate' )
+        HydrusGlobals.client_controller.sub( self, 'RemovePredicate', 'remove_predicate' )
         
     
     def AddPredicate( self, page_key, predicate ):
@@ -1816,7 +1816,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             self._names_to_delete = []
             
-            sites = HydrusGlobals.controller.Read( 'imageboards' )
+            sites = HydrusGlobals.client_controller.Read( 'imageboards' )
             
             for ( name, imageboards ) in sites.items():
                 
@@ -1916,7 +1916,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             for name in self._names_to_delete:
                 
-                HydrusGlobals.controller.Write( 'delete_imageboard', name )
+                HydrusGlobals.client_controller.Write( 'delete_imageboard', name )
                 
             
             for ( name, page ) in self._sites.GetNamesToActivePages().items():
@@ -1925,7 +1925,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     imageboards = page.GetImageboards()
                     
-                    HydrusGlobals.controller.Write( 'imageboard', name, imageboards )
+                    HydrusGlobals.client_controller.Write( 'imageboard', name, imageboards )
                     
                 
             
@@ -2531,7 +2531,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         self._names_to_import_folders = {}
         
-        import_folders = HydrusGlobals.controller.Read( 'import_folders' )
+        import_folders = HydrusGlobals.client_controller.Read( 'import_folders' )
         
         for import_folder in import_folders:
             
@@ -2702,17 +2702,17 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         for name in names_to_delete:
             
-            HydrusGlobals.controller.Write( 'delete_import_folder', name )
+            HydrusGlobals.client_controller.Write( 'delete_import_folder', name )
             
         
         for name in names_to_save:
             
             import_folder = self._names_to_import_folders[ name ]
             
-            HydrusGlobals.controller.Write( 'import_folder', import_folder )
+            HydrusGlobals.client_controller.Write( 'import_folder', import_folder )
             
         
-        HydrusGlobals.controller.pub( 'notify_new_import_folders' )
+        HydrusGlobals.client_controller.pub( 'notify_new_import_folders' )
         
         self.EndModal( wx.ID_OK )
         
@@ -3003,7 +3003,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         seed_cache = self._import_folder.GetSeedCache()
         
-        HydrusGlobals.controller.pub( 'show_seed_cache', seed_cache )
+        HydrusGlobals.client_controller.pub( 'show_seed_cache', seed_cache )
         
     
     def GetInfo( self ):
@@ -3710,7 +3710,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             for ( k, v ) in HC.site_type_string_lookup.items(): pretty_names_to_names[ v ] = k
             
-            boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
+            boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
             
             for ( booru_name, booru ) in boorus.items(): pretty_names_to_names[ 'booru: ' + booru_name ] = ( HC.SITE_TYPE_BOORU, booru_name )
             
@@ -3805,6 +3805,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._export_location = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
             
+            self._delete_to_recycle_bin = wx.CheckBox( self, label = '' )
             self._exclude_deleted_files = wx.CheckBox( self, label = '' )
             
             self._remove_filtered_files = wx.CheckBox( self, label = '' )
@@ -3822,6 +3823,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 if abs_path is not None: self._export_location.SetPath( abs_path )
                 
             
+            self._delete_to_recycle_bin.SetValue( HC.options[ 'delete_to_recycle_bin' ] )
             self._exclude_deleted_files.SetValue( HC.options[ 'exclude_deleted_files' ] )
             self._remove_filtered_files.SetValue( HC.options[ 'remove_filtered_files' ] )
             self._remove_trashed_files.SetValue( HC.options[ 'remove_trashed_files' ] )
@@ -3838,6 +3840,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddF( wx.StaticText( self, label = 'Default export directory: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._export_location, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'When deleting files or folders, send them to the OS\'s recycle bin: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._delete_to_recycle_bin, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self, label = 'By default, do not reimport files that have been previously deleted: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._exclude_deleted_files, CC.FLAGS_MIXED )
@@ -3866,6 +3871,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             HC.options[ 'export_path' ] = HydrusFileHandling.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
             
+            HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.GetValue()
             HC.options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
             HC.options[ 'remove_filtered_files' ] = self._remove_filtered_files.GetValue()
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
@@ -3909,7 +3915,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            gui_session_names = HydrusGlobals.controller.Read( 'gui_session_names' )
+            gui_session_names = HydrusGlobals.client_controller.Read( 'gui_session_names' )
             
             if 'last session' not in gui_session_names: gui_session_names.insert( 0, 'last session' )
             
@@ -3937,7 +3943,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
             
-            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
             
             for service in services: self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
             
@@ -4167,7 +4173,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             new_local_port = self._local_port.GetValue()
             
-            if new_local_port != HC.options[ 'local_port' ]: HydrusGlobals.controller.pub( 'restart_server' )
+            if new_local_port != HC.options[ 'local_port' ]: HydrusGlobals.client_controller.pub( 'restart_server' )
             
             HC.options[ 'local_port' ] = new_local_port
             
@@ -4606,7 +4612,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             page.UpdateOptions()
             
         
-        try: HydrusGlobals.controller.Write( 'save_options', HC.options )
+        try: HydrusGlobals.client_controller.Write( 'save_options', HC.options )
         except: wx.MessageBox( traceback.format_exc() )
         
         self.EndModal( wx.ID_OK )
@@ -4636,7 +4642,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            ( id, password ) = HydrusGlobals.controller.Read( 'pixiv_account' )
+            ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
             
             self._id.SetValue( id )
             self._password.SetValue( password )
@@ -4696,7 +4702,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         id = self._id.GetValue()
         password = self._password.GetValue()
         
-        HydrusGlobals.controller.Write( 'pixiv_account', ( id, password ) )
+        HydrusGlobals.client_controller.Write( 'pixiv_account', ( id, password ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -4717,7 +4723,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         headers = {}
         headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
         
-        ( response_gumpf, cookies ) = HydrusGlobals.controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+        ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
         
         # _ only given to logged in php sessions
         if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabel( 'OK!' )
@@ -4732,8 +4738,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            like_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-            numerical_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+            like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+            numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
             
             self._panels = []
             
@@ -4839,7 +4845,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                     
                 
             
-            HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
             ( remember, position ) = HC.options[ 'rating_dialog_position' ]
             
@@ -4849,7 +4855,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'rating_dialog_position' ] = ( remember, current_position )
                 
-                HydrusGlobals.controller.Write( 'save_options', HC.options )
+                HydrusGlobals.client_controller.Write( 'save_options', HC.options )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -5112,7 +5118,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             self.SetInitialSize( ( 680, y ) )
             
         
-        self._service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + self._service.GetName() + ' services' )
         
@@ -5207,7 +5213,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 
                 admin_service_key = self._service.GetServiceKey()
                 
-                HydrusGlobals.controller.Write( 'update_server_services', admin_service_key, self._services_info, self._edit_log, service_keys_to_access_keys )
+                HydrusGlobals.client_controller.Write( 'update_server_services', admin_service_key, self._services_info, self._edit_log, service_keys_to_access_keys )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -5431,7 +5437,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 parent_listbook.AddPage( name, listbook )
                 
-                services = HydrusGlobals.controller.GetServicesManager().GetServices( ( service_type, ) )
+                services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( service_type, ) )
                 
                 for service in services:
                     
@@ -5703,7 +5709,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: HydrusGlobals.controller.Write( 'update_services', self._edit_log )
+            if len( self._edit_log ) > 0: HydrusGlobals.client_controller.Write( 'update_services', self._edit_log )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -5912,7 +5918,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if service_type in HC.TAG_SERVICES:
                     
-                    self._archive_info = HydrusGlobals.controller.Read( 'tag_archive_info' )
+                    self._archive_info = HydrusGlobals.client_controller.Read( 'tag_archive_info' )
                     
                     self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
                     
@@ -6144,11 +6150,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if self._reset_downloading:
                 
-                HydrusGlobals.controller.Write( 'reset_service', service_key, delete_updates = True )
+                HydrusGlobals.client_controller.Write( 'reset_service', service_key, delete_updates = True )
                 
             elif self._reset_processing:
                 
-                HydrusGlobals.controller.Write( 'reset_service', service_key )
+                HydrusGlobals.client_controller.Write( 'reset_service', service_key )
                 
             
         
@@ -6501,7 +6507,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage subscriptions' )
         
-        self._original_subscription_names = HydrusGlobals.controller.Read( 'subscription_names' )
+        self._original_subscription_names = HydrusGlobals.client_controller.Read( 'subscription_names' )
         
         self._names_to_delete = set()
         
@@ -6585,18 +6591,18 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for name in self._names_to_delete: HydrusGlobals.controller.Write( 'delete_subscription', name )
+            for name in self._names_to_delete: HydrusGlobals.client_controller.Write( 'delete_subscription', name )
             
             for page in all_pages:
                 
                 ( name, info ) = page.GetSubscription()
                 
-                HydrusGlobals.controller.Write( 'subscription', name, info )
+                HydrusGlobals.client_controller.Write( 'subscription', name, info )
                 
             
             HydrusGlobals.subs_changed = True
             
-            HydrusGlobals.controller.pub( 'notify_new_subscriptions' )
+            HydrusGlobals.client_controller.pub( 'notify_new_subscriptions' )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -6786,7 +6792,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
             else:
                 
-                info = HydrusGlobals.controller.Read( 'subscription', self._name )
+                info = HydrusGlobals.client_controller.Read( 'subscription', self._name )
                 
                 self._new_subscription = False
                 
@@ -6820,7 +6826,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 booru_name = self._booru_selector.GetString( selection )
                 
-                booru = HydrusGlobals.controller.Read( 'remote_booru', booru_name )
+                booru = HydrusGlobals.client_controller.Read( 'remote_booru', booru_name )
                 
                 namespaces = booru.GetNamespaces()
                 
@@ -6860,7 +6866,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 if self._booru_selector.GetCount() == 0:
                     
-                    boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
+                    boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
                     
                     for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
                     
@@ -6903,7 +6909,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 if self._booru_selector.GetCount() == 0:
                     
-                    boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
+                    boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
                     
                     for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
                     
@@ -7033,7 +7039,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
@@ -7106,7 +7112,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             info = [ page.GetInfo() for page in self._tag_services.GetNamesToActivePages().values() if page.HasInfo() ]
             
-            HydrusGlobals.controller.Write( 'tag_censorship', info )
+            HydrusGlobals.client_controller.Write( 'tag_censorship', info )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -7136,7 +7142,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             def PopulateControls():
                 
-                ( blacklist, tags ) = HydrusGlobals.controller.Read( 'tag_censorship', service_key )
+                ( blacklist, tags ) = HydrusGlobals.client_controller.Read( 'tag_censorship', service_key )
                 
                 if blacklist: self._blacklist.SetSelection( 0 )
                 else: self._blacklist.SetSelection( 1 )
@@ -7217,7 +7223,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -7240,7 +7246,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            service = HydrusGlobals.controller.GetServicesManager().GetService( default_tag_repository_key )
+            service = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( service.GetName() )
             
@@ -7314,7 +7320,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -7330,80 +7336,18 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def __init__( self, parent, service_key, tag = None ):
             
-            def InitialiseControls():
-                
-                self._tag_parents = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'child', 160 ), ( 'parent', -1 ) ] )
-                self._tag_parents.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
-                self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-                self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
-                
-                removed_callable = lambda tag: 1
-                
-                self._children = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
-                self._parents = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
-                
-                self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddChild, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-                self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddParent, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-                
-                self._add = wx.Button( self, label = 'add' )
-                self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
-                self._add.Disable()
-                
-            
-            def PopulateControls():
-                
-                for ( status, pairs ) in self._original_statuses_to_pairs.items():
-                    
-                    if status != HC.DELETED:
-                        
-                        sign = HydrusData.ConvertStatusToPrefix( status )
-                        
-                        for ( child, parent ) in pairs: self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
-                        
-                    
-                
-                self._tag_parents.SortListItems( 2 )
-                
-                if tag is not None: self.AddChild( tag )
-                
-            
-            def ArrangeControls():
-                
-                intro = 'Files with a tag on the left will also be given the tag on the right.'
-                
-                tags_box = wx.BoxSizer( wx.HORIZONTAL )
-                
-                tags_box.AddF( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
-                tags_box.AddF( self._parents, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                input_box = wx.BoxSizer( wx.HORIZONTAL )
-                
-                input_box.AddF( self._child_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-                input_box.AddF( self._parent_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._tag_parents, CC.FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
-                vbox.AddF( tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                vbox.AddF( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
-                self.SetSizer( vbox )
-                
-            
             wx.Panel.__init__( self, parent )
             
             self._service_key = service_key
             
             if service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
             
-            self._original_statuses_to_pairs = HydrusGlobals.controller.Read( 'tag_parents', service_key )
+            self._original_statuses_to_pairs = HydrusGlobals.client_controller.Read( 'tag_parents', service_key )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -7411,20 +7355,81 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._pairs_to_reasons = {}
             
-            InitialiseControls()
+            self._tag_parents = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'child', 160 ), ( 'parent', -1 ) ] )
+            self._tag_parents.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
+            self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+            self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
-            PopulateControls()
+            removed_callable = lambda tag: 1
             
-            ArrangeControls()
+            self._children = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
+            self._parents = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
+            
+            self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddChild, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddParent, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            
+            self._add = wx.Button( self, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
+            self._add.Disable()
+            
+            #
+            
+            petitioned_pairs = set( self._original_statuses_to_pairs[ HC.PETITIONED ] )
+            
+            for ( status, pairs ) in self._original_statuses_to_pairs.items():
+                
+                if status != HC.DELETED:
+                    
+                    sign = HydrusData.ConvertStatusToPrefix( status )
+                    
+                    for ( child, parent ) in pairs:
+                        
+                        if status == HC.CURRENT and ( child, parent ) in petitioned_pairs:
+                            
+                            continue
+                            
+                        
+                        self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
+                        
+                    
+                
+            
+            self._tag_parents.SortListItems( 2 )
+            
+            if tag is not None: self.AddChild( tag )
+            
+            #
+            
+            intro = 'Files with a tag on the left will also be given the tag on the right.'
+            
+            tags_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            tags_box.AddF( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
+            tags_box.AddF( self._parents, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            input_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            input_box.AddF( self._child_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            input_box.AddF( self._parent_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._tag_parents, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
+            vbox.AddF( tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
             
         
         def _AddPairs( self, children, parent ):
             
             pairs = [ ( child, parent ) for child in children ]
             
-            current_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.CURRENT ] ]
-            pending_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PENDING ] ]
             petitioned_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PETITIONED ] ]
+            current_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.CURRENT ] and pair not in petitioned_pairs ]
+            pending_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PENDING ] ]
             
             existing_pairs = set()
             
@@ -7436,18 +7441,18 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             actions = []
             
-            if len( current_pairs ) > 0:
+            if len( current_pairs ) > 0 and len( new_pairs ) == 0:
                 
-                pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
+                do_it = True
                 
-                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
-                else: message = 'The pair ' + pair_strings + ' already exists.'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                     
-                    do_it = True
+                    pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
                     
-                    if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                    if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
+                    else: message = 'The pair ' + pair_strings + ' already exists.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
@@ -7473,17 +7478,17 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                             
                         
                     
-                    if do_it:
-                        
-                        old_status = HC.CURRENT
-                        new_status = HC.PETITIONED
-                        
-                        actions.append( ( current_pairs, old_status, new_status ) )
-                        
+                
+                if do_it:
+                    
+                    old_status = HC.CURRENT
+                    new_status = HC.PETITIONED
+                    
+                    actions.append( ( current_pairs, old_status, new_status ) )
                     
                 
             
-            if len( pending_pairs ) > 0:
+            if len( pending_pairs ) > 0 and len( new_pairs ) == 0:
                 
                 pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
                 
@@ -7571,7 +7576,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     
                     if old_status is not None:
                         
-                        self._current_statuses_to_pairs[ old_status ].discard( pair )
+                        if old_status not in ( HC.CURRENT, HC.DELETED ):
+                            
+                            self._current_statuses_to_pairs[ old_status ].discard( pair )
+                            
                         
                         index = self._tag_parents.GetIndexFromClientData( ( old_status, child, parent ) )
                         
@@ -7588,6 +7596,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                         
                     
                 
+            
+            self._tag_parents.SortListItems()
             
         
         def _CanAdd( self, potential_child, potential_parent ):
@@ -7748,7 +7758,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._tag_repositories.AddPage( name, page )
             
-            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -7765,7 +7775,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            service = HydrusGlobals.controller.GetServicesManager().GetService( default_tag_repository_key )
+            service = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( service.GetName() )
             
@@ -7839,7 +7849,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -7855,86 +7865,18 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         def __init__( self, parent, service_key, tag = None ):
             
-            def InitialiseControls():
-                
-                self._tag_siblings = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'old', 160 ), ( 'new', -1 ) ] )
-                self._tag_siblings.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
-                self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-                self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
-                
-                removed_callable = lambda tags: 1
-                
-                self._old_siblings = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
-                self._new_sibling = wx.StaticText( self )
-                
-                self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddOld, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-                self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-                
-                self._add = wx.Button( self, label = 'add' )
-                self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
-                self._add.Disable()
-                
-                
-            def PopulateControls():
-                
-                for ( status, pairs ) in self._original_statuses_to_pairs.items():
-                    
-                    if status != HC.DELETED:
-                        
-                        sign = HydrusData.ConvertStatusToPrefix( status )
-                        
-                        for ( old, new ) in pairs: self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
-                        
-                    
-                
-                self._tag_siblings.SortListItems( 2 )
-                
-                if tag is not None: self.AddOld( tag )
-                
-            
-            def ArrangeControls():
-                
-                intro = 'Tags on the left will be replaced by those on the right.'
-                
-                new_sibling_box = wx.BoxSizer( wx.VERTICAL )
-                
-                new_sibling_box.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-                new_sibling_box.AddF( self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
-                new_sibling_box.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                text_box = wx.BoxSizer( wx.HORIZONTAL )
-                
-                text_box.AddF( self._old_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
-                text_box.AddF( new_sibling_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                input_box = wx.BoxSizer( wx.HORIZONTAL )
-                
-                input_box.AddF( self._old_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-                input_box.AddF( self._new_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._tag_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
-                vbox.AddF( text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                vbox.AddF( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
-                self.SetSizer( vbox )
-                
-            
             wx.Panel.__init__( self, parent )
             
             self._service_key = service_key
             
             if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
             
-            self._original_statuses_to_pairs = HydrusGlobals.controller.Read( 'tag_siblings', service_key )
+            self._original_statuses_to_pairs = HydrusGlobals.client_controller.Read( 'tag_siblings', service_key )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -7944,20 +7886,88 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._current_new = None
             
-            InitialiseControls()
+            self._tag_siblings = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'old', 160 ), ( 'new', -1 ) ] )
+            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
+            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
-            PopulateControls()
+            removed_callable = lambda tags: 1
             
-            ArrangeControls()
+            self._old_siblings = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
+            self._new_sibling = wx.StaticText( self )
+            
+            self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddOld, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            
+            self._add = wx.Button( self, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
+            self._add.Disable()
+            
+            #
+            
+            petitioned_pairs = set( self._original_statuses_to_pairs[ HC.PETITIONED ] )
+            
+            for ( status, pairs ) in self._original_statuses_to_pairs.items():
+                
+                if status != HC.DELETED:
+                    
+                    sign = HydrusData.ConvertStatusToPrefix( status )
+                    
+                    for ( old, new ) in pairs:
+                        
+                        if status == HC.CURRENT and ( old, new ) in petitioned_pairs:
+                            
+                            continue
+                            
+                        
+                        self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
+                        
+                    
+                
+            
+            self._tag_siblings.SortListItems( 2 )
+            
+            if tag is not None: self.AddOld( tag )
+            
+            #
+            
+            intro = 'Tags on the left will be replaced by those on the right.'
+            
+            new_sibling_box = wx.BoxSizer( wx.VERTICAL )
+            
+            new_sibling_box.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            new_sibling_box.AddF( self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
+            new_sibling_box.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            text_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            text_box.AddF( self._old_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
+            text_box.AddF( new_sibling_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            input_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            input_box.AddF( self._old_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            input_box.AddF( self._new_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._tag_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
+            vbox.AddF( text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
             
         
         def _AddPairs( self, olds, new ):
             
             pairs = [ ( old, new ) for old in olds ]
             
-            current_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.CURRENT ] ]
-            pending_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PENDING ] ]
             petitioned_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PETITIONED ] ]
+            current_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.CURRENT ] and pair not in petitioned_pairs ]
+            pending_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PENDING ] ]
             
             existing_pairs = set()
             
@@ -7969,18 +7979,18 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             actions = []
             
-            if len( current_pairs ) > 0:
+            if len( current_pairs ) > 0 and len( new_pairs ) == 0:
                 
-                pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
+                do_it = True
                 
-                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
-                else: message = 'The pair ' + pair_strings + ' already exists.'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                     
-                    do_it = True
+                    pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
                     
-                    if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                    if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
+                    else: message = 'The pair ' + pair_strings + ' already exists.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
@@ -8003,17 +8013,18 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                             
                         
                     
-                    if do_it:
-                        
-                        old_status = HC.CURRENT
-                        new_status = HC.PETITIONED
-                        
-                        actions.append( ( current_pairs, old_status, new_status ) )
-                        
+                
+                if do_it:
+                    
+                    old_status = HC.CURRENT
+                    new_status = HC.PETITIONED
+                    
+                    actions.append( ( current_pairs, old_status, new_status ) )
                     
                 
+                
             
-            if len( pending_pairs ) > 0:
+            if len( pending_pairs ) > 0 and len( new_pairs ) == 0:
                 
                 pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
                 
@@ -8035,7 +8046,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                 
             
-            if len( petitioned_pairs ) > 0:
+            if len( petitioned_pairs ) > 0 and len( new_pairs ) == 0:
                 
                 pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
                 
@@ -8101,7 +8112,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                     if old_status is not None:
                         
-                        self._current_statuses_to_pairs[ old_status ].discard( pair )
+                        if old_status not in ( HC.CURRENT, HC.DELETED ):
+                            
+                            self._current_statuses_to_pairs[ old_status ].discard( pair )
+                            
                         
                         index = self._tag_siblings.GetIndexFromClientData( ( old_status, old, new ) )
                         
@@ -8118,6 +8132,8 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                         
                     
                 
+            
+            self._tag_siblings.SortListItems()
             
         
         def _CanAdd( self, potential_old, potential_new ):
@@ -8341,7 +8357,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
             name_to_select = None
             
@@ -8439,7 +8455,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         self.RefreshAcceleratorTable()
         
-        if self._canvas_key is not None: HydrusGlobals.controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+        if self._canvas_key is not None: HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
         
     
     def _ClearPanels( self ):
@@ -8460,7 +8476,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         if len( service_keys_to_content_updates ) > 0:
             
-            HydrusGlobals.controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
         
     
@@ -8524,7 +8540,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._CommitCurrentChanges()
             
-            HydrusGlobals.controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            HydrusGlobals.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
             
         
     
@@ -8553,7 +8569,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._ClearPanels()
             
-            HydrusGlobals.controller.pub( 'canvas_show_next', self._canvas_key )
+            HydrusGlobals.client_controller.pub( 'canvas_show_next', self._canvas_key )
             
         
     
@@ -8571,7 +8587,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'tag_dialog_size' ] = ( remember, current_size )
                 
-                HydrusGlobals.controller.Write( 'save_options', HC.options )
+                HydrusGlobals.client_controller.Write( 'save_options', HC.options )
                 
             
             ( remember, position ) = HC.options[ 'tag_dialog_position' ]
@@ -8582,7 +8598,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'tag_dialog_position' ] = ( remember, current_position )
                 
-                HydrusGlobals.controller.Write( 'save_options', HC.options )
+                HydrusGlobals.client_controller.Write( 'save_options', HC.options )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -8596,7 +8612,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._ClearPanels()
             
-            HydrusGlobals.controller.pub( 'canvas_show_previous', self._canvas_key )
+            HydrusGlobals.client_controller.pub( 'canvas_show_previous', self._canvas_key )
             
         
     
@@ -8631,7 +8647,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if not self._i_am_local_tag_service:
                 
-                service = HydrusGlobals.controller.GetServicesManager().GetService( tag_service_key )
+                service = HydrusGlobals.client_controller.GetServicesManager().GetService( tag_service_key )
                 
                 try: self._account = service.GetInfo( 'account' )
                 except: self._account = HydrusData.GetUnknownAccount()
@@ -8709,7 +8725,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             choices = []
             
-            sibling_tag = HydrusGlobals.controller.GetManager( 'tag_siblings' ).GetSibling( tag )
+            sibling_tag = HydrusGlobals.client_controller.GetManager( 'tag_siblings' ).GetSibling( tag )
             
             if sibling_tag is not None:
                 
@@ -8844,7 +8860,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             text = os.linesep.join( tags )
             
-            HydrusGlobals.controller.pub( 'clipboard', 'text', text )
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
             
         
         def EventModify( self, event ):
@@ -8948,7 +8964,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
             
-            if len( self._hashes ) > 0: media_results = HydrusGlobals.controller.Read( 'media_results', self._file_service_key, self._hashes )
+            if len( self._hashes ) > 0: media_results = HydrusGlobals.client_controller.Read( 'media_results', self._file_service_key, self._hashes )
             else: media_results = []
             
             # this should now be a nice clean copy of the original media

@@ -276,6 +276,7 @@ class HydrusServiceAdmin( HydrusServiceRestricted ):
         root.putChild( 'init', HydrusServerResources.HydrusResourceCommandInit( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         root.putChild( 'services', HydrusServerResources.HydrusResourceCommandRestrictedServices( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         root.putChild( 'services_info', HydrusServerResources.HydrusResourceCommandRestrictedServicesInfo( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'shutdown', HydrusServerResources.HydrusResourceCommandShutdown( self._service_key, self._service_type, LOCAL_DOMAIN ) )
         
         return root
         

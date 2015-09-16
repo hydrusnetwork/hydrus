@@ -8,6 +8,7 @@ import locale
 import os
 import psutil
 import send2trash
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -490,7 +491,14 @@ def DebugPrint( debug_info ):
     
 def DeletePath( path ):
     
-    send2trash.send2trash( path )
+    if os.path.isdir( path ):
+        
+        shutil.rmtree( path )
+        
+    else:
+        
+        os.remove( path )
+        
     
 def DeserialisePrettyTags( text ):
     
@@ -536,6 +544,56 @@ def GetNowPrecise():
     
     if HC.PLATFORM_WINDOWS: return time.clock()
     else: return time.time()
+    
+def GetSiblingProcessPorts( instance ):
+    
+    path = HC.BASE_DIR + os.path.sep + instance + '_running'
+    
+    if os.path.exists( path ):
+        
+        with open( path, 'rb' ) as f:
+            
+            result = f.read()
+            
+            try:
+                
+                ( pid, create_time ) = result.split( os.linesep )
+                
+                pid = int( pid )
+                create_time = float( create_time )
+                
+            except ValueError:
+                
+                return None
+                
+            
+            try:
+                
+                if psutil.pid_exists( pid ):
+                    
+                    ports = []
+                    
+                    p = psutil.Process( pid )
+                    
+                    for conn in p.connections():
+                        
+                        if conn.status == 'LISTEN':
+                            
+                            ports.append( int( conn.laddr[1] ) )
+                            
+                        
+                    
+                    return ports
+                    
+                
+            except psutil.Error:
+                
+                return None
+                
+            
+        
+    
+    return None
     
 def GetSubprocessStartupInfo():
     
@@ -666,6 +724,10 @@ def RecordRunningStart( instance ):
         f.write( record_string )
         
     
+def RecyclePath( path ):
+    
+    send2trash.send2trash( path )
+    
 def ShowExceptionDefault( e ):
     
     etype = type( e )
@@ -686,6 +748,8 @@ def ShowExceptionDefault( e ):
     
     sys.stdout.flush()
     sys.stderr.flush()
+    
+    time.sleep( 1 )
     
 ShowException = ShowExceptionDefault
 
@@ -1284,161 +1348,6 @@ class JobDatabase( object ):
         self._result_ready.set()
         
     
-class JobKey( object ):
-    
-    def __init__( self, pausable = False, cancellable = False ):
-        
-        self._key = GenerateKey()
-        
-        self._pausable = pausable
-        self._cancellable = cancellable
-        
-        self._deleted = threading.Event()
-        self._begun = threading.Event()
-        self._done = threading.Event()
-        self._cancelled = threading.Event()
-        self._paused = threading.Event()
-        
-        self._variable_lock = threading.Lock()
-        self._variables = dict()
-        
-    
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
-    
-    def __hash__( self ): return self._key.__hash__()
-    
-    def __ne__( self, other ): return self.__hash__() != other.__hash__()
-    
-    def Begin( self ): self._begun.set()
-    
-    def Cancel( self ):
-        
-        self._cancelled.set()
-        
-        self.Finish()
-        
-    
-    def Delete( self ):
-        
-        self.Finish()
-        
-        self._deleted.set()
-        
-    
-    def DeleteVariable( self, name ):
-        
-        with self._variable_lock:
-            
-            if name in self._variables: del self._variables[ name ]
-            
-        
-        time.sleep( 0.00001 )
-        
-    
-    def Finish( self ): self._done.set()
-    
-    def GetKey( self ): return self._key
-    
-    def GetVariable( self, name ):
-        
-        with self._variable_lock: return self._variables[ name ]
-        
-    
-    def HasVariable( self, name ):
-        
-        with self._variable_lock: return name in self._variables
-        
-    
-    def IsBegun( self ): return self._begun.is_set()
-    
-    def IsCancellable( self ): return self._cancellable and not self.IsDone()
-    
-    def IsCancelled( self ): return HydrusGlobals.view_shutdown or self._cancelled.is_set()
-    
-    def IsDeleted( self ): return HydrusGlobals.view_shutdown or self._deleted.is_set()
-    
-    def IsDone( self ): return HydrusGlobals.view_shutdown or self._done.is_set()
-    
-    def IsPausable( self ): return self._pausable and not self.IsDone()
-    
-    def IsPaused( self ): return self._paused.is_set() and not self.IsDone()
-    
-    def IsWorking( self ): return self.IsBegun() and not self.IsDone()
-    
-    def Pause( self ): self._paused.set()
-    
-    def PauseResume( self ):
-        
-        if self._paused.is_set(): self._paused.clear()
-        else: self._paused.set()
-        
-    
-    def Resume( self ): self._paused.clear()
-    
-    def SetCancellable( self, value ): self._cancellable = value
-    
-    def SetPausable( self, value ): self._pausable = value
-    
-    def SetVariable( self, name, value ):
-        
-        with self._variable_lock: self._variables[ name ] = value
-        
-        time.sleep( 0.00001 )
-        
-    
-    def ToString( self ):
-        
-        stuff_to_print = []
-        
-        with self._variable_lock:
-            
-            if 'popup_title' in self._variables: stuff_to_print.append( self._variables[ 'popup_title' ] )
-            
-            if 'popup_text_1' in self._variables: stuff_to_print.append( self._variables[ 'popup_text_1' ] )
-            
-            if 'popup_text_2' in self._variables: stuff_to_print.append( self._variables[ 'popup_text_2' ] )
-            
-            if 'popup_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_traceback' ] )
-            
-            if 'popup_caller_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_caller_traceback' ] )
-            
-            if 'popup_db_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_db_traceback' ] )
-            
-        
-        stuff_to_print = [ ToString( s ) for s in stuff_to_print ]
-        
-        try:
-            
-            return os.linesep.join( stuff_to_print )
-            
-        except:
-            
-            return repr( stuff_to_print )
-            
-        
-    
-    def WaitIfNeeded( self ):
-        
-        i_paused = False
-        should_quit = False
-        
-        while self.IsPaused():
-            
-            i_paused = True
-            
-            time.sleep( 0.1 )
-            
-            if HydrusGlobals.view_shutdown or self.IsDone(): break
-            
-        
-        if HydrusGlobals.view_shutdown or self.IsCancelled():
-            
-            should_quit = True
-            
-        
-        return ( i_paused, should_quit )
-        
-    
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
@@ -1489,7 +1398,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
             
-            serialisable_value = self._value.encode( 'hex' )
+            hash = self._value
+            
+            serialisable_value = hash.encode( 'hex' )
             
         else:
             
@@ -1673,25 +1584,32 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     mimes = self._value
                     
-                    if mimes in HC.mime_string_lookup or len( mimes ) == 1:
+                    if set( mimes ) == set( HC.SEARCHABLE_MIMES ):
                         
-                        if mimes in HC.mime_string_lookup:
-                            
-                            mime_text = HC.mime_string_lookup[ mimes ]
-                            
-                        else:
-                            
-                            mime = mimes[0]
-                            
-                            mime_text = HC.mime_string_lookup[ mime ]
-                            
+                        mime_text = 'anything'
                         
-                        base += u' is ' + mime_text
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.APPLICATIONS ) ):
+                        
+                        mime_text = 'application'
+                        
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.AUDIO ) ):
+                        
+                        mime_text = 'audio'
+                        
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.IMAGES ) ):
+                        
+                        mime_text = 'image'
+                        
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.VIDEO ) ):
+                        
+                        mime_text = 'video'
                         
                     else:
                         
-                        base += u' is specified'
+                        mime_text = ', '.join( [ HC.mime_string_lookup[ mime ] for mime in mimes ] )
                         
+                    
+                    base += u' is ' + mime_text
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:

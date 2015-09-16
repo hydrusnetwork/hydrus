@@ -138,8 +138,8 @@ def ConvertTagsToServiceKeysToTags( tags, advanced_tag_options ):
     
     service_keys_to_tags = {}
     
-    siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
-    parents_manager = HydrusGlobals.controller.GetManager( 'tag_parents' )
+    siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+    parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
     
     for ( service_key, namespaces ) in advanced_tag_options.items():
         
@@ -196,12 +196,12 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     try:
         
-        HydrusGlobals.controller.DoHTTP( HC.GET, url, temp_path = temp_path, report_hooks = [ hook ] )
+        HydrusGlobals.client_controller.DoHTTP( HC.GET, url, temp_path = temp_path, report_hooks = [ hook ] )
         
         job_key.DeleteVariable( 'popup_gauge_1' )
         job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
         
-        ( result, hash ) = HydrusGlobals.controller.WriteSynchronous( 'import_file', temp_path )
+        ( result, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path )
         
     finally:
         
@@ -305,7 +305,7 @@ class GalleryParser( object ):
         
         self._AddSessionCookies( request_headers )
         
-        return HydrusGlobals.controller.DoHTTP( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
+        return HydrusGlobals.client_controller.DoHTTP( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def _GetGalleryPageURL( self, page_index ):
@@ -371,7 +371,7 @@ class GalleryParserBooru( GalleryParser ):
         
         try:
             
-            self._booru = HydrusGlobals.controller.Read( 'remote_booru', booru_name )
+            self._booru = HydrusGlobals.client_controller.Read( 'remote_booru', booru_name )
             
         except:
             
@@ -814,7 +814,7 @@ class GalleryParserHentaiFoundry( GalleryParser ):
     
     def _AddSessionCookies( self, request_headers ):
         
-        manager = HydrusGlobals.controller.GetManager( 'web_sessions' )
+        manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
         
         cookies = manager.GetCookies( 'hentai foundry' )
         
@@ -977,7 +977,7 @@ class GalleryParserHentaiFoundry( GalleryParser ):
     
     def SetupGallerySearch( self ):
         
-        manager = HydrusGlobals.controller.GetManager( 'web_sessions' )
+        manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
         
         cookies = manager.GetCookies( 'hentai foundry' )
         
@@ -996,7 +996,7 @@ class GalleryParserHentaiFoundry( GalleryParser ):
         
         self._AddSessionCookies( request_headers )
         
-        HydrusGlobals.controller.DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
+        HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
         
     
 class GalleryParserNewgrounds( GalleryParser ):
@@ -1168,7 +1168,7 @@ class GalleryParserPixiv( GalleryParser ):
     
     def _AddSessionCookies( self, request_headers ):
         
-        manager = HydrusGlobals.controller.GetManager( 'web_sessions' )
+        manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
         
         cookies = manager.GetCookies( 'pixiv' )
         
@@ -1396,7 +1396,7 @@ class ImportArgsGenerator( object ):
                     
                     self._job_key.SetVariable( 'status', 'importing' )
                     
-                    ( result, media_result ) = HydrusGlobals.controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True, url = url )
+                    ( result, media_result ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True, url = url )
                     
                 finally:
                     
@@ -1412,7 +1412,7 @@ class ImportArgsGenerator( object ):
                 
                 if media_result is not None and page_key is not None:
                     
-                    HydrusGlobals.controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                    HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                     
                 
             
@@ -1501,13 +1501,13 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         gallery_parser = self._gallery_parsers_factory( 'example' )[0]
         
-        ( status, hash ) = HydrusGlobals.controller.Read( 'url_status', url )
+        ( status, hash ) = HydrusGlobals.client_controller.Read( 'url_status', url )
         
         if status == CC.STATUS_DELETED and not self._import_file_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
         
         if status == CC.STATUS_REDUNDANT:
             
-            ( media_result, ) = HydrusGlobals.controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             do_tags = len( self._advanced_tag_options ) > 0
             
@@ -1519,7 +1519,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
                 
                 service_keys_to_content_updates = ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags )
                 
-                HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
+                HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                 
                 time.sleep( HC.options[ 'website_download_polite_wait' ] )
                 
@@ -1543,7 +1543,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
             self._job_key.SetVariable( 'value', gauge_value )
             
         
-        HydrusGlobals.controller.DoHTTP( HC.GET, url, report_hooks = [ hook ], temp_path = temp_path )
+        HydrusGlobals.client_controller.DoHTTP( HC.GET, url, report_hooks = [ hook ], temp_path = temp_path )
         
         service_keys_to_tags = {}
         
@@ -1556,13 +1556,13 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         self._job_key.SetVariable( 'status', 'checking url status' )
         
-        ( status, hash ) = HydrusGlobals.controller.Read( 'url_status', url )
+        ( status, hash ) = HydrusGlobals.client_controller.Read( 'url_status', url )
         
         if status == CC.STATUS_DELETED and not self._import_file_options[ 'exclude_deleted_files' ]: status = CC.STATUS_NEW
         
         if status == CC.STATUS_REDUNDANT:
             
-            ( media_result, ) = HydrusGlobals.controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             return ( status, media_result )
             
@@ -1589,7 +1589,7 @@ class ImportController( object ):
     
     def _GetNewJobKey( self, job_type ):
         
-        job_key = HydrusData.JobKey( pausable = True, cancellable = True )
+        job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
         
         if job_type == 'controller':
             
@@ -1795,7 +1795,7 @@ class ImportController( object ):
                     
                     args_generator = self._import_args_generator_factory( self._import_job_key, import_item )
                     
-                    HydrusGlobals.controller.CallToThread( args_generator )
+                    HydrusGlobals.client_controller.CallToThread( args_generator )
                     
                 
                 if create_import_queue_item:
@@ -1975,7 +1975,7 @@ class ImportQueueBuilderURLs( ImportQueueBuilder ):
             
             self._job_key.SetVariable( 'status', 'Connecting to address' )
             
-            try: html = HydrusGlobals.controller.DoHTTP( HC.GET, url )
+            try: html = HydrusGlobals.client_controller.DoHTTP( HC.GET, url )
             except: raise Exception( 'Could not download that url' )
             
             self._job_key.SetVariable( 'status', 'parsing html' )

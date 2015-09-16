@@ -28,7 +28,7 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_select_booru( self ):
         
-        HydrusGlobals.controller.SetRead( 'remote_boorus', ClientDefaults.GetDefaultBoorus() )
+        HydrusGlobals.test_controller.SetRead( 'remote_boorus', ClientDefaults.GetDefaultBoorus() )
         
         with ClientGUIDialogs.DialogSelectBooru( None ) as dlg:
             

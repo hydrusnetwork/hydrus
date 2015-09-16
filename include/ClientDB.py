@@ -1181,7 +1181,7 @@ class DB( HydrusDB.HydrusDB ):
             
             deletee_path = path + os.path.sep + deletee_filename
             
-            HydrusData.DeletePath( deletee_path )
+            ClientData.DeletePath( deletee_path )
             
         
         shutil.copy( self._db_path, path + os.path.sep + 'client.db' )
@@ -1195,11 +1195,61 @@ class DB( HydrusDB.HydrusDB ):
         HydrusData.ShowText( 'Database backup done!' )
         
     
+    def _CheckDBIntegrity( self ):
+        
+        prefix_string = 'checking db integrity: '
+        
+        job_key = HydrusThreading.JobKey( cancellable = True )
+        
+        job_key.SetVariable( 'popup_title', prefix_string + 'preparing' )
+        
+        self._controller.pub( 'message', job_key )
+        
+        num_errors = 0
+        
+        job_key.SetVariable( 'popup_title', prefix_string + 'running' )
+        job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
+        
+        for ( text, ) in self._c.execute( 'PRAGMA integrity_check;' ):
+            
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                job_key.SetVariable( 'popup_title', prefix_string + 'cancelled' )
+                job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
+                
+                return
+                
+            
+            if text != 'ok':
+                
+                if num_errors == 0:
+                    
+                    print( 'During a db integrity check, these errors were discovered:' )
+                    
+                
+                print( text )
+                
+                num_errors += 1
+                
+            
+            job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
+            
+        
+        job_key.SetVariable( 'popup_title', prefix_string + 'completed' )
+        job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
+        
+        print( job_key.ToString() )
+        
+        job_key.Finish()
+        
+    
     def _CheckFileIntegrity( self, mode, move_location = None ):
         
         prefix_string = 'checking file integrity: '
         
-        job_key = HydrusData.JobKey( cancellable = True )
+        job_key = HydrusThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
@@ -1621,7 +1671,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix = 'database maintenance - delete orphans: '
         
-        job_key = HydrusData.JobKey( cancellable = True )
+        job_key = HydrusThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_text_1', prefix + 'gathering file information' )
         
@@ -1657,7 +1707,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    HydrusData.DeletePath( path )
+                    ClientData.DeletePath( path )
                     
                 except OSError:
                     
@@ -1703,12 +1753,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if os.path.exists( path ):
                     
-                    HydrusData.DeletePath( path )
+                    ClientData.DeletePath( path )
                     
                 
                 if os.path.exists( resized_path ):
                     
-                    HydrusData.DeletePath( resized_path )
+                    ClientData.DeletePath( resized_path )
                     
                 
             except OSError:
@@ -1771,7 +1821,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    HydrusData.DeletePath( path )
+                    ClientData.DeletePath( path )
                     
                 except OSError:
                     
@@ -1865,7 +1915,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix_string = 'exporting to tag archive: '
         
-        job_key = HydrusData.JobKey( cancellable = True )
+        job_key = HydrusThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
@@ -4736,7 +4786,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             text = name + ' at ' + time.ctime( timestamp ) + ':' + os.linesep * 2 + post
                             
-                            job_key = HydrusData.JobKey()
+                            job_key = HydrusThreading.JobKey()
                             
                             job_key.SetVariable( 'popup_text_1', text )
                             
@@ -4894,7 +4944,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix = 'resetting ' + name
         
-        job_key = HydrusData.JobKey()
+        job_key = HydrusThreading.JobKey()
         
         job_key.SetVariable( 'popup_text_1', prefix + ': deleting from main service table' )
         
@@ -4921,7 +4971,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if os.path.exists( updates_dir ):
                     
-                    HydrusData.DeletePath( updates_dir )
+                    ClientData.DeletePath( updates_dir )
                     
                 
                 info[ 'first_timestamp' ] = None
@@ -4963,7 +5013,7 @@ class DB( HydrusDB.HydrusDB ):
             
             prefix = 'deleting old resized thumbnails: '
             
-            job_key = HydrusData.JobKey()
+            job_key = HydrusThreading.JobKey()
             
             job_key.SetVariable( 'popup_text_1', prefix + 'initialising' )
             
@@ -4973,7 +5023,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( i, path ) in enumerate( thumbnail_paths ):
                 
-                HydrusData.DeletePath( path )
+                ClientData.DeletePath( path )
                 
                 job_key.SetVariable( 'popup_text_1', prefix + 'done ' + HydrusData.ConvertIntToPrettyString( i ) )
                 
@@ -5114,7 +5164,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix_string = 'syncing to tag archive ' + hta.GetName() + ': '
         
-        job_key = HydrusData.JobKey()
+        job_key = HydrusThreading.JobKey()
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
@@ -5568,7 +5618,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
                 
-                HydrusData.DeletePath( path )
+                ClientData.DeletePath( path )
                 
             
         
@@ -6163,7 +6213,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if os.path.exists( update_dir ):
                         
-                        HydrusData.DeletePath( update_dir )
+                        ClientData.DeletePath( update_dir )
                         
                     
                     if service_type == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
@@ -6232,7 +6282,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if os.path.exists( update_dir ):
                     
-                    HydrusData.DeletePath( update_dir )
+                    ClientData.DeletePath( update_dir )
                     
                 
                 if service_type == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
@@ -6315,7 +6365,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix = 'database maintenance - vacuum: '
         
-        job_key = HydrusData.JobKey()
+        job_key = HydrusThreading.JobKey()
         
         job_key.SetVariable( 'popup_text_1', prefix + 'vacuuming' )
         
@@ -6350,6 +6400,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'content_update_package':result = self._ProcessContentUpdatePackage( *args, **kwargs )
         elif action == 'content_updates':result = self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'copy_files': result = self._CopyFiles( *args, **kwargs )
+        elif action == 'db_integrity': result = self._CheckDBIntegrity( *args, **kwargs )
         elif action == 'delete_export_folder': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, *args, **kwargs )
         elif action == 'delete_gui_session': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, *args, **kwargs )
         elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )
@@ -6412,7 +6463,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 deletee_path = HC.DB_DIR + os.path.sep + deletee_filename
                 
-                HydrusData.DeletePath( deletee_path )
+                ClientData.DeletePath( deletee_path )
                 
             
         

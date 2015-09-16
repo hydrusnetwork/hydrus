@@ -59,12 +59,12 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         self.RefreshAcceleratorTable()
         
-        HydrusGlobals.controller.sub( self, 'SetConversations', 'set_conversations' )
-        HydrusGlobals.controller.sub( self, 'ArchiveConversation', 'archive_conversation_gui' )
-        HydrusGlobals.controller.sub( self, 'InboxConversation', 'inbox_conversation_gui' )
-        HydrusGlobals.controller.sub( self, 'DeleteConversation', 'delete_conversation_gui' )
-        HydrusGlobals.controller.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
-        HydrusGlobals.controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
+        HydrusGlobals.client_controller.sub( self, 'SetConversations', 'set_conversations' )
+        HydrusGlobals.client_controller.sub( self, 'ArchiveConversation', 'archive_conversation_gui' )
+        HydrusGlobals.client_controller.sub( self, 'InboxConversation', 'inbox_conversation_gui' )
+        HydrusGlobals.client_controller.sub( self, 'DeleteConversation', 'delete_conversation_gui' )
+        HydrusGlobals.client_controller.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
+        HydrusGlobals.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
         
     
     def RefreshAcceleratorTable( self ):
@@ -145,8 +145,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
             i += 1
             
         
-        HydrusGlobals.controller.pub( 'conversation_focus', self._page_key, None )
-        HydrusGlobals.controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+        HydrusGlobals.client_controller.pub( 'conversation_focus', self._page_key, None )
+        HydrusGlobals.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
         
     
     def _UpdateConversationItem( self, conversation_key ):
@@ -220,25 +220,25 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
             
             identity_contact_key = self._identity.GetContactKey()
             
-            if command == 'archive': HydrusGlobals.controller.Write( 'archive_conversation', conversation_key )
-            elif command == 'inbox': HydrusGlobals.controller.Write( 'inbox_conversation', conversation_key )
+            if command == 'archive': HydrusGlobals.client_controller.Write( 'archive_conversation', conversation_key )
+            elif command == 'inbox': HydrusGlobals.client_controller.Write( 'inbox_conversation', conversation_key )
             elif command == 'read':
                 
                 message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'sent' ) )
                 
-                for message_key in message_keys: HydrusGlobals.controller.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'read' ) ] )
+                for message_key in message_keys: HydrusGlobals.client_controller.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'read' ) ] )
                 
             elif command == 'unread':
                 
                 message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'read' ) )
                 
-                for message_key in message_keys: HydrusGlobals.controller.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'sent' ) ] )
+                for message_key in message_keys: HydrusGlobals.client_controller.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'sent' ) ] )
                 
             elif command == 'delete':
                 
                 with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete this conversation?' ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_YES: HydrusGlobals.controller.Write( 'delete_conversation', conversation_key )
+                    if dlg.ShowModal() == wx.ID_YES: HydrusGlobals.client_controller.Write( 'delete_conversation', conversation_key )
                     
                 
             else: event.Skip()
@@ -249,8 +249,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         selection = self.GetFirstSelected()
         
-        if selection == wx.NOT_FOUND: HydrusGlobals.controller.pub( 'conversation_focus', self._page_key, None )
-        else: HydrusGlobals.controller.pub( 'conversation_focus', self._page_key, self._data_indices_to_conversations[ self.GetItemData( selection ) ] )
+        if selection == wx.NOT_FOUND: HydrusGlobals.client_controller.pub( 'conversation_focus', self._page_key, None )
+        else: HydrusGlobals.client_controller.pub( 'conversation_focus', self._page_key, self._data_indices_to_conversations[ self.GetItemData( selection ) ] )
         
     
     def EventShowMenu( self, event ):
@@ -335,8 +335,8 @@ class ConversationPanel( wx.Panel ):
         
         self.SetSizer( self._vbox )
         
-        HydrusGlobals.controller.sub( self, 'DeleteDraft', 'delete_draft_gui' )
-        HydrusGlobals.controller.sub( self, 'NewMessage', 'new_message' )
+        HydrusGlobals.client_controller.sub( self, 'DeleteDraft', 'delete_draft_gui' )
+        HydrusGlobals.client_controller.sub( self, 'NewMessage', 'new_message' )
         
     
     def _DrawConversation( self ):
@@ -488,7 +488,7 @@ class ConversationSplitter( wx.SplitterWindow ):
         wx.CallAfter( self.SplitHorizontally, self._conversations_panel, self._conversation_panel, 180 )
         wx.CallAfter( self._conversation_panel.Refresh )
         
-        HydrusGlobals.controller.sub( self, 'SetConversationFocus', 'conversation_focus' )
+        HydrusGlobals.client_controller.sub( self, 'SetConversationFocus', 'conversation_focus' )
         
     
     def _InitConversationsPanel( self ): self._conversations_panel = ConversationsListCtrl( self, self._page_key, self._identity, self._conversations )
@@ -610,7 +610,7 @@ class DestinationPanel( wx.Panel ):
                 elif command == 'read': status = 'read'
                 elif command == 'unread': status = 'sent'
                 
-                my_message_depot = HydrusGlobals.controller.GetServicesManager().GetService( self._identity.GetServiceKey() )
+                my_message_depot = HydrusGlobals.client_controller.GetServicesManager().GetService( self._identity.GetServiceKey() )
                 
                 connection = my_message_depot.GetConnection()
                 
@@ -629,7 +629,7 @@ class DestinationPanel( wx.Panel ):
                 
                 connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = status_updates )
                 
-                HydrusGlobals.controller.Write( 'message_statuses', self._message_key, [ ( self._contact_key, status ) ] )
+                HydrusGlobals.client_controller.Write( 'message_statuses', self._message_key, [ ( self._contact_key, status ) ] )
                 
             else: event.Skip()
             
@@ -707,7 +707,7 @@ class DestinationsPanel( wx.Panel ):
         
         self.SetSizer( vbox )
         
-        HydrusGlobals.controller.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
+        HydrusGlobals.client_controller.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
         
     
     def UpdateMessageStatuses( self, message_key, updates ):
@@ -1146,8 +1146,8 @@ class DraftPanel( wx.Panel ):
         
         self.SetSizer( vbox )
         
-        HydrusGlobals.controller.sub( self, 'AddContact', 'add_contact' )
-        HydrusGlobals.controller.sub( self, 'DraftSaved', 'draft_saved' )
+        HydrusGlobals.client_controller.sub( self, 'AddContact', 'add_contact' )
+        HydrusGlobals.client_controller.sub( self, 'DraftSaved', 'draft_saved' )
         
         if not self._draft_message.IsReply(): wx.CallAfter( self._new_recipient.SetFocus )
         
@@ -1222,19 +1222,19 @@ class DraftPanel( wx.Panel ):
         if event is not None: event.Skip()
         
     
-    def EventDeleteDraft( self, event ): HydrusGlobals.controller.Write( 'delete_draft', self._draft_key )
+    def EventDeleteDraft( self, event ): HydrusGlobals.client_controller.Write( 'delete_draft', self._draft_key )
     
     def EventSend( self, event ):
         
         draft_message = self._GetDraftMessage()
         
-        transport_messages = HydrusGlobals.controller.Read( 'transport_messages_from_draft', draft_message )
+        transport_messages = HydrusGlobals.client_controller.Read( 'transport_messages_from_draft', draft_message )
         
         if self._contact_from.GetName() != 'Anonymous':
             
             try:
                 
-                my_message_depot = HydrusGlobals.controller.GetServicesManager().GetService( self._contact_from.GetServiceKey() )
+                my_message_depot = HydrusGlobals.client_controller.GetServicesManager().GetService( self._contact_from.GetServiceKey() )
                 
                 connection = my_message_depot.GetConnection()
                 
@@ -1273,18 +1273,18 @@ class DraftPanel( wx.Panel ):
                 
             
         
-        for transport_message in transport_messages: HydrusGlobals.controller.Write( 'message', transport_message, forced_status = 'pending' )
+        for transport_message in transport_messages: HydrusGlobals.client_controller.Write( 'message', transport_message, forced_status = 'pending' )
         
         draft_key = draft_message.GetDraftKey()
         
-        HydrusGlobals.controller.Write( 'delete_draft', draft_key )
+        HydrusGlobals.client_controller.Write( 'delete_draft', draft_key )
         
     
     def EventSaveDraft( self, event ):
         
         draft_message = self._GetDraftMessage()
         
-        HydrusGlobals.controller.Write( 'draft_message', draft_message )
+        HydrusGlobals.client_controller.Write( 'draft_message', draft_message )
         
     
     def EventRemove( self, event ):

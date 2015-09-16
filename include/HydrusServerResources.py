@@ -209,41 +209,46 @@ class HydrusResourceCommand( Resource ):
         
         request.content.seek( 0 )
         
-        if not request.requestHeaders.hasHeader( 'Content-Type' ): raise HydrusExceptions.ForbiddenException( 'No Content-Type header found!' )
-        
-        content_types = request.requestHeaders.getRawHeaders( 'Content-Type' )
-        
-        content_type = content_types[0]
-        
-        try: mime = HC.mime_enum_lookup[ content_type ]
-        except: raise HydrusExceptions.ForbiddenException( 'Did not recognise Content-Type header!' )
-        
-        if mime == HC.APPLICATION_YAML:
+        if not request.requestHeaders.hasHeader( 'Content-Type' ):
             
-            yaml_string = request.content.read()
-            
-            request.hydrus_request_data_usage += len( yaml_string )
-            
-            hydrus_args = yaml.safe_load( yaml_string )
+            hydrus_args = {}
             
         else:
             
+            content_types = request.requestHeaders.getRawHeaders( 'Content-Type' )
             
-            ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+            content_type = content_types[0]
             
-            request.temp_file_info = ( os_file_handle, temp_path )
+            try: mime = HC.mime_enum_lookup[ content_type ]
+            except: raise HydrusExceptions.ForbiddenException( 'Did not recognise Content-Type header!' )
             
-            with open( temp_path, 'wb' ) as f:
+            if mime == HC.APPLICATION_YAML:
                 
-                for block in HydrusData.ReadFileLikeAsBlocks( request.content, 65536 ): 
+                yaml_string = request.content.read()
+                
+                request.hydrus_request_data_usage += len( yaml_string )
+                
+                hydrus_args = yaml.safe_load( yaml_string )
+                
+            else:
+                
+                
+                ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+                
+                request.temp_file_info = ( os_file_handle, temp_path )
+                
+                with open( temp_path, 'wb' ) as f:
                     
-                    f.write( block )
-                    
-                    request.hydrus_request_data_usage += len( block )
+                    for block in HydrusData.ReadFileLikeAsBlocks( request.content, 65536 ): 
+                        
+                        f.write( block )
+                        
+                        request.hydrus_request_data_usage += len( block )
+                        
                     
                 
-            
-            hydrus_args = ParseFileArguments( temp_path )
+                hydrus_args = ParseFileArguments( temp_path )
+                
             
         
         request.hydrus_args = hydrus_args
@@ -553,6 +558,17 @@ class HydrusResourceCommandAccessKey( HydrusResourceCommand ):
         body = yaml.safe_dump( { 'access_key' : access_key } )
         
         response_context = ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandShutdown( HydrusResourceCommand ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        HydrusGlobals.controller.ShutdownFromServer()
+        
+        response_context = ResponseContext( 200 )
         
         return response_context
         

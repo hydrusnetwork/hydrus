@@ -20,6 +20,7 @@ import time
 import traceback
 import urlparse
 import wx
+import HydrusThreading
 
 class HDDImport( HydrusSerialisable.SerialisableBase ):
     
@@ -100,23 +101,24 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                ( status, media_result ) = HydrusGlobals.controller.WriteSynchronous( 'import_file', path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True )
+                ( status, media_result ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True )
                 
                 self._paths_cache.UpdateSeedStatus( path, status )
                 
                 if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                     
-                    HydrusGlobals.controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                    HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                     
                     if self._delete_after_success:
                         
                         try:
                             
-                            HydrusData.DeletePath( path )
+                            ClientData.DeletePath( path )
                             
-                        except:
+                        except Exception as e:
                             
-                            pass
+                            HydrusData.ShowText( 'While attempting to delete ' + path + ', the following error occured:' )
+                            HydrusData.ShowException( e )
                             
                         
                     
@@ -137,7 +139,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 self._RegenerateSeedCacheStatus()
                 
             
-            HydrusGlobals.controller.pub( 'update_status', page_key )
+            HydrusGlobals.client_controller.pub( 'update_status', page_key )
             
         else:
             
@@ -152,36 +154,28 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             self._RegenerateSeedCacheStatus()
             
         
-        HydrusGlobals.controller.pub( 'update_status', page_key )
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
-        while True:
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
             
-            if HydrusGlobals.view_shutdown:
-                
-                return
-                
-            
-            while self._paused:
-                
-                if HydrusGlobals.view_shutdown:
-                    
-                    return
-                    
+            if self._paused:
                 
                 time.sleep( 0.1 )
                 
-            
-            try:
+            else:
                 
-                self._WorkOnFiles( page_key )
-                
-                HydrusGlobals.controller.WaitUntilPubSubsEmpty()
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                return
+                try:
+                    
+                    self._WorkOnFiles( page_key )
+                    
+                    HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    return
+                    
                 
             
         
@@ -355,7 +349,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         if os.path.exists( path ):
                             
-                            HydrusData.DeletePath( path )
+                            ClientData.DeletePath( path )
                             
                         
                         self._path_cache.RemoveSeed( path )
@@ -498,7 +492,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                 service_keys_to_tags[ CC.LOCAL_TAG_SERVICE_KEY ] = [ self._tag ]
                                 
                             
-                            ( status, hash ) = HydrusGlobals.controller.WriteSynchronous( 'import_file', path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags )
+                            ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags )
                             
                             self._path_cache.UpdateSeedStatus( path, status )
                             
@@ -523,12 +517,12 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if self._open_popup and len( successful_hashes ) > 0:
                     
-                    job_key = HydrusData.JobKey()
+                    job_key = HydrusThreading.JobKey()
                     
                     job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
                     job_key.SetVariable( 'popup_files', successful_hashes )
                     
-                    HydrusGlobals.controller.pub( 'message', job_key )
+                    HydrusGlobals.client_controller.pub( 'message', job_key )
                     
                 
                 self._ActionPaths()
@@ -536,7 +530,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._last_checked = HydrusData.GetNow()
             
-            HydrusGlobals.controller.WriteSynchronous( 'import_folder', self )
+            HydrusGlobals.client_controller.WriteSynchronous( 'import_folder', self )
             
         
     
@@ -641,11 +635,11 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( status, hash ) = HydrusGlobals.controller.Read( 'url_status', file_url )
+            ( status, hash ) = HydrusGlobals.client_controller.Read( 'url_status', file_url )
             
             if status == CC.STATUS_REDUNDANT:
                 
-                ( media_result, ) = HydrusGlobals.controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
                 
             elif status == CC.STATUS_NEW:
                 
@@ -665,9 +659,9 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                     do_wait = True
                     
-                    HydrusGlobals.controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
+                    HydrusGlobals.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
-                    ( status, media_result ) = HydrusGlobals.controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, generate_media_result = True, url = file_url )
+                    ( status, media_result ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, generate_media_result = True, url = file_url )
                     
                 finally:
                     
@@ -679,7 +673,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                 
-                HydrusGlobals.controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
             
         except Exception as e:
@@ -698,7 +692,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             self._RegenerateSeedCacheStatus()
             
         
-        HydrusGlobals.controller.pub( 'update_status', page_key )
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
         if do_wait:
             
@@ -726,7 +720,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 self._parser_status = 'checking ' + page_url
                 
             
-            HydrusGlobals.controller.pub( 'update_status', page_key )
+            HydrusGlobals.client_controller.pub( 'update_status', page_key )
             
             error_occurred = False
             
@@ -734,7 +728,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 
                 do_wait = True
                 
-                html = HydrusGlobals.controller.DoHTTP( HC.GET, page_url )
+                html = HydrusGlobals.client_controller.DoHTTP( HC.GET, page_url )
                 
                 soup = bs4.BeautifulSoup( html )
                 
@@ -806,7 +800,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             if error_occurred:
                 
-                HydrusGlobals.controller.pub( 'update_status', page_key )
+                HydrusGlobals.client_controller.pub( 'update_status', page_key )
                 
                 time.sleep( 5 )
                 
@@ -819,7 +813,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        HydrusGlobals.controller.pub( 'update_status', page_key )
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
         if do_wait:
             
@@ -834,40 +828,32 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             self._RegenerateSeedCacheStatus()
             
         
-        HydrusGlobals.controller.pub( 'update_status', page_key )
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
-        while True:
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
             
-            if HydrusGlobals.view_shutdown:
-                
-                return
-                
-            
-            while self._paused:
-                
-                if HydrusGlobals.view_shutdown:
-                    
-                    return
-                    
+            if self._paused:
                 
                 time.sleep( 0.1 )
                 
-            
-            try:
+            else:
                 
-                self._WorkOnQueue( page_key )
-                
-                self._WorkOnFiles( page_key )
-                
-                time.sleep( 1 )
-                
-                HydrusGlobals.controller.WaitUntilPubSubsEmpty()
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                return
+                try:
+                    
+                    self._WorkOnQueue( page_key )
+                    
+                    self._WorkOnFiles( page_key )
+                    
+                    time.sleep( 1 )
+                    
+                    HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    return
+                    
                 
             
         
@@ -1130,7 +1116,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             self._seeds_to_info[ seed ] = seed_info
             
         
-        HydrusGlobals.controller.pub( 'seed_cache_seed_updated', seed )
+        HydrusGlobals.client_controller.pub( 'seed_cache_seed_updated', seed )
         
     
     def AdvanceSeed( self, seed ):
@@ -1150,7 +1136,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        HydrusGlobals.controller.pub( 'seed_cache_seed_updated', seed )
+        HydrusGlobals.client_controller.pub( 'seed_cache_seed_updated', seed )
         
     
     def DelaySeed( self, seed ):
@@ -1170,7 +1156,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        HydrusGlobals.controller.pub( 'seed_cache_seed_updated', seed )
+        HydrusGlobals.client_controller.pub( 'seed_cache_seed_updated', seed )
         
     
     def GetNextSeed( self, status ):
@@ -1277,7 +1263,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        HydrusGlobals.controller.pub( 'seed_cache_seed_updated', seed )
+        HydrusGlobals.client_controller.pub( 'seed_cache_seed_updated', seed )
         
     
     def RemoveSeeds( self, status ):
@@ -1304,7 +1290,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         for seed in seeds_to_delete:
             
-            HydrusGlobals.controller.pub( 'seed_cache_seed_updated', seed )
+            HydrusGlobals.client_controller.pub( 'seed_cache_seed_updated', seed )
             
         
     
@@ -1319,7 +1305,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             seed_info[ 'note' ] = note
             
         
-        HydrusGlobals.controller.pub( 'seed_cache_seed_updated', seed )
+        HydrusGlobals.client_controller.pub( 'seed_cache_seed_updated', seed )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE ] = SeedCache
@@ -1408,7 +1394,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             file_md5 = file_md5_base64.decode( 'base64' )
             
-            ( status, hash ) = HydrusGlobals.controller.Read( 'md5_status', file_md5 )
+            ( status, hash ) = HydrusGlobals.client_controller.Read( 'md5_status', file_md5 )
             
             if status == CC.STATUS_REDUNDANT:
                 
@@ -1416,10 +1402,10 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     service_keys_to_content_updates = ClientDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags )
                     
-                    HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
+                    HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                     
                 
-                ( media_result, ) = HydrusGlobals.controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
                 
             elif status == CC.STATUS_NEW:
                 
@@ -1439,9 +1425,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     do_wait = True
                     
-                    HydrusGlobals.controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
+                    HydrusGlobals.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
-                    ( status, media_result ) = HydrusGlobals.controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True, url = file_url )
+                    ( status, media_result ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True, url = file_url )
                     
                 finally:
                     
@@ -1453,7 +1439,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                 
-                HydrusGlobals.controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
             
         except Exception as e:
@@ -1472,7 +1458,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             self._RegenerateSeedCacheStatus()
             
         
-        HydrusGlobals.controller.pub( 'update_status', page_key )
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
         if do_wait:
             
@@ -1497,7 +1483,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 self._watcher_status = 'checking thread'
                 
             
-            HydrusGlobals.controller.pub( 'update_status', page_key )
+            HydrusGlobals.client_controller.pub( 'update_status', page_key )
             
             error_occurred = False
             
@@ -1507,7 +1493,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 do_wait = True
                 
-                raw_json = HydrusGlobals.controller.DoHTTP( HC.GET, json_url )
+                raw_json = HydrusGlobals.client_controller.DoHTTP( HC.GET, json_url )
                 
                 json_dict = json.loads( raw_json )
                 
@@ -1573,7 +1559,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     for i in range( self._times_to_check ):
                         
-                        HydrusGlobals.controller.pub( 'decrement_times_to_check', page_key )
+                        HydrusGlobals.client_controller.pub( 'decrement_times_to_check', page_key )
                         
                     
                     self._times_to_check = 0
@@ -1596,7 +1582,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     self._times_to_check -= 1
                     
-                    HydrusGlobals.controller.pub( 'decrement_times_to_check', page_key )
+                    HydrusGlobals.client_controller.pub( 'decrement_times_to_check', page_key )
                     
                 
                 self._last_time_checked = HydrusData.GetNow()
@@ -1606,7 +1592,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             if error_occurred:
                 
-                HydrusGlobals.controller.pub( 'update_status', page_key )
+                HydrusGlobals.client_controller.pub( 'update_status', page_key )
                 
                 time.sleep( 5 )
                 
@@ -1635,7 +1621,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        HydrusGlobals.controller.pub( 'update_status', page_key )
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
         if do_wait:
             
@@ -1650,43 +1636,35 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             self._RegenerateSeedCacheStatus()
             
         
-        HydrusGlobals.controller.pub( 'update_status', page_key )
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
-        while True:
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
             
-            if HydrusGlobals.view_shutdown:
-                
-                return
-                
-            
-            while self._paused:
-                
-                if HydrusGlobals.view_shutdown:
-                    
-                    return
-                    
+            if self._paused:
                 
                 time.sleep( 0.1 )
                 
-            
-            try:
+            else:
                 
-                if self._thread_url != '':
+                try:
                     
-                    self._WorkOnThread( page_key )
+                    if self._thread_url != '':
+                        
+                        self._WorkOnThread( page_key )
+                        
+                        self._WorkOnFiles( page_key )
+                        
                     
-                    self._WorkOnFiles( page_key )
+                    time.sleep( 1 )
                     
-                
-                time.sleep( 1 )
-                
-                HydrusGlobals.controller.WaitUntilPubSubsEmpty()
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                return
+                    HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    return
+                    
                 
             
         

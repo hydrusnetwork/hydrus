@@ -471,7 +471,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:local (100)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, HC.IMAGES )
+        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, set( HC.IMAGES ).intersection( HC.SEARCHABLE_MIMES ) )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is image' )
         
@@ -481,7 +481,7 @@ class TestTagObjects( unittest.TestCase ):
         
         p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:mime is specified' )
+        self.assertEqual( p.GetUnicode(), u'system:mime is video/webm, image/gif' )
         
         p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : 100 } )
         
@@ -578,7 +578,7 @@ class TestTagParents( unittest.TestCase ):
         tag_parents[ self._second_key ] = second_dict
         tag_parents[ self._third_key ] = third_dict
         
-        HydrusGlobals.controller.SetRead( 'tag_parents', tag_parents )
+        HydrusGlobals.test_controller.SetRead( 'tag_parents', tag_parents )
         
         self._tag_parents_manager = ClientCaches.TagParentsManager()
         
@@ -723,7 +723,7 @@ class TestTagSiblings( unittest.TestCase ):
         tag_siblings[ self._second_key ] = second_dict
         tag_siblings[ self._third_key ] = third_dict
         
-        HydrusGlobals.controller.SetRead( 'tag_siblings', tag_siblings )
+        HydrusGlobals.test_controller.SetRead( 'tag_siblings', tag_siblings )
         
         self._tag_siblings_manager = ClientCaches.TagSiblingsManager()
         

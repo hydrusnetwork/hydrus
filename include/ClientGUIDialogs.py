@@ -89,7 +89,7 @@ def ExportToHTA( parent, service_key, hashes ):
     
     if hash_type is not None:
         
-        HydrusGlobals.controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
+        HydrusGlobals.client_controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
         
     
 def ImportFromHTA( parent, path, service_key ):
@@ -102,7 +102,7 @@ def ImportFromHTA( parent, path, service_key ):
     
     del hta
     
-    service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
     service_type = service.GetServiceType()
     
@@ -171,7 +171,7 @@ def ImportFromHTA( parent, path, service_key ):
                     
                     service_keys_to_content_updates = { service_key : [ content_update ] }
                     
-                    HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
+                    HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                     
                 
             
@@ -181,7 +181,7 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
     
     if service_keys is None:
         
-        services = HydrusGlobals.controller.GetServicesManager().GetServices( service_types )
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( service_types )
         
         if permission is not None: services = [ service for service in services if service.GetInfo( 'account' ).HasPermission( permission ) ]
         
@@ -199,11 +199,11 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
         
     else:
         
-        services = { HydrusGlobals.controller.GetServicesManager().GetService( service_key ) for service_key in service_keys }
+        services = { HydrusGlobals.client_controller.GetServicesManager().GetService( service_key ) for service_key in service_keys }
         
         names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in services }
         
-        with DialogSelectFromListOfStrings( HydrusGlobals.controller.GetGUI(), 'select service', names_to_service_keys.keys() ) as dlg:
+        with DialogSelectFromListOfStrings( HydrusGlobals.client_controller.GetGUI(), 'select service', names_to_service_keys.keys() ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK: return names_to_service_keys[ dlg.GetString() ]
             else: return None
@@ -245,7 +245,7 @@ class Dialog( wx.Dialog ):
             wx.CallAfter( self.Center )
             
         
-        HydrusGlobals.controller.ResetIdleTimer()
+        HydrusGlobals.client_controller.ResetIdleTimer()
         
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
@@ -323,7 +323,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             #
             
-            services = [ service for service in HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
+            services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
             
             for service in services:
                 
@@ -455,7 +455,7 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         service_keys_to_content_updates = { self._service_key : [ content_update ] }
         
-        HydrusGlobals.controller.Write( 'content_updates', service_keys_to_content_updates )
+        HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
         
     
     def EventImportFromHTA( self, event ):
@@ -680,7 +680,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
             self._num.SetValue( 1 )
             
-            service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
             
             response = service.Request( HC.GET, 'account_types' )
             
@@ -742,7 +742,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         lifetime = self._lifetime.GetClientData( self._lifetime.GetSelection() )
         
-        service = HydrusGlobals.controller.GetServicesManager().GetService( self._service_key )
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
         
         try:
             
@@ -776,7 +776,7 @@ class DialogInputAdvancedTagOptions( Dialog ):
                 
                 ( booru_id, booru_name ) = name
                 
-                booru = HydrusGlobals.controller.Read( 'remote_booru', booru_name )
+                booru = HydrusGlobals.client_controller.Read( 'remote_booru', booru_name )
                 
                 namespaces = booru.GetNamespaces()
                 
@@ -918,7 +918,7 @@ class DialogInputCustomFilterAction( Dialog ):
             self._ok_ratings_numerical.Bind( wx.EVT_BUTTON, self.EventOKRatingsNumerical )
             self._ok_ratings_numerical.SetForegroundColour( ( 0, 128, 0 ) )
             
-            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
             for service in services:
                 
@@ -939,7 +939,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
             else:
                 
-                self._service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+                self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                 
                 service_name = self._service.GetName()
                 service_type = self._service.GetServiceType()
@@ -1074,7 +1074,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_key = self._ratings_like_service_keys.GetClientData( selection )
                 
-                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                 
                 self._current_ratings_like_service = service
                 
@@ -1088,7 +1088,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_key = self._ratings_numerical_service_keys.GetClientData( selection )
                 
-                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                 
                 self._current_ratings_numerical_service = service
                 
@@ -1213,7 +1213,7 @@ class DialogInputCustomFilterAction( Dialog ):
         ( modifier, key ) = self._shortcut.GetValue()
         
         if self._service_key is None: pretty_service_key = ''
-        else: pretty_service_key = HydrusGlobals.controller.GetServicesManager().GetService( self._service_key ).GetName()
+        else: pretty_service_key = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key ).GetName()
         
         ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
         
@@ -1252,7 +1252,7 @@ class DialogInputFileSystemPredicates( Dialog ):
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumWords )
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
             
-            services_manager = HydrusGlobals.controller.GetServicesManager()
+            services_manager = HydrusGlobals.client_controller.GetServicesManager()
             
             ratings_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
@@ -1440,7 +1440,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyExternalShareURL( self, event ):
         
-        self._service = HydrusGlobals.controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         info = self._service.GetInfo()
         
@@ -1452,12 +1452,12 @@ class DialogInputLocalBooruShare( Dialog ):
         
         url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
-        HydrusGlobals.controller.pub( 'clipboard', 'text', url )
+        HydrusGlobals.client_controller.pub( 'clipboard', 'text', url )
         
     
     def EventCopyInternalShareURL( self, event ):
         
-        self._service = HydrusGlobals.controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         info = self._service.GetInfo()
         
@@ -1467,7 +1467,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
-        HydrusGlobals.controller.pub( 'clipboard', 'text', url )
+        HydrusGlobals.client_controller.pub( 'clipboard', 'text', url )
         
     
     def GetInfo( self ):
@@ -1576,7 +1576,7 @@ class DialogInputLocalFiles( Dialog ):
         self._current_paths = []
         self._current_paths_set = set()
         
-        self._job_key = HydrusData.JobKey()
+        self._job_key = HydrusThreading.JobKey()
         
         if len( paths ) > 0: self._AddPathsToList( paths )
         
@@ -1608,9 +1608,9 @@ class DialogInputLocalFiles( Dialog ):
                 
                 self._currently_parsing = True
                 
-                self._job_key = HydrusData.JobKey()
+                self._job_key = HydrusThreading.JobKey()
                 
-                HydrusGlobals.controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
+                HydrusGlobals.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
                 
                 self.SetGaugeInfo( None, None, '' )
                 
@@ -1724,7 +1724,7 @@ class DialogInputLocalFiles( Dialog ):
             
             delete_after_success = self._delete_after_success.GetValue()
             
-            HydrusGlobals.controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
+            HydrusGlobals.client_controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
             
         
         self.EndModal( wx.ID_OK )
@@ -1746,7 +1746,7 @@ class DialogInputLocalFiles( Dialog ):
                     
                     delete_after_success = self._delete_after_success.GetValue()
                     
-                    HydrusGlobals.controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
+                    HydrusGlobals.client_controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
                     
                     self.EndModal( wx.ID_OK )
                     
@@ -1914,7 +1914,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = HydrusGlobals.controller.Read( 'contact_names' )
+                contact_names = HydrusGlobals.client_controller.Read( 'contact_names' )
                 
                 self._contact = wx.Choice( self, choices=contact_names )
                 
@@ -1956,7 +1956,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = HydrusGlobals.controller.Read( 'contact_names' )
+                contact_names = HydrusGlobals.client_controller.Read( 'contact_names' )
                 
                 self._contact = wx.Choice( self, choices = contact_names )
                 
@@ -1998,7 +1998,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = [ name for name in HydrusGlobals.controller.Read( 'contact_names' ) if name != 'Anonymous' ]
+                contact_names = [ name for name in HydrusGlobals.client_controller.Read( 'contact_names' ) if name != 'Anonymous' ]
                 
                 self._contact = wx.Choice( self, choices = contact_names )
                 
@@ -2715,7 +2715,7 @@ class DialogModifyAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'modify account' )
         
-        self._service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         self._subject_identifiers = list( subject_identifiers )
         
         InitialiseControls()
@@ -2800,7 +2800,7 @@ class DialogNews( Dialog ):
     
         def PopulateControls():
             
-            self._newslist = HydrusGlobals.controller.Read( 'news', service_key )
+            self._newslist = HydrusGlobals.client_controller.Read( 'news', service_key )
             
             self._current_news_position = len( self._newslist )
             
@@ -2931,7 +2931,7 @@ class DialogPageChooser( Dialog ):
         
         ArrangeControls()
         
-        self._services = HydrusGlobals.controller.GetServicesManager().GetServices()
+        self._services = HydrusGlobals.client_controller.GetServicesManager().GetServices()
         
         self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
         
@@ -2980,7 +2980,7 @@ class DialogPageChooser( Dialog ):
         if entry_type == 'menu': button.SetLabel( obj )
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
-            name = HydrusGlobals.controller.GetServicesManager().GetService( obj ).GetName()
+            name = HydrusGlobals.client_controller.GetServicesManager().GetService( obj ).GetName()
             
             button.SetLabel( name )
             
@@ -3018,7 +3018,7 @@ class DialogPageChooser( Dialog ):
             
             entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', HC.SITE_TYPE_GIPHY, None ) ), ( 'page_import_gallery', ( 'deviant art', HC.SITE_TYPE_DEVIANT_ART, 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', HC.SITE_TYPE_NEWGROUNDS, None ) ) ]
             
-            ( id, password ) = HydrusGlobals.controller.Read( 'pixiv_account' )
+            ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
             
             if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
             
@@ -3066,7 +3066,7 @@ class DialogPageChooser( Dialog ):
             if entry_type == 'menu': self._InitButtons( obj )
             else:
                 
-                if entry_type == 'page_query': HydrusGlobals.controller.pub( 'new_page_query', obj )
+                if entry_type == 'page_query': HydrusGlobals.client_controller.pub( 'new_page_query', obj )
                 elif entry_type == 'page_import_booru':
                     
                     with DialogSelectBooru( self ) as dlg:
@@ -3075,7 +3075,7 @@ class DialogPageChooser( Dialog ):
                             
                             booru = dlg.GetBooru()
                             
-                            HydrusGlobals.controller.pub( 'new_import_gallery', HC.SITE_TYPE_BOORU, booru.GetName() )
+                            HydrusGlobals.client_controller.pub( 'new_import_gallery', HC.SITE_TYPE_BOORU, booru.GetName() )
                             
                         
                     
@@ -3083,11 +3083,11 @@ class DialogPageChooser( Dialog ):
                     
                     ( name, site_type, gallery_type ) = obj
                     
-                    HydrusGlobals.controller.pub( 'new_import_gallery', site_type, gallery_type )
+                    HydrusGlobals.client_controller.pub( 'new_import_gallery', site_type, gallery_type )
                     
-                elif entry_type == 'page_import_thread_watcher': HydrusGlobals.controller.pub( 'new_page_import_thread_watcher' )
-                elif entry_type == 'page_import_page_of_images': HydrusGlobals.controller.pub( 'new_page_import_page_of_images' )
-                elif entry_type == 'page_petitions': HydrusGlobals.controller.pub( 'new_page_petitions', obj )
+                elif entry_type == 'page_import_thread_watcher': HydrusGlobals.client_controller.pub( 'new_page_import_thread_watcher' )
+                elif entry_type == 'page_import_page_of_images': HydrusGlobals.client_controller.pub( 'new_page_import_page_of_images' )
+                elif entry_type == 'page_petitions': HydrusGlobals.client_controller.pub( 'new_page_petitions', obj )
                 
                 self.EndModal( wx.ID_OK )
                 
@@ -3139,7 +3139,7 @@ class DialogPathsToTags( Dialog ):
         
         def PopulateControls():
             
-            services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -3163,7 +3163,7 @@ class DialogPathsToTags( Dialog ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            default_tag_repository = HydrusGlobals.controller.GetServicesManager().GetService( default_tag_repository_key )
+            default_tag_repository = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
@@ -3807,7 +3807,7 @@ class DialogSelectBooru( Dialog ):
     
         def PopulateControls():
             
-            boorus = HydrusGlobals.controller.Read( 'remote_boorus' )
+            boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
             
             for ( name, booru ) in boorus.items():
                 
@@ -3875,7 +3875,7 @@ class DialogSelectImageboard( Dialog ):
         
         def PopulateControls():
             
-            all_imageboards = HydrusGlobals.controller.Read( 'imageboards' )
+            all_imageboards = HydrusGlobals.client_controller.Read( 'imageboards' )
             
             root_item = self._tree.AddRoot( 'all sites' )
             
@@ -4129,11 +4129,11 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 url_string = title + ' ' + resolution + ' ' + extension
                 
-                job_key = HydrusData.JobKey( pausable = True, cancellable = True )
+                job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
                 
-                HydrusGlobals.controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
+                HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
                 
-                HydrusGlobals.controller.pub( 'message', job_key )
+                HydrusGlobals.client_controller.pub( 'message', job_key )
                 
             
         
@@ -4413,7 +4413,7 @@ class DialogShortcuts( Dialog ):
             
             self._shortcuts.AddPage( 'default', page )
             
-            all_shortcuts = HydrusGlobals.controller.Read( 'shortcuts' )
+            all_shortcuts = HydrusGlobals.client_controller.Read( 'shortcuts' )
             
             names_to_shortcuts = { shortcuts.GetName() : shortcuts for shortcuts in all_shortcuts }
             
@@ -4521,7 +4521,7 @@ class DialogShortcuts( Dialog ):
                 
                 name = entry.GetIdentifier()
                 
-                HydrusGlobals.controller.Write( 'delete_shortcuts', name )
+                HydrusGlobals.client_controller.Write( 'delete_shortcuts', name )
                 
             
         
@@ -4531,7 +4531,7 @@ class DialogShortcuts( Dialog ):
                 
                 shortcuts = page.GetShortcuts()
                 
-                HydrusGlobals.controller.Write( 'shortcuts', shortcuts )
+                HydrusGlobals.client_controller.Write( 'shortcuts', shortcuts )
                 
             
         
@@ -4635,7 +4635,7 @@ class DialogShortcuts( Dialog ):
                         
                         try:
                             
-                            service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+                            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                             
                             pretty_service_key = service.GetName()
                             

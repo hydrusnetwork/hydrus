@@ -297,7 +297,7 @@ class HydrusDB( object ):
         
         job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
-        if HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application has shutdown!' )
+        if HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
@@ -313,7 +313,7 @@ class HydrusDB( object ):
         
         job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
-        if HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application has shutdown!' )
+        if HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
         
         self._jobs.put( ( priority, job ) )
         

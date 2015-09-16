@@ -1,4 +1,7 @@
 controller = None
+client_controller = None
+server_controller = None
+test_controller = None
 view_shutdown = False
 model_shutdown = False
 

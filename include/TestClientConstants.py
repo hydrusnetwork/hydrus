@@ -78,7 +78,7 @@ class TestManagers( unittest.TestCase ):
         services.append( repo )
         services.append( other )
         
-        HydrusGlobals.controller.SetRead( 'services', services )
+        HydrusGlobals.test_controller.SetRead( 'services', services )
         
         services_manager = ClientData.ServicesManager()
         
@@ -104,7 +104,7 @@ class TestManagers( unittest.TestCase ):
         
         services.append( repo )
         
-        HydrusGlobals.controller.SetRead( 'services', services )
+        HydrusGlobals.test_controller.SetRead( 'services', services )
         
         services_manager.RefreshServices()
         
@@ -140,21 +140,21 @@ class TestManagers( unittest.TestCase ):
         
         self.assertEqual( ( u'undo local files->archive 1 files', u'redo local files->inbox 1 files' ), undo_manager.GetUndoRedoStrings() )
         
-        self.assertEqual( HydrusGlobals.controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
         
         undo_manager.Redo()
         
-        self.assertEqual( HydrusGlobals.controller.GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
+        self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
         
         self.assertEqual( ( u'undo local files->inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
         
         undo_manager.Undo()
         
-        self.assertEqual( HydrusGlobals.controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
         
         undo_manager.Undo()
         
-        self.assertEqual( HydrusGlobals.controller.GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
+        self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
         
         self.assertEqual( ( None, u'redo local files->archive 1 files' ), undo_manager.GetUndoRedoStrings() )
         

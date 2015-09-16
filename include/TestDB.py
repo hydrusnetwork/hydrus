@@ -55,7 +55,7 @@ class TestClientDB( unittest.TestCase ):
         HC.CLIENT_FILES_DIR = HC.DB_DIR + os.path.sep + 'client_files'
         HC.CLIENT_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'client_thumbnails'
         
-        self._db = ClientDB.DB( HydrusGlobals.controller )
+        self._db = ClientDB.DB( HydrusGlobals.test_controller )
         
         threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
         
@@ -1232,7 +1232,7 @@ class TestServerDB( unittest.TestCase ):
         HC.SERVER_FILES_DIR = HC.DB_DIR + os.path.sep + 'server_files'
         HC.SERVER_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'server_thumbnails'
         
-        self._db = ServerDB.DB( HydrusGlobals.controller )
+        self._db = ServerDB.DB( HydrusGlobals.test_controller )
         
         threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
         

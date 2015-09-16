@@ -726,14 +726,14 @@ class DB( HydrusDB.HydrusDB ):
                 
                 path = ServerFiles.GetPath( 'file', hash )
                 
-                HydrusData.DeletePath( path )
+                HydrusData.RecyclePath( path )
                 
             
             for hash in thumbnails_hashes & deletee_hashes:
                 
                 path = ServerFiles.GetPath( 'thumbnail', hash )
                 
-                HydrusData.DeletePath( path )
+                HydrusData.RecyclePath( path )
                 
             
             self._c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HydrusData.SplayListForDB( deletees ) + ';' )
@@ -1732,10 +1732,10 @@ class DB( HydrusDB.HydrusDB ):
         
         shutil.copy( self._db_path, self._db_path + '.backup' )
         
-        HydrusData.DeletePath( HC.SERVER_FILES_DIR + '_backup' )
-        HydrusData.DeletePath( HC.SERVER_THUMBNAILS_DIR + '_backup' )
-        HydrusData.DeletePath( HC.SERVER_MESSAGES_DIR + '_backup' )
-        HydrusData.DeletePath( HC.SERVER_UPDATES_DIR + '_backup' )
+        HydrusData.RecyclePath( HC.SERVER_FILES_DIR + '_backup' )
+        HydrusData.RecyclePath( HC.SERVER_THUMBNAILS_DIR + '_backup' )
+        HydrusData.RecyclePath( HC.SERVER_MESSAGES_DIR + '_backup' )
+        HydrusData.RecyclePath( HC.SERVER_UPDATES_DIR + '_backup' )
         
         shutil.copytree( HC.SERVER_FILES_DIR, HC.SERVER_FILES_DIR + '_backup' )
         shutil.copytree( HC.SERVER_THUMBNAILS_DIR, HC.SERVER_THUMBNAILS_DIR + '_backup' )
@@ -2380,7 +2380,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
                 
-                HydrusData.DeletePath( path )
+                HydrusData.RecyclePath( path )
                 
             
             for ( service_id, end ) in first_ends:
@@ -2456,7 +2456,7 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusGlobals.is_db_updated = True
         
-    
+    '''
     def _UpdateRatings( self, service_id, account_id, ratings ):
         
         hashes = [ rating[0] for rating in ratings ]
@@ -2498,7 +2498,7 @@ class DB( HydrusDB.HydrusDB ):
             elif new_timestamp != hash_ids_to_new_timestamps[ hash_id ]: self._c.execute( 'UPDATE aggregate_ratings SET new_timestamp = ? WHERE service_id = ? AND hash_id = ?;', ( new_timestamp, service_id, hash_id ) )
             
         
-    
+    '''
     def _VerifyAccessKey( self, service_key, access_key ):
         
         service_id = self._GetServiceId( service_key )

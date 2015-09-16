@@ -232,7 +232,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 # notebook on linux doesn't 'hide' things apparently, so isshownonscreen, which recursively tests parents' hide status, doesn't work!
                 
-                gui = HydrusGlobals.controller.GetGUI()
+                gui = HydrusGlobals.client_controller.GetGUI()
                 
                 current_page = gui.GetCurrentPage()
                 
@@ -316,12 +316,12 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventCloseDropdown( self, event ):
         
-        HydrusGlobals.controller.GetGUI().EventExit( event )
+        HydrusGlobals.client_controller.GetGUI().EventExit( event )
         
     
     def EventKeyDown( self, event ):
         
-        HydrusGlobals.controller.ResetIdleTimer()
+        HydrusGlobals.client_controller.ResetIdleTimer()
         
         if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
             
@@ -464,8 +464,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._file_service_key = file_service_key
         self._tag_service_key = tag_service_key
         
-        file_service = HydrusGlobals.controller.GetServicesManager().GetService( self._file_service_key )
-        tag_service = HydrusGlobals.controller.GetServicesManager().GetService( self._tag_service_key )
+        file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
+        tag_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._tag_service_key )
         
         self._file_repo_button = wx.Button( self._dropdown_window, label = file_service.GetName() )
         self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
@@ -482,7 +482,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
 
         self._file_service_key = file_service_key
         
-        file_service = HydrusGlobals.controller.GetServicesManager().GetService( self._file_service_key )
+        file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
         
         name = file_service.GetName()
         
@@ -493,7 +493,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
 
         self._tag_service_key = tag_service_key
         
-        tag_service = tag_service = HydrusGlobals.controller.GetServicesManager().GetService( self._tag_service_key )
+        tag_service = tag_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._tag_service_key )
         
         name = tag_service.GetName()
         
@@ -519,7 +519,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventFileButton( self, event ):
         
-        services_manager = HydrusGlobals.controller.GetServicesManager()
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
         
         services = []
         services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
@@ -562,7 +562,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventTagButton( self, event ):
         
-        services_manager = HydrusGlobals.controller.GetServicesManager()
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
         
         services = []
         services.append( services_manager.GetService( CC.COMBINED_TAG_SERVICE_KEY ) )
@@ -617,10 +617,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._dropdown_window.SetSizer( vbox )
         
-        HydrusGlobals.controller.sub( self, 'SetSynchronisedWait', 'synchronised_wait_switch' )
+        HydrusGlobals.client_controller.sub( self, 'SetSynchronisedWait', 'synchronised_wait_switch' )
         
-        HydrusGlobals.controller.sub( self, 'IncludeCurrent', 'notify_include_current' )
-        HydrusGlobals.controller.sub( self, 'IncludePending', 'notify_include_pending' )
+        HydrusGlobals.client_controller.sub( self, 'IncludeCurrent', 'notify_include_current' )
+        HydrusGlobals.client_controller.sub( self, 'IncludePending', 'notify_include_pending' )
         
     
     def _BroadcastChoice( self, predicate ):
@@ -630,7 +630,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._text_ctrl.SetValue( '' )
             
         
-        HydrusGlobals.controller.pub( 'add_predicate', self._page_key, predicate )
+        HydrusGlobals.client_controller.pub( 'add_predicate', self._page_key, predicate )
         
     
     def _BroadcastCurrentText( self ):
@@ -653,14 +653,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         AutoCompleteDropdownTags._ChangeFileRepository( self, file_service_key )
         
-        HydrusGlobals.controller.pub( 'change_file_repository', self._page_key, self._file_service_key )
+        HydrusGlobals.client_controller.pub( 'change_file_repository', self._page_key, self._file_service_key )
         
     
     def _ChangeTagRepository( self, tag_service_key ):
         
         AutoCompleteDropdownTags._ChangeTagRepository( self, tag_service_key )
         
-        HydrusGlobals.controller.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
+        HydrusGlobals.client_controller.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
         
     
     def _ParseSearchText( self ):
@@ -701,7 +701,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             if self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service_key
             else: search_service_key = self._file_service_key
             
-            matches = HydrusGlobals.controller.Read( 'file_system_predicates', search_service_key )
+            matches = HydrusGlobals.client_controller.Read( 'file_system_predicates', search_service_key )
             
         else:
             
@@ -754,7 +754,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if len( search_text ) < num_autocomplete_chars:
                         
-                        predicates = HydrusGlobals.controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
+                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                         
                     else:
                         
@@ -762,7 +762,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cache_text = search_text
                             
-                            self._cached_results = HydrusGlobals.controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
+                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                             
                         
                         predicates = self._cached_results
@@ -920,13 +920,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             tag = predicate.GetValue()
             
-            tag_censorship_manager = HydrusGlobals.controller.GetManager( 'tag_censorship' )
+            tag_censorship_manager = HydrusGlobals.client_controller.GetManager( 'tag_censorship' )
             
             result = tag_censorship_manager.FilterTags( self._tag_service_key, ( tag, ) )
             
             if len( result ) > 0:
                 
-                tag_parents_manager = HydrusGlobals.controller.GetManager( 'tag_parents' )
+                tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
                 
                 parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
                 
@@ -945,7 +945,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         entry_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text )
         
-        siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
         sibling = siblings_manager.GetSibling( search_text )
         
@@ -1018,7 +1018,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if len( search_text ) < num_autocomplete_chars:
                 
-                predicates = HydrusGlobals.controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
+                predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
                 
             else:
                 
@@ -1026,7 +1026,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._cache_text = half_complete_tag
                     
-                    self._cached_results = HydrusGlobals.controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, add_namespaceless = False )
+                    self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, add_namespaceless = False )
                     
                 
                 predicates = self._cached_results
@@ -1077,7 +1077,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         tag = predicate.GetValue()
                         
-                        parents_manager = HydrusGlobals.controller.GetManager( 'tag_parents' )
+                        parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
                         
                         raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
                         
@@ -1214,7 +1214,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         collect_types = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in collect_types ] )
         collect_types.sort()
         
-        ratings_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for ratings_service in ratings_services: collect_types.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey() ) ) )
         
@@ -1246,7 +1246,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
             self._collect_by = None
             
         
-        HydrusGlobals.controller.pub( 'collect_media', self._page_key, self._collect_by )
+        HydrusGlobals.client_controller.pub( 'collect_media', self._page_key, self._collect_by )
         
     
     class _Popup( wx.combo.ComboPopup ):
@@ -1351,7 +1351,7 @@ class ChoiceSort( BetterChoice ):
         
         sort_choices = CC.SORT_CHOICES + sort_by
         
-        ratings_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for ratings_service in ratings_services:
             
@@ -1384,7 +1384,7 @@ class ChoiceSort( BetterChoice ):
         
         self.Bind( wx.EVT_CHOICE, self.EventChoice )
         
-        HydrusGlobals.controller.sub( self, 'ACollectHappened', 'collect_media' )
+        HydrusGlobals.client_controller.sub( self, 'ACollectHappened', 'collect_media' )
         
     
     def _BroadcastSort( self ):
@@ -1395,7 +1395,7 @@ class ChoiceSort( BetterChoice ):
             
             sort_by = self.GetClientData( selection )
             
-            HydrusGlobals.controller.pub( 'sort_media', self._page_key, sort_by )
+            HydrusGlobals.client_controller.pub( 'sort_media', self._page_key, sort_by )
             
         
     
@@ -1438,7 +1438,7 @@ class ExportPatternButton( wx.Button ):
         if id == self.ID_TAG: phrase = '(...)'
         else: event.Skip()
         
-        if phrase is not None: HydrusGlobals.controller.pub( 'clipboard', 'text', phrase )
+        if phrase is not None: HydrusGlobals.client_controller.pub( 'clipboard', 'text', phrase )
         
     
     def EventButton( self, event ):
@@ -1511,7 +1511,7 @@ class Frame( wx.Frame ):
     
     def __init__( self, *args, **kwargs ):
         
-        HydrusGlobals.controller.ResetIdleTimer()
+        HydrusGlobals.client_controller.ResetIdleTimer()
         
         wx.Frame.__init__( self, *args, **kwargs )
         
@@ -2230,7 +2230,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                HydrusGlobals.controller.pub( 'clipboard', 'text', term )
+                HydrusGlobals.client_controller.pub( 'clipboard', 'text', term )
                 
             elif command == 'copy_sub_term':
                 
@@ -2238,7 +2238,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 sub_term = term.split( ':', 1 )[1]
                 
-                HydrusGlobals.controller.pub( 'clipboard', 'text', sub_term )
+                HydrusGlobals.client_controller.pub( 'clipboard', 'text', sub_term )
                 
             else:
                 
@@ -2410,7 +2410,7 @@ class ListBoxMessagesPredicates( ListBoxMessages ):
             
         
     
-    def _Activate( self, s, term ): HydrusGlobals.controller.pub( 'remove_predicate', self._page_key, term )
+    def _Activate( self, s, term ): HydrusGlobals.client_controller.pub( 'remove_predicate', self._page_key, term )
     
     def ActivatePredicate( self, term ):
         
@@ -2507,7 +2507,7 @@ class ListBoxTags( ListBox ):
                 if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
-                HydrusGlobals.controller.pub( 'clipboard', 'text', s )
+                HydrusGlobals.client_controller.pub( 'clipboard', 'text', s )
                 
             elif command == 'copy_sub_term':
                 
@@ -2518,10 +2518,10 @@ class ListBoxTags( ListBox ):
                 
                 sub_s = s.split( ':', 1 )[1]
                 
-                HydrusGlobals.controller.pub( 'clipboard', 'text', sub_s )
+                HydrusGlobals.client_controller.pub( 'clipboard', 'text', sub_s )
                 
-            elif command == 'copy_all_tags': HydrusGlobals.controller.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
-            elif command == 'copy_all_tags_with_counts': HydrusGlobals.controller.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
+            elif command == 'copy_all_tags': HydrusGlobals.client_controller.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
+            elif command == 'copy_all_tags_with_counts': HydrusGlobals.client_controller.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
             elif command == 'new_search_page_with_term':
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
@@ -2529,7 +2529,7 @@ class ListBoxTags( ListBox ):
                 if type( term ) == HydrusData.Predicate: predicate = term
                 else: predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, term )
                 
-                HydrusGlobals.controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ predicate ] )
+                HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ predicate ] )
                 
             elif command in ( 'parent', 'sibling' ):
                 
@@ -2859,7 +2859,7 @@ class ListBoxTagsStrings( ListBoxTags ):
         
         self._strings_to_terms = {}
         
-        siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
         for tag in self._tags:
             
@@ -2956,7 +2956,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
         
     
-    def _Activate( self, s, term ): HydrusGlobals.controller.pub( 'remove_predicate', self._page_key, term )
+    def _Activate( self, s, term ): HydrusGlobals.client_controller.pub( 'remove_predicate', self._page_key, term )
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
@@ -3044,7 +3044,7 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def _RecalcStrings( self ):
         
-        siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
         all_tags = set()
         
@@ -3117,7 +3117,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         if self._collapse_siblings:
             
-            siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
             
             current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
             deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
@@ -3162,7 +3162,7 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             if self._collapse_siblings:
                 
-                siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+                siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
                 
                 current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
                 deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
@@ -3214,15 +3214,15 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         
         self._page_key = page_key
         
-        HydrusGlobals.controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
-        HydrusGlobals.controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
+        HydrusGlobals.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
+        HydrusGlobals.client_controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
         
     
     def _Activate( self, s, term ):
         
         predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, term )
         
-        HydrusGlobals.controller.pub( 'add_predicate', self._page_key, predicate )
+        HydrusGlobals.client_controller.pub( 'add_predicate', self._page_key, predicate )
         
     
     def ChangeTagRepositoryPubsub( self, page_key, service_key ):
@@ -3397,7 +3397,7 @@ class OnOffButton( wx.Button ):
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         
-        HydrusGlobals.controller.sub( self, 'HitButton', 'hit_on_off_button' )
+        HydrusGlobals.client_controller.sub( self, 'HitButton', 'hit_on_off_button' )
         
     
     def EventButton( self, event ):
@@ -3410,7 +3410,7 @@ class OnOffButton( wx.Button ):
             
             self.SetForegroundColour( ( 128, 0, 0 ) )
             
-            HydrusGlobals.controller.pub( self._topic, self._page_key, False )
+            HydrusGlobals.client_controller.pub( self._topic, self._page_key, False )
             
         else:
             
@@ -3420,7 +3420,7 @@ class OnOffButton( wx.Button ):
             
             self.SetForegroundColour( ( 0, 128, 0 ) )
             
-            HydrusGlobals.controller.pub( self._topic, self._page_key, True )
+            HydrusGlobals.client_controller.pub( self._topic, self._page_key, True )
             
         
     
@@ -3597,7 +3597,7 @@ class PopupMessage( PopupWindow ):
     
     def EventCopyTBButton( self, event ):
         
-        HydrusGlobals.controller.pub( 'clipboard', 'text', self._job_key.ToString() )
+        HydrusGlobals.client_controller.pub( 'clipboard', 'text', self._job_key.ToString() )
         
     
     def EventPauseButton( self, event ):
@@ -3656,9 +3656,9 @@ class PopupMessage( PopupWindow ):
         
         hashes = self._job_key.GetVariable( 'popup_files' )
         
-        media_results = HydrusGlobals.controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
+        media_results = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
         
-        HydrusGlobals.controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+        HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
         
     
     def EventShowTBButton( self, event ):
@@ -3845,7 +3845,7 @@ class PopupMessageManager( wx.Frame ):
         parent.Bind( wx.EVT_SIZE, self.EventMove )
         parent.Bind( wx.EVT_MOVE, self.EventMove )
         
-        HydrusGlobals.controller.sub( self, 'AddMessage', 'message' )
+        HydrusGlobals.client_controller.sub( self, 'AddMessage', 'message' )
         
         self._old_excepthook = sys.excepthook
         self._old_show_exception = HydrusData.ShowException
@@ -4147,14 +4147,14 @@ class RatingLikeCanvas( RatingLike ):
         self._current_media = None
         self._rating_state = None
         
-        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
         name = service.GetName()
         
         self.SetToolTipString( name )
         
-        HydrusGlobals.controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HydrusGlobals.controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _Draw( self ):
@@ -4184,7 +4184,7 @@ class RatingLikeCanvas( RatingLike ):
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HydrusGlobals.controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            HydrusGlobals.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
             
         
     
@@ -4197,7 +4197,7 @@ class RatingLikeCanvas( RatingLike ):
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HydrusGlobals.controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            HydrusGlobals.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
             
         
     
@@ -4251,7 +4251,7 @@ class RatingNumerical( wx.Window ):
         
         self._service_key = service_key
         
-        self._service = HydrusGlobals.controller.GetServicesManager().GetService( self._service_key )
+        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
         
         self._num_stars = self._service.GetInfo( 'num_stars' )
         self._allow_zero = self._service.GetInfo( 'allow_zero' )
@@ -4437,8 +4437,8 @@ class RatingNumericalCanvas( RatingNumerical ):
         
         self.SetToolTipString( name )
         
-        HydrusGlobals.controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HydrusGlobals.controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _Draw( self ):
@@ -4469,7 +4469,7 @@ class RatingNumericalCanvas( RatingNumerical ):
                 
                 content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
                 
-                HydrusGlobals.controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+                HydrusGlobals.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
                 
             
         
@@ -4482,7 +4482,7 @@ class RatingNumericalCanvas( RatingNumerical ):
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HydrusGlobals.controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            HydrusGlobals.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
             
         
     
@@ -4651,7 +4651,7 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_FILENAME: phrase = r'(?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)'
         else: event.Skip()
         
-        if phrase is not None: HydrusGlobals.controller.pub( 'clipboard', 'text', phrase )
+        if phrase is not None: HydrusGlobals.client_controller.pub( 'clipboard', 'text', phrase )
         
     
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
@@ -4877,7 +4877,7 @@ class SeedCacheControl( SaneListCtrl ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
-        HydrusGlobals.controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
+        HydrusGlobals.client_controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
         
     
     def _AddSeed( self, info_tuple ):
@@ -5158,7 +5158,7 @@ class ShowKeys( Frame ):
         elif key_type == 'access': title = 'Access Keys'
         
         # give it no parent, so this doesn't close when the dialog is closed!
-        Frame.__init__( self, None, title = HydrusGlobals.controller.PrepStringForDisplay( title ) )
+        Frame.__init__( self, None, title = HydrusGlobals.client_controller.PrepStringForDisplay( title ) )
         
         self._key_type = key_type
         self._keys = keys

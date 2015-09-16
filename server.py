@@ -28,25 +28,18 @@ try:
     
     action = ServerController.GetStartingAction()
     
-    if action is None or action == 'help':
+    if action == 'help':
     
         print( 'This is the hydrus server. It accepts these commands:' )
         print( '' )
         print( 'server start - runs the server' )
-        print( 'server stop - stops an already running server' )
-        print( 'server restart - stops an already running server, then runs itself' )
+        print( 'server stop - stops an existing instance of this server' )
+        print( 'server restart - stops an existing instance of this server, then runs itself' )
         print( '' )
         print( 'You can also run \'server\' without arguments. Depending on what is going on, it will try to start or it will ask you if you want to stop or restart.' )
-        print( 'You can also stop the server just by hitting your keyboard interrupt (usually Ctrl+C).')
-        print( '' )
-        print( 'PROTIP: stop and restart don\'t work yet lol')
+        print( 'You can also stop the running server just by hitting Ctrl+C.')
         
     else:
-        
-        if action in ( 'start', 'restart' ):
-            
-            print( 'Running...' )
-            
         
         error_occured = False
         
@@ -55,18 +48,57 @@ try:
         
         with open( HC.LOGS_DIR + os.path.sep + 'server.log', 'a' ) as f:
             
-            sys.stdout = f
-            sys.stderr = f
+            class logger( object ):
+                
+                def __init__( self ):
+                    
+                    pass
+                    
+                
+                def flush( self ):
+                    
+                    initial_sys_stdout.flush()
+                    f.flush()
+                    
+                
+                def write( self, value ):
+                    
+                    if value in ( os.linesep, '\n' ):
+                        
+                        prefix = ''
+                        
+                    else:
+                        
+                        prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ', time.localtime() )
+                        
+                    
+                    initial_sys_stdout.write( prefix + value )
+                    f.write( prefix + value )
+                    
+                
+            
+            l = logger()
+            
+            sys.stdout = l
+            sys.stderr = l
             
             try:
                 
-                print( 'hydrus server started at ' + time.ctime() )
+                if action in ( 'stop', 'restart' ):
+                    
+                    ServerController.ShutdownSiblingInstance()
+                    
                 
-                threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
-                
-                controller = ServerController.Controller()
-                
-                controller.Run( action )
+                if action in ( 'start', 'restart' ):
+                    
+                    print( 'Initialising controller...' )
+                    
+                    threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+                    
+                    controller = ServerController.Controller()
+                    
+                    controller.Run()
+                    
                 
             except HydrusExceptions.PermissionException as e:
                 
@@ -80,7 +112,7 @@ try:
                 error_occured = True
                 error = traceback.format_exc()
                 
-                print( 'hydrus server failed at ' + time.ctime() )
+                print( 'Hydrus server failed' )
                 
                 print( traceback.format_exc() )
                 
@@ -94,22 +126,10 @@ try:
                 
                 reactor.callFromThread( reactor.stop )
                 
-                print( 'hydrus server shut down at ' + time.ctime() )
-                
             
         
         sys.stdout = initial_sys_stdout
         sys.stderr = initial_sys_stderr
-        
-        if error_occured:
-            
-            print( error )
-            
-        
-        if action in ( 'start', 'restart' ):
-            
-            print( 'Finished.' )
-            
         
     
 except HydrusExceptions.PermissionException as e:

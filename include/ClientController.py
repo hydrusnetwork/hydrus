@@ -35,6 +35,13 @@ class Controller( HydrusController.HydrusController ):
     
     pubsub_binding_errors_to_ignore = [ wx.PyDeadObjectError ]
     
+    def __init__( self ):
+        
+        HydrusController.HydrusController.__init__( self )
+        
+        HydrusGlobals.client_controller = self
+        
+    
     def _InitDB( self ):
         
         return ClientDB.DB( self )
@@ -85,7 +92,7 @@ class Controller( HydrusController.HydrusController ):
             finally: job_key.Finish()
             
         
-        job_key = HydrusData.JobKey()
+        job_key = HydrusThreading.JobKey()
         
         job_key.Begin()
         
@@ -475,6 +482,11 @@ class Controller( HydrusController.HydrusController ):
         wx.CallAfter( self.ProcessPubSub )
         
     
+    def PageDeleted( self, page_key ):
+        
+        return self._gui.PageDeleted( page_key )
+        
+    
     def PrepStringForDisplay( self, text ):
         
         if self._options[ 'gui_capitalisation' ]: return text
@@ -698,15 +710,11 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_text', 'waiting for daemons to exit' )
         
-        HydrusController.HydrusController.ShutdownView( self )
+        self._ShutdownDaemons()
         
         idle_shutdown_action = self._options[ 'idle_shutdown' ]
         
         if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
-            
-            # callblockingtowx needs view_shutdown to be true for the job_key to not quit early lol! fix this!
-            
-            HydrusGlobals.view_shutdown = False
             
             self.pub( 'splash_set_text', 'running maintenance' )
             
@@ -744,8 +752,8 @@ class Controller( HydrusController.HydrusController ):
                 self.DoIdleShutdownWork()
                 
             
-            HydrusGlobals.view_shutdown = True
-            
+        
+        HydrusController.HydrusController.ShutdownView( self )
         
     
     def StartFileQuery( self, query_key, search_context ):

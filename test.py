@@ -47,6 +47,9 @@ class Controller( object ):
     def __init__( self ):
         
         HydrusGlobals.controller = self
+        HydrusGlobals.client_controller = self
+        HydrusGlobals.server_controller = self
+        HydrusGlobals.test_controller = self
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         
         def show_text( text ): pass
@@ -229,6 +232,12 @@ if __name__ == '__main__':
         wx.CallAfter( win.Destroy )
         
         app.MainLoop()
+        
+    except:
+        
+        import traceback
+        
+        traceback.print_exc()
         
     finally:
         

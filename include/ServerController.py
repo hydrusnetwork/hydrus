@@ -19,7 +19,7 @@ from twisted.internet import defer
 
 def GetStartingAction():
     
-    action = None
+    action = 'help'
     
     args = sys.argv[1:]
     
@@ -48,7 +48,7 @@ def GetStartingAction():
                     
                 else:
                     
-                    action = None
+                    action = 'start'
                     
                 
             elif command == 'stop':
@@ -107,7 +107,95 @@ def GetStartingAction():
     
     return action
     
+
+def ShutdownSiblingInstance():
+    
+    port_found = False
+    
+    ports = HydrusData.GetSiblingProcessPorts( 'server' )
+    
+    if ports is None:
+        
+        raise HydrusExceptions.PermissionException( 'Could not figure out the existing server\'s ports, so could not shut it down!' )
+        
+    
+    for port in ports:
+        
+        try:
+            
+            connection = HydrusNetworking.GetLocalConnection( port )
+            
+            connection.request( 'GET', '/' )
+            
+            response = connection.getresponse()
+            
+            response.read()
+            
+            server_name = response.getheader( 'Server' )
+            
+        except:
+            
+            text = 'Could not contact existing server\'s port ' + str( port ) + '!'
+            text += os.linesep
+            text += traceback.format_exc()
+            
+            raise HydrusExceptions.PermissionException( text )
+            
+        
+        if 'server administration' in server_name:
+            
+            port_found = True
+            
+            print( 'Sending shut down instruction...' )
+            
+            connection.request( 'POST', '/shutdown' )
+            
+            response = connection.getresponse()
+            
+            result = response.read()
+            
+            if response.status != 200:
+                
+                text = 'When told to shut down, the existing server gave an error!'
+                text += os.linesep
+                text += result
+                
+                raise HydrusExceptions.PermissionException( text )
+                
+            
+            time_waited = 0
+            
+            while HydrusData.IsAlreadyRunning( 'server' ):
+                
+                time.sleep( 1 )
+                
+                time_waited += 1
+                
+                if time_waited > 20:
+                    
+                    raise HydrusExceptions.PermissionException( 'Attempted to shut the existing server down, but it took too long!' )
+                    
+                
+            
+            break
+            
+        
+    
+    if not port_found:
+        
+        raise HydrusExceptions.PermissionException( 'The existing server did not have an administration service!' )
+        
+    
+    print( 'The existing server is shut down!' )
+    
 class Controller( HydrusController.HydrusController ):
+    
+    def __init__( self ):
+        
+        HydrusController.HydrusController.__init__( self )
+        
+        HydrusGlobals.server_controller = self
+        
     
     def _InitDB( self ):
         
@@ -166,10 +254,14 @@ class Controller( HydrusController.HydrusController ):
             if action == 'start': StartService()
             else:
                 
-                deferred = defer.maybeDeferred( self._services[ service_key ].stopListening )
+                if service_key in self._services:
+                    
+                    deferred = defer.maybeDeferred( self._services[ service_key ].stopListening )
+                    
+                    if action == 'stop': del self._services[ service_key ]
+                    
                 
                 if action == 'restart': deferred.addCallback( StartService )
-                elif action == 'stop': del self._services[ service_key ]
                 
             
         
@@ -201,12 +293,18 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
+        print( 'Shutting down daemons and services...' )
+        
         self.ShutdownView()
+        
+        print( 'Shutting down db...' )
         
         self.ShutdownModel()
         
     
     def InitModel( self ):
+        
+        print( 'Initialising db...' )
         
         HydrusController.HydrusController.InitModel( self )
         
@@ -219,6 +317,8 @@ class Controller( HydrusController.HydrusController ):
         
     
     def InitView( self ):
+        
+        print( 'Initialising daemons and services...' )
         
         HydrusController.HydrusController.InitView( self )
         
@@ -245,34 +345,65 @@ class Controller( HydrusController.HydrusController ):
         self.CallToThread( self.ProcessPubSub )
         
     
-    def Run( self, action ):
+    def Run( self,):
         
-        if action in ( 'stop', 'restart' ):
+        HydrusData.RecordRunningStart( 'server' )
+        
+        self.InitModel()
+        
+        self.InitView()
+        
+        print( 'Server is running. Press Ctrl+C to quit.' )
+        
+        interrupt_received = False
+        
+        while not HydrusGlobals.model_shutdown:
             
-            raise HydrusExceptions.PermissionException( 'This isn\'t working yet! You will have to Ctrl+C to quit an existing server for now!' )
-            
-            self.ShutdownSiblingInstance()
+            try:
+                
+                time.sleep( 1 )
+                
+            except KeyboardInterrupt:
+                
+                if not interrupt_received:
+                    
+                    interrupt_received = True
+                    
+                    print( 'Received a keyboard interrupt...' )
+                    
+                    def do_it():
+                        
+                        self.Exit()
+                        
+                    
+                    self.CallToThread( do_it )
+                    
+                
             
         
-        if action in ( 'start', 'restart' ):
+        print( 'Shutting down controller...' )
+        
+    
+    def ShutdownView( self ):
+        
+        service_keys = self.Read( 'service_keys' )
+        
+        for service_key in service_keys: self.ActionService( service_key, 'stop' )
+        
+        HydrusController.HydrusController.ShutdownView( self )
+        
+    
+    def ShutdownFromServer( self ):
+        
+        print( 'Received a server shut down request...' )
+        
+        def do_it():
             
-            HydrusData.RecordRunningStart( 'server' )
+            time.sleep( 1 )
             
-            self.InitModel()
+            self.Exit()
             
-            self.InitView()
-            
-            while not HydrusGlobals.model_shutdown:
-                
-                try:
-                    
-                    time.sleep( 1 )
-                    
-                except KeyboardInterrupt:
-                    
-                    self.Exit()
-                    
-                
-            
+        
+        self.CallToThread( do_it )
         
     

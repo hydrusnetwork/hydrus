@@ -179,7 +179,7 @@ def GetNumericalStateFromMedia( media, service_key ):
     
 def GetNumericalWidth( service_key ):
     
-    service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
     num_stars = service.GetInfo( 'num_stars' )
     
@@ -187,7 +187,7 @@ def GetNumericalWidth( service_key ):
     
 def GetPenAndBrushColours( service_key, rating_state ):
     
-    service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
     colours = service.GetInfo( 'colours' )
     
@@ -200,7 +200,7 @@ def GetPenAndBrushColours( service_key, rating_state ):
     
 def GetShape( service_key ):
     
-    service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
     shape = service.GetInfo( 'shape' )
     
@@ -208,7 +208,7 @@ def GetShape( service_key ):
     
 def GetStars( service_key, rating_state, rating ):
     
-    service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
     allow_zero = service.GetInfo( 'allow_zero' )
     

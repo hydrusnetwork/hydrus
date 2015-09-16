@@ -145,7 +145,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         self._sign.SetSelection( 0 )
         self._current_pending.SetSelection( 0 )
         
-        services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
         
         for service in services: self._file_service_key.Append( service.GetName(), service.GetServiceKey() )
         self._file_service_key.SetSelection( 0 )
@@ -439,7 +439,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         #
         
-        local_like_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        local_like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
         self._like_checkboxes_to_info = {}
         
@@ -470,7 +470,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         #
         
-        local_numerical_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        local_numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
         self._numerical_checkboxes_to_info = {}
         

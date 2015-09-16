@@ -43,6 +43,7 @@ def GetClientDefaultOptions():
     options[ 'website_download_polite_wait' ] = 1
     options[ 'confirm_trash' ] = True
     options[ 'confirm_archive' ] = True
+    options[ 'delete_to_recycle_bin' ] = True
     
     system_predicates = {}
     
@@ -216,7 +217,7 @@ def GetClientDefaultOptions():
     
 def GetDefaultImportFileOptions():
     
-    options = HydrusGlobals.controller.GetOptions()
+    options = HydrusGlobals.client_controller.GetOptions()
     
     result = {}
     

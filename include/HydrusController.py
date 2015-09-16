@@ -54,6 +54,21 @@ class HydrusController( object ):
         return result
         
     
+    def _ShutdownDaemons( self ):
+        
+        for daemon in self._daemons:
+            
+            daemon.shutdown()
+            
+        
+        while True in ( daemon.is_alive() for daemon in self._daemons ):
+            
+            time.sleep( 0.1 )
+            
+        
+        self._daemons = []
+        
+    
     def _Write( self, action, priority, synchronous, *args, **kwargs ):
         
         result = self._db.Write( action, priority, synchronous, *args, **kwargs )
@@ -163,12 +178,12 @@ class HydrusController( object ):
         
         HydrusGlobals.view_shutdown = True
         
-        self.pub( 'wake_daemons' )
+        self._ShutdownDaemons()
         
-        while True in ( daemon.is_alive() for daemon in self._daemons ):
-            
-            time.sleep( 0.1 )
-            
+    
+    def ShutdownFromServer( self ):
+        
+        raise Exception( 'This hydrus application cannot be shut down from the server!' )
         
     
     def SleepCheck( self ):

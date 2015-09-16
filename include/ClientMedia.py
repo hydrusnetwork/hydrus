@@ -97,7 +97,7 @@ class LocationsManager( object ):
         pending = self.GetPendingRemote()
         petitioned = self.GetPetitionedRemote()
         
-        file_repo_services = HydrusGlobals.controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
+        file_repo_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
         
         file_repo_services = list( file_repo_services )
         
@@ -237,7 +237,7 @@ class MediaList( object ):
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
         ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
         
-        services_manager = HydrusGlobals.controller.GetServicesManager()
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
         
         local_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         remote_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetServiceType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
@@ -563,7 +563,7 @@ class MediaList( object ):
                 
                 ( x_local_ratings, x_remote_ratings ) = x.GetRatings()
                 
-                service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+                service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                 
                 if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = deal_with_none( x_local_ratings.GetRating( service_key ) )
                 else: rating = deal_with_none( x_remote_ratings.GetScore( service_key ) )
@@ -589,8 +589,8 @@ class ListeningMediaList( MediaList ):
         
         self._file_query_result = ClientData.FileQueryResult( media_results )
         
-        HydrusGlobals.controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HydrusGlobals.controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+        HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
     def AddMediaResults( self, media_results, append = True ):
@@ -765,14 +765,23 @@ class MediaCollection( MediaList, Media ):
     
     def GetHash( self ): return self.GetDisplayMedia().GetHash()
     
-    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None ):
+    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
         
-        if has_location is None and discriminant is None and not_uploaded_to is None: return self._hashes
+        if has_location is None and discriminant is None and not_uploaded_to is None and not ordered: return self._hashes
         else:
             
-            result = set()
-            
-            for media in self._sorted_media: result.update( media.GetHashes( has_location, discriminant, not_uploaded_to ) )
+            if ordered:
+                
+                result = []
+                
+                for media in self._sorted_media: result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                
+            else:
+                
+                result = set()
+                
+                for media in self._sorted_media: result.update( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                
             
             return result
             
@@ -869,7 +878,16 @@ class MediaSingleton( Media ):
     
     def GetHash( self ): return self._media_result.GetHash()
     
-    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None ):
+    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+        
+        if ordered:
+            
+            no_result = []
+            
+        else:
+            
+            no_result = set()
+            
         
         locations_manager = self._media_result.GetLocationsManager()
         
@@ -877,20 +895,27 @@ class MediaSingleton( Media ):
             
             inbox = self._media_result.GetInbox()
             
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal() ): return set()
+            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal() ): return no_result
             
         
         if has_location is not None:
             
-            if has_location not in locations_manager.GetCurrent(): return set()
+            if has_location not in locations_manager.GetCurrent(): return no_result
             
         
         if not_uploaded_to is not None:
             
-            if not_uploaded_to in locations_manager.GetCurrentRemote(): return set()
+            if not_uploaded_to in locations_manager.GetCurrentRemote(): return no_result
             
         
-        return { self._media_result.GetHash() }
+        if ordered:
+            
+            return [ self._media_result.GetHash() ]
+            
+        else:
+            
+            return { self._media_result.GetHash() }
+            
         
     
     def GetLocationsManager( self ): return self._media_result.GetLocationsManager()
@@ -962,7 +987,7 @@ class MediaSingleton( Media ):
         
         title_string = ''
         
-        siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
         namespaces = self._media_result.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
         
@@ -1092,7 +1117,7 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -1130,7 +1155,7 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -1269,7 +1294,7 @@ class TagsManagerSimple( object ):
     
     def __init__( self, service_keys_to_statuses_to_tags ):
         
-        tag_censorship_manager = HydrusGlobals.controller.GetManager( 'tag_censorship' )
+        tag_censorship_manager = HydrusGlobals.client_controller.GetManager( 'tag_censorship' )
         
         service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
         
@@ -1304,7 +1329,7 @@ class TagsManagerSimple( object ):
         
         combined = combined_current.union( combined_pending )
         
-        siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
         slice = []
         
@@ -1337,7 +1362,7 @@ class TagsManagerSimple( object ):
         
         if collapse_siblings:
             
-            siblings_manager = HydrusGlobals.controller.GetManager( 'tag_siblings' )
+            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
             
             slice = siblings_manager.CollapseTags( slice )
             

@@ -129,7 +129,7 @@ def GetExpectedFilePath( hash, mime ):
     
 def GetExportPath():
     
-    options = HydrusGlobals.controller.GetOptions()
+    options = HydrusGlobals.client_controller.GetOptions()
     
     path = options[ 'export_path' ]
     
@@ -193,7 +193,7 @@ def GetThumbnailPath( hash, full_size = True ):
             
             full_size_path = GetThumbnailPath( hash, True )
             
-            options = HydrusGlobals.controller.GetOptions()
+            options = HydrusGlobals.client_controller.GetOptions()
             
             thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
             
@@ -386,7 +386,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 #
                 
-                query_hash_ids = HydrusGlobals.controller.Read( 'file_query_ids', self._file_search_context )
+                query_hash_ids = HydrusGlobals.client_controller.Read( 'file_query_ids', self._file_search_context )
                 
                 query_hash_ids = list( query_hash_ids )
                 
@@ -411,7 +411,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     sub_query_hash_ids = query_hash_ids[ last_i : i ]
                     
-                    more_media_results = HydrusGlobals.controller.Read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, sub_query_hash_ids )
+                    more_media_results = HydrusGlobals.client_controller.Read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, sub_query_hash_ids )
                     
                     media_results.extend( more_media_results )
                     
@@ -475,14 +475,14 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     for deletee_path in deletee_paths:
                         
-                        HydrusData.DeletePath( deletee_path )
+                        ClientData.DeletePath( deletee_path )
                         
                     
                 
             
             self._last_checked = HydrusData.GetNow()
             
-            HydrusGlobals.controller.WriteSynchronous( 'export_folder', self )
+            HydrusGlobals.client_controller.WriteSynchronous( 'export_folder', self )
             
         
     
