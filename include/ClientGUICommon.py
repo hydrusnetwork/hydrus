@@ -333,8 +333,8 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
-            if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
-            elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
+            if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
+            elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
@@ -342,8 +342,8 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
-            if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_previous' )
-            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_next' )
+            if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_previous' )
+            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_next' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
@@ -363,8 +363,8 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
-            if event.GetWheelRotation() > 0: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
-            else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
+            if event.GetWheelRotation() > 0: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
+            else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
@@ -529,7 +529,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service.GetServiceKey() ), service.GetName() )
+        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_repository', service.GetServiceKey() ), service.GetName() )
         
         self._file_repo_button.PopupMenu( menu )
         
@@ -571,7 +571,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service.GetServiceKey() ), service.GetName() )
+        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_tag_repository', service.GetServiceKey() ), service.GetName() )
         
         self._tag_repo_button.PopupMenu( menu )
         
@@ -2261,13 +2261,13 @@ class ListBox( wx.ScrolledWindow ):
             
             term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + term + '"' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_term' ), 'copy "' + term + '"' )
             
             if ':' in term:
                 
                 sub_term = term.split( ':', 1 )[1]
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_term + '"' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_term' ), 'copy "' + sub_term + '"' )
                 
             
             self.PopupMenu( menu )
@@ -2572,13 +2572,13 @@ class ListBoxTags( ListBox ):
                 if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_search_page_with_term' ), 'open a new search page for "' + s + '"' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page_with_term' ), 'open a new search page for "' + s + '"' )
                 
                 menu.AppendSeparator()
                 
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags' ), 'copy all tags' )
-            if self.has_counts: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags' ), 'copy all tags' )
+            if self.has_counts: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
             
             if self._current_selected_index is not None:
                 
@@ -2587,21 +2587,21 @@ class ListBoxTags( ListBox ):
                 if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + s + '"' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_term' ), 'copy "' + s + '"' )
                 
                 if ':' in s:
                     
                     sub_s = s.split( ':', 1 )[1]
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_s + '"' )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_term' ), 'copy "' + sub_s + '"' )
                     
                 
                 if type( term ) in ( str, unicode ):
                     
                     menu.AppendSeparator()
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent' ), 'add parent to ' + s )
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling' ), 'add sibling to ' + s )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'parent' ), 'add parent to ' + s )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'sibling' ), 'add sibling to ' + s )
                     
                 
             
@@ -4550,12 +4550,12 @@ class RegexButton( wx.Button ):
     ID_REGEX_LOOKBEHIND = 17
     ID_REGEX_NEGATIVE_LOOKBEHIND = 18
     ID_REGEX_NUMBER_WITHOUT_ZEROES = 19
-    ID_REGEX_NUMBER_EXT = 20
-    ID_REGEX_AUTHOR = 21
     ID_REGEX_BACKSPACE = 22
     ID_REGEX_SET = 23
     ID_REGEX_NOT_SET = 24
     ID_REGEX_FILENAME = 25
+    ID_REGEX_MANAGE_FAVOURITES = 26
+    ID_REGEX_FAVOURITES = range( 100, 200 )
     
     def __init__( self, parent ):
         
@@ -4573,44 +4573,58 @@ class RegexButton( wx.Button ):
         
         menu.AppendSeparator()
         
-        menu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
-        menu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
-        menu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
-        menu.Append( self.ID_REGEX_ANY, r'any character - .' )
-        menu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
-        menu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
-        menu.Append( self.ID_REGEX_END, r'end of line - $' )
-        menu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
-        menu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
+        submenu = wx.Menu()
         
-        menu.AppendSeparator()
+        submenu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
+        submenu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
+        submenu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
+        submenu.Append( self.ID_REGEX_ANY, r'any character - .' )
+        submenu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
+        submenu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
+        submenu.Append( self.ID_REGEX_END, r'end of line - $' )
+        submenu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
+        submenu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
         
-        menu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
-        menu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
-        menu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
-        menu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
-        menu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
-        menu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
-        menu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
-        menu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
-        menu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
+        submenu.AppendSeparator()
         
-        menu.AppendSeparator()
+        submenu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
+        submenu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
+        submenu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
+        submenu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
+        submenu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
+        submenu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
+        submenu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
+        submenu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
+        submenu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
         
-        menu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
-        menu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
-        menu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
-        menu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
+        submenu.AppendSeparator()
         
-        menu.AppendSeparator()
+        submenu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
+        submenu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
+        submenu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
+        submenu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
         
-        menu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)' )
+        submenu.AppendSeparator()
         
-        menu.AppendSeparator()
+        submenu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
+        submenu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)' )
         
-        menu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
-        menu.Append( self.ID_REGEX_NUMBER_EXT, r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' )
-        menu.Append( self.ID_REGEX_AUTHOR, r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' )
+        menu.AppendMenu( -1, 'regex components', submenu )
+        
+        submenu = wx.Menu()
+        
+        submenu.Append( self.ID_REGEX_MANAGE_FAVOURITES, 'manage favourites' )
+        
+        submenu.AppendSeparator()
+        
+        for ( index, ( regex_phrase, description ) ) in enumerate( HC.options[ 'regex_favourites' ] ):
+            
+            menu_id = index + 100
+            
+            submenu.Append( menu_id, description )
+            
+        
+        menu.AppendMenu( -1, 'favourites', submenu )
         
         self.PopupMenu( menu )
         
@@ -4646,9 +4660,22 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_LOOKBEHIND: phrase = r'(?<=...)'
         elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = r'(?<!...)'
         elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
-        elif id == self.ID_REGEX_NUMBER_EXT: phrase = r'[1-9]+\d*(?=.{4}$)'
-        elif id == self.ID_REGEX_AUTHOR: phrase = r'[^\\][\w\s]*(?=\s-)'
         elif id == self.ID_REGEX_FILENAME: phrase = r'(?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)'
+        elif id == self.ID_REGEX_MANAGE_FAVOURITES:
+            
+            import ClientGUIDialogsManage
+            
+            with ClientGUIDialogsManage.DialogManageRegexFavourites( self.GetTopLevelParent() ) as dlg:
+                
+                dlg.ShowModal()
+                
+            
+        elif id in self.ID_REGEX_FAVOURITES:
+            
+            index = id - 100
+            
+            ( phrase, description ) = HC.options[ 'regex_favourites' ][ index ]
+            
         else: event.Skip()
         
         if phrase is not None: HydrusGlobals.client_controller.pub( 'clipboard', 'text', phrase )
@@ -4900,6 +4927,30 @@ class SeedCacheControl( SaneListCtrl ):
         return ( pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )
         
     
+    def _CopySelectedNotes( self ):
+        
+        notes = []
+        
+        seeds_to_reset = set()
+        
+        for ( seed, status, added_timestamp, last_modified_timestamp, note ) in self.GetSelectedClientData():
+            
+            if note != '':
+                
+                notes.append( note )
+                
+            
+        
+        if len( notes ) > 0:
+            
+            separator = os.linesep * 2
+            
+            text = separator.join( notes )
+            
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
     def _SetSelectedUnknown( self ):
         
         seeds_to_reset = set()
@@ -4926,7 +4977,8 @@ class SeedCacheControl( SaneListCtrl ):
             
             ( command, data ) = action
             
-            if command == 'set_seed_unknown': self._SetSelectedUnknown()
+            if command == 'copy_seed_notes': self._CopySelectedNotes()
+            elif command == 'set_seed_unknown': self._SetSelectedUnknown()
             else: event.Skip()
             
         
@@ -4935,7 +4987,8 @@ class SeedCacheControl( SaneListCtrl ):
         
         menu = wx.Menu()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'set_seed_unknown' ), 'try again' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_seed_notes' ), 'copy notes' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_unknown' ), 'try again' )
         
         self.PopupMenu( menu )
         

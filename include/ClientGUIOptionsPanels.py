@@ -226,7 +226,7 @@ class OptionsPanelImportFiles( OptionsPanel ):
     
     def EventChanged( self, event ):
         
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_file_options_changed' ) ) )
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'import_file_options_changed' ) ) )
         
         event.Skip()
         
@@ -518,7 +518,7 @@ class OptionsPanelTags( OptionsPanel ):
     
     def EventChecked( self, event ):
         
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_tag_options_changed' ) ) )
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'import_tag_options_changed' ) ) )
         
         event.Skip()
         

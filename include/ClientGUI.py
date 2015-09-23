@@ -599,18 +599,18 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def file():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_tags' ), p( '&Import Tag Archive' ), p( 'Add tags from a tag archive.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'import_tags' ), p( '&Import Tag Archive' ), p( 'Add tags from a tag archive.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
             
             menu.AppendSeparator()
             
             open = wx.Menu()
             
-            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_install_folder' ), p( 'Installation Directory' ), p( 'Open the installation directory for this client.' ) )
-            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Quick Export Directory' ), p( 'Open the export directory so you can easily access the files you have exported.' ) )
+            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'open_install_folder' ), p( 'Installation Directory' ), p( 'Open the installation directory for this client.' ) )
+            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'open_export_folder' ), p( 'Quick Export Directory' ), p( 'Open the export directory so you can easily access the files you have exported.' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( 'Open' ), open )
             
@@ -626,13 +626,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 for name in gui_session_names:
                     
-                    load.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'load_gui_session', name ), name )
+                    load.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'load_gui_session', name ), name )
                     
                 
                 sessions.AppendMenu( CC.ID_NULL, p( 'Load' ), load )
                 
             
-            sessions.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'save_gui_session' ), p( 'Save Current' ) )
+            sessions.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'save_gui_session' ), p( 'Save Current' ) )
             
             if len( gui_session_names ) > 0:
                 
@@ -640,7 +640,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 for name in gui_session_names:
                     
-                    delete.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_gui_session', name ), name )
+                    delete.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_gui_session', name ), name )
                     
                 
                 sessions.AppendMenu( CC.ID_NULL, p( 'Delete' ), delete )
@@ -649,9 +649,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendMenu( CC.ID_NULL, p( 'Sessions' ), sessions )
             
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options' ), p( '&Options' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'options' ), p( '&Options' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'exit' ), p( '&Exit' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'exit' ), p( '&Exit' ) )
             
             return ( menu, p( '&File' ), True )
             
@@ -676,14 +676,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     did_undo_stuff = True
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undo' ), undo_string )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'undo' ), undo_string )
                     
                 
                 if redo_string is not None:
                     
                     did_undo_stuff = True
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'redo' ), redo_string )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'redo' ), redo_string )
                     
                 
                 if have_closed_pages:
@@ -692,7 +692,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     undo_pages = wx.Menu()
                     
-                    undo_pages.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_all_closed_pages' ), 'clear all' )
+                    undo_pages.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_all_closed_pages' ), 'clear all' )
                     
                     undo_pages.AppendSeparator()
                     
@@ -700,7 +700,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     for ( i, ( time_closed, index, name, page ) ) in enumerate( self._closed_pages ):
                         
-                        args.append( ( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
+                        args.append( ( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
                         
                     
                     args.reverse() # so that recently closed are at the top
@@ -717,10 +717,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def view():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_hide_splitters' ), p( 'Show/Hide Splitters' ), p( 'Show or hide the current page\'s splitters.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'show_hide_splitters' ), p( 'Show/Hide Splitters' ), p( 'Show or hide the current page\'s splitters.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
             
             return ( menu, p( '&View' ), True )
             
@@ -738,14 +738,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             petition_resolve_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
             menu = wx.Menu()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', CC.TRASH_SERVICE_KEY ), p( '&New Trash Search' ), p( 'Open a new search tab for your recently deleted files' ) )
-            for service in file_repositories: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', CC.TRASH_SERVICE_KEY ), p( '&New Trash Search' ), p( 'Open a new search tab for your recently deleted files' ) )
+            for service in file_repositories: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
             if len( petition_resolve_tag_services ) > 0 or len( petition_resolve_file_services ) > 0:
                 
                 menu.AppendSeparator()
-                for service in petition_resolve_tag_services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
-                for service in petition_resolve_file_services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
+                for service in petition_resolve_tag_services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
+                for service in petition_resolve_file_services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
                 
             
             return ( menu, p( '&Search' ), True )
@@ -753,56 +753,56 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def download():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_page_of_images' ), p( '&New Page of Images Download Page' ), p( 'Open a new tab to download files from generic galleries or threads.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_page_of_images' ), p( '&New Page of Images Download Page' ), p( 'Open a new tab to download files from generic galleries or threads.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
             
             submenu = wx.Menu()
             
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_booru' ), p( 'Booru' ), p( 'Open a new tab to download files from a booru.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_GIPHY, None ) ), p( 'Giphy' ), p( 'Open a new tab to download files from Giphy.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_DEVIANT_ART, 'artist' ) ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_booru' ), p( 'Booru' ), p( 'Open a new tab to download files from a booru.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_GIPHY, None ) ), p( 'Giphy' ), p( 'Open a new tab to download files from Giphy.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_DEVIANT_ART, 'artist' ) ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
             hf_submenu = wx.Menu()
-            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist' ) ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
-            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_HENTAI_FOUNDRY, 'tags' ) ), p( 'By Tags' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
+            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist' ) ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
+            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_HENTAI_FOUNDRY, 'tags' ) ), p( 'By Tags' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
             submenu.AppendMenu( CC.ID_NULL, p( '&Hentai Foundry' ), hf_submenu )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_NEWGROUNDS, None ) ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_NEWGROUNDS, None ) ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
             
             ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
             
             if id != '' and password != '':
                 
                 pixiv_submenu = wx.Menu()
-                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_PIXIV, 'artist_id' ) ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
-                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_PIXIV, 'tag' ) ), p( 'By Tag' ), p( 'Open a new tab to download files from Hentai Pixiv.' ) )
+                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_PIXIV, 'artist_id' ) ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
+                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_PIXIV, 'tag' ) ), p( 'By Tag' ), p( 'Open a new tab to download files from Hentai Pixiv.' ) )
                 submenu.AppendMenu( CC.ID_NULL, p( '&Pixiv' ), pixiv_submenu )
                 
             
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_gallery', ( HC.SITE_TYPE_TUMBLR, None ) ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_TUMBLR, None ) ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( '&New Gallery Download Page' ), submenu )
             
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
             
             return ( menu, p( 'Do&wnload' ), True )
             
         
         def database():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'set_password' ), p( 'Set a &Password' ), p( 'Set a password for the database so only you can access it.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'set_password' ), p( 'Set a &Password' ), p( 'Set a password for the database so only you can access it.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_database' ), p( 'Create Database Backup' ), p( 'Back the database up to an external location.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'backup_database' ), p( 'Create Database Backup' ), p( 'Back the database up to an external location.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
             menu.AppendSeparator()
             
             submenu = wx.Menu()
             
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
-            #submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'check_db_integrity' ), p( 'Check Database Integrity' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
+            #submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'check_db_integrity' ), p( 'Check Database Integrity' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( '&Maintenance' ), submenu )
             
@@ -837,8 +837,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     submenu = wx.Menu()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_key ), p( '&Upload' ), p( 'Upload ' + name + '\'s Pending and Petitions.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_key ), p( '&Forget' ), p( 'Clear ' + name + '\'s Pending and Petitions.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'upload_pending', service_key ), p( '&Upload' ), p( 'Upload ' + name + '\'s Pending and Petitions.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_pending', service_key ), p( '&Forget' ), p( 'Clear ' + name + '\'s Pending and Petitions.' ) )
                     
                     menu.AppendMenu( CC.ID_NULL, p( name + ' Pending (' + HydrusData.ConvertValueRangeToPrettyString( num_pending, num_petitioned ) + ')' ), submenu )
                     
@@ -858,10 +858,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             submenu = wx.Menu()
             
-            pause_export_folders_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_export_folders_sync' )
-            pause_import_folders_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_import_folders_sync' )
-            pause_repo_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_repo_sync' )
-            pause_subs_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_subs_sync' )
+            pause_export_folders_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pause_export_folders_sync' )
+            pause_import_folders_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pause_import_folders_sync' )
+            pause_repo_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pause_repo_sync' )
+            pause_subs_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pause_subs_sync' )
             
             submenu.AppendCheckItem( pause_export_folders_sync_id, p( '&Export Folders Synchronisation' ), p( 'Pause the client\'s export folders.' ) )
             submenu.AppendCheckItem( pause_import_folders_sync_id, p( '&Import Folders Synchronisation' ), p( 'Pause the client\'s import folders.' ) )
@@ -876,27 +876,27 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendMenu( CC.ID_NULL, p( 'Pause' ), submenu )
             
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Look at the services your client connects to.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Manage Services' ), p( 'Edit the services your client connects to.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'review_services' ), p( '&Review Services' ), p( 'Look at the services your client connects to.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_services' ), p( '&Manage Services' ), p( 'Edit the services your client connects to.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_censorship' ), p( '&Manage Tag Censorship' ), p( 'Set which tags you want to see from which services.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_censorship' ), p( '&Manage Tag Censorship' ), p( 'Set which tags you want to see from which services.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
-            #menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
-            #menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
+            #menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
+            #menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp' ), p( 'Manage Local UPnP' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_upnp' ), p( 'Manage Local UPnP' ) )
             
             if len( tag_services ) + len( file_services ) > 0:
                 
                 menu.AppendSeparator()
                 submenu = wx.Menu()
-                for service in tag_services: submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
-                for service in file_services: submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
+                for service in tag_services: submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
+                for service in file_services: submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
                 menu.AppendMenu( CC.ID_NULL, p( 'News' ), submenu )
                 
             
@@ -924,14 +924,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     service_key = service.GetServiceKey()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
                     submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
                     submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
                     
                     menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
                     
@@ -942,15 +942,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     service_key = service.GetServiceKey()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fetch_ip', service_key ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'fetch_ip', service_key ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
                     submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
                     submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
                     
                     menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
                     
@@ -961,8 +961,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     service_key = service.GetServiceKey()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', service_key ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', service_key ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_server_services', service_key ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'backup_service', service_key ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
                     
                     menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
                     
@@ -974,19 +974,19 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def help():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help' ), p( '&Help' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'help' ), p( '&Help' ) )
             dont_know = wx.Menu()
-            dont_know.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_repo_setup' ), p( 'Just set up some repositories for me, please' ) )
-            dont_know.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
+            dont_know.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'auto_repo_setup' ), p( 'Just set up some repositories for me, please' ) )
+            dont_know.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
             menu.AppendMenu( wx.ID_NONE, p( 'I don\'t know what I am doing' ), dont_know )
             links = wx.Menu()
-            site = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'site' ), p( 'Site' ) )
+            site = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'site' ), p( 'Site' ) )
             site.SetBitmap( CC.GlobalBMPs.file_repository )
-            board = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( '8chan_board' ), p( '8chan Board' ) )
+            board = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( '8chan_board' ), p( '8chan Board' ) )
             board.SetBitmap( CC.GlobalBMPs.eight_chan )
-            twitter = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'twitter' ), p( 'Twitter' ) )
+            twitter = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'twitter' ), p( 'Twitter' ) )
             twitter.SetBitmap( CC.GlobalBMPs.twitter )
-            tumblr = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tumblr' ), p( 'Tumblr' ) )
+            tumblr = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'tumblr' ), p( 'Tumblr' ) )
             tumblr.SetBitmap( CC.GlobalBMPs.tumblr )
             links.AppendItem( site )
             links.AppendItem( board )
@@ -994,20 +994,20 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             links.AppendItem( tumblr )
             menu.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
             
-            db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'db_profile_mode' )
+            db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'db_profile_mode' )
             
             debug = wx.Menu()
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'force_idle' ), p( 'Force Idle Mode' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'force_unbusy' ), p( 'Force Unbusy Mode' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle' ), p( 'Force Idle Mode' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_unbusy' ), p( 'Force Unbusy Mode' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
             
             menu.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_shortcuts' ), p( '&Shortcuts' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_about' ), p( '&About' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'help_shortcuts' ), p( '&Shortcuts' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'help_about' ), p( '&About' ) )
             
             return ( menu, p( '&Help' ), True )
             
@@ -1373,8 +1373,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             HydrusGlobals.client_controller.pub( 'notify_restart_import_folders_daemon' )
             
         
-        try: HydrusGlobals.client_controller.Write( 'save_options', HC.options )
-        except: wx.MessageBox( traceback.format_exc() )
+        HydrusGlobals.client_controller.Write( 'save_options', HC.options )
         
     
     def _PostNews( self, service_key ):
@@ -1892,7 +1891,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         job_key.Finish()
         
-        wx.CallLater( 1000 * 3600, job_key.Delete )
+        wx.CallLater( 1000 * 5, job_key.Delete )
         
         HydrusGlobals.client_controller.pub( 'notify_new_pending' )
         
@@ -2125,8 +2124,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             menu = wx.Menu()
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tab_menu_close_page' ), 'close page' )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tab_menu_rename_page' ), 'rename page' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tab_menu_close_page' ), 'close page' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tab_menu_rename_page' ), 'rename page' )
             
             self.PopupMenu( menu )
             
@@ -2253,7 +2252,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         entries = []
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -3292,8 +3291,8 @@ class FrameSeedCache( ClientGUICommon.Frame ):
     
 class FrameSplash( ClientGUICommon.Frame ):
     
-    WIDTH = 254
-    HEIGHT = 220
+    WIDTH = 300
+    HEIGHT = 250
     
     def __init__( self ):
         
@@ -3309,7 +3308,8 @@ class FrameSplash( ClientGUICommon.Frame ):
         wx.Frame.__init__( self, None, style = style, title = 'hydrus client' )
         
         self._dirty = True
-        self._text = ''
+        self._title_text = ''
+        self._status_text = ''
         
         self._bmp = wx.EmptyBitmap( self.WIDTH, self.HEIGHT, 24 )
         
@@ -3332,7 +3332,8 @@ class FrameSplash( ClientGUICommon.Frame ):
         
         self.Show( True )
         
-        HydrusGlobals.client_controller.sub( self, 'SetText', 'splash_set_text' )
+        HydrusGlobals.client_controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
+        HydrusGlobals.client_controller.sub( self, 'SetStatusText', 'splash_set_status_text' )
         HydrusGlobals.client_controller.sub( self, 'Destroy', 'splash_destroy' )
         
     
@@ -3345,16 +3346,31 @@ class FrameSplash( ClientGUICommon.Frame ):
         dc.Clear()
         
         x = ( self.WIDTH - 124 ) / 2
+        y = 15
         
-        dc.DrawBitmap( self._hydrus, x, 15 )
+        dc.DrawBitmap( self._hydrus, x, y )
         
         dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
         
-        ( width, height ) = dc.GetTextExtent( self._text )
+        y += 166 + 15
+        
+        ( width, height ) = dc.GetTextExtent( self._title_text )
+        
+        text_gap = ( self.HEIGHT - y - height * 2 ) / 3
+        
+        x = ( self.WIDTH - width ) / 2
+        y += text_gap
+        
+        dc.DrawText( self._title_text, x, y )
+        
+        y += height + text_gap
+        
+        ( width, height ) = dc.GetTextExtent( self._status_text )
         
         x = ( self.WIDTH - width ) / 2
         
-        dc.DrawText( self._text, x, 200 )
+        dc.DrawText( self._status_text, x, y )
+        
         
     
     def EventDrag( self, event ):
@@ -3405,11 +3421,22 @@ class FrameSplash( ClientGUICommon.Frame ):
         wx.BufferedPaintDC( self, self._bmp )
         
     
-    def SetText( self, text ):
+    def SetStatusText( self, text ):
         
         print( text )
         
-        self._text = text
+        self._status_text = text
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
+    def SetTitleText( self, text ):
+        
+        print( text )
+        
+        self._title_text = text
         
         self._dirty = True
         

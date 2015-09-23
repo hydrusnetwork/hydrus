@@ -1155,6 +1155,13 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
         
     
+    def _AnalyzeAfterUpdate( self ):
+        
+        self._controller.pub( 'splash_set_status_text', 'analyzing db after update' )
+        
+        HydrusDB.HydrusDB._AnalyzeAfterUpdate( self )
+        
+    
     def _ArchiveFiles( self, hash_ids ):
         
         valid_hash_ids = [ hash_id for hash_id in hash_ids if hash_id in self._inbox_hash_ids ]
@@ -1667,7 +1674,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeleteOrphans( self ):
         
-        self._controller.pub( 'splash_set_text', 'deleting orphan files' )
+        self._controller.pub( 'splash_set_status_text', 'deleting orphan files' )
         
         prefix = 'database maintenance - delete orphans: '
         
@@ -3337,7 +3344,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 pending = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids )
                 
-                content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PENDING ].append( pending )
+                content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PEND ].append( pending )
                 
                 all_hash_ids.update( hash_ids )
                 
@@ -3413,7 +3420,7 @@ class DB( HydrusDB.HydrusDB ):
             
             pending = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
-            if len( pending ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
+            if len( pending ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PEND ] = pending
             
             petitioned = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
@@ -3423,7 +3430,7 @@ class DB( HydrusDB.HydrusDB ):
             
             pending = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
-            if len( pending ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PENDING ] = pending
+            if len( pending ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PEND ] = pending
             
             petitioned = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
@@ -4004,24 +4011,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if can_add:
             
-            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
-            
-            if width is not None and height is not None:
-                
-                if min_resolution is not None:
-                    
-                    ( min_x, min_y ) = min_resolution
-                    
-                    if width < min_x or height < min_y: raise Exception( 'Resolution too small' )
-                    
-                
-            
-            if min_size is not None:
-                
-                if size < min_size: raise Exception( 'File too small' )
-                
-            
-            timestamp = HydrusData.GetNow()
+            mime = HydrusFileHandling.GetMime( path )
             
             dest_path = ClientFiles.GetExpectedFilePath( hash, mime )
             
@@ -4033,9 +4023,41 @@ class DB( HydrusDB.HydrusDB ):
                 except: pass
                 
             
+            # I moved the file copy up because passing an original filename with unicode chars to getfileinfo
+            # was causing problems in windows.
+            
+            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( dest_path )
+            
+            if width is not None and height is not None:
+                
+                if min_resolution is not None:
+                    
+                    ( min_x, min_y ) = min_resolution
+                    
+                    if width < min_x or height < min_y:
+                        
+                        os.remove( dest_path )
+                        
+                        raise Exception( 'Resolution too small' )
+                        
+                    
+                
+            
+            if min_size is not None:
+                
+                if size < min_size:
+                    
+                    os.remove( dest_path )
+                    
+                    raise Exception( 'File too small' )
+                    
+                
+            
+            timestamp = HydrusData.GetNow()
+            
             if mime in HC.MIMES_WITH_THUMBNAILS:
                 
-                thumbnail = HydrusFileHandling.GenerateThumbnail( path )
+                thumbnail = HydrusFileHandling.GenerateThumbnail( dest_path )
                 
                 self._AddThumbnails( [ ( hash, thumbnail ) ] )
                 
@@ -4046,7 +4068,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self.pub_content_updates_after_commit( { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
             
-            ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( path )
+            ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( dest_path )
             
             self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
             
@@ -4067,7 +4089,7 @@ class DB( HydrusDB.HydrusDB ):
             for ( service_key, tags ) in service_keys_to_tags.items():
                 
                 if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
-                else: action = HC.CONTENT_UPDATE_PENDING
+                else: action = HC.CONTENT_UPDATE_PEND
                 
                 hashes = set( ( hash, ) )
                 
@@ -4233,6 +4255,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                 
+                HydrusGlobals.client_controller.pub( 'splash_set_status_text', content_update_index_string + 'committing' + update_speed_string )
                 job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing' + update_speed_string )
                 
                 job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
@@ -4311,7 +4334,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._AddFiles( service_id, [ ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) ] )
                             
-                        elif action == HC.CONTENT_UPDATE_PENDING:
+                        elif action == HC.CONTENT_UPDATE_PEND:
                             
                             hashes = row
                             
@@ -4336,7 +4359,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             notify_new_pending = True
                             
-                        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
                             
                             hashes = row
                             
@@ -4500,8 +4523,8 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if action == HC.CONTENT_UPDATE_ADD: ultimate_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
                             elif action == HC.CONTENT_UPDATE_DELETE: ultimate_deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                            elif action == HC.CONTENT_UPDATE_PENDING: ultimate_pending_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                            elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: ultimate_pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_PEND: ultimate_pending_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PEND: ultimate_pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
                             elif action == HC.CONTENT_UPDATE_PETITION:
                                 
                                 reason_id = self._GetReasonId( reason )
@@ -4533,9 +4556,9 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, new_status ) )
                             
-                        elif action in ( HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_PETITION ):
+                        elif action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
                             
-                            if action == HC.CONTENT_UPDATE_PENDING: new_status = HC.PENDING
+                            if action == HC.CONTENT_UPDATE_PEND: new_status = HC.PENDING
                             elif action == HC.CONTENT_UPDATE_PETITION: new_status = HC.PETITIONED
                             
                             ( ( old_tag, new_tag ), reason ) = row
@@ -4556,9 +4579,9 @@ class DB( HydrusDB.HydrusDB ):
                             
                             notify_new_pending = True
                             
-                        elif action in ( HC.CONTENT_UPDATE_RESCIND_PENDING, HC.CONTENT_UPDATE_RESCIND_PETITION ):
+                        elif action in ( HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
                             
-                            if action == HC.CONTENT_UPDATE_RESCIND_PENDING: deletee_status = HC.PENDING
+                            if action == HC.CONTENT_UPDATE_RESCIND_PEND: deletee_status = HC.PENDING
                             elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: deletee_status = HC.PETITIONED
                             
                             ( old_tag, new_tag ) = row
@@ -4610,9 +4633,9 @@ class DB( HydrusDB.HydrusDB ):
                                 self.pub_content_updates_after_commit( { service_key : [ special_content_update ] } )
                                 
                             
-                        elif action in ( HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_PETITION ):
+                        elif action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
                             
-                            if action == HC.CONTENT_UPDATE_PENDING: new_status = HC.PENDING
+                            if action == HC.CONTENT_UPDATE_PEND: new_status = HC.PENDING
                             elif action == HC.CONTENT_UPDATE_PETITION: new_status = HC.PETITIONED
                             
                             ( ( child_tag, parent_tag ), reason ) = row
@@ -4631,7 +4654,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._c.execute( 'INSERT OR IGNORE INTO tag_parent_petitions ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, new_status ) )
                             
-                            if action == HC.CONTENT_UPDATE_PENDING:
+                            if action == HC.CONTENT_UPDATE_PEND:
                                 
                                 existing_hash_ids = [ hash for ( hash, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status IN ( ?, ? );', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT, HC.PENDING ) ) ]
                                 
@@ -4641,16 +4664,16 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 self._UpdateMappings( service_id, pending_mappings_ids = mappings_ids )
                                 
-                                special_content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( parent_tag, existing_hashes ) )
+                                special_content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( parent_tag, existing_hashes ) )
                                 
                                 self.pub_content_updates_after_commit( { service_key : [ special_content_update ] } )
                                 
                             
                             notify_new_pending = True
                             
-                        elif action in ( HC.CONTENT_UPDATE_RESCIND_PENDING, HC.CONTENT_UPDATE_RESCIND_PETITION ):
+                        elif action in ( HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
                             
-                            if action == HC.CONTENT_UPDATE_RESCIND_PENDING: deletee_status = HC.PENDING
+                            if action == HC.CONTENT_UPDATE_RESCIND_PEND: deletee_status = HC.PENDING
                             elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: deletee_status = HC.PETITIONED
                             
                             ( child_tag, parent_tag ) = row
@@ -5145,7 +5168,7 @@ class DB( HydrusDB.HydrusDB ):
                 if adding:
                     
                     if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
-                    else: action = HC.CONTENT_UPDATE_PENDING
+                    else: action = HC.CONTENT_UPDATE_PEND
                     
                 else: action = HC.CONTENT_UPDATE_DELETE
                 
@@ -5238,7 +5261,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateDB( self, version ):
         
-        self._controller.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
+        self._controller.pub( 'splash_set_title_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
         if version == 125:
             
@@ -5356,7 +5379,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'INSERT INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
                 
-                if i % 100 == 0: self._controller.pub( 'splash_set_text', 'generating sha512 hashes: ' + HydrusData.ConvertIntToPrettyString( i ) )
+                if i % 100 == 0: self._controller.pub( 'splash_set_status_text', 'generating sha512 hashes: ' + HydrusData.ConvertIntToPrettyString( i ) )
                 
             
             #
@@ -5756,14 +5779,14 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if i % 100 == 0:
                     
-                    self._controller.pub( 'splash_set_text', 'updating file permissions ' + HydrusData.ConvertIntToPrettyString( i ) )
+                    self._controller.pub( 'splash_set_status_text', 'updating file permissions ' + HydrusData.ConvertIntToPrettyString( i ) )
                     
                 
             
         
         if version == 171:
             
-            self._controller.pub( 'splash_set_text', 'moving updates about' )
+            self._controller.pub( 'splash_set_status_text', 'moving updates about' )
             
             for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
                 
@@ -5865,7 +5888,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._controller.pub( 'splash_set_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
+        self._controller.pub( 'splash_set_title_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
@@ -6361,7 +6384,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Vacuum( self ):
         
-        self._controller.pub( 'splash_set_text', 'vacuuming db' )
+        self._controller.pub( 'splash_set_status_text', 'vacuuming db' )
         
         prefix = 'database maintenance - vacuum: '
         

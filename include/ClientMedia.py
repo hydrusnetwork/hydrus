@@ -181,7 +181,7 @@ class LocationsManager( object ):
             
             self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
             
-        elif action == HC.CONTENT_UPDATE_PENDING:
+        elif action == HC.CONTENT_UPDATE_PEND:
             
             if service_key not in self._current: self._pending.add( service_key )
             
@@ -189,7 +189,7 @@ class LocationsManager( object ):
             
             if service_key not in self._deleted: self._petitioned.add( service_key )
             
-        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: self._pending.discard( service_key )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PEND: self._pending.discard( service_key )
         elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: self._petitioned.discard( service_key )
         
     
@@ -1485,8 +1485,8 @@ class TagsManager( TagsManagerSimple ):
             statuses_to_tags[ HC.CURRENT ].discard( tag )
             statuses_to_tags[ HC.PETITIONED ].discard( tag )
             
-        elif action == HC.CONTENT_UPDATE_PENDING: statuses_to_tags[ HC.PENDING ].add( tag )
-        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: statuses_to_tags[ HC.PENDING ].discard( tag )
+        elif action == HC.CONTENT_UPDATE_PEND: statuses_to_tags[ HC.PENDING ].add( tag )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PEND: statuses_to_tags[ HC.PENDING ].discard( tag )
         elif action == HC.CONTENT_UPDATE_PETITION: statuses_to_tags[ HC.PETITIONED ].add( tag )
         elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.PETITIONED ].discard( tag )
         

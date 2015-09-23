@@ -208,7 +208,6 @@ def GetFileInfo( path ):
     elif mime == HC.AUDIO_FLAC: duration = HydrusAudioHandling.GetFLACDuration( path )
     elif mime == HC.AUDIO_WMA: duration = HydrusAudioHandling.GetWMADuration( path )
     
-    
     return ( size, mime, width, height, duration, num_frames, num_words )
     
 def GetHashFromPath( path ):

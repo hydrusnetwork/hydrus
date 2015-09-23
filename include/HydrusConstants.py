@@ -37,7 +37,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 174
+SOFTWARE_VERSION = 175
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -57,8 +57,8 @@ CONTENT_DATA_TYPE_RATINGS = 4
 
 CONTENT_UPDATE_ADD = 0
 CONTENT_UPDATE_DELETE = 1
-CONTENT_UPDATE_PENDING = 2
-CONTENT_UPDATE_RESCIND_PENDING = 3
+CONTENT_UPDATE_PEND = 2
+CONTENT_UPDATE_RESCIND_PEND = 3
 CONTENT_UPDATE_PETITION = 4
 CONTENT_UPDATE_RESCIND_PETITION = 5
 CONTENT_UPDATE_EDIT_LOG = 6
@@ -74,8 +74,8 @@ content_update_string_lookup = {}
 
 content_update_string_lookup[ CONTENT_UPDATE_ADD ] = 'add'
 content_update_string_lookup[ CONTENT_UPDATE_DELETE ] = 'delete'
-content_update_string_lookup[ CONTENT_UPDATE_PENDING ] = 'pending'
-content_update_string_lookup[ CONTENT_UPDATE_RESCIND_PENDING ] = 'rescind pending'
+content_update_string_lookup[ CONTENT_UPDATE_PEND ] = 'pending'
+content_update_string_lookup[ CONTENT_UPDATE_RESCIND_PEND ] = 'rescind pending'
 content_update_string_lookup[ CONTENT_UPDATE_PETITION ] = 'petition'
 content_update_string_lookup[ CONTENT_UPDATE_RESCIND_PETITION ] = 'rescind petition'
 content_update_string_lookup[ CONTENT_UPDATE_EDIT_LOG ] = 'edit log'

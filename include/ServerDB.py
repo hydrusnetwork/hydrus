@@ -1540,7 +1540,7 @@ class DB( HydrusDB.HydrusDB ):
                 petition_data = ( old_tag, new_tag )
                 
             
-            if status == HC.PENDING: action = HC.CONTENT_UPDATE_PENDING
+            if status == HC.PENDING: action = HC.CONTENT_UPDATE_PEND
             elif status == HC.PETITIONED: action = HC.CONTENT_UPDATE_PETITION
             
             account_key = self._GetAccountKeyFromAccountId( account_id )
@@ -1954,7 +1954,7 @@ class DB( HydrusDB.HydrusDB ):
             
             overwrite_deleted = account.HasPermission( HC.RESOLVE_PETITIONS )
             
-            for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING ):
+            for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND ):
                 
                 tag_id = self._GetTagId( tag )
                 
@@ -1999,7 +1999,7 @@ class DB( HydrusDB.HydrusDB ):
                 if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
                 elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
                 
-                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PENDING ):
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     new_tag_id = self._GetTagId( new_tag )
@@ -2051,7 +2051,7 @@ class DB( HydrusDB.HydrusDB ):
                 if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
                 elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
                 
-                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PENDING ):
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     new_tag_id = self._GetTagId( new_tag )

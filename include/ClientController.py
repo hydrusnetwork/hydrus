@@ -113,7 +113,7 @@ class Controller( HydrusController.HydrusController ):
     
         while HydrusData.IsAlreadyRunning( 'client' ):
             
-            self.pub( 'splash_set_text', 'client already running' )
+            self.pub( 'splash_set_status_text', 'client already running' )
             
             def wx_code():
                 
@@ -139,7 +139,7 @@ class Controller( HydrusController.HydrusController ):
                     break
                     
                 
-                self.pub( 'splash_set_text', 'waiting ' + str( i ) + ' seconds' )
+                self.pub( 'splash_set_status_text', 'waiting ' + str( i ) + ' seconds' )
                 
                 time.sleep( 1 )
                 
@@ -323,7 +323,7 @@ class Controller( HydrusController.HydrusController ):
     
     def InitModel( self ):
         
-        self.pub( 'splash_set_text', 'booting db' )
+        self.pub( 'splash_set_status_text', 'booting db' )
         
         self._http = HydrusNetworking.HTTPConnectionManager()
         
@@ -370,7 +370,7 @@ class Controller( HydrusController.HydrusController ):
         
         if self._options[ 'password' ] is not None:
             
-            self.pub( 'splash_set_text', 'waiting for password' )
+            self.pub( 'splash_set_status_text', 'waiting for password' )
             
             def wx_code_password():
                 
@@ -390,7 +390,7 @@ class Controller( HydrusController.HydrusController ):
             self.CallBlockingToWx( wx_code_password )
             
         
-        self.pub( 'splash_set_text', 'booting gui' )
+        self.pub( 'splash_set_status_text', 'booting gui' )
         
         def wx_code_gui():
             
@@ -446,7 +446,7 @@ class Controller( HydrusController.HydrusController ):
         
         if now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
             
-            self.pub( 'splash_set_text', 'fattening service info' )
+            self.pub( 'splash_set_status_text', 'fattening service info' )
             
             services = self.GetServicesManager().GetServices()
             
@@ -686,7 +686,7 @@ class Controller( HydrusController.HydrusController ):
             raise
             
         
-        self.pub( 'splash_set_text', 'initialising' )
+        self.pub( 'splash_set_title_text', 'booting client' )
         
         boot_thread = threading.Thread( target = self.THREADBootEverything, name = 'Application Boot Thread' )
         
@@ -697,18 +697,18 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownModel( self ):
     
-        self.pub( 'splash_set_text', 'exiting db' )
+        self.pub( 'splash_set_status_text', 'exiting db' )
         
         HydrusController.HydrusController.ShutdownModel( self )
         
     
     def ShutdownView( self ):
         
-        self.pub( 'splash_set_text', 'exiting gui' )
+        self.pub( 'splash_set_status_text', 'exiting gui' )
         
         self.CallBlockingToWx( self._gui.Shutdown )
         
-        self.pub( 'splash_set_text', 'waiting for daemons to exit' )
+        self.pub( 'splash_set_status_text', 'waiting for daemons to exit' )
         
         self._ShutdownDaemons()
         
@@ -716,7 +716,7 @@ class Controller( HydrusController.HydrusController ):
         
         if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
             
-            self.pub( 'splash_set_text', 'running maintenance' )
+            self.pub( 'splash_set_status_text', 'running maintenance' )
             
             self.ResetIdleTimer()
             
@@ -885,7 +885,11 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
+            self.pub( 'splash_set_title_text', 'exiting client' )
+            
             self.ShutdownView()
+            
+            self.pub( 'splash_set_title_text', 'exiting client' )
             
             self.ShutdownModel()
             

@@ -2947,20 +2947,20 @@ class DialogPageChooser( Dialog ):
         
         entries = []
         
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_LEFT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 8 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_LEFT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 4 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 6 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 2 ) ) )
         
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 1 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD2, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD3, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 3 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD4, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD5, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 5 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD6, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD7, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 7 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD8, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD9, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 9 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 1 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD2, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 2 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD3, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 3 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD4, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 4 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD5, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 5 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD6, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 6 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD7, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 7 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD8, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 8 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD9, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 9 ) ) )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -3104,9 +3104,7 @@ class DialogPageChooser( Dialog ):
     
     def EventMenu( self, event ):
         
-        event_id = event.GetId()
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event_id )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -3204,7 +3202,7 @@ class DialogPathsToTags( Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         

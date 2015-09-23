@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 175</h3></li>
+				<ul>
+					<li>the 'regex shortcuts' button in the path tagging dialog now permits the managing of favourite regex phrases</li>
+					<li>added 'start animations this % in' options to options->media</li>
+					<li>animations will no longer clear to white while scanning beyond their immediate frame cache</li>
+					<li>modifier-click (like shift-click) will now drag animations without altering their pause/play status</li>
+					<li>the splash screen is a little larger, to better fit db update text in</li>
+					<li>the splash screen's text is split into two lines, and shutdown repository processing is a bit more verbose</li>
+					<li>fixed some incorrect dialog text in manage sibling and parent dialogs</li>
+					<li>rewrote sibling and parent pair update code to deal with unusual situations more gracefully</li>
+					<li>improved how the new downloader engine saves error notes</li>
+					<li>the import review frame now lets you copy the selected entries' notes to the clipboard</li>
+					<li>video files will no longer fail to import in windows because of unicode characters</li>
+					<li>recycling files with unicode characters on Linux will work more reliably, and when it breaks, it will fail more gracefully</li>
+					<li>the client and server can now detect and recover from a rare error where a database file is created but never initialised with the appropriate tables</li>
+					<li>the tag/file upload popup message now dismisses itself after a few seconds, rather than pointlessly lingering</li>
+					<li>wx event ids used in one-shot menus will be recycled, which should alleviate the 'after a long time, some menu selections stop doing anything' problem</li>
+					<li>some code cleanup</li>
+				</ul>
 				<li><h3>version 174</h3></li>
 				<ul>
 					<li>'server stop' and 'server restart' now work!</li>

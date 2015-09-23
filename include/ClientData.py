@@ -1474,7 +1474,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             options = HydrusGlobals.client_controller.GetOptions()
             
-            HydrusGlobals.client_controller.pub( 'splash_set_text', 'synchronising ' + self._name )
+            HydrusGlobals.client_controller.pub( 'splash_set_title_text', self._name )
             job_key.SetVariable( 'popup_title', 'repository synchronisation - ' + self._name )
             
             HydrusGlobals.client_controller.pub( 'message', job_key )
@@ -1527,7 +1527,8 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                     subupdate_index_string = 'service update: '
                     
-                    HydrusGlobals.client_controller.pub( 'splash_set_text', 'synchronising ' + self._name + ' - ' + update_index_string + 'downloading' )
+                    HydrusGlobals.client_controller.pub( 'splash_set_title_text', self._name + ' - ' + update_index_string + subupdate_index_string )
+                    HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'downloading' )
                     job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'downloading and parsing' )
                     job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
                     
@@ -1557,6 +1558,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                             
                             subupdate_index_string = 'content update ' + HydrusData.ConvertValueRangeToPrettyString( subindex + 1, subindex_count ) + ': '
                             
+                            HydrusGlobals.client_controller.pub( 'splash_set_title_text', self._name + ' - ' + update_index_string + subupdate_index_string )
                             job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'downloading and parsing' )
                             
                             content_update_package = self.Request( HC.GET, 'content_update_package', { 'begin' : begin, 'subindex' : subindex } )
@@ -1641,7 +1643,8 @@ class Service( HydrusData.HydrusYAMLBase ):
                 
                 subupdate_index_string = 'service update: '
                 
-                HydrusGlobals.client_controller.pub( 'splash_set_text', 'synchronising ' + self._name + ' - ' + update_index_string + 'processing' )
+                HydrusGlobals.client_controller.pub( 'splash_set_title_text', self._name + ' - ' + update_index_string + subupdate_index_string )
+                HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'processing' )
                 job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'loading from disk' )
                 job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
                 
@@ -1728,6 +1731,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                         return
                         
                     
+                    HydrusGlobals.client_controller.pub( 'splash_set_title_text', self._name + ' - ' + update_index_string + subupdate_index_string )
                     job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'processing' )
                     
                     ( did_it_all, c_u_p_weight_processed ) = HydrusGlobals.client_controller.WriteSynchronous( 'content_update_package', self._service_key, content_update_package, job_key, only_when_idle )
@@ -1850,6 +1854,9 @@ class Service( HydrusData.HydrusYAMLBase ):
                     job_key.DeleteVariable( 'popup_gauge_1' )
                     
                 
+            
+            HydrusGlobals.client_controller.pub( 'splash_set_title_text', '' )
+            HydrusGlobals.client_controller.pub( 'splash_set_status_text', '' )
             
             job_key.SetVariable( 'popup_title', 'repository synchronisation - ' + self._name + ' - finished' )
             
@@ -2149,8 +2156,8 @@ class UndoManager( object ):
                     
                     if action == HC.CONTENT_UPDATE_ARCHIVE: inverted_action = HC.CONTENT_UPDATE_INBOX
                     elif action == HC.CONTENT_UPDATE_INBOX: inverted_action = HC.CONTENT_UPDATE_ARCHIVE
-                    elif action == HC.CONTENT_UPDATE_PENDING: inverted_action = HC.CONTENT_UPDATE_RESCIND_PENDING
-                    elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: inverted_action = HC.CONTENT_UPDATE_PENDING
+                    elif action == HC.CONTENT_UPDATE_PEND: inverted_action = HC.CONTENT_UPDATE_RESCIND_PEND
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PEND: inverted_action = HC.CONTENT_UPDATE_PEND
                     elif action == HC.CONTENT_UPDATE_PETITION:
                         
                         inverted_action = HC.CONTENT_UPDATE_RESCIND_PETITION
@@ -2164,8 +2171,8 @@ class UndoManager( object ):
                     
                     if action == HC.CONTENT_UPDATE_ADD: inverted_action = HC.CONTENT_UPDATE_DELETE
                     elif action == HC.CONTENT_UPDATE_DELETE: inverted_action = HC.CONTENT_UPDATE_ADD
-                    elif action == HC.CONTENT_UPDATE_PENDING: inverted_action = HC.CONTENT_UPDATE_RESCIND_PENDING
-                    elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: inverted_action = HC.CONTENT_UPDATE_PENDING
+                    elif action == HC.CONTENT_UPDATE_PEND: inverted_action = HC.CONTENT_UPDATE_RESCIND_PEND
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PEND: inverted_action = HC.CONTENT_UPDATE_PEND
                     elif action == HC.CONTENT_UPDATE_PETITION:
                         
                         inverted_action = HC.CONTENT_UPDATE_RESCIND_PETITION

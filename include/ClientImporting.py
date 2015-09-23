@@ -125,13 +125,12 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
             except Exception as e:
                 
-                traceback.print_exc()
+                error_text = traceback.format_exc()
+                print( error_text )
                 
                 status = CC.STATUS_FAILED
                 
-                note = HydrusData.ToString( e )
-                
-                self._paths_cache.UpdateSeedStatus( path, status, note = note )
+                self._paths_cache.UpdateSeedStatus( path, status, note = error_text )
                 
             
             with self._lock:
@@ -508,10 +507,12 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     except Exception as e:
                         
-                        print( 'A file failed to import from import folder ' + self._name + ':' )
-                        traceback.print_exc()
+                        error_text = traceback.format_exc()
                         
-                        self._path_cache.UpdateSeedStatus( path, CC.STATUS_FAILED, note = str( e ) )
+                        print( 'A file failed to import from import folder ' + self._name + ':' )
+                        print( error_text )
+                        
+                        self._path_cache.UpdateSeedStatus( path, CC.STATUS_FAILED, note = error_text )
                         
                     
                 
@@ -678,13 +679,12 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
         except Exception as e:
             
-            traceback.print_exc()
+            error_text = traceback.format_exc()
+            print( error_text )
             
             status = CC.STATUS_FAILED
             
-            note = HydrusData.ToString( e )
-            
-            self._urls_cache.UpdateSeedStatus( file_url, status, note = note )
+            self._urls_cache.UpdateSeedStatus( file_url, status, note = error_text )
             
         
         with self._lock:
@@ -1444,13 +1444,12 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         except Exception as e:
             
-            traceback.print_exc()
+            error_text = traceback.format_exc()
+            print( error_text )
             
             status = CC.STATUS_FAILED
             
-            note = HydrusData.ToString( e )
-            
-            self._urls_cache.UpdateSeedStatus( file_url, status, note = note )
+            self._urls_cache.UpdateSeedStatus( file_url, status, note = error_text )
             
         
         with self._lock:

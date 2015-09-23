@@ -4070,6 +4070,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._fit_to_canvas = wx.CheckBox( self, label = '' )
+            self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
             
             self._mime_media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
@@ -4096,6 +4097,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             #
             
             self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
+            self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
@@ -4120,6 +4122,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'Zoom smaller media to fit media canvas: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._fit_to_canvas, CC.FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( self, label = 'Start animations this % in: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._animation_start_position, CC.FLAGS_MIXED )
+            
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._mime_media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -4129,6 +4134,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         def UpdateOptions( self ):
             
             HC.options[ 'fit_to_canvas' ] = self._fit_to_canvas.GetValue()
+            HC.options[ 'animation_start_position' ] = float( self._animation_start_position.GetValue() ) / 100.0
             
             mime_media_viewer_actions = {}
             
@@ -4867,7 +4873,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -5040,6 +5046,143 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
             
             return False
+            
+        
+    
+class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
+    
+    def __init__( self, parent ):
+        
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage regex favourites' )
+        
+        self._regexes = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'regex phrase', 120 ), ( 'description', -1 ) ], delete_key_callback = self.Delete )
+        
+        self._add_button = wx.Button( self, label = 'add' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        
+        self._edit_button = wx.Button( self, label = 'edit' )
+        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._delete_button = wx.Button( self, label = 'delete' )
+        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        for ( regex_phrase, description ) in HC.options[ 'regex_favourites' ]:
+            
+            self._regexes.Append( ( regex_phrase, description ), ( regex_phrase, description ) )
+            
+        
+        #
+        
+        regex_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        regex_buttons.AddF( self._add_button, CC.FLAGS_MIXED )
+        regex_buttons.AddF( self._edit_button, CC.FLAGS_MIXED )
+        regex_buttons.AddF( self._delete_button, CC.FLAGS_MIXED )
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_MIXED )
+        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( regex_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 360: x = 360
+        if y < 360: y = 360
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def Delete( self ):
+        
+        self._regexes.RemoveAllSelected()
+        
+    
+    def EventAdd( self, event ):
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter regex.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                regex_phrase = dlg.GetValue()
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter description.' ) as dlg_2:
+                    
+                    if dlg_2.ShowModal() == wx.ID_OK:
+                        
+                        description = dlg_2.GetValue()
+                        
+                        self._regexes.Append( ( regex_phrase, description ), ( regex_phrase, description ) )
+                        
+                    
+                
+            
+        
+    
+    def EventDelete( self, event ):
+        
+        self.Delete()
+        
+    
+    def EventEdit( self, event ):
+        
+        indices = self._regexes.GetAllSelected()
+        
+        for index in indices:
+            
+            ( regex_phrase, description ) = self._regexes.GetClientData( index )
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'Update regex.', default = regex_phrase ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    regex_phrase = dlg.GetValue()
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
+                        
+                        if dlg_2.ShowModal() == wx.ID_OK:
+                            
+                            description = dlg_2.GetValue()
+                            
+                            self._regexes.UpdateRow( index, ( regex_phrase, description ), ( regex_phrase, description ) )
+                            
+                        
+                    
+                
+            
+        
+    
+    def EventOK( self, event ):
+        
+        try:
+            
+            HC.options[ 'regex_favourites' ] = self._regexes.GetClientData()
+            
+            HydrusGlobals.client_controller.Write( 'save_options', HC.options )
+            
+        finally:
+            
+            self.EndModal( wx.ID_OK )
             
         
     
@@ -7094,7 +7237,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -7265,7 +7408,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self.SetSizer( vbox )
             
-            self.SetInitialSize( ( 550, 680 ) )
+            self.SetInitialSize( ( 550, 780 ) )
             
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'tag parents' )
@@ -7280,7 +7423,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -7425,109 +7568,34 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def _AddPairs( self, children, parent ):
             
-            pairs = [ ( child, parent ) for child in children ]
+            new_pairs = []
+            current_pairs = []
+            petitioned_pairs = []
+            pending_pairs = []
             
-            petitioned_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PETITIONED ] ]
-            current_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.CURRENT ] and pair not in petitioned_pairs ]
-            pending_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PENDING ] ]
-            
-            existing_pairs = set()
-            
-            existing_pairs.update( current_pairs )
-            existing_pairs.update( pending_pairs )
-            existing_pairs.update( petitioned_pairs )
-            
-            new_pairs = [ pair for pair in pairs if pair not in existing_pairs and self._CanAdd( *pair ) ]
-            
-            actions = []
-            
-            if len( current_pairs ) > 0 and len( new_pairs ) == 0:
+            for child in children:
                 
-                do_it = True
+                pair = ( child, parent )
                 
-                if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
                     
-                    pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
+                    pending_pairs.append( pair )
                     
-                    if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
-                    else: message = 'The pair ' + pair_strings + ' already exists.'
+                elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
                     
-                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
-                            else:
-                                
-                                message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
-                                
-                                with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
-                                    
-                                    if dlg.ShowModal() == wx.ID_OK:
-                                        
-                                        reason = dlg.GetValue()
-                                        
-                                    else: do_it = False
-                                    
-                                
-                            
-                            if do_it:
-                                
-                                for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
-                                
-                            
-                        
+                    petitioned_pairs.append( pair )
                     
-                
-                if do_it:
+                elif pair in self._original_statuses_to_pairs[ HC.CURRENT ]:
                     
-                    old_status = HC.CURRENT
-                    new_status = HC.PETITIONED
+                    current_pairs.append( pair )
                     
-                    actions.append( ( current_pairs, old_status, new_status ) )
+                elif self._CanAdd( pair ):
+                    
+                    new_pairs.append( pair )
                     
                 
             
-            if len( pending_pairs ) > 0 and len( new_pairs ) == 0:
-                
-                pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
-                
-                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
-                else: message = 'The pair ' + pair_strings + ' is pending.'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        old_status = HC.PENDING
-                        
-                        deleted_pending_pairs = [ pair for pair in pending_pairs if pair in self._current_statuses_to_pairs[ HC.DELETED ] ]
-                        non_existing_pending_pairs = [ pair for pair in pending_pairs if pair not in self._current_statuses_to_pairs[ HC.DELETED ] ]
-                        
-                        actions.append( ( deleted_pending_pairs, old_status, HC.DELETED ) )
-                        actions.append( ( non_existing_pending_pairs, old_status, None ) )
-                        
-                    
-                
-            
-            if len( petitioned_pairs ) > 0:
-                
-                pair_strings = ', '.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
-                
-                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
-                else: message = 'The pair ' + pair_strings + ' is petitioned.'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        old_status = HC.PETITIONED
-                        new_status = HC.CURRENT
-                        
-                        actions.append( ( petitioned_pairs, old_status, new_status ) )
-                        
-                    
-                
+            affected_pairs = []
             
             if len( new_pairs ) > 0:
             
@@ -7560,47 +7628,110 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 if do_it:
                     
-                    deleted_new_pairs = [ pair for pair in new_pairs if pair in self._current_statuses_to_pairs[ HC.DELETED ] ]
-                    non_existing_new_pairs = [ pair for pair in new_pairs if pair not in self._current_statuses_to_pairs[ HC.DELETED ] ]
+                    self._current_statuses_to_pairs[ HC.PENDING ].update( new_pairs )
                     
-                    actions.append( ( deleted_new_pairs, HC.DELETED, HC.PENDING ) )
-                    actions.append( ( non_existing_new_pairs, None, HC.PENDING ) )
+                    affected_pairs.extend( new_pairs )
+                    
+                
+            else:
+                
+                if len( current_pairs ) > 0:
+                    
+                    do_it = True
+                    
+                    if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                        
+                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
+                        
+                        if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
+                        else: message = 'The pair ' + pair_strings + ' already exists.'
+                        
+                        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_YES:
+                                
+                                if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                                else:
+                                    
+                                    message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                                    
+                                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                                        
+                                        if dlg.ShowModal() == wx.ID_OK:
+                                            
+                                            reason = dlg.GetValue()
+                                            
+                                        else: do_it = False
+                                        
+                                    
+                                
+                                if do_it:
+                                    
+                                    for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
+                                    
+                                
+                            
+                        
+                    
+                    if do_it:
+                        
+                        self._current_statuses_to_pairs[ HC.PETITIONED ].update( current_pairs )
+                        
+                        affected_pairs.extend( current_pairs )
+                        
+                    
+                
+                if len( pending_pairs ) > 0:
+                    
+                    pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
+                    
+                    if len( pending_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
+                    else: message = 'The pair ' + pair_strings + ' is pending.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._current_statuses_to_pairs[ HC.PENDING ].difference_update( pending_pairs )
+                            
+                            affected_pairs.extend( pending_pairs )
+                            
+                        
+                    
+                
+                if len( petitioned_pairs ) > 0:
+                    
+                    pair_strings = ', '.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
+                    
+                    if len( petitioned_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
+                    else: message = 'The pair ' + pair_strings + ' is petitioned.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._current_statuses_to_pairs[ HC.PETITIONED ].difference_update( petitioned_pairs )
+                            
+                            affected_pairs.extend( petitioned_pairs )
+                            
+                        
                     
                 
             
-            for ( pairs, old_status, new_status ) in actions:
+            if len( affected_pairs ) > 0:
                 
-                for pair in pairs:
+                for pair in affected_pairs:
                     
-                    ( child, parent ) = pair
-                    
-                    if old_status is not None:
-                        
-                        if old_status not in ( HC.CURRENT, HC.DELETED ):
-                            
-                            self._current_statuses_to_pairs[ old_status ].discard( pair )
-                            
-                        
-                        index = self._tag_parents.GetIndexFromClientData( ( old_status, child, parent ) )
-                        
-                        self._tag_parents.DeleteItem( index )
-                        
-                    
-                    if new_status is not None:
-                        
-                        self._current_statuses_to_pairs[ new_status ].add( pair )
-                        
-                        sign = HydrusData.ConvertStatusToPrefix( new_status )
-                        
-                        self._tag_parents.Append( ( sign, child, parent ), ( new_status, child, parent ) )
-                        
+                    self._RefreshPair( pair )
                     
                 
-            
-            self._tag_parents.SortListItems()
+                self._tag_parents.SortListItems()
+                
             
         
-        def _CanAdd( self, potential_child, potential_parent ):
+        def _CanAdd( self, potential_pair ):
+            
+            ( potential_child, potential_parent ) = potential_pair
             
             if potential_child == potential_parent: return False
             
@@ -7623,6 +7754,45 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
             
             return True
+            
+        
+        def _RefreshPair( self, pair ):
+            
+            ( child, parent ) = pair
+            
+            for status in ( HC.CURRENT, HC.DELETED, HC.PENDING, HC.PETITIONED ):
+                
+                if self._tag_parents.HasClientData( ( status, child, parent ) ):
+                    
+                    index = self._tag_parents.GetIndexFromClientData( ( status, child, parent ) )
+                    
+                    self._tag_parents.DeleteItem( index )
+                    
+                    break
+                    
+                
+            
+            new_status = None
+            
+            if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+                
+                new_status = HC.PENDING
+                
+            elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+                
+                new_status = HC.PETITIONED
+                
+            elif pair in self._original_statuses_to_pairs[ HC.CURRENT ]:
+                
+                new_status = HC.CURRENT
+                
+            
+            if new_status is not None:
+                
+                sign = HydrusData.ConvertStatusToPrefix( new_status )
+                
+                self._tag_parents.Append( ( sign, child, parent ), ( new_status, child, parent ) )
+                
             
         
         def _SetButtonStatus( self ):
@@ -7717,8 +7887,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 new_petitions = current_petitioned.difference( original_petitioned )
                 rescinded_petitions = original_petitioned.difference( current_petitioned )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PENDING, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_pends ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PENDING, pair ) for pair in rescinded_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_petitions ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
                 
@@ -7794,7 +7964,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self.SetSizer( vbox )
             
-            self.SetInitialSize( ( 550, 680 ) )
+            self.SetInitialSize( ( 550, 780 ) )
             
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'tag siblings' )
@@ -7809,7 +7979,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -7963,107 +8133,34 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         def _AddPairs( self, olds, new ):
             
-            pairs = [ ( old, new ) for old in olds ]
+            new_pairs = []
+            current_pairs = []
+            petitioned_pairs = []
+            pending_pairs = []
             
-            petitioned_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PETITIONED ] ]
-            current_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.CURRENT ] and pair not in petitioned_pairs ]
-            pending_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PENDING ] ]
-            
-            existing_pairs = set()
-            
-            existing_pairs.update( current_pairs )
-            existing_pairs.update( pending_pairs )
-            existing_pairs.update( petitioned_pairs )
-            
-            new_pairs = [ pair for pair in pairs if pair not in existing_pairs and self._CanAdd( *pair ) ]
-            
-            actions = []
-            
-            if len( current_pairs ) > 0 and len( new_pairs ) == 0:
+            for old in olds:
                 
-                do_it = True
+                pair = ( old, new )
                 
-                if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
                     
-                    pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
+                    pending_pairs.append( pair )
                     
-                    if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
-                    else: message = 'The pair ' + pair_strings + ' already exists.'
+                elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
                     
-                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
-                            else:
-                                
-                                message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
-                                
-                                with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
-                                    
-                                    if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
-                                    else: do_it = False
-                                    
-                                
-                            
-                            if do_it:
-                                
-                                for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
-                                
-                            
-                        
+                    petitioned_pairs.append( pair )
                     
-                
-                if do_it:
+                elif pair in self._original_statuses_to_pairs[ HC.CURRENT ]:
                     
-                    old_status = HC.CURRENT
-                    new_status = HC.PETITIONED
+                    current_pairs.append( pair )
                     
-                    actions.append( ( current_pairs, old_status, new_status ) )
+                elif self._CanAdd( pair ):
                     
-                
-                
-            
-            if len( pending_pairs ) > 0 and len( new_pairs ) == 0:
-                
-                pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
-                
-                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
-                else: message = 'The pair ' + pair_strings + ' is pending.'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        old_status = HC.PENDING
-                        
-                        deleted_pending_pairs = [ pair for pair in pending_pairs if pair in self._current_statuses_to_pairs[ HC.DELETED ] ]
-                        non_existing_pending_pairs = [ pair for pair in pending_pairs if pair not in self._current_statuses_to_pairs[ HC.DELETED ] ]
-                        
-                        actions.append( ( deleted_pending_pairs, old_status, HC.DELETED ) )
-                        actions.append( ( non_existing_pending_pairs, old_status, None ) )
-                        
+                    new_pairs.append( pair )
                     
                 
             
-            if len( petitioned_pairs ) > 0 and len( new_pairs ) == 0:
-                
-                pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
-                
-                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
-                else: message = 'The pair ' + pair_strings + ' is petitioned.'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        old_status = HC.PETITIONED
-                        new_status = HC.CURRENT
-                        
-                        actions.append( ( petitioned_pairs, old_status, new_status ) )
-                        
-                    
-                
+            affected_pairs = []
             
             if len( new_pairs ) > 0:
                 
@@ -8096,47 +8193,108 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 if do_it:
                     
-                    deleted_new_pairs = [ pair for pair in new_pairs if pair in self._current_statuses_to_pairs[ HC.DELETED ] ]
-                    non_existing_new_pairs = [ pair for pair in new_pairs if pair not in self._current_statuses_to_pairs[ HC.DELETED ] ]
+                    self._current_statuses_to_pairs[ HC.PENDING ].update( new_pairs )
                     
-                    actions.append( ( deleted_new_pairs, HC.DELETED, HC.PENDING ) )
-                    actions.append( ( non_existing_new_pairs, None, HC.PENDING ) )
+                    affected_pairs.extend( new_pairs )
+                    
+                
+            else:
+                
+                if len( current_pairs ) > 0:
+                    
+                    do_it = True
+                    
+                    if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                        
+                        pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
+                        
+                        if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
+                        else: message = 'The pair ' + pair_strings + ' already exists.'
+                        
+                        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_YES:
+                                
+                                if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                                else:
+                                    
+                                    message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                                    
+                                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                                        
+                                        if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
+                                        else: do_it = False
+                                        
+                                    
+                                
+                                if do_it:
+                                    
+                                    for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
+                                    
+                                
+                            
+                        
+                    
+                    if do_it:
+                        
+                        self._current_statuses_to_pairs[ HC.PETITIONED ].update( current_pairs )
+                        
+                        affected_pairs.extend( current_pairs )
+                        
+                    
+                    
+                
+                if len( pending_pairs ) > 0:
+                    
+                    pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
+                    
+                    if len( pending_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
+                    else: message = 'The pair ' + pair_strings + ' is pending.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._current_statuses_to_pairs[ HC.PENDING ].difference_update( pending_pairs )
+                            
+                            affected_pairs.extend( pending_pairs )
+                            
+                        
+                    
+                
+                if len( petitioned_pairs ) > 0:
+                    
+                    pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
+                    
+                    if len( petitioned_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
+                    else: message = 'The pair ' + pair_strings + ' is petitioned.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._current_statuses_to_pairs[ HC.PETITIONED ].difference_update( petitioned_pairs )
+                            
+                            affected_pairs.extend( petitioned_pairs )
+                            
+                        
                     
                 
             
-            for ( pairs, old_status, new_status ) in actions:
+            if len( affected_pairs ) > 0:
                 
-                for pair in pairs:
+                for pair in affected_pairs:
                     
-                    ( old, new ) = pair
-                    
-                    if old_status is not None:
-                        
-                        if old_status not in ( HC.CURRENT, HC.DELETED ):
-                            
-                            self._current_statuses_to_pairs[ old_status ].discard( pair )
-                            
-                        
-                        index = self._tag_siblings.GetIndexFromClientData( ( old_status, old, new ) )
-                        
-                        self._tag_siblings.DeleteItem( index )
-                        
-                    
-                    if new_status is not None:
-                        
-                        self._current_statuses_to_pairs[ new_status ].add( pair )
-                        
-                        sign = HydrusData.ConvertStatusToPrefix( new_status )
-                        
-                        self._tag_siblings.Append( ( sign, old, new ), ( new_status, old, new ) )
-                        
+                    self._RefreshPair( pair )
                     
                 
-            
-            self._tag_siblings.SortListItems()
+                self._tag_siblings.SortListItems()
+                
             
         
-        def _CanAdd( self, potential_old, potential_new ):
+        def _CanAdd( self, potential_pair ):
+            
+            ( potential_old, potential_new ) = potential_pair
             
             current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
             
@@ -8173,6 +8331,45 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
             
             return True
+            
+        
+        def _RefreshPair( self, pair ):
+            
+            ( old, new ) = pair
+            
+            for status in ( HC.CURRENT, HC.DELETED, HC.PENDING, HC.PETITIONED ):
+                
+                if self._tag_siblings.HasClientData( ( status, old, new ) ):
+                    
+                    index = self._tag_siblings.GetIndexFromClientData( ( status, old, new ) )
+                    
+                    self._tag_siblings.DeleteItem( index )
+                    
+                    break
+                    
+                
+            
+            new_status = None
+            
+            if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+                
+                new_status = HC.PENDING
+                
+            elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+                
+                new_status = HC.PETITIONED
+                
+            elif pair in self._original_statuses_to_pairs[ HC.CURRENT ]:
+                
+                new_status = HC.CURRENT
+                
+            
+            if new_status is not None:
+                
+                sign = HydrusData.ConvertStatusToPrefix( new_status )
+                
+                self._tag_siblings.Append( ( sign, old, new ), ( new_status, old, new ) )
+                
             
         
         def _SetButtonStatus( self ):
@@ -8293,8 +8490,8 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 new_petitions = current_petitioned.difference( original_petitioned )
                 rescinded_petitions = original_petitioned.difference( current_petitioned )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PENDING, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_pends ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PENDING, pair ) for pair in rescinded_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_petitions ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
                 
@@ -8629,7 +8826,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -8762,7 +8959,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 if not only_remove:
                     
-                    if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PENDING, tag ) ) )
+                    if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, tag ) ) )
                     
                     if sibling_tag is not None:
                         
@@ -8770,7 +8967,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                         
                         if num_sibling_current + num_sibling_pending < num_files:
                             
-                            choices.append( ( 'pend ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_PENDING, sibling_tag ) ) )
+                            choices.append( ( 'pend ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_PEND, sibling_tag ) ) )
                             
                         
                     
@@ -8778,7 +8975,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 if not only_add:
                     
                     if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_PETITION, tag ) ) )
-                    if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PENDING, tag ) ) )
+                    if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PEND, tag ) ) )
                     
                 
                 if not only_remove:
@@ -8804,9 +9001,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
             elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-            elif choice_action == HC.CONTENT_UPDATE_PENDING: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
+            elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
             elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
-            elif choice_action == HC.CONTENT_UPDATE_RESCIND_PENDING: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
+            elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
             elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
             
             hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
@@ -8843,7 +9040,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if parents is None: parents = []
             
-            if tag is None: wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ok' ) ) )
+            if tag is None: wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
             else:
                 
                 self._AddTag( tag )

@@ -74,10 +74,17 @@ class HydrusDB( object ):
         
         if run_analyze_after:
             
-            self._c.execute( 'ANALYZE' )
+            self._AnalyzeAfterUpdate()
             
         
         self._CloseDBCursor()
+        
+    
+    def _AnalyzeAfterUpdate( self ):
+        
+        print( 'Analysing db after update.' )
+        
+        self._c.execute( 'ANALYZE' )
         
     
     def _CleanUpCaches( self ):
@@ -129,10 +136,18 @@ class HydrusDB( object ):
     
     def _InitDB( self ):
         
+        create_db = False
+        
         if not os.path.exists( self._db_path ): create_db = True
-        else: create_db = False
         
         self._InitDBCursor()
+        
+        result = self._c.execute( 'SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?;', ( 'table', 'version' ) ).fetchone()
+        
+        if result is None:
+            
+            create_db = True
+            
         
         if create_db:
             

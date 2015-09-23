@@ -282,26 +282,90 @@ class MenuEventIdToActionCache( object ):
         self._ids_to_actions = {}
         self._actions_to_ids = {}
         
+        self._temporary_ids = set()
+        self._free_temporary_ids = set()
+        
+    
+    def _ClearTemporaries( self ):
+        
+        for temporary_id in self._temporary_ids.difference( self._free_temporary_ids ):
+            
+            temporary_action = self._ids_to_actions[ temporary_id ]
+            
+            del self._ids_to_actions[ temporary_id ]
+            del self._actions_to_ids[ temporary_action ]
+            
+        
+        self._free_temporary_ids = set( self._temporary_ids )
+        
+    
+    def _GetNewId( self, temporary ):
+        
+        if temporary:
+            
+            if len( self._free_temporary_ids ) == 0:
+                
+                new_id = wx.NewId()
+                
+                self._temporary_ids.add( new_id )
+                self._free_temporary_ids.add( new_id )
+                
+            
+            return self._free_temporary_ids.pop()
+            
+        else:
+            
+            return wx.NewId()
+            
+        
     
     def GetAction( self, event_id ):
         
-        if event_id in self._ids_to_actions: return self._ids_to_actions[ event_id ]
-        else: return None
+        action = None
+        
+        if event_id in self._ids_to_actions:
+            
+            action = self._ids_to_actions[ event_id ]
+            
+            if event_id in self._temporary_ids:
+                
+                self._ClearTemporaries()
+                
+            
+        
+        return action
         
     
-    def GetId( self, command, data = None ):
+    def GetId( self, command, data = None, temporary = False ):
         
         action = ( command, data )
         
         if action not in self._actions_to_ids:
             
-            event_id = wx.NewId()
+            event_id = self._GetNewId( temporary )
             
             self._ids_to_actions[ event_id ] = action
             self._actions_to_ids[ action ] = event_id
             
         
         return self._actions_to_ids[ action ]
+        
+    
+    def GetPermanentId( self, command, data = None ):
+        
+        return self.GetId( command, data, False )
+        
+    
+    def GetTemporaryId( self, command, data = None ):
+        
+        temporary = True
+        
+        if data is None:
+            
+            temporary = False
+            
+        
+        return self.GetId( command, data, temporary )
         
     
 MENU_EVENT_ID_TO_ACTION_CACHE = MenuEventIdToActionCache()

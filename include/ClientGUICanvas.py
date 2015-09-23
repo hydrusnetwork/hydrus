@@ -120,7 +120,11 @@ class Animation( wx.Window ):
         self._drag_happened = False
         self._left_down_event = None
         
-        self._current_frame_index = 0
+        self._a_frame_has_been_drawn = False
+        
+        self._num_frames = self._media.GetNumFrames()
+        
+        self._current_frame_index = int( ( self._num_frames - 1 ) * HC.options[ 'animation_start_position' ] )
         self._current_frame_drawn = False
         self._current_frame_drawn_at = 0.0
         self._next_frame_due_at = 0.0
@@ -193,6 +197,8 @@ class Animation( wx.Window ):
         
         self._next_frame_due_at = self._current_frame_drawn_at + next_frame_time_s
         
+        self._a_frame_has_been_drawn = True
+        
     
     def _DrawWhite( self ):
         
@@ -224,11 +230,14 @@ class Animation( wx.Window ):
             
             etype = event.GetEventType()
             
-            if etype == wx.wxEVT_LEFT_DOWN:
+            if not ( event.ShiftDown() or event.ControlDown() or event.CmdDown() or event.AltDown() ):
                 
-                self.PausePlay()
-                
-                return
+                if etype == wx.wxEVT_LEFT_DOWN:
+                    
+                    self.PausePlay()
+                    
+                    return
+                    
                 
             
         
@@ -252,7 +261,10 @@ class Animation( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._video_container is None: self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_width, my_height ) )
+                if self._video_container is None:
+                    
+                    self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_width, my_height ) )
+                    
                 else:
                     
                     ( image_width, image_height ) = self._video_container.GetSize()
@@ -265,15 +277,17 @@ class Animation( wx.Window ):
                         
                         self._video_container = ClientRendering.RasterContainerVideo( self._media, full_resolution )
                         
-                        self._video_container.SetFramePosition( self._current_frame_index )
-                        
-                        self._current_frame_drawn = False
-                        
                     
+                
+                self._video_container.SetFramePosition( self._current_frame_index )
+                
+                self._current_frame_drawn = False
                 
                 wx.CallAfter( self._canvas_bmp.Destroy )
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+                
+                self._a_frame_has_been_drawn = False
                 
                 if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
                 else: self._DrawWhite()
@@ -293,7 +307,7 @@ class Animation( wx.Window ):
             self._current_frame_drawn = False
             
             if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
-            else: self._DrawWhite()
+            elif not self._a_frame_has_been_drawn: self._DrawWhite()
             
         
         self._paused = True
@@ -319,7 +333,12 @@ class Animation( wx.Window ):
         self._paused = not self._paused
         
     
-    def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
+    def SetAnimationBar( self, animation_bar ):
+        
+        self._animation_bar = animation_bar
+        
+        if self._animation_bar is not None: self._animation_bar.GotoFrame( self._current_frame_index )
+        
     
     def TIMEREventVideo( self, event ):
         
@@ -1370,53 +1389,53 @@ class CanvasPanel( Canvas, wx.Window ):
                 
                 manage_menu = wx.Menu()
                 
-                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
-                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_tags' ), 'tags' )
+                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_ratings' ), 'ratings' )
                 
                 menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
                 
             else:
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'manage tags' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_tags' ), 'manage tags' )
                 
             
             menu.AppendSeparator()
             
-            if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
-            if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+            if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'archive' ), '&archive' )
+            if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'inbox' ), 'return to &inbox' )
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
                 
             elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ), '&undelete' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'undelete' ), '&undelete' )
                 
             
             menu.AppendSeparator()
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally' ), '&open externally' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'open_externally' ), '&open externally' )
             
             share_menu = wx.Menu()
             
             copy_menu = wx.Menu()
             
-            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_files' ), 'file' )
             
             copy_hash_menu = wx.Menu()
             
-            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
-            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'md5' ) , 'md5' )
-            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha1' ) , 'sha1' )
-            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha512' ) , 'sha512' )
+            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
+            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'md5' ) , 'md5' )
+            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha1' ) , 'sha1' )
+            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha512' ) , 'sha512' )
             
             copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
             
-            if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ), 'image' )
-            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
-            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
+            if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ), 'image' )
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ), 'path' )
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
             
             share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
             
@@ -1968,7 +1987,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                     
                     action = key_dict[ key ]
                     
-                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action ) ) )
                     
                 else: event.Skip()
                 
@@ -2274,7 +2293,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                     
                     action = key_dict[ key ]
                     
-                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action ) ) )
                     
                 else: event.Skip()
                 
@@ -2374,8 +2393,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             
             menu.Append( CC.ID_NULL, 'current zoom: ' + ClientData.ConvertZoomToPercentage( self._current_zoom ) )
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_in' ), 'zoom in' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_out' ), 'zoom out' )
             
             if self._current_display_media.GetMime() != HC.APPLICATION_FLASH:
                 
@@ -2385,9 +2404,9 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 
                 if self._current_zoom == 1.0:
                     
-                    if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
+                    if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom fit' )
                     
-                else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
+                else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom full' )
                 
             
             menu.AppendSeparator()
@@ -2397,55 +2416,55 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             
             manage_menu = wx.Menu()
             
-            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
-            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_tags' ), 'tags' )
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_ratings' ), 'ratings' )
             
             menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
             
         else:
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'manage tags' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_tags' ), 'manage tags' )
             
         
         menu.AppendSeparator()
         
-        if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
-        if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'archive' ), '&archive' )
+        if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'inbox' ), 'return to &inbox' )
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), '&remove' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove' ), '&remove' )
         
         if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
             
         elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ), '&undelete' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'undelete' ), '&undelete' )
             
         
         menu.AppendSeparator()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally' ), '&open externally' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'open_externally' ), '&open externally' )
         
         share_menu = wx.Menu()
         
         copy_menu = wx.Menu()
         
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_files' ), 'file' )
         
         copy_hash_menu = wx.Menu()
         
-        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
-        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'md5' ) , 'md5' )
-        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha1' ) , 'sha1' )
-        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha512' ) , 'sha512' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'md5' ) , 'md5' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha1' ) , 'sha1' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha512' ) , 'sha512' )
         
         copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
         
-        if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ), 'image' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
+        if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ), 'image' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ), 'path' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
         
         share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
@@ -2455,22 +2474,22 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         slideshow = wx.Menu()
         
-        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 1000 ), '1 second' )
-        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 5000 ), '5 seconds' )
-        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 10000 ), '10 seconds' )
-        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 30000 ), '30 seconds' )
-        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 60000 ), '60 seconds' )
-        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 80 ), 'william gibson' )
-        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow' ), 'custom interval' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 1000 ), '1 second' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 5000 ), '5 seconds' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 10000 ), '10 seconds' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 30000 ), '30 seconds' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 60000 ), '60 seconds' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 80 ), 'william gibson' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow' ), 'custom interval' )
         
         menu.AppendMenu( CC.ID_NULL, 'start slideshow', slideshow )
         
-        if self._timer_slideshow.IsRunning(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow_pause_play' ), 'stop slideshow' )
+        if self._timer_slideshow.IsRunning(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow_pause_play' ), 'stop slideshow' )
         
         menu.AppendSeparator()
         
-        if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'exit fullscreen' )
-        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'go fullscreen' )
+        if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'exit fullscreen' )
+        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
         
         self._menu_open = True
         
@@ -2642,10 +2661,10 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                                 
                                 tags = [ tag ]
                                 
-                                if tag in pending: content_update_action = HC.CONTENT_UPDATE_RESCIND_PENDING
+                                if tag in pending: content_update_action = HC.CONTENT_UPDATE_RESCIND_PEND
                                 else:
                                     
-                                    content_update_action = HC.CONTENT_UPDATE_PENDING
+                                    content_update_action = HC.CONTENT_UPDATE_PEND
                                     
                                     tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
                                     
@@ -2691,7 +2710,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                         
                         action = key_dict[ key ]
                         
-                        self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                        self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action ) ) )
                         
                     else: event.Skip()
                     
@@ -2783,8 +2802,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
             
             menu.Append( CC.ID_NULL, 'current zoom: ' + ClientData.ConvertZoomToPercentage( self._current_zoom ) )
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_in' ), 'zoom in' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_out' ), 'zoom out' )
             
             #
             
@@ -2796,9 +2815,9 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 
                 if self._current_zoom == 1.0:
                     
-                    if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
+                    if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom fit' )
                     
-                else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
+                else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom full' )
                 
             
             menu.AppendSeparator()
@@ -2808,55 +2827,55 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
             
             manage_menu = wx.Menu()
             
-            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
-            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_tags' ), 'tags' )
+            manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_ratings' ), 'ratings' )
             
             menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
             
         else:
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'manage tags' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_tags' ), 'manage tags' )
             
         
         menu.AppendSeparator()
         
-        if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
-        if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'archive' ), '&archive' )
+        if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'inbox' ), 'return to &inbox' )
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), '&remove' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove' ), '&remove' )
         
         if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
             
         elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undelete' ), '&undelete' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'undelete' ), '&undelete' )
             
         
         menu.AppendSeparator()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally' ), '&open externally' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'open_externally' ), '&open externally' )
         
         share_menu = wx.Menu()
         
         copy_menu = wx.Menu()
         
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_files' ), 'file' )
         
         copy_hash_menu = wx.Menu()
         
-        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
-        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'md5' ) , 'md5' )
-        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha1' ) , 'sha1' )
-        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash', 'sha512' ) , 'sha512' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'md5' ) , 'md5' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha1' ) , 'sha1' )
+        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha512' ) , 'sha512' )
         
         copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
         
-        if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ), 'image' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
+        if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ), 'image' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ), 'path' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
         
         share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
@@ -2864,8 +2883,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu.AppendSeparator()
         
-        if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'exit fullscreen' )
-        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'go fullscreen' )
+        if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'exit fullscreen' )
+        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
         
         self._menu_open = True
         

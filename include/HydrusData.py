@@ -726,7 +726,41 @@ def RecordRunningStart( instance ):
     
 def RecyclePath( path ):
     
-    send2trash.send2trash( path )
+    original_path = path
+    
+    if HC.PLATFORM_LINUX:
+        
+        # send2trash for Linux tries to do some Python3 str() stuff in prepping non-str paths for recycling
+        
+        if not isinstance( path, str ):
+            
+            try:
+                
+                path = path.encode( sys.getfilesystemencoding() )
+                
+            except:
+                
+                print( 'Trying to prepare a file for recycling created this error:' )
+                traceback.print_exc()
+                
+                return
+                
+            
+        
+    
+    try:
+        
+        send2trash.send2trash( path )
+        
+    except:
+        
+        print( 'Trying to recycle a file created this error:' )
+        traceback.print_exc()
+        
+        print( 'It has been fully deleted instead.' )
+        
+        DeletePath( original_path )
+        
     
 def ShowExceptionDefault( e ):
     
@@ -1112,7 +1146,7 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
     def GetContentUpdates( self, for_client = False ):
         
         data_types = [ HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ]
-        actions = [ HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_DENY_PEND, HC.CONTENT_UPDATE_DENY_PETITION ]
+        actions = [ HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_DENY_PEND, HC.CONTENT_UPDATE_DENY_PETITION ]
         
         content_updates = []
         
@@ -1122,11 +1156,11 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
             
             if for_client:
                 
-                if action == HC.CONTENT_UPDATE_PENDING: new_action = HC.CONTENT_UPDATE_ADD
+                if action == HC.CONTENT_UPDATE_PEND: new_action = HC.CONTENT_UPDATE_ADD
                 elif action == HC.CONTENT_UPDATE_PETITION: new_action = HC.CONTENT_UPDATE_DELETE
                 else: continue
                 
-                if data_type in ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ) and action in ( HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_PETITION ):
+                if data_type in ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ) and action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
                     
                     munge_row = lambda ( pair, reason ): pair
                     
@@ -1172,7 +1206,7 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
         
         tags = set()
         
-        try: tags.update( ( tag for ( tag, hash_ids ) in self._content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PENDING ] ) )
+        try: tags.update( ( tag for ( tag, hash_ids ) in self._content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PEND ] ) )
         except: pass
         
         try: tags.update( ( tag for ( tag, hash_ids, reason ) in self._content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ] ) )
@@ -1218,7 +1252,7 @@ class ContentUpdate( object ):
                 
                 hashes = set( ( hash, ) )
                 
-            elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_RESCIND_PENDING, HC.CONTENT_UPDATE_RESCIND_PETITION ): hashes = self._row
+            elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ): hashes = self._row
             elif self._action == HC.CONTENT_UPDATE_PETITION: ( hashes, reason ) = self._row
             
         elif self._data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
@@ -1776,7 +1810,7 @@ class ServerToClientPetition( HydrusYAMLBase ):
         
         content_data = GetEmptyDataDict()
         
-        if self._action == HC.CONTENT_UPDATE_PENDING: denial_action = HC.CONTENT_UPDATE_DENY_PEND
+        if self._action == HC.CONTENT_UPDATE_PEND: denial_action = HC.CONTENT_UPDATE_DENY_PEND
         elif self._action == HC.CONTENT_UPDATE_PETITION: denial_action = HC.CONTENT_UPDATE_DENY_PETITION
         
         content_data[ self._petition_type ][ denial_action ] = row_list
@@ -1797,7 +1831,7 @@ class ServerToClientPetition( HydrusYAMLBase ):
     
     def GetPetitionString( self ):
         
-        if self._action == HC.CONTENT_UPDATE_PENDING: action_phrase = 'Add '
+        if self._action == HC.CONTENT_UPDATE_PEND: action_phrase = 'Add '
         elif self._action == HC.CONTENT_UPDATE_PETITION: action_phrase = 'Remove '
         
         if self._petition_type == HC.CONTENT_DATA_TYPE_FILES:
@@ -1996,7 +2030,7 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
                 
                 if as_if_pending:
                     
-                    if action == HC.CONTENT_UPDATE_ADD: yieldee_action = HC.CONTENT_UPDATE_PENDING
+                    if action == HC.CONTENT_UPDATE_ADD: yieldee_action = HC.CONTENT_UPDATE_PEND
                     elif action == HC.CONTENT_UPDATE_DELETE: continue
                     
                 

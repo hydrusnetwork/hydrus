@@ -44,6 +44,14 @@ def GetClientDefaultOptions():
     options[ 'confirm_trash' ] = True
     options[ 'confirm_archive' ] = True
     options[ 'delete_to_recycle_bin' ] = True
+    options[ 'animation_start_position' ] = 0.0
+    
+    regex_favourites = []
+    
+    regex_favourites.append( ( r'[1-9]+\d*(?=.{4}$)', r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' ) )
+    regex_favourites.append( ( r'[^\\][\w\s]*(?=\s-)', r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' ) )
+    
+    options[ 'regex_favourites' ] = regex_favourites
     
     system_predicates = {}
     

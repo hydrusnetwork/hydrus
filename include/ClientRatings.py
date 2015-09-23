@@ -294,7 +294,7 @@ class CPRemoteRatingsServiceKeys( object ):
             
             current = None
             
-        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
+        elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
             
             pending = None
             

@@ -58,7 +58,7 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to
     for ( service_key, tags ) in service_keys_to_tags.items():
         
         if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
-        else: action = HC.CONTENT_UPDATE_PENDING
+        else: action = HC.CONTENT_UPDATE_PEND
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
         

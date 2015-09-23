@@ -269,7 +269,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'hello', hashes ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'hello', hashes ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -283,7 +283,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PENDING, ( 'hello', hashes ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'hello', hashes ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
@@ -297,7 +297,7 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'hello', hashes ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'hello', hashes ) )
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         

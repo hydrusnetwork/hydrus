@@ -11,6 +11,8 @@ import numpy
 import os
 import re
 import subprocess
+import sys
+import tempfile
 import traceback
 import threading
 import time
@@ -158,7 +160,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     
     # open the file in a pipe, provoke an error, read output
     
-    cmd = [FFMPEG_PATH, "-i", filename ]
+    cmd = [ FFMPEG_PATH, "-i", filename ]
     
     is_GIF = filename.endswith('.gif')
     

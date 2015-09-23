@@ -70,11 +70,11 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
     def RefreshAcceleratorTable( self ):
         
         entries = [
-        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) )
+        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete' ) )
         ]
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -259,14 +259,14 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         menu = wx.Menu()
         
-        if conversation.IsInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), 'archive' )
-        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to inbox' )
+        if conversation.IsInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'archive' ), 'archive' )
+        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'inbox' ), 'return to inbox' )
         
-        if conversation.HasUnread(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'read' ), 'set all as read' )
-        if conversation.HasRead(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unread' ), 'set all as unread' )
+        if conversation.HasUnread(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'read' ), 'set all as read' )
+        if conversation.HasRead(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'unread' ), 'set all as unread' )
         
         menu.AppendSeparator()
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ), 'delete' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete' ), 'delete' )
         
         self.PopupMenu( menu )
         
@@ -639,7 +639,7 @@ class DestinationPanel( wx.Panel ):
         
         menu = wx.Menu()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'read' ), 'read' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'read' ), 'read' )
         
         self.PopupMenu( menu )
         
@@ -650,7 +650,7 @@ class DestinationPanel( wx.Panel ):
         
         menu = wx.Menu()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'retry' ), 'retry' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'retry' ), 'retry' )
         
         self.PopupMenu( menu )
         
@@ -661,7 +661,7 @@ class DestinationPanel( wx.Panel ):
         
         menu = wx.Menu()
         
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unread' ), 'unread' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'unread' ), 'unread' )
         
         self.PopupMenu( menu )
         
