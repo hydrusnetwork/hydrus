@@ -1692,23 +1692,21 @@ class DialogInputLocalFiles( Dialog ):
     
     def EventGaugePause( self, event ):
         
+        self._job_key.PausePlay()
+        
         if self._job_key.IsPaused():
-            
-            self._job_key.Resume()
-            
-            self._add_button.Disable()
-            self._tag_button.Disable()
-            
-            self._gauge_pause.SetBitmap( CC.GlobalBMPs.pause )
-            
-        else:
-            
-            self._job_key.Pause()
             
             self._add_button.Enable()
             self._tag_button.Enable()
             
             self._gauge_pause.SetBitmap( CC.GlobalBMPs.play )
+            
+        else:
+            
+            self._add_button.Disable()
+            self._tag_button.Disable()
+            
+            self._gauge_pause.SetBitmap( CC.GlobalBMPs.pause )
             
         
     
@@ -2984,12 +2982,17 @@ class DialogPageChooser( Dialog ):
             
             button.SetLabel( name )
             
-        elif entry_type == 'page_import_booru': button.SetLabel( 'booru' )
+        elif entry_type == 'page_import_booru':
+            
+            button.SetLabel( 'booru' )
+            
         elif entry_type == 'page_import_gallery':
             
-            ( name, site_type, gallery_type ) = obj
+            site_type = obj
             
-            button.SetLabel( name )
+            text = HC.site_type_string_lookup[ site_type ]
+            
+            button.SetLabel( text )
             
         elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
         elif entry_type == 'page_import_page_of_images': button.SetLabel( 'page of images' )
@@ -3001,32 +3004,70 @@ class DialogPageChooser( Dialog ):
         
         self._command_dict = {}
         
+        entries = []
+        
         if menu_keyword == 'home':
             
-            entries = [ ( 'menu', 'files' ), ( 'menu', 'download' ) ]
+            entries.append( ( 'menu', 'files' ) )
+            entries.append( ( 'menu', 'download' ) )
             
-            if len( self._petition_service_keys ) > 0: entries.append( ( 'menu', 'petitions' ) )
+            if len( self._petition_service_keys ) > 0:
+                
+                entries.append( ( 'menu', 'petitions' ) )
+                
             
         elif menu_keyword == 'files':
             
             file_repos = [ ( 'page_query', service_key ) for service_key in [ service.GetServiceKey() for service in self._services if service.GetServiceType() == HC.FILE_REPOSITORY ] ]
             
-            entries = [ ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ), ( 'page_query', CC.TRASH_SERVICE_KEY ) ] + file_repos
+            entries.append( ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ) )
+            entries.append( ( 'page_query', CC.TRASH_SERVICE_KEY ) )
             
-        elif menu_keyword == 'download': entries = [ ( 'page_import_page_of_images', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
+            for service in self._services:
+                
+                if service.GetServiceType() == HC.FILE_REPOSITORY:
+                    
+                    entries.append( ( 'page_query', service.GetServiceKey() ) )
+                    
+                
+            
+        elif menu_keyword == 'download':
+            
+            entries.append( ( 'page_import_page_of_images', None ) )
+            entries.append( ( 'page_import_thread_watcher', None ) )
+            entries.append( ( 'menu', 'gallery' ) )
+            
         elif menu_keyword == 'gallery':
             
-            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', HC.SITE_TYPE_GIPHY, None ) ), ( 'page_import_gallery', ( 'deviant art', HC.SITE_TYPE_DEVIANT_ART, 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', HC.SITE_TYPE_NEWGROUNDS, None ) ) ]
+            entries.append( ( 'page_import_booru', None ) )
+            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_GIPHY ) )
+            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_DEVIANT_ART ) )
+            entries.append( ( 'menu', 'hentai foundry' ) )
+            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )
             
             ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
             
-            if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
+            if id != '' and password != '':
+                
+                entries.append( ( 'menu', 'pixiv' ) )
+                
             
-            entries.extend( [ ( 'page_import_gallery', ( 'tumblr', HC.SITE_TYPE_TUMBLR, None ) ) ] )
+            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_TUMBLR ) )
             
-        elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', ( 'hentai foundry by artist', HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist' ) ), ( 'page_import_gallery', ( 'hentai foundry by tags', HC.SITE_TYPE_HENTAI_FOUNDRY, 'tags' ) ) ]
-        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv by artist id', HC.SITE_TYPE_PIXIV, 'artist_id' ) ), ( 'page_import_gallery', ( 'pixiv by tag', HC.SITE_TYPE_PIXIV, 'tag' ) ) ]
-        elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_key ) for service_key in self._petition_service_keys ]
+        elif menu_keyword == 'hentai foundry':
+            
+            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ) )
+            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) )
+            
+        elif menu_keyword == 'pixiv':
+            
+            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
+            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_PIXIV_TAG ) )
+            
+        elif menu_keyword == 'petitions':
+            
+            entries = [ ( 'page_petitions', service_key ) for service_key in self._petition_service_keys ]
+            
         
         if len( entries ) <= 4:
             
@@ -3063,31 +3104,38 @@ class DialogPageChooser( Dialog ):
             
             ( entry_type, obj ) = self._command_dict[ id ]
             
-            if entry_type == 'menu': self._InitButtons( obj )
+            if entry_type == 'menu':
+                
+                self._InitButtons( obj )
+                
             else:
                 
-                if entry_type == 'page_query': HydrusGlobals.client_controller.pub( 'new_page_query', obj )
+                if entry_type == 'page_query': 
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_query', obj )
+                    
                 elif entry_type == 'page_import_booru':
                     
-                    with DialogSelectBooru( self ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            booru = dlg.GetBooru()
-                            
-                            HydrusGlobals.client_controller.pub( 'new_import_gallery', HC.SITE_TYPE_BOORU, booru.GetName() )
-                            
-                        
+                    HydrusGlobals.client_controller.pub( 'new_import_booru' )
                     
                 elif entry_type == 'page_import_gallery':
                     
-                    ( name, site_type, gallery_type ) = obj
+                    site_type = obj
                     
-                    HydrusGlobals.client_controller.pub( 'new_import_gallery', site_type, gallery_type )
+                    HydrusGlobals.client_controller.pub( 'new_import_gallery', site_type )
                     
-                elif entry_type == 'page_import_thread_watcher': HydrusGlobals.client_controller.pub( 'new_page_import_thread_watcher' )
-                elif entry_type == 'page_import_page_of_images': HydrusGlobals.client_controller.pub( 'new_page_import_page_of_images' )
-                elif entry_type == 'page_petitions': HydrusGlobals.client_controller.pub( 'new_page_petitions', obj )
+                elif entry_type == 'page_import_thread_watcher':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_import_thread_watcher' )
+                    
+                elif entry_type == 'page_import_page_of_images':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_import_page_of_images' )
+                    
+                elif entry_type == 'page_petitions':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_petitions', obj )
+                    
                 
                 self.EndModal( wx.ID_OK )
                 
@@ -3791,54 +3839,39 @@ class DialogSelectBooru( Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            self._boorus = wx.ListBox( self, style = wx.LB_SORT )
-            self._boorus.Bind( wx.EVT_LISTBOX_DCLICK, self.EventDoubleClick )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, size = ( 0, 0 ) )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetDefault()
-            
-    
-        def PopulateControls():
-            
-            boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
-            
-            for ( name, booru ) in boorus.items():
-                
-                self._boorus.Append( name )
-                
-                self._names_to_boorus[ name ] = booru
-                
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._boorus, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 320: x = 320
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'select booru' )
         
-        self._names_to_boorus = {}
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        InitialiseControls()
+        self._boorus = wx.ListBox( self, style = wx.LB_SORT )
+        self._boorus.Bind( wx.EVT_LISTBOX_DCLICK, self.EventDoubleClick )
         
-        PopulateControls()
+        self._ok = wx.Button( self, id = wx.ID_OK, size = ( 0, 0 ) )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetDefault()
         
-        ArrangeControls()
+        #
+        
+        boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
+        
+        for name in boorus.keys():
+            
+            self._boorus.Append( name )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._boorus, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 320: x = 320
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -3849,14 +3882,19 @@ class DialogSelectBooru( Dialog ):
     
         selection = self._boorus.GetSelection()
         
-        if selection != wx.NOT_FOUND: self.EndModal( wx.ID_OK )
+        if selection != wx.NOT_FOUND:
+            
+            self.EndModal( wx.ID_OK )
+            
         
     
-    def GetBooru( self ):
+    def GetGalleryIdentifier( self ):
         
         name = self._boorus.GetString( self._boorus.GetSelection() )
         
-        return self._names_to_boorus[ name ]
+        gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = name )
+        
+        return gallery_identifier
         
     
 class DialogSelectImageboard( Dialog ):

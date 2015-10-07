@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientDB
 import ClientDefaults
+import ClientDownloading
 import ClientFiles
 import ClientGUIManagement
 import ClientGUIPages
@@ -602,7 +603,9 @@ class TestClientDB( unittest.TestCase ):
         
         session = ClientGUIPages.GUISession( 'test_session' )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist' )
+        gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
         
         session.AddPage( 'hf download page', management_controller, [] )
         
@@ -690,18 +693,18 @@ class TestClientDB( unittest.TestCase ):
         
         path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
         
-        generate_media_result = True
-        
         ( written_result, written_hash ) = self._write( 'import_file', path )
         
         self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
         self.assertEqual( written_hash, hash )
         
-        ( written_result, written_media_result ) = self._write( 'import_file', path, generate_media_result = True )
+        ( written_result, written_hash ) = self._write( 'import_file', path )
         
         self.assertEqual( written_result, CC.STATUS_REDUNDANT )
         
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = written_media_result.ToTuple()
+        ( media_result, ) = self._read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( written_hash, ) )
+        
+        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         
         now = HydrusData.GetNow()
         
@@ -819,24 +822,16 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, ( CC.STATUS_DELETED, None ) )
         
-        HC.options[ 'exclude_deleted_files' ] = False
-        
-        result = self._read( 'md5_status', md5 )
-        
-        self.assertEqual( result, ( CC.STATUS_NEW, None ) )
-        
     
     def test_media_results( self ):
         
         self._clear_db()
         
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
-        
-        md5 = 'fdadb2cae78f2dfeb629449cd005f2a2'.decode( 'hex' )
-        
         path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
         
-        self._write( 'import_file', path )
+        HC.options[ 'exclude_deleted_files' ] = False
+        
+        ( result, hash ) = self._write( 'import_file', path )
         
         #
         

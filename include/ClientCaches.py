@@ -1,14 +1,17 @@
+import ClientDefaults
 import ClientFiles
 import ClientRendering
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusNetworking
 import os
 import random
 import Queue
 import threading
 import time
+import urllib
 import wx
 import HydrusData
 import ClientData
@@ -1093,6 +1096,94 @@ class TagSiblingsManager( object ):
                 
             
             return results
+            
+        
+    
+class WebSessionManagerClient( object ):
+    
+    def __init__( self ):
+        
+        existing_sessions = HydrusGlobals.controller.Read( 'web_sessions' )
+        
+        self._names_to_sessions = { name : ( cookies, expires ) for ( name, cookies, expires ) in existing_sessions }
+        
+        self._lock = threading.Lock()
+        
+    
+    def GetCookies( self, name ):
+        
+        now = HydrusData.GetNow()
+        
+        with self._lock:
+            
+            if name in self._names_to_sessions:
+                
+                ( cookies, expires ) = self._names_to_sessions[ name ]
+                
+                if HydrusData.TimeHasPassed( expires - 300 ): del self._names_to_sessions[ name ]
+                else: return cookies
+                
+            
+            # name not found, or expired
+            
+            if name == 'hentai foundry':
+                
+                ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
+                
+                raw_csrf = cookies[ 'YII_CSRF_TOKEN' ] # 19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
+                
+                processed_csrf = urllib.unquote( raw_csrf ) # 19b05b536885ec60b8b37650a32f8deb11c08cd1s:40:"2917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32";
+                
+                csrf_token = processed_csrf.split( '"' )[1] # the 2917... bit
+                
+                hentai_foundry_form_info = ClientDefaults.GetDefaultHentaiFoundryInfo()
+                
+                hentai_foundry_form_info[ 'YII_CSRF_TOKEN' ] = csrf_token
+                
+                body = urllib.urlencode( hentai_foundry_form_info )
+                
+                request_headers = {}
+                HydrusNetworking.AddCookiesToHeaders( cookies, request_headers )
+                request_headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
+                
+                HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
+                
+                expires = now + 60 * 60
+                
+            elif name == 'pixiv':
+                
+                ( id, password ) = HydrusGlobals.controller.Read( 'pixiv_account' )
+                
+                if id == '' and password == '':
+                    
+                    raise Exception( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
+                    
+                
+                form_fields = {}
+                
+                form_fields[ 'mode' ] = 'login'
+                form_fields[ 'pixiv_id' ] = id
+                form_fields[ 'pass' ] = password
+                form_fields[ 'skip' ] = '1'
+                
+                body = urllib.urlencode( form_fields )
+                
+                headers = {}
+                headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
+                
+                ( response_gumpf, cookies ) = HydrusGlobals.controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+                
+                # _ only given to logged in php sessions
+                if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Pixiv login credentials not accepted!' )
+                
+                expires = now + 30 * 86400
+                
+            
+            self._names_to_sessions[ name ] = ( cookies, expires )
+            
+            HydrusGlobals.controller.Write( 'web_session', name, cookies, expires )
+            
+            return cookies
             
         
     

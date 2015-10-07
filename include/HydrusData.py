@@ -201,18 +201,6 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
     
     return s
     
-def ConvertSiteTypeGalleryTypeToPrettyString( site_type, gallery_type ):
-    
-    if site_type == HC.SITE_TYPE_BOORU: s = gallery_type
-    else:
-        
-        s = HC.site_type_string_lookup[ site_type ]
-        
-        if gallery_type is not None: s += ' by ' + gallery_type
-        
-    
-    return s
-    
 def ConvertStatusToPrefix( status ):
     
     if status == HC.CURRENT: return ''
@@ -407,7 +395,7 @@ def ConvertTimestampToPrettyPending( timestamp ):
     
 def ConvertTimestampToPrettySync( timestamp ):
     
-    if timestamp is None or timestamp == 0: return 'not updated'
+    if timestamp is None or timestamp == 0: return '(initial sync has not yet occured)'
     
     age = GetNow() - timestamp
     

@@ -3602,17 +3602,15 @@ class PopupMessage( PopupWindow ):
     
     def EventPauseButton( self, event ):
         
+        self._job_key.PausePlay()
+        
         if self._job_key.IsPaused():
             
-            self._job_key.Resume()
-            
-            self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
+            self._pause_button.SetBitmap( CC.GlobalBMPs.play )
             
         else:
             
-            self._job_key.Pause()
-            
-            self._pause_button.SetBitmap( CC.GlobalBMPs.play )
+            self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
             
         
     

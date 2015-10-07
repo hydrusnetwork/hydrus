@@ -46,22 +46,6 @@ class TestDaemons( unittest.TestCase ):
             
             self.assertEqual( len( import_file ), 3 )
             
-            expected_kwargs = { 'generate_media_result' : True, 'import_file_options' : 'blah', 'service_keys_to_tags' : { CC.LOCAL_TAG_SERVICE_KEY : [ 'local tag' ] } }
-            
-            ( one, two, three ) = import_file
-            
-            ( temp_path, kwargs ) = one
-            
-            self.assertEqual( kwargs[ 'service_keys_to_tags' ], expected_kwargs[ 'service_keys_to_tags' ] )
-            
-            ( temp_path, kwargs ) = two
-            
-            self.assertEqual( kwargs[ 'service_keys_to_tags' ], expected_kwargs[ 'service_keys_to_tags' ] )
-            
-            ( temp_path, kwargs ) = three
-            
-            self.assertEqual( kwargs[ 'service_keys_to_tags' ], expected_kwargs[ 'service_keys_to_tags' ] )
-            
             # I need to expand tests here with the new file system
             
             [ ( ( updated_import_folder, ), empty_dict ) ] = HydrusGlobals.test_controller.GetWrite( 'import_folder' )

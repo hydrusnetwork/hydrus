@@ -78,6 +78,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         HydrusGlobals.client_controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
         HydrusGlobals.client_controller.sub( self, 'NewCompose', 'new_compose_frame' )
+        HydrusGlobals.client_controller.sub( self, 'NewPageImportBooru', 'new_import_booru' )
         HydrusGlobals.client_controller.sub( self, 'NewPageImportGallery', 'new_import_gallery' )
         HydrusGlobals.client_controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         HydrusGlobals.client_controller.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
@@ -496,13 +497,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
             
         
-        page.Pause()
+        page.PrepareToHide()
         
         page.Hide()
         
         name = self._notebook.GetPageText( selection )
         
-        self._closed_pages.append( ( HydrusData.GetNow(), selection, name, page ) )
+        with self._lock:
+            
+            self._closed_pages.append( ( HydrusData.GetNow(), selection, name, page ) )
+            
         
         self._notebook.RemovePage( selection )
         
@@ -513,17 +517,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _DeleteAllClosedPages( self ):
         
-        for ( time_closed, selection, name, page ) in self._closed_pages:
+        with self._lock:
             
-            with self._lock:
-                
-                self._deleted_page_keys.add( page.GetPageKey() )
-                
+            deletee_pages = [ page for ( time_closed, selection, name, page ) in self._closed_pages ]
             
-            self._DestroyPage( page )
+            self._closed_pages = []
             
         
-        self._closed_pages = []
+        self._DestroyPages( deletee_pages )
         
         self._focus_holder.SetFocus()
         
@@ -558,13 +559,22 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _DestroyPage( self, page ):
+    def _DestroyPages( self, pages ):
         
-        page.Hide()
+        with self._lock:
+            
+            for page in pages:
+                
+                self._deleted_page_keys.add( page.GetPageKey() )
+                
+            
         
-        page.CleanBeforeDestroy()
-        
-        wx.CallAfter( page.Destroy )
+        for page in pages:
+            
+            page.CleanBeforeDestroy()
+            
+            wx.CallAfter( page.Destroy )
+            
         
     
     def _FetchIP( self, service_key ):
@@ -658,7 +668,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def undo():
             
-            have_closed_pages = len( self._closed_pages ) > 0
+            with self._lock:
+                
+                have_closed_pages = len( self._closed_pages ) > 0
+                
             
             undo_manager = HydrusGlobals.client_controller.GetManager( 'undo' )
             
@@ -698,9 +711,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     args = []
                     
-                    for ( i, ( time_closed, index, name, page ) ) in enumerate( self._closed_pages ):
+                    with self._lock:
                         
-                        args.append( ( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
+                        for ( i, ( time_closed, index, name, page ) ) in enumerate( self._closed_pages ):
+                            
+                            args.append( ( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
+                            
                         
                     
                     args.reverse() # so that recently closed are at the top
@@ -759,25 +775,25 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu = wx.Menu()
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_booru' ), p( 'Booru' ), p( 'Open a new tab to download files from a booru.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_GIPHY, None ) ), p( 'Giphy' ), p( 'Open a new tab to download files from Giphy.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_DEVIANT_ART, 'artist' ) ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_GIPHY ), p( 'Giphy' ), p( 'Open a new tab to download files from Giphy.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_DEVIANT_ART ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
             hf_submenu = wx.Menu()
-            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist' ) ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
-            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_HENTAI_FOUNDRY, 'tags' ) ), p( 'By Tags' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
+            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
+            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ), p( 'By Tags' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
             submenu.AppendMenu( CC.ID_NULL, p( '&Hentai Foundry' ), hf_submenu )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_NEWGROUNDS, None ) ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_NEWGROUNDS ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
             
             ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
             
             if id != '' and password != '':
                 
                 pixiv_submenu = wx.Menu()
-                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_PIXIV, 'artist_id' ) ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
-                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_PIXIV, 'tag' ) ), p( 'By Tag' ), p( 'Open a new tab to download files from Hentai Pixiv.' ) )
+                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_PIXIV_ARTIST_ID ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
+                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_PIXIV_TAG ), p( 'By Tag' ), p( 'Open a new tab to download files from Hentai Pixiv.' ) )
                 submenu.AppendMenu( CC.ID_NULL, p( '&Pixiv' ), pixiv_submenu )
                 
             
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', ( HC.SITE_TYPE_TUMBLR, None ) ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_TUMBLR ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( '&New Gallery Download Page' ), submenu )
             
@@ -1200,7 +1216,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             with ClientGUIDialogsManage.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
             
-        finally: HC.options[ 'pause_subs_sync' ] = original_pause_status
+        finally:
+            
+            HC.options[ 'pause_subs_sync' ] = original_pause_status
+            
         
     
     def _ManageTagCensorship( self ):
@@ -1269,18 +1288,18 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                booru = dlg.GetBooru()
+                gallery_identifier = dlg.GetGalleryIdentifier()
                 
-                self._NewPageImportGallery( HC.SITE_TYPE_BOORU, booru.GetName() )
+                self._NewPageImportGallery( gallery_identifier )
                 
             
         
     
-    def _NewPageImportGallery( self, site_type, gallery_type ):
+    def _NewPageImportGallery( self, gallery_identifier ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( site_type, gallery_type )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
         
-        page_name = HydrusData.ConvertSiteTypeGalleryTypeToPrettyString( site_type, gallery_type )
+        page_name = ClientDownloading.ConvertGalleryIdentifierToPrettyString( gallery_identifier )
         
         self._NewPage( page_name, management_controller )
         
@@ -1470,7 +1489,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                                 time.sleep( 0.1 )
                                 
-                                if job_key.IsPaused(): job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
+                                if job_key.IsPaused():
+                                    
+                                    job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
+                                    
                                 
                                 if job_key.IsCancelled():
                                     
@@ -1703,9 +1725,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _UnclosePage( self, closed_page_index ):
         
-        ( time_closed, index, name, page ) = self._closed_pages.pop( closed_page_index )
-        
-        page.Resume()
+        with self._lock:
+            
+            ( time_closed, index, name, page ) = self._closed_pages.pop( closed_page_index )
+            
         
         page.Show()
         
@@ -1768,7 +1791,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         time.sleep( 0.1 )
                         
-                        if job_key.IsPaused(): job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
+                        if job_key.IsPaused():
+                            
+                            job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
+                            
                         
                         if job_key.IsCancelled():
                             
@@ -1841,7 +1867,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         time.sleep( 0.1 )
                         
-                        if job_key.IsPaused(): job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
+                        if job_key.IsPaused():
+                            
+                            job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
+                            
                         
                         if job_key.IsCancelled():
                             
@@ -1904,17 +1933,24 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         timeout = 60 * 60
         
-        for ( time_closed, index, name, page ) in self._closed_pages:
+        with self._lock:
             
-            if time_closed + timeout < now: self._DestroyPage( page )
-            else: new_closed_pages.append( ( time_closed, index, name, page ) )
+            deletee_pages = []
+            
+            old_closed_pages = self._closed_pages
+            
+            self._closed_pages = []
+            
+            for ( time_closed, index, name, page ) in old_closed_pages:
+                
+                if time_closed + timeout < now: deletee_pages.append( page )
+                else: self._closed_pages.append( ( time_closed, index, name, page ) )
+                
+            
+            if len( old_closed_pages ) != len( self._closed_pages ): HydrusGlobals.client_controller.pub( 'notify_new_undo' )
             
         
-        old_closed_pages = self._closed_pages
-        
-        self._closed_pages = new_closed_pages
-        
-        if len( old_closed_pages ) != len( new_closed_pages ): HydrusGlobals.client_controller.pub( 'notify_new_undo' )
+        self._DestroyPages( deletee_pages )
         
     
     def DoFirstStart( self ):
@@ -2056,9 +2092,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'new_import_booru': self._NewPageImportBooru()
             elif command == 'new_import_gallery':
                 
-                ( site_type, gallery_type ) = data
+                site_type = data
                 
-                self._NewPageImportGallery( site_type, gallery_type )
+                gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
+                
+                self._NewPageImportGallery( gallery_identifier )
                 
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_page_of_images': self._NewPageImportPageOfImages()
@@ -2162,11 +2200,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return self._notebook.GetCurrentPage()
         
     
-    def ImportFiles( self, paths ): self._ImportFiles( paths )
-    
-    def NewPageImportGallery( self, site_type, gallery_type ):
+    def ImportFiles( self, paths ):
         
-        self._NewPageImportGallery( site_type, gallery_type )
+        self._ImportFiles( paths )
+        
+    
+    def NewPageImportBooru( self ):
+        
+        self._NewPageImportBooru()
+        
+    
+    def NewPageImportGallery( self, site_type ):
+        
+        gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
+        
+        self._NewPageImportGallery( gallery_identifier )
         
     
     def NewPageImportHDD( self, paths, import_file_options, paths_to_tags, delete_after_success ):
@@ -2244,6 +2292,22 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             return page_key in self._deleted_page_keys
             
+        
+    
+    def PageHidden( self, page_key ):
+        
+        with self._lock:
+            
+            for ( time_closed, index, name, page ) in self._closed_pages:
+                
+                if page.GetPageKey() == page_key:
+                    
+                    return True
+                    
+                
+            
+        
+        return False
         
     
     def RefreshAcceleratorTable( self ):
@@ -3296,14 +3360,7 @@ class FrameSplash( ClientGUICommon.Frame ):
     
     def __init__( self ):
         
-        if HC.PLATFORM_OSX:
-            
-            style = wx.FRAME_NO_TASKBAR
-            
-        else:
-            
-            style = wx.FRAME_NO_TASKBAR | wx.STAY_ON_TOP
-            
+        style = wx.FRAME_NO_TASKBAR
         
         wx.Frame.__init__( self, None, style = style, title = 'hydrus client' )
         

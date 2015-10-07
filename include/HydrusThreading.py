@@ -343,15 +343,11 @@ class JobKey( object ):
     
     def IsWorking( self ): return self.IsBegun() and not self.IsDone()
     
-    def Pause( self ): self._paused.set()
-    
-    def PauseResume( self ):
+    def PausePlay( self ):
         
         if self._paused.is_set(): self._paused.clear()
         else: self._paused.set()
         
-    
-    def Resume( self ): self._paused.clear()
     
     def SetCancellable( self, value ): self._cancellable = value
     

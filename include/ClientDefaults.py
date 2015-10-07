@@ -223,31 +223,136 @@ def GetClientDefaultOptions():
     
     return options
     
+def GetDefaultHentaiFoundryInfo():
+
+    info = {}
+    
+    info[ 'rating_nudity' ] = 3
+    info[ 'rating_violence' ] = 3
+    info[ 'rating_profanity' ] = 3
+    info[ 'rating_racism' ] = 3
+    info[ 'rating_sex' ] = 3
+    info[ 'rating_spoilers' ] = 3
+    
+    info[ 'rating_yaoi' ] = 1
+    info[ 'rating_yuri' ] = 1
+    info[ 'rating_teen' ] = 1
+    info[ 'rating_guro' ] = 1
+    info[ 'rating_furry' ] = 1
+    info[ 'rating_beast' ] = 1
+    info[ 'rating_male' ] = 1
+    info[ 'rating_female' ] = 1
+    info[ 'rating_futa' ] = 1
+    info[ 'rating_other' ] = 1
+    
+    info[ 'filter_media' ] = 'A'
+    info[ 'filter_order' ] = 'date_new'
+    info[ 'filter_type' ] = 0
+    
+    return info
+    
 def GetDefaultImportFileOptions():
     
     options = HydrusGlobals.client_controller.GetOptions()
     
-    result = {}
-    
-    result[ 'auto_archive' ] = False
-    result[ 'exclude_deleted_files' ] = options[ 'exclude_deleted_files' ]
-    result[ 'min_size' ] = None
-    result[ 'min_resolution' ] = None
-    
-    return result
-    
-def GetDefaultImportFileOptionsObject():
-    
-    result = GetDefaultImportFileOptions()
-    
-    automatic_archive = result[ 'auto_archive' ]
-    exclude_deleted = result[ 'exclude_deleted_files' ]
-    min_size = result[ 'min_size' ]
-    min_resolution = result[ 'min_resolution' ]
+    automatic_archive = False
+    exclude_deleted = options[ 'exclude_deleted_files' ]
+    min_size = None
+    min_resolution = None
     
     import_file_options = ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
     
     return import_file_options
+    
+def GetDefaultImportTagOptions( gallery_identifier ):
+    
+    ( namespaces, search_value ) = GetDefaultNamespacesAndSearchValue( gallery_identifier )
+    
+    # fill up the given namespaces appropriately
+    
+    '''
+    backup_lookup = None
+    
+    if type( lookup ) == tuple:
+        
+        ( site_type, site_name ) = lookup
+        
+        if site_type == HC.SITE_TYPE_BOORU: backup_lookup = HC.SITE_TYPE_BOORU
+        
+    
+    options = HydrusGlobals.client_controller.GetOptions()
+    
+    ato_options = options[ 'default_advanced_tag_options' ]
+    
+    if lookup in ato_options: service_keys_to_namespaces = ato_options[ lookup ]
+    elif backup_lookup is not None and backup_lookup in ato_options: service_keys_to_namespaces = ato_options[ backup_lookup ]
+    elif 'default' in ato_options: service_keys_to_namespaces = ato_options[ 'default' ]
+    else: service_keys_to_namespaces = {}
+    '''
+    return ClientData.ImportTagOptions()
+    
+def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
+    
+    site_type = gallery_identifier.GetSiteType()
+    
+    if site_type == HC.SITE_TYPE_BOORU:
+        
+        name = gallery_identifier.GetAdditionalInfo()
+        
+        booru = HydrusGlobals.client_controller.Read( 'remote_booru', name )
+        
+        namespaces = booru.GetNamespaces()
+        search_value = 'search tags'
+        
+    elif site_type == HC.SITE_TYPE_DEVIANT_ART:
+        
+        namespaces = [ 'creator', 'title' ]
+        search_value = 'artist username'
+        
+    elif site_type == HC.SITE_TYPE_GIPHY:
+        
+        namespaces = [ '' ]
+        
+        search_value = 'search tag'
+        
+    elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ):
+        
+        namespaces = [ 'creator', 'title', '' ]
+        
+        if site_type == HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST:
+            
+            search_value = 'artist username'
+            
+        elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS:
+            
+            search_value = 'search tags'
+            
+        
+    elif site_type == HC.SITE_TYPE_NEWGROUNDS:
+        
+        namespaces = [ 'creator', 'title', '' ]
+        search_value = 'artist username'
+        
+    elif site_type in ( HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ):
+        
+        namespaces = [ 'creator', 'title', '' ]
+        
+        if site_type == HC.SITE_TYPE_PIXIV_ARTIST_ID:
+            
+            search_value = 'numerical artist id'
+            
+        elif site_type == HC.SITE_TYPE_PIXIV_TAG:
+            
+            search_value = 'search tag'
+            
+        
+    elif site_type == HC.SITE_TYPE_TUMBLR:
+        
+        namespaces = [ '' ]
+        search_value = 'username'
+        
+    
+    return ( namespaces, search_value )
     
 def GetDefaultBoorus():
     

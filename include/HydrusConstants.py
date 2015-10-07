@@ -37,7 +37,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 175
+SOFTWARE_VERSION = 176
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -411,6 +411,14 @@ SITE_TYPE_BOORU = 3
 SITE_TYPE_TUMBLR = 4
 SITE_TYPE_HENTAI_FOUNDRY = 5
 SITE_TYPE_NEWGROUNDS = 6
+SITE_TYPE_NEWGROUNDS_MOVIES = 7
+SITE_TYPE_NEWGROUNDS_GAMES = 8
+SITE_TYPE_HENTAI_FOUNDRY_ARTIST = 9
+SITE_TYPE_HENTAI_FOUNDRY_ARTIST_PICTURES = 10
+SITE_TYPE_HENTAI_FOUNDRY_ARTIST_SCRAPS = 11
+SITE_TYPE_HENTAI_FOUNDRY_TAGS = 12
+SITE_TYPE_PIXIV_ARTIST_ID = 13
+SITE_TYPE_PIXIV_TAG = 14
 
 site_type_string_lookup = {}
 
@@ -418,8 +426,16 @@ site_type_string_lookup[ SITE_TYPE_BOORU ] = 'booru'
 site_type_string_lookup[ SITE_TYPE_DEVIANT_ART ] = 'deviant art'
 site_type_string_lookup[ SITE_TYPE_GIPHY ] = 'giphy'
 site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY ] = 'hentai foundry'
+site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY_ARTIST ] = 'hentai foundry artist'
+site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY_ARTIST_PICTURES ] = 'hentai foundry artist pictures'
+site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY_ARTIST_SCRAPS ] = 'hentai foundry artist scraps'
+site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY_TAGS ] = 'hentai foundry tags'
 site_type_string_lookup[ SITE_TYPE_NEWGROUNDS ] = 'newgrounds'
+site_type_string_lookup[ SITE_TYPE_NEWGROUNDS_GAMES ] = 'newgrounds games'
+site_type_string_lookup[ SITE_TYPE_NEWGROUNDS_MOVIES ] = 'newgrounds movies'
 site_type_string_lookup[ SITE_TYPE_PIXIV ] = 'pixiv'
+site_type_string_lookup[ SITE_TYPE_PIXIV_ARTIST_ID ] = 'pixiv artist id'
+site_type_string_lookup[ SITE_TYPE_PIXIV_TAG ] = 'pixiv tag'
 site_type_string_lookup[ SITE_TYPE_TUMBLR ] = 'tumblr'
 
 # request checking

@@ -2940,13 +2940,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdStatus( self, hash_id ):
     
-        options = self._controller.GetOptions()
+        result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
         
-        if options[ 'exclude_deleted_files' ]:
+        if result is not None:
             
-            result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
-            
-            if result is not None: return ( CC.STATUS_DELETED, None )
+            return ( CC.STATUS_DELETED, None )
             
         
         result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
@@ -3949,29 +3947,14 @@ class DB( HydrusDB.HydrusDB ):
         return names
         
     
-    def _ImportFile( self, path, import_file_options = None, service_keys_to_tags = None, generate_media_result = False, override_deleted = False, url = None ):
+    def _ImportFile( self, path, import_file_options = None, override_deleted = False, url = None ):
         
-        if import_file_options is None: import_file_options = ClientDefaults.GetDefaultImportFileOptions()
-        if service_keys_to_tags is None: service_keys_to_tags = {}
+        if import_file_options is None:
+            
+            import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+            
         
-        result = CC.STATUS_SUCCESSFUL
-        
-        can_add = True
-        
-        if type( import_file_options ) == dict:
-            
-            archive = import_file_options[ 'auto_archive' ]
-            
-            exclude_deleted_files = import_file_options[ 'exclude_deleted_files' ]
-            
-            min_size = import_file_options[ 'min_size' ]
-            
-            min_resolution = import_file_options[ 'min_resolution' ]
-            
-        else:
-            
-            ( archive, exclude_deleted_files, min_size, min_resolution ) = import_file_options.ToTuple()
-            
+        ( archive, exclude_deleted_files, min_size, min_resolution ) = import_file_options.ToTuple()
         
         HydrusImageHandling.ConvertToPngIfBmp( path )
         
@@ -3979,13 +3962,22 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self._GetHashId( hash )
         
-        if url is not None: self._c.execute( 'INSERT OR IGNORE INTO urls ( url, hash_id ) VALUES ( ?, ? );', ( url, hash_id ) )
-        
-        already_in_db = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None
-        
-        if already_in_db:
+        if url is not None:
             
-            result = CC.STATUS_REDUNDANT
+            self._c.execute( 'INSERT OR IGNORE INTO urls ( url, hash_id ) VALUES ( ?, ? );', ( url, hash_id ) )
+            
+        
+        ( status, status_hash ) = self._GetHashIdStatus( hash_id )
+        
+        if status == CC.STATUS_DELETED:
+            
+            if override_deleted or not exclude_deleted_files:
+                
+                status = CC.STATUS_NEW
+                
+            
+        
+        if status == CC.STATUS_REDUNDANT:
             
             if archive:
                 
@@ -3994,22 +3986,7 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_content_updates_after_commit( { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( hash, ) ) ) ] } )
                 
             
-            can_add = False
-            
-        else:
-            
-            if not override_deleted:
-                
-                if exclude_deleted_files and self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None:
-                    
-                    result = CC.STATUS_DELETED
-                    
-                    can_add = False
-                    
-                
-            
-        
-        if can_add:
+        elif status == CC.STATUS_NEW:
             
             mime = HydrusFileHandling.GetMime( path )
             
@@ -4081,22 +4058,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._InboxFiles( ( hash_id, ) )
                 
             
-        
-        if len( service_keys_to_tags ) > 0 and self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None:
-            
-            service_keys_to_content_updates = collections.defaultdict( list )
-            
-            for ( service_key, tags ) in service_keys_to_tags.items():
-                
-                if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
-                else: action = HC.CONTENT_UPDATE_PEND
-                
-                hashes = set( ( hash, ) )
-                
-                service_keys_to_content_updates[ service_key ].extend( ( HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ) )
-                
-            
-            self._ProcessContentUpdates( service_keys_to_content_updates )
+            status = CC.STATUS_SUCCESSFUL
             
         
         tag_services = self._GetServices( HC.TAG_SERVICES )
@@ -4118,17 +4080,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if generate_media_result:
-            
-            if ( can_add or already_in_db ):
-                
-                ( media_result, ) = self._GetMediaResults( CC.LOCAL_FILE_SERVICE_KEY, { hash_id } )
-                
-                return ( result, media_result )
-                
-            else: return ( result, None )
-            
-        else: return ( result, hash )
+        return ( status, hash )
         
     
     def _InboxFiles( self, hash_ids ):
@@ -4930,8 +4882,8 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'services': result = self._GetServices( *args, **kwargs )
         elif action == 'shortcuts': result = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, *args, **kwargs )
         elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( *args, **kwargs )
-        elif action == 'subscription_names': result = self._GetYAMLDumpNames( YAML_DUMP_ID_SUBSCRIPTION )
-        elif action == 'subscription': result = self._GetYAMLDump( YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
+        elif action == 'subscription_names': result = self._GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+        elif action == 'subscription': result = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, *args, **kwargs )
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
@@ -5079,7 +5031,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
             
-            self._c.execute( 'INSERT INTO json_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, version, sqlite3.Binary( dump ) ) )
+            self._c.execute( 'INSERT INTO json_dumps ( dump_type, version, dump ) VALUES ( ?, ?, ? );', ( dump_type, version, sqlite3.Binary( dump ) ) )
             
         
     
@@ -5888,6 +5840,179 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 175:
+            
+            HC.options = self._GetOptions()
+            HydrusGlobals.client_controller._options = HC.options
+            
+            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_IMPORT_FOLDER, ) )
+            
+            #
+            
+            def ConvertSiteTypeQueryTypeToGalleryIdentifier( site_type, query_type ):
+                
+                if site_type == HC.SITE_TYPE_BOORU:
+                    
+                    ( booru_name, gumpf ) = query_type
+                    
+                    return ClientDownloading.GalleryIdentifier( site_type, additional_info = booru_name )
+                    
+                elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
+                    
+                    if query_type in ( 'tag', 'tags' ):
+                        
+                        return ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS )
+                        
+                    else:
+                        
+                        return ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
+                        
+                    
+                elif site_type == HC.SITE_TYPE_PIXIV:
+                    
+                    if query_type in ( 'tag', 'tags' ):
+                        
+                        return ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG )
+                        
+                    else:
+                        
+                        return ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID )
+                        
+                    
+                else:
+                    
+                    return ClientDownloading.GalleryIdentifier( site_type )
+                    
+                
+            
+            #
+            
+            subscriptions = []
+            
+            results = self._c.execute( 'SELECT dump_name, dump FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) )
+            
+            for ( name, info ) in results:
+                
+                try:
+                    
+                    self._controller.pub( 'splash_set_status_text', 'updating subscription ' + name )
+                    
+                    subscription = ClientImporting.Subscription( name )
+                    
+                    site_type = info[ 'site_type' ]
+                    query_type = info[ 'query_type' ]
+                    
+                    frequency_type = info[ 'frequency_type' ]
+                    frequency = info[ 'frequency' ]
+                    
+                    service_keys_to_namespaces = info[ 'advanced_tag_options' ]
+                    import_file_options = info[ 'advanced_import_options' ]
+                    
+                    automatic_archive = import_file_options[ 'auto_archive' ]
+                    exclude_deleted = import_file_options[ 'exclude_deleted_files' ]
+                    min_size = import_file_options[ 'min_size' ]
+                    min_resolution = import_file_options[ 'min_resolution' ]
+                    
+                    gallery_identifier = ConvertSiteTypeQueryTypeToGalleryIdentifier( site_type, query_type )
+                    gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
+                    query = info[ 'query' ]
+                    period = frequency_type * frequency
+                    get_tags_if_redundant = info[ 'get_tags_if_redundant' ]
+                    
+                    if 'initial_limit' in info:
+                        
+                        initial_file_limit = info[ 'initial_limit' ]
+                        
+                    else:
+                        
+                        initial_file_limit = None
+                        
+                    
+                    periodic_file_limit = None
+                    paused = info[ 'paused' ]
+                    import_file_options = ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+                    import_tag_options = ClientData.ImportTagOptions( service_keys_to_namespaces = service_keys_to_namespaces )
+                    
+                    subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options )
+                    
+                    last_checked = info[ 'last_checked' ]
+                    
+                    if last_checked is None:
+                        
+                        last_checked = 0
+                        
+                    
+                    subscription._last_checked = last_checked
+                    
+                    for url in info[ 'url_cache' ]:
+                        
+                        subscription._seed_cache.AddSeed( url )
+                        subscription._seed_cache.UpdateSeedStatus( url, CC.STATUS_SUCCESSFUL )
+                        
+                    
+                    subscriptions.append( subscription )
+                    
+                except:
+                    
+                    traceback.print_exc()
+                    
+                    self._controller.pub( 'splash_set_status_text', 'error updating subscription ' + name )
+                    
+                    time.sleep( 5 )
+                    
+                
+            
+            self._controller.pub( 'splash_set_status_text', 'saving updated subscriptions' )
+            
+            for subscription in subscriptions:
+                
+                ( dump_type, dump_name, obj_version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( subscription )
+                
+                dump = json.dumps( serialisable_info )
+                
+                self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, dump ) VALUES ( ?, ?, ?, ? );', ( dump_type, dump_name, obj_version, sqlite3.Binary( dump ) ) )
+                
+            
+            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) )
+            
+            #
+            
+            self._controller.pub( 'splash_set_status_text', 'updating gui sessions with gallery download pages' )
+            
+            import ClientGUIManagement
+            import ClientGUIPages
+            
+            new_sessions = []
+            
+            sessions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            
+            for session in sessions:
+                
+                session_name = session.GetName()
+                
+                new_session = ClientGUIPages.GUISession( session_name )
+                
+                for ( page_name, management_controller, hashes ) in session.IteratePages():
+                    
+                    if management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_GALLERY:
+                        
+                        site_type = management_controller.GetVariable( 'site_type' )
+                        query_type = management_controller.GetVariable( 'gallery_type' )
+                        
+                        gallery_identifier = ConvertSiteTypeQueryTypeToGalleryIdentifier( site_type, query_type )
+                        
+                        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
+                        
+                        gallery_import = management_controller.GetVariable( 'gallery_import' )
+                        
+                    
+                    new_session.AddPage( page_name, management_controller, hashes )
+                    
+                
+                self._SetJSONDump( new_session )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6435,7 +6560,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_remote_booru': result = self._DeleteYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'delete_service_info': result = self._DeleteServiceInfo( *args, **kwargs )
         elif action == 'delete_shortcuts': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, *args, **kwargs )
-        elif action == 'delete_subscription': result = self._DeleteYAMLDump( YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
+        elif action == 'delete_subscription': result = self._DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, *args, **kwargs )
         elif action == 'export_folder': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'export_mappings': result = self._ExportToTagArchive( *args, **kwargs )
         elif action == 'file_integrity': result = self._CheckFileIntegrity( *args, **kwargs )
@@ -6452,7 +6577,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'service_updates': result = self._ProcessServiceUpdates( *args, **kwargs )
         elif action == 'set_password': result = self._SetPassword( *args, **kwargs )
         elif action == 'shortcuts': result = self._SetJSONDump( *args, **kwargs )
-        elif action == 'subscription': result = self._SetYAMLDump( YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
+        elif action == 'subscription': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'tag_censorship': result = self._SetTagCensorship( *args, **kwargs )
         elif action == 'thumbnails': result = self._AddThumbnails( *args, **kwargs )
         elif action == 'update_server_services': result = self._UpdateServerServices( *args, **kwargs )

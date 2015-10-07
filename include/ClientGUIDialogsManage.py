@@ -8,6 +8,7 @@ import ClientFiles
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientDownloading
 import ClientGUIOptionsPanels
 import ClientGUIPredicates
 import ClientImporting
@@ -21,6 +22,7 @@ import HydrusFileHandling
 import HydrusGlobals
 import HydrusNATPunch
 import HydrusNetworking
+import HydrusSerialisable
 import HydrusTags
 import itertools
 import multipart
@@ -5697,7 +5699,10 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if service_type in HC.REMOTE_SERVICES:
                             
-                            if service_type == HC.SERVER_ADMIN: ( host, port ) = ( 'hostname', 45870 )
+                            if service_type == HC.SERVER_ADMIN:
+                                
+                                ( host, port ) = ( 'hostname', 45870 )
+                                
                             elif service_type in HC.RESTRICTED_SERVICES:
                                 
                                 with ClientGUIDialogs.DialogChooseNewServiceMethod( self ) as dlg:
@@ -5722,15 +5727,24 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                                     else: ( host, port ) = ( 'hostname', 45871 )
                                     
                                 
-                            else: ( host, port ) = ( 'hostname', 45871 )
+                            else:
+                                
+                                ( host, port ) = ( 'hostname', 45871 )
+                                
                             
                             info[ 'host' ] = host
                             info[ 'port' ] = port
                             
                         
-                        if service_type in HC.REPOSITORIES: info[ 'paused' ] = False
+                        if service_type in HC.REPOSITORIES:
+                            
+                            info[ 'paused' ] = False
+                            
                         
-                        if service_type == HC.TAG_REPOSITORY: info[ 'tag_archive_sync' ] = {}
+                        if service_type == HC.TAG_REPOSITORY:
+                            
+                            info[ 'tag_archive_sync' ] = {}
+                            
                         
                         if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                             
@@ -6598,67 +6612,60 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._listbook = ClientGUICommon.ListBook( self )
-            
-            self._add = wx.Button( self, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            self._add.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._remove = wx.Button( self, label = 'remove' )
-            self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-            self._remove.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            self._export = wx.Button( self, label = 'export' )
-            self._export.Bind( wx.EVT_BUTTON, self.EventExport )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            for name in self._original_subscription_names:
-                
-                self._listbook.AddPageArgs( name, self._Panel, ( self._listbook, name ), {} )
-                
-            
-        
-        def ArrangeControls():
-            
-            add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
-            
-            ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
-            ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-        
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage subscriptions' )
         
         self._original_subscription_names = HydrusGlobals.client_controller.Read( 'subscription_names' )
         
         self._names_to_delete = set()
         
-        InitialiseControls()
+        #
         
-        PopulateControls()
+        self._listbook = ClientGUICommon.ListBook( self )
         
-        ArrangeControls()
+        self._add = wx.Button( self, label = 'add' )
+        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+        self._add.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._remove = wx.Button( self, label = 'remove' )
+        self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+        self._remove.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        self._export = wx.Button( self, label = 'export' )
+        self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        for name in self._original_subscription_names:
+            
+            self._listbook.AddPageArgs( name, self._Panel, ( self._listbook, name ), {} )
+            
+        
+        #
+        
+        add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+        
+        ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
+        ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox.AddF( self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
+        vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        #
         
         ( x, y ) = self.GetEffectiveMinSize()
         
@@ -6683,7 +6690,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the subscription.' )
                     
-                    page = self._Panel( self._listbook, name, new_subscription = True )
+                    page = self._Panel( self._listbook, name, is_new_subscription = True )
                     
                     self._listbook.AddPage( name, page, select = True )
                     
@@ -6703,25 +6710,27 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         if panel is not None:
             
-            ( name, info ) = panel.GetSubscription()
+            subscription = panel.GetSubscription()
+            
+            name = subscription.GetName()
             
             try:
                 
-                with wx.FileDialog( self, 'select where to export subscription', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
+                with wx.FileDialog( self, 'select where to export subscription', defaultFile = name + '.json', style = wx.FD_SAVE ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( name, info ) ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( HydrusSerialisable.DumpToString( subscription ) )
                         
                     
                 
             except:
                 
-                with wx.FileDialog( self, 'select where to export subscription', defaultFile = 'subscription.yaml', style = wx.FD_SAVE ) as dlg:
+                with wx.FileDialog( self, 'select where to export subscription', defaultFile = 'subscription.json', style = wx.FD_SAVE ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( name, info ) ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( HydrusSerialisable.DumpToString( subscription ) )
                         
                     
                 
@@ -6734,16 +6743,17 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for name in self._names_to_delete: HydrusGlobals.client_controller.Write( 'delete_subscription', name )
+            for name in self._names_to_delete:
+                
+                HydrusGlobals.client_controller.Write( 'delete_subscription', name )
+                
             
             for page in all_pages:
                 
-                ( name, info ) = page.GetSubscription()
+                subscription = page.GetSubscription()
                 
-                HydrusGlobals.client_controller.Write( 'subscription', name, info )
+                HydrusGlobals.client_controller.Write( 'subscription', subscription )
                 
-            
-            HydrusGlobals.subs_changed = True
             
             HydrusGlobals.client_controller.pub( 'notify_new_subscriptions' )
             
@@ -6765,9 +6775,11 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             try:
                 
-                with open( path, 'rb' ) as f: file = f.read()
+                with open( path, 'rb' ) as f: data = f.read()
                 
-                ( name, info ) = yaml.safe_load( file )
+                subscription = HydrusSerialisable.CreateFromString( data )
+                
+                name = subscription.GetName()
                 
                 if self._listbook.NameExists( name ):
                     
@@ -6781,15 +6793,15 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                             
                             page = self._listbook.GetNamesToActivePages()[ name ]
                             
-                            page.Update( info )
+                            page.Update( subscription )
                             
                         
                     
                 else:
                     
-                    page = self._Panel( self._listbook, name, new_subscription = True )
+                    page = self._Panel( self._listbook, name, is_new_subscription = True )
                     
-                    page.Update( info )
+                    page.Update( subscription )
                     
                     self._listbook.AddPage( name, page, select = True )
                     
@@ -6803,150 +6815,125 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.ScrolledWindow ):
         
-        def __init__( self, parent, name, new_subscription = False ):
-            
-            def InitialiseControls():
-                
-                self._query_panel = ClientGUICommon.StaticBox( self, 'site and query' )
-                
-                self._site_type = ClientGUICommon.BetterChoice( self._query_panel )
-                self._site_type.Append( 'booru', HC.SITE_TYPE_BOORU )
-                self._site_type.Append( 'deviant art', HC.SITE_TYPE_DEVIANT_ART )
-                self._site_type.Append( 'giphy', HC.SITE_TYPE_GIPHY )
-                self._site_type.Append( 'hentai foundry', HC.SITE_TYPE_HENTAI_FOUNDRY )
-                self._site_type.Append( 'pixiv', HC.SITE_TYPE_PIXIV )
-                self._site_type.Append( 'tumblr', HC.SITE_TYPE_TUMBLR )
-                self._site_type.Append( 'newgrounds', HC.SITE_TYPE_NEWGROUNDS )
-                self._site_type.Bind( wx.EVT_CHOICE, self.EventSiteChanged )
-                
-                self._query = wx.TextCtrl( self._query_panel )
-                
-                self._booru_selector = wx.ListBox( self._query_panel )
-                self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
-                
-                self._query_type = ClientGUICommon.BetterChoice( self._query_panel )
-                self._query_type.Append( 'artist', 'artist' )
-                self._query_type.Append( 'artist id', 'artist_id' )
-                self._query_type.Append( 'tags', 'tags' )
-                
-                self._frequency = wx.SpinCtrl( self._query_panel, min = 1, max = 9999 )
-                
-                self._frequency_type = wx.Choice( self._query_panel )
-                
-                for ( title, timespan ) in ( ( 'days', 86400 ), ( 'weeks', 86400 * 7 ), ( 'months', 86400 * 30 ) ): self._frequency_type.Append( title, timespan )
-                
-                self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
-                
-                self._get_tags_if_redundant = wx.CheckBox( self._info_panel, label = 'get tags even if file already in db' )
-                
-                text = 'initial sync file limit'
-                
-                self._initial_limit = ClientGUICommon.NoneableSpinCtrl( self._info_panel, text, none_phrase = 'no limit', min = 1, max = 1000000 )
-                
-                self._paused = wx.CheckBox( self._info_panel, label = 'paused' )
-                
-                self._reset_cache_button = wx.Button( self._info_panel, label = '     reset cache on dialog ok     ' )
-                self._reset_cache_button.Bind( wx.EVT_BUTTON, self.EventResetCache )
-                
-                self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
-                
-                self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
-                
-            
-            def PopulateControls():
-                
-                self._SetControls( info )
-                
-            
-            def ArrangeControls():
-                
-                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self._query_panel, label = 'Check subscription every ' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._frequency, CC.FLAGS_MIXED )
-                hbox.AddF( self._frequency_type, CC.FLAGS_MIXED )
-                
-                self._query_panel.AddF( self._site_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._query_panel.AddF( self._query, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._query_panel.AddF( self._query_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._query_panel.AddF( self._booru_selector, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._query_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
-                if info[ 'last_checked' ] is None: last_checked_message = 'not yet initialised'
-                else:
-                    
-                    now = HydrusData.GetNow()
-                    
-                    if info[ 'last_checked' ] < now: last_checked_message = 'updated to ' + HydrusData.ConvertTimestampToPrettySync( info[ 'last_checked' ] )
-                    else: last_checked_message = 'due to error, update is delayed. next check in ' + HydrusData.ConvertTimestampToPrettyPending( info[ 'last_checked' ] )
-                    
-                
-                self._info_panel.AddF( wx.StaticText( self._info_panel, label = last_checked_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._info_panel.AddF( wx.StaticText( self._info_panel, label = HydrusData.ToString( len( info[ 'url_cache' ] ) ) + ' urls in cache' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._info_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_LONE_BUTTON )
-                self._info_panel.AddF( self._initial_limit, CC.FLAGS_LONE_BUTTON )
-                self._info_panel.AddF( self._paused, CC.FLAGS_LONE_BUTTON )
-                self._info_panel.AddF( self._reset_cache_button, CC.FLAGS_LONE_BUTTON )
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( self._query_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                self.SetSizer( vbox )
-                
+        def __init__( self, parent, name, is_new_subscription = False ):
             
             wx.ScrolledWindow.__init__( self, parent )
             
-            self._name = name
+            self._is_new_subscription = is_new_subscription
             
-            if new_subscription:
+            if self._is_new_subscription:
                 
-                info = {}
-                
-                info[ 'site_type' ] = HC.SITE_TYPE_BOORU
-                info[ 'query_type' ] = ( 'safebooru', 'tags' )
-                info[ 'query' ] = ''
-                info[ 'frequency_type' ] = 86400
-                info[ 'frequency' ] = 7
-                info[ 'get_tags_if_redundant' ] = False
-                
-                if HC.options[ 'gallery_file_limit' ] is None:
-                    
-                    file_limit = 200
-                    
-                else:
-                    
-                    file_limit = min( 200, HC.options[ 'gallery_file_limit' ] )
-                    
-                
-                info[ 'initial_limit' ] = file_limit
-                info[ 'advanced_tag_options' ] = {}
-                info[ 'advanced_import_options' ] = ClientDefaults.GetDefaultImportFileOptions()
-                info[ 'last_checked' ] = None
-                info[ 'url_cache' ] = set()
-                info[ 'paused' ] = False
-                
-                self._new_subscription = True
+                self._original_subscription = ClientImporting.Subscription( name )
                 
             else:
                 
-                info = HydrusGlobals.client_controller.Read( 'subscription', self._name )
-                
-                self._new_subscription = False
+                self._original_subscription = HydrusGlobals.client_controller.Read( 'subscription', name )
                 
             
-            self._original_info = info
+            #
             
-            InitialiseControls()
+            self._query_panel = ClientGUICommon.StaticBox( self, 'site and query' )
             
-            PopulateControls()
+            self._site_type = ClientGUICommon.BetterChoice( self._query_panel )
             
-            ArrangeControls()
+            site_types = []
+            site_types.append( HC.SITE_TYPE_BOORU )
+            site_types.append( HC.SITE_TYPE_DEVIANT_ART )
+            site_types.append( HC.SITE_TYPE_GIPHY )
+            site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
+            site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS )
+            site_types.append( HC.SITE_TYPE_NEWGROUNDS )
+            site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
+            site_types.append( HC.SITE_TYPE_PIXIV_TAG )
+            site_types.append( HC.SITE_TYPE_TUMBLR )
+            
+            for site_type in site_types:
+                
+                self._site_type.Append( HC.site_type_string_lookup[ site_type ], site_type )
+                
+            
+            self._site_type.Bind( wx.EVT_CHOICE, self.EventSiteChanged )
+            
+            self._query = wx.TextCtrl( self._query_panel )
+            
+            self._booru_selector = wx.ListBox( self._query_panel )
+            self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
+            
+            self._period_days = wx.SpinCtrl( self._query_panel, min = 1, max = 1000 )
+            
+            self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
+            
+            self._get_tags_if_redundant = wx.CheckBox( self._info_panel, label = 'get tags even if file already in db' )
+            
+            self._initial_file_limit = ClientGUICommon.NoneableSpinCtrl( self._info_panel, 'initial file limit', none_phrase = 'no limit', min = 1, max = 1000000 )
+            self._initial_file_limit.SetToolTipString( 'If set, the first sync will add no more than this many files. Otherwise, it will get everything the gallery has.' )
+            
+            self._periodic_file_limit = ClientGUICommon.NoneableSpinCtrl( self._info_panel, 'periodic file limit', none_phrase = 'no limit', min = 1, max = 1000000 )
+            self._periodic_file_limit.SetToolTipString( 'If set, normal syncs will add no more than this many files. Otherwise, they will get everything up until they find a file they have seen before.' )
+            
+            self._paused = wx.CheckBox( self._info_panel, label = 'paused' )
+            
+            self._seed_cache_button = wx.BitmapButton( self._info_panel, bitmap = CC.GlobalBMPs.seed_cache )
+            self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+            self._seed_cache_button.SetToolTipString( 'open detailed url cache status' )
+            
+            self._reset_cache_button = wx.Button( self._info_panel, label = '     reset url cache on dialog ok     ' )
+            self._reset_cache_button.Bind( wx.EVT_BUTTON, self.EventResetCache )
+            
+            self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
+            
+            self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
+            
+            #
+            
+            self._SetControls()
+            
+            #
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            #
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self._query_panel, label = 'Check subscription every ' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._period_days, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._query_panel, label = 'days' ), CC.FLAGS_MIXED )
+            
+            self._query_panel.AddF( self._site_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._query_panel.AddF( self._query, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._query_panel.AddF( self._booru_selector, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._query_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            self._info_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_LONE_BUTTON )
+            self._info_panel.AddF( self._initial_file_limit, CC.FLAGS_LONE_BUTTON )
+            self._info_panel.AddF( self._periodic_file_limit, CC.FLAGS_LONE_BUTTON )
+            self._info_panel.AddF( self._paused, CC.FLAGS_LONE_BUTTON )
+            
+            last_checked_text = self._original_subscription.GetLastCheckedText()
+            
+            self._info_panel.AddF( wx.StaticText( self._info_panel, label = last_checked_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            seed_cache = self._original_subscription.GetSeedCache()
+            
+            seed_cache_text = HydrusData.ToString( seed_cache.GetSeedCount() ) + ' urls in cache'
+            
+            self._info_panel.AddF( wx.StaticText( self._info_panel, label = seed_cache_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._info_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
+            self._info_panel.AddF( self._reset_cache_button, CC.FLAGS_LONE_BUTTON )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._query_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
             
             self._reset_cache = False
             
@@ -6959,51 +6946,47 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         def _ConfigureAdvancedTagOptions( self ):
             
-            site_type = self._site_type.GetChoice()
+            gallery_identifier = self._GetGalleryIdentifier()
             
-            lookup = site_type
+            ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+            
+            import_tag_options = ClientDefaults.GetDefaultImportTagOptions( gallery_identifier )
+            
+            if not self._is_new_subscription:
+                
+                if gallery_identifier == self._original_subscription.GetGalleryIdentifier():
+                    
+                    search_value = self._original_subscription.GetQuery()
+                    import_tag_options = self._original_subscription.GetImportTagOptions()
+                    
+                
+            
+            self._query.SetValue( search_value )
+            self._import_tag_options.SetNamespaces( namespaces )
+            self._import_tag_options.SetOptions( import_tag_options )
+            
+        
+        def _GetGalleryIdentifier( self ):
+            
+            site_type = self._site_type.GetChoice()
             
             if site_type == HC.SITE_TYPE_BOORU:
                 
-                selection = self._booru_selector.GetSelection()
+                booru_name = self._booru_selector.GetStringSelection()
                 
-                booru_name = self._booru_selector.GetString( selection )
+                gallery_identifier = ClientDownloading.GalleryIdentifier( site_type, additional_info = booru_name )
                 
-                booru = HydrusGlobals.client_controller.Read( 'remote_booru', booru_name )
+            else:
                 
-                namespaces = booru.GetNamespaces()
-                
-                lookup = ( HC.SITE_TYPE_BOORU, booru.GetName() )
-                
-            elif site_type == HC.SITE_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
-            elif site_type == HC.SITE_TYPE_GIPHY: namespaces = [ '' ]
-            elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
-            elif site_type == HC.SITE_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
-            elif site_type == HC.SITE_TYPE_TUMBLR: namespaces = [ '' ]
-            elif site_type == HC.SITE_TYPE_NEWGROUNDS: namespaces = [ 'creator', 'title', '' ]
-            
-            ato = ClientData.GetDefaultAdvancedTagOptions( lookup )
-            
-            if not self._new_subscription:
-                
-                ( name, info ) = self.GetSubscription()
-                
-                same_site = info[ 'site_type' ] == self._original_info[ 'site_type' ]
-                same_type_of_query = info[ 'query_type' ] == self._original_info[ 'query_type' ]
-                
-                if same_site and same_type_of_query: ato = self._original_info[ 'advanced_tag_options' ]
+                gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
                 
             
-            self._advanced_tag_options.SetNamespaces( namespaces )
-            self._advanced_tag_options.SetInfo( ato )
+            return gallery_identifier
             
         
         def _PresentForSiteType( self ):
             
             site_type = self._site_type.GetChoice()
-            
-            if site_type in ( HC.SITE_TYPE_BOORU, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_GIPHY, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_NEWGROUNDS ): self._query_type.Hide()
-            else: self._query_type.Show()
             
             if site_type == HC.SITE_TYPE_BOORU:
                 
@@ -7025,78 +7008,55 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self.Layout()
             
         
-        def _SetControls( self, info ):
+        def _SetControls( self ):
             
-            site_type = info[ 'site_type' ]
-            query_type = info[ 'query_type' ]
-            query = info[ 'query' ]
-            frequency_type = info[ 'frequency_type' ]
-            frequency = info[ 'frequency' ]
-            get_tags_if_redundant = info[ 'get_tags_if_redundant' ]
-            initial_limit = info[ 'initial_limit' ]
-            advanced_tag_options = info[ 'advanced_tag_options' ]
-            import_file_options = info[ 'advanced_import_options' ]
-            last_checked = info[ 'last_checked' ]
-            url_cache = info[ 'url_cache' ]
-            paused = info[ 'paused' ]
+            ( gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options ) = self._original_subscription.ToTuple()
             
-            #
+            site_type = gallery_identifier.GetSiteType()
             
             self._site_type.SelectClientData( site_type )
             
             self._PresentForSiteType()
             
-            self._query.SetValue( query )
-            
             if site_type == HC.SITE_TYPE_BOORU:
                 
-                if self._booru_selector.GetCount() == 0:
-                    
-                    boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
-                    
-                    for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
-                    
-                
-                ( booru_name, query_type ) = query_type
+                booru_name = gallery_identifier.GetAdditionalInfo()
                 
                 index = self._booru_selector.FindString( booru_name )
                 
-                if index != wx.NOT_FOUND: self._booru_selector.Select( index )
+                if index != wx.NOT_FOUND:
+                    
+                    self._booru_selector.Select( index )
+                    
                 
             
-            self._query_type.SelectClientData( query_type )
+            # set gallery_stream_identifiers selection here--some kind of list of checkboxes or whatever
             
-            self._frequency.SetValue( frequency )
+            self._query.SetValue( query )
             
-            index_to_select = None
-            i = 0
-            
-            for ( title, timespan ) in ( ( 'days', 86400 ), ( 'weeks', 86400 * 7 ), ( 'months', 86400 * 30 ) ):
-                
-                if frequency_type == timespan: index_to_select = i
-                
-                i += 1
-                
-            
-            if index_to_select is not None: self._frequency_type.Select( index_to_select )
+            self._period_days.SetValue( period / 86400 )
             
             self._get_tags_if_redundant.SetValue( get_tags_if_redundant )
-            self._initial_limit.SetValue( initial_limit )
+            self._initial_file_limit.SetValue( initial_file_limit )
+            self._periodic_file_limit.SetValue( periodic_file_limit )
             
             self._paused.SetValue( paused )
             
+            self._reset_cache = False
+            
             self._reset_cache_button.SetLabel( '     reset cache on dialog ok     ' )
+            self._reset_cache_button.Enable()
             
-            self._advanced_tag_options.SetInfo( advanced_tag_options )
+            self._import_file_options.SetOptions( import_file_options )
             
-            self._import_file_options.SetInfo( import_file_options )
+            self._import_tag_options.SetOptions( import_tag_options )
             
         
         def EventBooruSelected( self, event ): self._ConfigureAdvancedTagOptions()
         
         def EventResetCache( self, event ):
             
-            message = '''Resetting this subscription's cache will delete ''' + HydrusData.ConvertIntToPrettyString( len( self._original_info[ 'url_cache' ] ) ) + ''' remembered links, meaning when the subscription next runs, it will try to download those all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
+            message = '''Resetting this subscription's cache will delete ''' + HydrusData.ConvertIntToPrettyString( self._original_subscription.GetSeedCache().GetSeedCount() ) + ''' remembered urls, meaning when the subscription next runs, it will try to download those all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
@@ -7110,56 +7070,51 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
             
         
+        def EventSeedCache( self, event ):
+            
+            seed_cache = self._original_subscription.GetSeedCache()
+            
+            HydrusGlobals.client_controller.pub( 'show_seed_cache', seed_cache )
+            
+        
         def EventSiteChanged( self, event ): self._PresentForSiteType()
         
         def GetSubscription( self ):
             
-            info = dict( self._original_info )
+            gallery_identifier = self._GetGalleryIdentifier()
             
-            info[ 'site_type' ] = self._site_type.GetChoice()
+            # in future, this can be harvested from some checkboxes or whatever for stream selection
+            gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
             
-            if info[ 'site_type' ] in ( HC.SITE_TYPE_BOORU, HC.SITE_TYPE_GIPHY ): query_type = 'tags'
-            elif info[ 'site_type' ] in ( HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_TUMBLR ): query_type = 'artist'
-            else: query_type = self._query_type.GetChoice()
+            query = self._query.GetValue()
             
-            if info[ 'site_type' ] == HC.SITE_TYPE_BOORU:
-                
-                booru_name = self._booru_selector.GetStringSelection()
-                
-                info[ 'query_type' ] = ( booru_name, query_type )
-                
-            else: info[ 'query_type' ] = query_type
+            period = self._period_days.GetValue() * 86400
             
-            info[ 'query' ] = self._query.GetValue()
+            get_tags_if_redundant = self._get_tags_if_redundant.GetValue()
+            initial_file_limit = self._initial_file_limit.GetValue()
+            periodic_file_limit = self._periodic_file_limit.GetValue()
             
-            info[ 'frequency' ] = self._frequency.GetValue()
-            info[ 'frequency_type' ] = self._frequency_type.GetClientData( self._frequency_type.GetSelection() )
+            paused = self._paused.GetValue()
             
-            info[ 'get_tags_if_redundant' ] = self._get_tags_if_redundant.GetValue()
-            info[ 'initial_limit' ] = self._initial_limit.GetValue()
+            import_file_options = self._import_file_options.GetOptions()
             
-            info[ 'advanced_tag_options' ] = self._advanced_tag_options.GetInfo()
+            import_tag_options = self._import_tag_options.GetOptions()
             
-            info[ 'advanced_import_options' ] = self._import_file_options.GetInfo()
+            self._original_subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options )
             
             if self._reset_cache:
                 
-                info[ 'last_checked' ] = None
-                info[ 'url_cache' ] = set()
+                self._original_subscription.Reset()
                 
             
-            info[ 'paused' ] = self._paused.GetValue()
-            
-            return ( self._name, info )
+            return self._original_subscription
             
         
-        def GetName( self ): return self._name
-        
-        def Update( self, info ):
+        def Update( self, subscription ):
             
-            self._original_info = info
+            self._original_subscription = subscription
             
-            self._SetControls( info )
+            self._SetControls()
             
         
     

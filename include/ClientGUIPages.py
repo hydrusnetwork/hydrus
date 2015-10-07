@@ -101,19 +101,12 @@ class Page( wx.SplitterWindow ):
     
     def PageShown( self ): HydrusGlobals.client_controller.pub( 'page_shown', self._page_key )
     
-    def Pause( self ):
-        
-        HydrusGlobals.client_controller.pub( 'pause', self._page_key )
+    def PrepareToHide( self ):
         
         HydrusGlobals.client_controller.pub( 'set_focus', self._page_key, None )
         
     
     def RefreshQuery( self ): HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
-    
-    def Resume( self ):
-        
-        HydrusGlobals.client_controller.pub( 'resume', self._page_key )
-        
     
     def ShowHideSplit( self ):
         

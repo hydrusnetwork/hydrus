@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientDownloading
 import ClientFiles
 import collections
 import datetime
@@ -93,6 +94,22 @@ def CatchExceptionClient( etype, value, tb ):
         
     
     time.sleep( 1 )
+    
+def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_to_tags ):
+    
+    service_keys_to_content_updates = {}
+    
+    for ( service_key, tags ) in service_keys_to_tags.items():
+        
+        if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
+        else: action = HC.CONTENT_UPDATE_PEND
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
+        
+        service_keys_to_content_updates[ service_key ] = content_updates
+        
+    
+    return service_keys_to_content_updates
     
 def ConvertShortcutToPrettyShortcut( modifier, key ):
     
@@ -917,7 +934,7 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
         return dict( self._service_keys_to_namespaces )
         
     
-    def GetServiceKeysToTags( self, tags ):
+    def GetServiceKeysToContentUpdates( self, hash, tags ):
         
         tags = [ tag for tag in tags if tag is not None ]
         
@@ -950,10 +967,65 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        return service_keys_to_tags
+        service_keys_to_content_updates = ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+        
+        return service_keys_to_content_updates
+        
+    
+    def ShouldFetchTags( self ):
+        
+        i_am_interested_in_namespaces = len( self._service_keys_to_namespaces ) > 0
+        
+        return i_am_interested_in_namespaces
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS ] = ImportTagOptions
+
+class ClientOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, default = False ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._dictionary = HydrusSerialisable.SerialisableDictionary()
+        
+        if default:
+            
+            self._InitialiseDefaults()
+            
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_info = HydrusSerialisable.GetSerialisableTuple( self._dictionary )
+        
+        return serialisable_info
+        
+    
+    def _InitialiseDefaults( self ):
+        
+        self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        self._dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+        
+    
+    def GetDefaultImportTagOptions( self, gallery_identifier ):
+        
+        pass
+        
+    
+    def Save( self ):
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'new_options', self )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS ] = ClientOptions
 
 class Periodic( HydrusSerialisable.SerialisableBase ):
     
@@ -1793,6 +1865,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             if self._service_type == HC.FILE_REPOSITORY and self.CanDownload():
                 
+                HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'reviewing thumbnails' )
                 job_key.SetVariable( 'popup_text_1', 'reviewing existing thumbnails' )
                 
                 thumbnail_hashes_i_have = ClientFiles.GetAllThumbnailHashes()
@@ -1855,7 +1928,6 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                 
             
-            HydrusGlobals.client_controller.pub( 'splash_set_title_text', '' )
             HydrusGlobals.client_controller.pub( 'splash_set_status_text', '' )
             
             job_key.SetVariable( 'popup_title', 'repository synchronisation - ' + self._name + ' - finished' )
@@ -2312,28 +2384,6 @@ class UndoManager( object ):
             
         
     
-def GetDefaultAdvancedTagOptions( lookup ):
-    
-    backup_lookup = None
-    
-    if type( lookup ) == tuple:
-        
-        ( site_type, site_name ) = lookup
-        
-        if site_type == HC.SITE_TYPE_BOORU: backup_lookup = HC.SITE_TYPE_BOORU
-        
-    
-    options = HydrusGlobals.client_controller.GetOptions()
-    
-    ato_options = options[ 'default_advanced_tag_options' ]
-    
-    if lookup in ato_options: ato = ato_options[ lookup ]
-    elif backup_lookup is not None and backup_lookup in ato_options: ato = ato_options[ backup_lookup ]
-    elif 'default' in ato_options: ato = ato_options[ 'default' ]
-    else: ato = {}
-    
-    return ato
-
 def GetShortcutFromEvent( event ):
     
     modifier = wx.ACCEL_NORMAL

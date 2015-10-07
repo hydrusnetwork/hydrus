@@ -221,7 +221,7 @@ class OptionsPanelImportFiles( OptionsPanel ):
         
         self.SetSizer( vbox )
         
-        self.SetOptions( ClientDefaults.GetDefaultImportFileOptionsObject() )
+        self.SetOptions( ClientDefaults.GetDefaultImportFileOptions() )
         
     
     def EventChanged( self, event ):
@@ -229,21 +229,6 @@ class OptionsPanelImportFiles( OptionsPanel ):
         wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'import_file_options_changed' ) ) )
         
         event.Skip()
-        
-    
-    def GetInfo( self ):
-        
-        info = {}
-        
-        info[ 'auto_archive' ] = self._auto_archive.GetValue()
-        
-        info[ 'exclude_deleted_files' ] = self._exclude_deleted.GetValue()
-        
-        info[ 'min_resolution' ] = self._min_resolution.GetValue()
-        
-        info[ 'min_size' ] = self._min_size.GetValue()
-        
-        return info
         
     
     def GetOptions( self ):
@@ -254,17 +239,6 @@ class OptionsPanelImportFiles( OptionsPanel ):
         min_resolution = self._min_resolution.GetValue()
         
         return ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
-        
-    
-    def SetInfo( self, info ):
-        
-        self._auto_archive.SetValue( info[ 'auto_archive' ] )
-        
-        self._exclude_deleted.SetValue( info[ 'exclude_deleted_files' ] )
-        
-        self._min_size.SetValue( info[ 'min_size' ] )
-        
-        self._min_resolution.SetValue( info[ 'min_resolution' ] )
         
     
     def SetOptions( self, import_file_options ):

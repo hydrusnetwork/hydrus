@@ -341,7 +341,7 @@ class Controller( HydrusController.HydrusController ):
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
         self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager()
         self._managers[ 'undo' ] = ClientData.UndoManager()
-        self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
+        self._managers[ 'web_sessions' ] = ClientCaches.WebSessionManagerClient()
         
         if HC.options[ 'proxy' ] is not None:
             
@@ -436,7 +436,7 @@ class Controller( HydrusController.HydrusController ):
         
         if self._options[ 'maintenance_vacuum_period' ] != 0:
             
-            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > self._options[ 'maintenance_vacuum_period' ]: self.Write( 'vacuum' )
+            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > self._options[ 'maintenance_vacuum_period' ]: self.WriteSynchronous( 'vacuum' )
             
         
         if self._timestamps[ 'last_service_info_cache_fatten' ] == 0:
@@ -485,6 +485,11 @@ class Controller( HydrusController.HydrusController ):
     def PageDeleted( self, page_key ):
         
         return self._gui.PageDeleted( page_key )
+        
+    
+    def PageHidden( self, page_key ):
+        
+        return self._gui.PageHidden( page_key )
         
     
     def PrepStringForDisplay( self, text ):
