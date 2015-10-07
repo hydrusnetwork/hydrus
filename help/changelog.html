@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 176</h3></li>
+				<ul>
+					<li>the gallery downloader is updated to the new system</li>
+					<li>the gallery downloader code is generally a bit better all around</li>
+					<li>the gallery downloader will now remember its urls and file and tag options and paused status and so on throughout a reboot</li>
+					<li>the gallery downloader supports 'get tags even if file already in db' option</li>
+					<li>the gallery downloader management panel is updated for the new object. like the other panel updates, it is a little more minimalist</li>
+					<li>the gallery downloader management panel now has the import status button so you can review your parsed urls and retry them, or copy errors, or whatever</li>
+					<li>existing gallery downloader pages in gui sessions will semi-convert on the db update</li>
+					<li>subscriptions are updated to the new system</li>
+					<li>the subscription code is generally a bit better all around</li>
+					<li>subscriptions will no longer dump out on a failed file!</li>
+					<li>subscriptions can now recognise when files are uploaded during a page-walk (which shuffles everything up by one, of course), and recover without assuming it has synced</li>
+					<li>subscriptions can now be set an initial file limit and a periodic file limit separately</li>
+					<li>the manage subscriptions dialog is updated for the new object</li>
+					<li>the manage subscriptions dialog now has the import status button so you can review your parsed urls and retry them, or copy errors, or whatever</li>
+					<li>existing subscriptions will convert on the db update</li>
+					<li>subscription popup now shows per-file download progress</li>
+					<li>boorus that use number of thumbs to advance their gallery page indices can now resume</li>
+					<li>the thread watcher now obeys 'exclude deleted' status more reliably</li>
+					<li>the 'page of images' downloader now obeys 'exclude deleted' status more reliably</li>
+					<li>subscriptions now attempt to recover their sync status when a new file is uploaded during sync</li>
+					<li>fixed a bug where the thread watcher was not applying the filename namespace to new files, only redundant ones</li>
+					<li>the old advanced_import_options dictionaries are all updated to the new import_file_options object</li>
+					<li>improved subscription-dialog-was-opened-while-subs-were-running detection and reaction</li>
+					<li>the way galleries are identified behind the scenes is now much simpler and more flexible</li>
+					<li>for now, hentai foundry downloads and subs will no longer support the specific hf filter--they will be unfiltered and sorted newest first, so they work like all the other galleries. I may reintroduce 'sort by popularity' if there is demand for it</li>
+					<li>a bit of importer status update refactoring and cleanup</li>
+					<li>fixed some db vacuum maintenance timing that was interfering with gui reporting, so the 'currently vacuuming' popup never appeared until the vacuum was complete</li>
+					<li>fixed a possible bug for import folders that have a local tag set</li>
+					<li>splash screen is no longer stay_on_top--if there is demand, I will add an option</li>
+					<li>fixed a bug in the page deleted detection code</li>
+					<li>added page hidden detection code, replaced some ambiguous pause code with it</li>
+					<li>improved pause/play code throughout the program</li>
+					<li>corrected some bad x/y status texts</li>
+					<li>for simplicity, the import_file db command now always returns ( status, hash )</li>
+					<li>for simplicity, the import_file db command no longer takes service_keys_to_tags</li>
+					<li>plenty of general code cleanup</li>
+				</ul>
 				<li><h3>version 175</h3></li>
 				<ul>
 					<li>the 'regex shortcuts' button in the path tagging dialog now permits the managing of favourite regex phrases</li>
