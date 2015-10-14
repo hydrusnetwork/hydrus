@@ -121,7 +121,7 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     
     ( w, h ) = pil_image.size
     
-    s = pil_image.tostring()
+    s = pil_image.tobytes()
     
     return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
     

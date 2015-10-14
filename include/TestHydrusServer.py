@@ -328,13 +328,18 @@ class TestServer( unittest.TestCase ):
         
         # petition
         
-        petition = 'petition'
+        action = HC.CONTENT_UPDATE_PETITION
+        account_identifier = HydrusData.AccountIdentifier( account_key = HydrusData.GenerateKey() )
+        reason = 'it sucks'
+        contents = [ HydrusData.Content( HC.CONTENT_TYPE_FILES, [ HydrusData.GenerateKey() for i in range( 10 ) ] ) ]
+        
+        petition = HydrusData.ServerToClientPetition( action = action, petitioner_account_identifier = account_identifier, reason = reason, contents = contents )
         
         HydrusGlobals.test_controller.SetRead( 'petition', petition )
         
         response = service.Request( HC.GET, 'petition' )
         
-        self.assertEqual( response[ 'petition' ], petition )
+        self.assertEqual( type( response ), HydrusData.ServerToClientPetition )
         
         # update
         
@@ -347,7 +352,7 @@ class TestServer( unittest.TestCase ):
         
         path = ServerFiles.GetExpectedServiceUpdatePackagePath( service_key, begin )
         
-        with open( path, 'wb' ) as f: f.write( HydrusSerialisable.DumpToNetworkString( update ) )
+        with open( path, 'wb' ) as f: f.write( update.DumpToNetworkString() )
         
         response = service.Request( HC.GET, 'service_update_package', { 'begin' : begin } )
         
@@ -363,11 +368,11 @@ class TestServer( unittest.TestCase ):
         rows = [ ( tag, [ i for i in range( num_hashes ) ] ) ]
         
         update = HydrusData.ServerToClientContentUpdatePackage()
-        update.AddContentData( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, rows, hash_ids_to_hashes )
+        update.AddContentData( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, rows, hash_ids_to_hashes )
         
         path = ServerFiles.GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
         
-        with open( path, 'wb' ) as f: f.write( HydrusSerialisable.DumpToNetworkString( update ) )
+        with open( path, 'wb' ) as f: f.write( update.DumpToNetworkString() )
         
         response = service.Request( HC.GET, 'content_update_package', { 'begin' : begin, 'subindex' : subindex } )
         

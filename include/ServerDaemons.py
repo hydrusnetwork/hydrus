@@ -2,8 +2,10 @@ import collections
 import hashlib
 import httplib
 import HydrusConstants as HC
+import HydrusData
 import HydrusExceptions
 import HydrusFileHandling
+import HydrusGlobals
 import HydrusNATPunch
 import HydrusServer
 import itertools
@@ -18,8 +20,6 @@ import threading
 import time
 import traceback
 import yaml
-import HydrusData
-import HydrusGlobals
 
 def DAEMONCheckDataUsage(): HydrusGlobals.server_controller.WriteSynchronous( 'check_data_usage' )
 
@@ -34,27 +34,6 @@ def DAEMONFlushRequestsMade( all_requests ): HydrusGlobals.server_controller.Wri
 def DAEMONGenerateUpdates():
     
     if not HydrusGlobals.server_busy:
-        
-        dirty_updates = HydrusGlobals.server_controller.Read( 'dirty_updates' )
-        
-        for ( service_key, tuples ) in dirty_updates.items():
-            
-            for ( begin, end ) in tuples:
-                
-                if HydrusGlobals.view_shutdown:
-                    
-                    return
-                    
-                
-                HydrusGlobals.server_busy = True
-                
-                HydrusGlobals.server_controller.WriteSynchronous( 'clean_update', service_key, begin, end )
-                
-                HydrusGlobals.server_busy = False
-                
-                time.sleep( 1 )
-                
-            
         
         update_ends = HydrusGlobals.server_controller.Read( 'update_ends' )
         
@@ -87,6 +66,29 @@ def DAEMONGenerateUpdates():
             HydrusGlobals.server_busy = False
             
             time.sleep( 1 )
+            
+        
+        time_to_stop = HydrusData.GetNow() + 30
+        
+        dirty_updates = HydrusGlobals.server_controller.Read( 'dirty_updates' )
+        
+        for ( service_key, tuples ) in dirty_updates.items():
+            
+            for ( begin, end ) in tuples:
+                
+                if HydrusGlobals.view_shutdown or HydrusData.TimeHasPassed( time_to_stop ):
+                    
+                    return
+                    
+                
+                HydrusGlobals.server_busy = True
+                
+                HydrusGlobals.server_controller.WriteSynchronous( 'clean_update', service_key, begin, end )
+                
+                HydrusGlobals.server_busy = False
+                
+                time.sleep( 1 )
+                
             
         
     

@@ -884,7 +884,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     path = ServerFiles.GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
                     
-                    network_string = HydrusSerialisable.DumpToNetworkString( content_update_package )
+                    network_string = content_update_package.DumpToNetworkString()
                     
                     with open( path, 'wb' ) as f: f.write( network_string )
                     
@@ -902,7 +902,7 @@ class DB( HydrusDB.HydrusDB ):
             
             path = ServerFiles.GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
             
-            network_string = HydrusSerialisable.DumpToNetworkString( content_update_package )
+            network_string = content_update_package.DumpToNetworkString()
             
             with open( path, 'wb' ) as f: f.write( network_string )
             
@@ -922,7 +922,7 @@ class DB( HydrusDB.HydrusDB ):
         
         path = ServerFiles.GetExpectedServiceUpdatePackagePath( service_key, begin )
         
-        network_string = HydrusSerialisable.DumpToNetworkString( service_update_package )
+        network_string = service_update_package.DumpToNetworkString()
         
         with open( path, 'wb' ) as f: f.write( network_string )
         
@@ -1023,13 +1023,18 @@ class DB( HydrusDB.HydrusDB ):
             
             if result is None: raise HydrusExceptions.ForbiddenException( 'The service could not find that hash in its database.')
             
-        else:
+        elif account_identifier.HasContent():
             
-            if account_identifier.HasHash():
+            content = account_identifier.GetData()
+            
+            content_type = content.GetContentType()
+            content_data = content.GetContent()
+            
+            if content_type == HC.CONTENT_TYPE_FILES:
                 
                 try:
                     
-                    hash = account_identifier.GetData()
+                    hash = content_data[0]
                     
                     hash_id = self._GetHashId( hash )
                     
@@ -1041,11 +1046,11 @@ class DB( HydrusDB.HydrusDB ):
                     
                 except: raise HydrusExceptions.ForbiddenException( 'The service could not find that hash in its database.' )
                 
-            elif account_identifier.HasMapping():
+            elif content_type == HC.CONTENT_TYPE_MAPPING:
                 
                 try:
                     
-                    ( hash, tag ) = account_identifier.GetData()
+                    ( tag, hash ) = content_data
                     
                     hash_id = self._GetHashId( hash )
                     tag_id = self._GetTagId( tag )
@@ -1153,6 +1158,14 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( service_id, tuples ) in service_ids_to_tuples.items():
             
+            result_1 = self._c.execute( 'SELECT 1 FROM file_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
+            result_2 = self._c.execute( 'SELECT 1 FROM mapping_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
+            
+            if result_1 is not None or result_2 is not None:
+                
+                continue
+                
+            
             service_key = self._GetServiceKey( service_id )
             
             service_keys_to_tuples[ service_key ] = tuples
@@ -1172,7 +1185,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetFilePetition( self, service_id ):
         
-        result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PETITIONED ) ).fetchone()
+        data_type = HC.CONTENT_TYPE_FILES
+        status = HC.PETITIONED
+        action = HC.CONTENT_UPDATE_PETITION
+        
+        result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, status ) ).fetchone()
         
         if result is None: raise HydrusExceptions.NotFoundException( 'No petitions!' )
         
@@ -1184,13 +1201,13 @@ class DB( HydrusDB.HydrusDB ):
         
         reason = self._GetReason( reason_id )
         
-        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ? AND account_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, reason_id, HC.PETITIONED ) ) ]
+        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ? AND account_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, reason_id, status ) ) ]
         
         hashes = self._GetHashes( hash_ids )
         
-        petition_data = hashes
+        contents = [ HydrusData.Content( data_type, hashes ) ]
         
-        return HydrusData.ServerToClientPetition( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, petitioner_account_identifier, petition_data, reason )
+        return HydrusData.ServerToClientPetition( action, petitioner_account_identifier, reason, contents )
         
     
     def _GetHash( self, hash_id ):
@@ -1500,48 +1517,64 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetTagPetition( self, service_id ):
         
-        petition_types = [ HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ]
+        content_types = [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ]
         
-        random.shuffle( petition_types )
+        random.shuffle( content_types )
         
-        for petition_type in petition_types:
+        contents = []
+        
+        for content_type in content_types:
             
-            if petition_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+            if content_type == HC.CONTENT_TYPE_MAPPINGS:
                 
-                result = self._c.execute( 'SELECT DISTINCT account_id, tag_id, reason_id, status FROM mapping_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PETITIONED ) ).fetchone()
-                
-                if result is None: continue
-                
-                ( account_id, tag_id, reason_id, status ) = result
-                
+                status = HC.PETITIONED
                 action = HC.CONTENT_UPDATE_PETITION
                 
-                tag = self._GetTag( tag_id )
-                
-                hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND tag_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, tag_id, reason_id, HC.PETITIONED ) ) ]
-                
-                hashes = self._GetHashes( hash_ids )
-                
-                petition_data = ( tag, hashes )
-                
-            elif petition_type in ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ):
-                
-                if petition_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS: result = self._c.execute( 'SELECT account_id, old_tag_id, new_tag_id, reason_id, status FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
-                elif petition_type == HC.CONTENT_DATA_TYPE_TAG_PARENTS: result = self._c.execute( 'SELECT account_id, old_tag_id, new_tag_id, reason_id, status FROM tag_parents WHERE service_id = ? AND status IN ( ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
+                result = self._c.execute( 'SELECT account_id, reason_id FROM mapping_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, status ) ).fetchone()
                 
                 if result is None: continue
                 
-                ( account_id, old_tag_id, new_tag_id, reason_id, status ) = result
+                ( account_id, reason_id ) = result
                 
-                old_tag = self._GetTag( old_tag_id )
+                tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, reason_id, status ) ) )
                 
-                new_tag = self._GetTag( new_tag_id )
+                for ( tag_id, hash_ids ) in tag_ids_to_hash_ids.items():
+                    
+                    tag = self._GetTag( tag_id )
+                    
+                    hashes = self._GetHashes( hash_ids )
+                    
+                    content = HydrusData.Content( content_type, ( tag, hashes ) )
+                    
+                    contents.append( content )
+                    
                 
-                petition_data = ( old_tag, new_tag )
+            elif content_type in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
                 
-            
-            if status == HC.PENDING: action = HC.CONTENT_UPDATE_PEND
-            elif status == HC.PETITIONED: action = HC.CONTENT_UPDATE_PETITION
+                if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS: result = self._c.execute( 'SELECT account_id, reason_id, status FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
+                elif content_type == HC.CONTENT_TYPE_TAG_PARENTS: result = self._c.execute( 'SELECT account_id, reason_id, status FROM tag_parents WHERE service_id = ? AND status IN ( ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
+                
+                if result is None: continue
+                
+                ( account_id, reason_id, status ) = result
+                
+                if status == HC.PENDING: action = HC.CONTENT_UPDATE_PEND
+                elif status == HC.PETITIONED: action = HC.CONTENT_UPDATE_PETITION
+                
+                if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS: tag_pairs = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_siblings WHERE service_id = ? AND account_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, reason_id, status ) ).fetchall()
+                elif content_type == HC.CONTENT_TYPE_TAG_PARENTS: tag_pairs = self._c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_parents WHERE service_id = ? AND account_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, reason_id, status ) ).fetchall()
+                
+                for ( old_tag_id, new_tag_id ) in tag_pairs:
+                    
+                    old_tag = self._GetTag( old_tag_id )
+                    
+                    new_tag = self._GetTag( new_tag_id )
+                    
+                    content = HydrusData.Content( content_type, ( old_tag, new_tag ) )
+                    
+                    contents.append( content )
+                    
+                
             
             account_key = self._GetAccountKeyFromAccountId( account_id )
             
@@ -1549,7 +1582,7 @@ class DB( HydrusDB.HydrusDB ):
             
             reason = self._GetReason( reason_id )
             
-            return HydrusData.ServerToClientPetition( petition_type, action, petitioner_account_identifier, petition_data, reason )
+            return HydrusData.ServerToClientPetition( action, petitioner_account_identifier, reason, contents )
             
         
         raise HydrusExceptions.NotFoundException( 'No petitions!' )
@@ -1615,7 +1648,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
             
-            yield ( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, block_of_files_info, hash_ids_to_hashes, len( hash_ids ) )
+            yield ( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, block_of_files_info, hash_ids_to_hashes, len( hash_ids ) )
             
         
         #
@@ -1628,7 +1661,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
             
-            yield ( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_files_info, hash_ids_to_hashes, len( hash_ids ) )
+            yield ( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_files_info, hash_ids_to_hashes, len( hash_ids ) )
             
         
     
@@ -1644,7 +1677,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_hashes = self._GetHashIdsToHashes( block_of_hash_ids )
                 
-                yield ( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, [ ( tag, block_of_hash_ids ) ], hash_ids_to_hashes, len( block_of_hash_ids ) )
+                yield ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, [ ( tag, block_of_hash_ids ) ], hash_ids_to_hashes, len( block_of_hash_ids ) )
                 
             
         
@@ -1658,7 +1691,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_hashes = self._GetHashIdsToHashes( block_of_hash_ids )
                 
-                yield ( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, [ ( tag, block_of_hash_ids ) ], hash_ids_to_hashes, len( block_of_hash_ids ) )
+                yield ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, [ ( tag, block_of_hash_ids ) ], hash_ids_to_hashes, len( block_of_hash_ids ) )
                 
             
         
@@ -1672,7 +1705,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_hashes = {}
             
-            yield ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, tag_siblings, hash_ids_to_hashes, len( tag_siblings ) )
+            yield ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, tag_siblings, hash_ids_to_hashes, len( tag_siblings ) )
             
         
         #
@@ -1685,7 +1718,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_hashes = {}
             
-            yield ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, deleted_tag_siblings, hash_ids_to_hashes, len( deleted_tag_siblings ) )
+            yield ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, deleted_tag_siblings, hash_ids_to_hashes, len( deleted_tag_siblings ) )
             
         
         # tag parents
@@ -1698,7 +1731,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_hashes = {}
             
-            yield ( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, tag_parents, hash_ids_to_hashes, len( tag_parents ) )
+            yield ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, tag_parents, hash_ids_to_hashes, len( tag_parents ) )
             
         
         #
@@ -1711,7 +1744,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_hashes = {}
             
-            yield ( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, deleted_tag_parents, hash_ids_to_hashes, len( deleted_tag_parents ) )
+            yield ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, deleted_tag_parents, hash_ids_to_hashes, len( deleted_tag_parents ) )
             
         
     
@@ -1924,7 +1957,7 @@ class DB( HydrusDB.HydrusDB ):
                 if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveFilePetition
                 elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddFilePetition
                 
-                for ( hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION ):
+                for ( hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION ):
                     
                     hash_ids = self._GetHashIds( hashes )
                     
@@ -1936,7 +1969,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if account.HasPermission( HC.RESOLVE_PETITIONS ):
                 
-                for hashes in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DENY_PETITION ):
+                for hashes in update.GetContentDataIterator( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DENY_PETITION ):
                     
                     hash_ids = self._GetHashIds( hashes )
                     
@@ -1954,7 +1987,7 @@ class DB( HydrusDB.HydrusDB ):
             
             overwrite_deleted = account.HasPermission( HC.RESOLVE_PETITIONS )
             
-            for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND ):
+            for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND ):
                 
                 tag_id = self._GetTagId( tag )
                 
@@ -1968,7 +2001,7 @@ class DB( HydrusDB.HydrusDB ):
                 if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveMappingPetition
                 elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddMappingPetition
                 
-                for ( tag, hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION ):
+                for ( tag, hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION ):
                     
                     tag_id = self._GetTagId( tag )
                     
@@ -1982,7 +2015,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if account.HasPermission( HC.RESOLVE_PETITIONS ):
                 
-                for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
                     
                     tag_id = self._GetTagId( tag )
                     
@@ -1999,7 +2032,7 @@ class DB( HydrusDB.HydrusDB ):
                 if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
                 elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
                 
-                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND ):
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     new_tag_id = self._GetTagId( new_tag )
@@ -2012,7 +2045,7 @@ class DB( HydrusDB.HydrusDB ):
                 if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
                 elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
                 
-                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION ):
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     new_tag_id = self._GetTagId( new_tag )
@@ -2025,7 +2058,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if account.HasPermission( HC.RESOLVE_PETITIONS ):
                 
-                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PEND ):
+                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PEND ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     
@@ -2034,7 +2067,7 @@ class DB( HydrusDB.HydrusDB ):
                     self._DenyTagSiblingPetition( service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PEND )
                     
                 
-                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     
@@ -2051,7 +2084,7 @@ class DB( HydrusDB.HydrusDB ):
                 if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
                 elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
                 
-                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND ):
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     new_tag_id = self._GetTagId( new_tag )
@@ -2064,7 +2097,7 @@ class DB( HydrusDB.HydrusDB ):
                 if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
                 elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
                 
-                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION ):
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     new_tag_id = self._GetTagId( new_tag )
@@ -2077,7 +2110,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if account.HasPermission( HC.RESOLVE_PETITIONS ):
                 
-                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PEND ):
+                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PEND ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     
@@ -2086,7 +2119,7 @@ class DB( HydrusDB.HydrusDB ):
                     self._DenyTagParentPetition( service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PEND )
                     
                 
-                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PETITION ):
                     
                     old_tag_id = self._GetTagId( old_tag )
                     

@@ -362,7 +362,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_file_search_context = HydrusSerialisable.GetSerialisableTuple( self._file_search_context )
+        serialisable_file_search_context = self._file_search_context.GetSerialisableTuple()
         
         return ( self._export_type, serialisable_file_search_context, self._period, self._phrase, self._last_checked )
         

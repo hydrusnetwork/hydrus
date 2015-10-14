@@ -316,6 +316,11 @@ class Controller( HydrusController.HydrusController ):
         return self._options
         
     
+    def GetNewOptions( self ):
+        
+        return self._new_options
+        
+    
     def GetServicesManager( self ):
         
         return self._services_manager
@@ -330,6 +335,7 @@ class Controller( HydrusController.HydrusController ):
         HydrusController.HydrusController.InitModel( self )
         
         self._options = self.Read( 'options' )
+        self._new_options = self.Read( 'new_options' )
         
         HC.options = self._options
     

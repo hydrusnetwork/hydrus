@@ -24,6 +24,10 @@ SERIALISABLE_TYPE_IMPORT_FOLDER = 19
 SERIALISABLE_TYPE_GALLERY_IMPORT = 20
 SERIALISABLE_TYPE_DICTIONARY = 21
 SERIALISABLE_TYPE_CLIENT_OPTIONS = 22
+SERIALISABLE_TYPE_CONTENT = 23
+SERIALISABLE_TYPE_SERVER_TO_CLIENT_PETITION = 24
+SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER = 25
+SERIALISABLE_TYPE_LIST = 26
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -58,29 +62,6 @@ def CreateFromSerialisableTuple( obj_tuple ):
     
     return obj
     
-def DumpToNetworkString( obj ):
-    
-    obj_string = DumpToString( obj )
-    
-    return lz4.dumps( obj_string )
-    
-def DumpToString( obj ):
-    
-    obj_tuple = GetSerialisableTuple( obj )
-    
-    return json.dumps( obj_tuple )
-    
-def GetSerialisableTuple( obj ):
-    
-    if isinstance( obj, SerialisableBaseNamed ):
-        
-        return ( obj.SERIALISABLE_TYPE, obj.GetName(), obj.SERIALISABLE_VERSION, obj.GetSerialisableInfo() )
-        
-    else:
-        
-        return ( obj.SERIALISABLE_TYPE, obj.SERIALISABLE_VERSION, obj.GetSerialisableInfo() )
-        
-    
 class SerialisableBase( object ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BASE
@@ -100,17 +81,24 @@ class SerialisableBase( object ):
         
         return old_serialisable_info
         
+        
+    def DumpToNetworkString( self ):
+        
+        obj_string = self.DumpToString()
+        
+        return lz4.dumps( obj_string )
+        
     
-    def GetSerialisableInfo( self ):
+    def DumpToString( self ):
         
-        serialisable_info = self._GetSerialisableInfo()
+        obj_tuple = self.GetSerialisableTuple()
         
-        return serialisable_info
+        return json.dumps( obj_tuple )
         
     
-    def GetTypeAndVersion( self ):
+    def GetSerialisableTuple( self ):
         
-        return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION )
+        return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, self._GetSerialisableInfo() )
         
     
     def InitialiseFromSerialisableInfo( self, version, serialisable_info ):
@@ -134,6 +122,11 @@ class SerialisableBaseNamed( SerialisableBase ):
         self._name = name
         
     
+    def GetSerialisableTuple( self ):
+        
+        return ( self.SERIALISABLE_TYPE, self._name, self.SERIALISABLE_VERSION, self._GetSerialisableInfo() )
+        
+
     def GetName( self ): return self._name
     
     def SetName( self, name ): self._name = name
@@ -160,11 +153,11 @@ class SerialisableDictionary( SerialisableBase, dict ):
             
             if isinstance( key, SerialisableBase ):
                 
-                serialisable_key = GetSerialisableTuple( key )
+                serialisable_key = key.GetSerialisableTuple()
                 
                 if isinstance( value, SerialisableBase ):
                     
-                    serialisable_value = GetSerialisableTuple( value )
+                    serialisable_value = value.GetSerialisableTuple()
                     
                     serialisable_key_serialisable_value_pairs.append( ( serialisable_key, serialisable_value ) )
                     
@@ -181,7 +174,7 @@ class SerialisableDictionary( SerialisableBase, dict ):
                 
                 if isinstance( value, SerialisableBase ):
                     
-                    serialisable_value = GetSerialisableTuple( value )
+                    serialisable_value = value.GetSerialisableTuple()
                     
                     simple_key_serialisable_value_pairs.append( ( serialisable_key, serialisable_value ) )
                     
@@ -231,3 +224,29 @@ class SerialisableDictionary( SerialisableBase, dict ):
         
     
 SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_DICTIONARY ] = SerialisableDictionary
+
+class SerialisableList( SerialisableBase, list ):
+    
+    SERIALISABLE_TYPE = SERIALISABLE_TYPE_LIST
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, *args, **kwargs ):
+        
+        list.__init__( self, *args, **kwargs )
+        SerialisableBase.__init__( self )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return [ obj.GetSerialisableTuple() for obj in self ]
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        for obj_tuple in serialisable_info:
+            
+            self.append( CreateFromSerialisableTuple( obj_tuple ) )
+            
+        
+    
+SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_LIST ] = SerialisableList

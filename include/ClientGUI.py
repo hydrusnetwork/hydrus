@@ -1299,7 +1299,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
         
-        page_name = ClientDownloading.ConvertGalleryIdentifierToPrettyString( gallery_identifier )
+        page_name = gallery_identifier.ToString()
         
         self._NewPage( page_name, management_controller )
         
@@ -1828,7 +1828,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
                         
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                         
                         HydrusGlobals.client_controller.Write( 'content_updates', { service_key : content_updates } )
                         

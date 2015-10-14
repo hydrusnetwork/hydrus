@@ -54,6 +54,91 @@ def CalculateScoreFromRating( count, rating ):
     
     return score
     
+def ConvertContentsToClientToServerContentUpdatePackage( action, contents, reason = None ):
+    
+    hashes_to_hash_ids = {}
+    hash_ids_to_hashes = {}
+    hash_i = 0
+    
+    content_data_dict = GetEmptyDataDict()
+    
+    for content in contents:
+        
+        content_type = content.GetContentType()
+        content_data = content.GetContent()
+        
+        if content_type == HC.CONTENT_TYPE_FILES:
+            
+            hashes = content_data
+            
+        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            ( tag, hashes ) = content_data
+            
+        elif content_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
+            
+            ( old_tag, new_tag ) = content_data
+            
+            hashes = set()
+            
+        
+        hash_ids = []
+        
+        for hash in hashes:
+            
+            if hash not in hashes_to_hash_ids:
+                
+                hashes_to_hash_ids[ hash ] = hash_i
+                hash_ids_to_hashes[ hash_i ] = hash
+                
+                hash_i += 1
+                
+            
+            hash_ids.append( hashes_to_hash_ids[ hash ] )
+            
+        
+        if action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
+            
+            if reason is None:
+                
+                reason = 'admin'
+                
+            
+            if content_type == HC.CONTENT_TYPE_FILES:
+                
+                row = ( hash_ids, reason )
+                
+            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                row = ( tag, hash_ids, reason )
+                
+            else:
+                
+                row = ( ( old_tag, new_tag ), reason )
+                
+            
+        elif action in ( HC.CONTENT_UPDATE_DENY_PEND, HC.CONTENT_UPDATE_DENY_PETITION ):
+            
+            if content_type == HC.CONTENT_TYPE_FILES:
+                
+                row = hash_ids
+                
+            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                row = ( tag, hash_ids )
+                
+            elif content_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
+                
+                row = ( old_tag, new_tag )
+                
+            
+        
+        content_data_dict[ content_type ][ action ].append( row )
+        
+    
+    return ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes )
+    
+    
 def ConvertIntToBytes( size ):
     
     if size is None: return 'unknown size'
@@ -189,7 +274,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
             
             ( data_type, action, row ) = content_update.ToTuple()
             
-            if data_type == HC.CONTENT_DATA_TYPE_MAPPINGS: extra_words = ' tags for'
+            if data_type == HC.CONTENT_TYPE_MAPPINGS: extra_words = ' tags for'
             
             actions.add( HC.content_update_string_lookup[ action ] )
             
@@ -986,17 +1071,15 @@ class Account( HydrusYAMLBase ):
     
 sqlite3.register_adapter( Account, yaml.safe_dump )
 
-class AccountIdentifier( HydrusYAMLBase ):
+class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER
+    SERIALISABLE_VERSION = 1
     
     TYPE_ACCOUNT_KEY = 1
-    TYPE_HASH = 2
-    TYPE_MAPPING = 3
-    TYPE_SIBLING = 4
-    TYPE_PARENT = 5
+    TYPE_CONTENT = 2
     
-    yaml_tag = u'!AccountIdentifier'
-    
-    def __init__( self, account_key = None, hash = None, tag = None ):
+    def __init__( self, account_key = None, content = None ):
         
         HydrusYAMLBase.__init__( self )
         
@@ -1005,18 +1088,10 @@ class AccountIdentifier( HydrusYAMLBase ):
             self._type = self.TYPE_ACCOUNT_KEY
             self._data = account_key
             
-        elif hash is not None:
+        elif content is not None:
             
-            if tag is not None:
-                
-                self._type = self.TYPE_MAPPING
-                self._data = ( hash, tag )
-                
-            else:
-                
-                self._type = self.TYPE_HASH
-                self._data = hash
-                
+            self._type = self.TYPE_CONTENT
+            self._data = content
             
         
     
@@ -1028,14 +1103,42 @@ class AccountIdentifier( HydrusYAMLBase ):
     
     def __repr__( self ): return 'Account Identifier: ' + ToString( ( self._type, self._data ) )
     
+    def _GetSerialisableInfo( self ):
+        
+        if self._type == self.TYPE_ACCOUNT_KEY:
+            
+            serialisable_data = self._data.encode( 'hex' )
+            
+        elif self._type == self.TYPE_CONTENT:
+            
+            serialisable_data = self._data.GetSerialisableTuple()
+            
+        
+        return ( self._type, serialisable_data )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._type, serialisable_data ) = serialisable_info
+        
+        if self._type == self.TYPE_ACCOUNT_KEY:
+            
+            self._data = serialisable_data.decode( 'hex' )
+            
+        elif self._type == self.TYPE_CONTENT:
+            
+            self._data = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+            
+        
+    
     def GetData( self ): return self._data
     
     def HasAccountKey( self ): return self._type == self.TYPE_ACCOUNT_KEY
     
-    def HasHash( self ): return self._type == self.TYPE_HASH
+    def HasContent( self ): return self._type == self.TYPE_CONTENT
     
-    def HasMapping( self ): return self._type == self.TYPE_MAPPING
-    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER ] = AccountIdentifier
+
 class AccountType( HydrusYAMLBase ):
     
     yaml_tag = u'!AccountType'
@@ -1133,7 +1236,7 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
     
     def GetContentUpdates( self, for_client = False ):
         
-        data_types = [ HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ]
+        data_types = [ HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ]
         actions = [ HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_DENY_PEND, HC.CONTENT_UPDATE_DENY_PETITION ]
         
         content_updates = []
@@ -1148,15 +1251,15 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
                 elif action == HC.CONTENT_UPDATE_PETITION: new_action = HC.CONTENT_UPDATE_DELETE
                 else: continue
                 
-                if data_type in ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ) and action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
+                if data_type in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ) and action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
                     
                     munge_row = lambda ( pair, reason ): pair
                     
-                elif data_type == HC.CONTENT_DATA_TYPE_FILES and action == HC.CONTENT_UPDATE_PETITION:
+                elif data_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_PETITION:
                     
                     munge_row = lambda ( hashes, reason ): hashes
                     
-                elif data_type == HC.CONTENT_DATA_TYPE_MAPPINGS and action == HC.CONTENT_UPDATE_PETITION:
+                elif data_type == HC.CONTENT_TYPE_MAPPINGS and action == HC.CONTENT_UPDATE_PETITION:
                     
                     munge_row = lambda ( tag, hashes, reason ): ( tag, hashes )
                     
@@ -1177,12 +1280,12 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
         
         data = self._content_data[ data_type ][ action ]
         
-        if data_type == HC.CONTENT_DATA_TYPE_FILES:
+        if data_type == HC.CONTENT_TYPE_FILES:
             
             if action == HC.CONTENT_UPDATE_PETITION: return ( ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids }, reason ) for ( hash_ids, reason ) in data )
             else: return ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids } for hash_ids in ( data, ) )
             
-        if data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+        if data_type == HC.CONTENT_TYPE_MAPPINGS:
             
             if action == HC.CONTENT_UPDATE_PETITION: return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ], reason ) for ( tag, hash_ids, reason ) in data )
             else: return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in data )
@@ -1194,10 +1297,10 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
         
         tags = set()
         
-        try: tags.update( ( tag for ( tag, hash_ids ) in self._content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PEND ] ) )
+        try: tags.update( ( tag for ( tag, hash_ids ) in self._content_data[ HC.CONTENT_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PEND ] ) )
         except: pass
         
-        try: tags.update( ( tag for ( tag, hash_ids, reason ) in self._content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ] ) )
+        try: tags.update( ( tag for ( tag, hash_ids, reason ) in self._content_data[ HC.CONTENT_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ] ) )
         except: pass
         
         return tags
@@ -1215,6 +1318,174 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
         return num_total == 0
         
     
+class Content( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CONTENT
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, content_type = None, content = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._content_type = content_type
+        self._content = content
+        
+    
+    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    
+    def __hash__( self ): return ( self._content_type, self._content ).__hash__()
+    
+    def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def __repr__( self ): return 'Content: ' + self.ToString()
+    
+    def _GetSerialisableInfo( self ):
+        
+        def EncodeHashes( hs ):
+            
+            return [ h.encode( 'hex' ) for h in hs ]
+            
+        
+        if self._content_type == HC.CONTENT_TYPE_FILES:
+            
+            hashes = self._content
+            
+            serialisable_content = EncodeHashes( hashes )
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPING:
+            
+            ( tag, hash ) = self._content
+            
+            serialisable_content = ( tag, hash.encode( 'hex' ) )
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            ( tag, hashes ) = self._content
+            
+            serialisable_content = ( tag, EncodeHashes( hashes ) )
+            
+        elif self._content_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
+            
+            ( old_tag, new_tag ) = self._content
+            
+            serialisable_content = ( old_tag, new_tag )
+            
+        
+        return ( self._content_type, serialisable_content )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        def DecodeHashes( hs ):
+            
+            return [ h.decode( 'hex' ) for h in hs ]
+            
+        
+        ( self._content_type, serialisable_content ) = serialisable_info
+        
+        if self._content_type == HC.CONTENT_TYPE_FILES:
+            
+            serialisable_hashes = serialisable_content
+            
+            self._content = DecodeHashes( serialisable_hashes )
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPING:
+            
+            ( tag, serialisable_hash ) = serialisable_content
+            
+            self._content = ( tag, serialisable_hash.decode( 'hex' ) )
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            ( tag, serialisable_hashes ) = serialisable_content
+            
+            self._content = ( tag, DecodeHashes( serialisable_hashes ) )
+            
+        elif self._content_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
+            
+            ( old_tag, new_tag ) = serialisable_content
+            
+            self._content = ( old_tag, new_tag )
+            
+        
+    
+    def GetContent( self ):
+        
+        return self._content
+        
+    
+    def GetContentType( self ):
+        
+        return self._content_type
+        
+    
+    def GetHashes( self ):
+        
+        if self._content_type == HC.CONTENT_TYPE_FILES:
+            
+            hashes = self._content
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPING:
+            
+            ( tag, hash ) = self._content
+            
+            return [ hash ]
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            ( tag, hashes ) = self._content
+            
+        else:
+            
+            hashes = []
+            
+        
+        return hashes
+        
+    
+    def HasHashes( self ):
+        
+        return self._content_type in ( HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPING, HC.CONTENT_TYPE_MAPPINGS )
+        
+    
+    def ToString( self ):
+        
+        if self._content_type == HC.CONTENT_TYPE_FILES:
+            
+            hashes = self._content
+            
+            text = 'FILES: ' + ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPING:
+            
+            ( tag, hash ) = self._content
+            
+            text = 'MAPPING: ' + tag + ' for ' + hash.encode( 'hex' )
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            ( tag, hashes ) = self._content
+            
+            text = 'MAPPINGS: ' + tag + ' for ' + ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            
+        elif self._content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+            
+            ( child, parent ) = self._content
+            
+            text = 'PARENT: ' '"' + child + '" -> "' + parent + '"'
+            
+        elif self._content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+            
+            ( old_tag, new_tag ) = self._content
+            
+            text = 'SIBLING: ' + '"' + old_tag + '" -> "' + new_tag + '"'
+            
+        
+        return text
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CONTENT ] = Content
+
 class ContentUpdate( object ):
     
     def __init__( self, data_type, action, row ):
@@ -1232,7 +1503,7 @@ class ContentUpdate( object ):
     
     def GetHashes( self ):
         
-        if self._data_type == HC.CONTENT_DATA_TYPE_FILES:
+        if self._data_type == HC.CONTENT_TYPE_FILES:
             
             if self._action == HC.CONTENT_UPDATE_ADD:
                 
@@ -1243,14 +1514,14 @@ class ContentUpdate( object ):
             elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ): hashes = self._row
             elif self._action == HC.CONTENT_UPDATE_PETITION: ( hashes, reason ) = self._row
             
-        elif self._data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+        elif self._data_type == HC.CONTENT_TYPE_MAPPINGS:
             
             if self._action == HC.CONTENT_UPDATE_ADVANCED: hashes = set()
             elif self._action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = self._row
             else: ( tag, hashes ) = self._row
             
-        elif self._data_type in ( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ): hashes = set()
-        elif self._data_type == HC.CONTENT_DATA_TYPE_RATINGS:
+        elif self._data_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ): hashes = set()
+        elif self._data_type == HC.CONTENT_TYPE_RATINGS:
             
             if self._action == HC.CONTENT_UPDATE_ADD: ( rating, hashes ) = self._row
             
@@ -1739,145 +2010,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE ] = Predicate
 
-class ServerToClientPetition( HydrusYAMLBase ):
-    
-    yaml_tag = u'!ServerToClientPetition'
-    
-    def __init__( self, petition_type, action, petitioner_account_identifier, petition_data, reason ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._petition_type = petition_type
-        self._action = action
-        self._petitioner_account_identifier = petitioner_account_identifier
-        self._petition_data = petition_data
-        self._reason = reason
-        
-    
-    def GetApproval( self, reason = None ):
-        
-        if reason is None: reason = self._reason
-        
-        if self._petition_type == HC.CONTENT_DATA_TYPE_FILES: hashes = self._petition_data
-        elif self._petition_type == HC.CONTENT_DATA_TYPE_MAPPINGS: ( tag, hashes ) = self._petition_data
-        else: hashes = set()
-        
-        hash_ids_to_hashes = dict( enumerate( hashes ) )
-        
-        hash_ids = hash_ids_to_hashes.keys()
-        
-        content_data = GetEmptyDataDict()
-        
-        if self._petition_type == HC.CONTENT_DATA_TYPE_FILES: row = ( hash_ids, reason )
-        elif self._petition_type == HC.CONTENT_DATA_TYPE_MAPPINGS: row = ( tag, hash_ids, reason )
-        else:
-            
-            ( old, new ) = self._petition_data
-            
-            row = ( ( old, new ), reason )
-            
-        
-        content_data[ self._petition_type ][ self._action ].append( row )
-        
-        return ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes )
-        
-    
-    def GetDenial( self ):
-        
-        if self._petition_type == HC.CONTENT_DATA_TYPE_FILES: hashes = self._petition_data
-        elif self._petition_type == HC.CONTENT_DATA_TYPE_MAPPINGS: ( tag, hashes ) = self._petition_data
-        else: hashes = set()
-        
-        hash_ids_to_hashes = dict( enumerate( hashes ) )
-        
-        hash_ids = hash_ids_to_hashes.keys()
-        
-        if self._petition_type == HC.CONTENT_DATA_TYPE_FILES: row_list = hash_ids
-        elif self._petition_type == HC.CONTENT_DATA_TYPE_MAPPINGS: row_list = [ ( tag, hash_ids ) ]
-        else: row_list = [ self._petition_data ]
-        
-        content_data = GetEmptyDataDict()
-        
-        if self._action == HC.CONTENT_UPDATE_PEND: denial_action = HC.CONTENT_UPDATE_DENY_PEND
-        elif self._action == HC.CONTENT_UPDATE_PETITION: denial_action = HC.CONTENT_UPDATE_DENY_PETITION
-        
-        content_data[ self._petition_type ][ denial_action ] = row_list
-        
-        return ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes )
-        
-    
-    def GetHashes( self ):
-        
-        if self._petition_type == HC.CONTENT_DATA_TYPE_FILES: hashes = self._petition_data
-        elif self._petition_type == HC.CONTENT_DATA_TYPE_MAPPINGS: ( tag, hashes ) = self._petition_data
-        else: hashes = set()
-        
-        return hashes
-        
-    
-    def GetPetitionerIdentifier( self ): return self._petitioner_account_identifier
-    
-    def GetPetitionString( self ):
-        
-        if self._action == HC.CONTENT_UPDATE_PEND: action_phrase = 'Add '
-        elif self._action == HC.CONTENT_UPDATE_PETITION: action_phrase = 'Remove '
-        
-        if self._petition_type == HC.CONTENT_DATA_TYPE_FILES:
-            
-            hashes = self._petition_data
-            
-            action_phrase += 'files'
-            
-            content_phrase = ConvertIntToPrettyString( len( hashes ) ) + ' files'
-            
-        elif self._petition_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
-            
-            ( tag, hashes ) = self._petition_data
-            
-            action_phrase += 'a tag:'
-            
-            content_phrase = '    ' + tag
-            content_phrase += os.linesep * 2
-            content_phrase += 'For ' + ConvertIntToPrettyString( len( hashes ) ) + ' files'
-            
-        elif self._petition_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS:
-            
-            ( old_tag, new_tag ) = self._petition_data
-            
-            action_phrase += 'a sibling:'
-            
-            content_phrase = '    ' + old_tag
-            content_phrase += os.linesep * 2
-            content_phrase += 'Being replaced with:'
-            content_phrase += os.linesep * 2
-            content_phrase += '    ' + new_tag
-            
-        elif self._petition_type == HC.CONTENT_DATA_TYPE_TAG_PARENTS:
-            
-            ( old_tag, new_tag ) = self._petition_data
-            
-            action_phrase += 'a parent:'
-            
-            content_phrase = '    ' + old_tag
-            content_phrase += os.linesep * 2
-            content_phrase += 'Always inheriting:'
-            content_phrase += os.linesep * 2
-            content_phrase += '    ' + new_tag
-            
-        
-        reason_phrase = 'Because:'
-        reason_phrase += os.linesep * 2
-        reason_phrase += '    ' + self._reason
-        
-        result = action_phrase
-        result += os.linesep * 2
-        result += content_phrase
-        result += os.linesep * 2
-        result += reason_phrase
-        
-        return result
-        
-    
 class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_CONTENT_UPDATE_PACKAGE
@@ -1957,12 +2089,12 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
         
         data = self._content_data[ data_type ][ action ]
         
-        if data_type == HC.CONTENT_DATA_TYPE_FILES:
+        if data_type == HC.CONTENT_TYPE_FILES:
             
             if action == HC.CONTENT_UPDATE_ADD: return ( ( self._hash_ids_to_hashes[ hash_id ], size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in data )
             else: return ( ( self._hash_ids_to_hashes[ hash_id ], ) for hash_id in data )
             
-        elif data_type == HC.CONTENT_DATA_TYPE_MAPPINGS: return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in data )
+        elif data_type == HC.CONTENT_TYPE_MAPPINGS: return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in data )
         else: return data.__iter__()
         
     
@@ -1991,7 +2123,7 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
                 
                 data = self._content_data[ data_type ][ action ]
                 
-                if data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+                if data_type == HC.CONTENT_TYPE_MAPPINGS:
                     
                     for ( tag, hash_ids ) in data:
                         
@@ -2007,7 +2139,7 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
     
     def IterateContentUpdates( self, as_if_pending = False ):
         
-        data_types = [ HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ]
+        data_types = [ HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ]
         actions = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ]
         
         for ( data_type, action ) in itertools.product( data_types, actions ):
@@ -2033,18 +2165,103 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
         
         tags = set()
         
-        tags.update( ( tag for ( tag, hash_ids ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CURRENT ) ) )
-        tags.update( ( tag for ( tag, hash_ids ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.DELETED ) ) )
+        tags.update( ( tag for ( tag, hash_ids ) in self.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CURRENT ) ) )
+        tags.update( ( tag for ( tag, hash_ids ) in self.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.DELETED ) ) )
         
-        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CURRENT ) ) )
-        tags.update( ( new_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CURRENT ) ) )
-        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.DELETED ) ) )
-        tags.update( ( new_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.DELETED ) ) )
+        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CURRENT ) ) )
+        tags.update( ( new_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CURRENT ) ) )
+        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.DELETED ) ) )
+        tags.update( ( new_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.DELETED ) ) )
         
         return tags
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_CONTENT_UPDATE_PACKAGE ] = ServerToClientContentUpdatePackage
+
+class ServerToClientPetition( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_PETITION
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, action = None, petitioner_account_identifier = None, reason = None, contents = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._action = action
+        self._petitioner_account_identifier = petitioner_account_identifier
+        self._reason = reason
+        self._contents = contents
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_petitioner_account_identifier = self._petitioner_account_identifier.GetSerialisableTuple()
+        serialisable_contents = [ content.GetSerialisableTuple() for content in self._contents ]
+        
+        return ( self._action, serialisable_petitioner_account_identifier, self._reason, serialisable_contents )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._action, serialisable_petitioner_account_identifier, self._reason, serialisable_contents ) = serialisable_info
+        
+        self._petitioner_account_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_petitioner_account_identifier )
+        self._contents = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content ) for serialisable_content in serialisable_contents ]
+        
+    
+    def GetActionTextAndColour( self ):
+        
+        action_text = ''
+        
+        if self._action == HC.CONTENT_UPDATE_PEND:
+            
+            action_text += 'ADD'
+            action_colour = ( 0, 128, 0 )
+            
+        elif self._action == HC.CONTENT_UPDATE_PETITION:
+            
+            action_text += 'DELETE'
+            action_colour = ( 128, 0, 0 )
+            
+        
+        return ( action_text, action_colour )
+        
+    
+    def GetApproval( self, filtered_contents ):
+        
+        return ConvertContentsToClientToServerContentUpdatePackage( self._action, filtered_contents, reason = self._reason )
+        
+    
+    def GetContents( self ):
+        
+        return self._contents
+        
+    
+    def GetDenial( self, filtered_contents ):
+        
+        if self._action == HC.CONTENT_UPDATE_PEND:
+            
+            denial_action = HC.CONTENT_UPDATE_DENY_PEND
+            
+        elif self._action == HC.CONTENT_UPDATE_PETITION:
+            
+            denial_action = HC.CONTENT_UPDATE_DENY_PETITION
+            
+        
+        return ConvertContentsToClientToServerContentUpdatePackage( denial_action, filtered_contents )
+        
+    
+    def GetPetitionerIdentifier( self ):
+        
+        return self._petitioner_account_identifier
+        
+    
+    def GetReason( self ):
+        
+        return self._reason
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_PETITION ] = ServerToClientPetition
 
 class ServerToClientServiceUpdatePackage( HydrusSerialisable.SerialisableBase ):
     

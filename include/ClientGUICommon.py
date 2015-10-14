@@ -4180,7 +4180,7 @@ class RatingLikeCanvas( RatingLike ):
             if self._rating_state == ClientRatings.LIKE: rating = None
             else: rating = 1
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
             HydrusGlobals.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
             
@@ -4193,7 +4193,7 @@ class RatingLikeCanvas( RatingLike ):
             if self._rating_state == ClientRatings.DISLIKE: rating = None
             else: rating = 0
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
             HydrusGlobals.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
             
@@ -4209,7 +4209,7 @@ class RatingLikeCanvas( RatingLike ):
                     
                     ( data_type, action, row ) = content_update.ToTuple()
                     
-                    if data_type == HC.CONTENT_DATA_TYPE_RATINGS:
+                    if data_type == HC.CONTENT_TYPE_RATINGS:
                         
                         hashes = content_update.GetHashes()
                         
@@ -4465,7 +4465,7 @@ class RatingNumericalCanvas( RatingNumerical ):
             
             if rating is not None:
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
                 
                 HydrusGlobals.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
                 
@@ -4478,7 +4478,7 @@ class RatingNumericalCanvas( RatingNumerical ):
             
             rating = None
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
             HydrusGlobals.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
             
@@ -4494,7 +4494,7 @@ class RatingNumericalCanvas( RatingNumerical ):
                     
                     ( data_type, action, row ) = content_update.ToTuple()
                     
-                    if data_type == HC.CONTENT_DATA_TYPE_RATINGS:
+                    if data_type == HC.CONTENT_TYPE_RATINGS:
                         
                         hashes = content_update.GetHashes()
                         

@@ -52,6 +52,8 @@ class Controller( object ):
         HydrusGlobals.test_controller = self
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         
+        self._new_options = ClientData.ClientOptions()
+        
         def show_text( text ): pass
         
         HydrusData.ShowText = show_text
@@ -127,6 +129,11 @@ class Controller( object ):
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
     
     def GetHTTP( self ): return self._http
+    
+    def GetNewOptions( self ):
+        
+        return self._new_options
+        
     
     def GetOptions( self ):
         

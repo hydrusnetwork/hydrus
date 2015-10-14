@@ -1,9 +1,11 @@
 import Crypto.PublicKey.RSA
 import HydrusConstants as HC
+import ClientDefaults
 import ClientDownloading
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
+import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
@@ -167,7 +169,7 @@ def ImportFromHTA( parent, path, service_key ):
                 
                 if dlg_final.ShowModal() == wx.ID_YES:
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'hta', ( path, adding, namespaces ) ) )
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'hta', ( path, adding, namespaces ) ) )
                     
                     service_keys_to_content_updates = { service_key : [ content_update ] }
                     
@@ -442,15 +444,15 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         if action == self.COPY:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
             
         elif action == self.DELETE:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', ( tag, self._hashes ) ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', ( tag, self._hashes ) ) )
             
         elif action == self.DELETE_DELETED:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
             
         
         service_keys_to_content_updates = { self._service_key : [ content_update ] }
@@ -759,110 +761,63 @@ class DialogGenerateNewAccounts( Dialog ):
         finally: self.EndModal( wx.ID_OK )
         
     
-class DialogInputAdvancedTagOptions( Dialog ):
+class DialogInputImportTagOptions( Dialog ):
     
-    def __init__( self, parent, pretty_name, name, ato ):
+    def __init__( self, parent, pretty_name, gallery_identifier, import_tag_options = None ):
         
-        def InitialiseControls():
+        Dialog.__init__( self, parent, 'configure default import tag options for ' + pretty_name )
+        
+        #
+        
+        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+        
+        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = namespaces )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        if import_tag_options is None:
             
-            if name in ( 'default', HC.SITE_TYPE_BOORU ): namespaces = [ 'all namespaces' ]
-            elif name == HC.SITE_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
-            elif name == HC.SITE_TYPE_GIPHY: namespaces = [ '' ]
-            elif name == HC.SITE_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
-            elif name == HC.SITE_TYPE_NEWGROUNDS: namespaces = [ 'creator', 'title', '' ]
-            elif name == HC.SITE_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
-            elif name == HC.SITE_TYPE_TUMBLR: namespaces = [ '' ]
-            else:
-                
-                ( booru_id, booru_name ) = name
-                
-                booru = HydrusGlobals.client_controller.Read( 'remote_booru', booru_name )
-                
-                namespaces = booru.GetNamespaces()
-                
+            new_options = HydrusGlobals.client_controller.GetNewOptions()
             
-            self._name = name
-            
-            self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = namespaces )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            import_tag_options = new_options.GetDefaultImportTagOptions( gallery_identifier )
             
         
-        def PopulateControls():
-            
-            if name in ( 'default', HC.SITE_TYPE_BOORU ):
-                
-                namespaces = [ 'all namespaces' ]
-                
-                new_ato = {}
-                
-                for ( service_key, boolean ) in self._initial_ato.items():
-                    
-                    if boolean: new_ato[ service_key ] = [ 'all namespaces' ]
-                    
-                
-                self._initial_ato = new_ato
-                
-            
-            self._advanced_tag_options.SetInfo( self._initial_ato )
-            
+        self._import_tag_options.SetOptions( import_tag_options )
         
-        def ArrangeControls():
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            x = max( 200, x )
-            y = max( 300, y )
-            
-            self.SetInitialSize( ( x, y ) )
-            
+        #
         
-        self._name = name
-        self._initial_ato = ato
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
         
-        Dialog.__init__( self, parent, 'configure default tag import options for ' + pretty_name )
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
-        InitialiseControls()
+        vbox.AddF( self._import_tag_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
         
-        PopulateControls()
+        self.SetSizer( vbox )
         
-        ArrangeControls()
+        ( x, y ) = self.GetEffectiveMinSize()
         
-        wx.CallAfter( self._advanced_tag_options.ExpandCollapse )
+        x = max( 200, x )
+        y = max( 300, y )
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        wx.CallAfter( self._import_tag_options.ExpandCollapse )
         
     
-    def GetATO( self ):
+    def GetImportTagOptions( self ):
         
-        ato = self._advanced_tag_options.GetInfo()
+        import_tag_options = self._import_tag_options.GetOptions()
         
-        if self._name in ( 'default', HC.SITE_TYPE_BOORU ):
-            
-            new_ato = {}
-            
-            for ( service_key, namespaces ) in ato.items():
-                
-                if namespaces == [ 'all namespaces' ]: new_ato[ service_key ] = True
-                
-            
-            ato = new_ato
-            
-        
-        return ato
+        return import_tag_options
         
     
 class DialogInputCustomFilterAction( Dialog ):
@@ -2107,67 +2062,86 @@ class DialogInputNamespaceRegex( Dialog ):
     
     def __init__( self, parent, namespace = '', regex = '' ):
         
-        def InitialiseControls():
-            
-            self._namespace = wx.TextCtrl( self )
-            
-            self._regex = wx.TextCtrl( self )
-            
-            self._shortcuts = ClientGUICommon.RegexButton( self )
-            
-            self._regex_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._namespace.SetValue( namespace )
-            self._regex.SetValue( regex )
-            
-        
-        def ArrangeControls():
-            
-            control_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            control_box.AddF( self._namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
-            control_box.AddF( wx.StaticText( self, label = ':' ), CC.FLAGS_MIXED )
-            control_box.AddF( self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            intro = 'Put the namespace (e.g. page) on the left.' + os.linesep + 'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + 'All files will be tagged with "namespace:regex".'
-            
-            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._shortcuts, CC.FLAGS_LONE_BUTTON )
-            vbox.AddF( self._regex_link, CC.FLAGS_LONE_BUTTON )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'configure quick namespace' )
         
-        InitialiseControls()
+        self._namespace = wx.TextCtrl( self )
         
-        PopulateControls()
+        self._regex = wx.TextCtrl( self )
         
-        ArrangeControls()
+        self._shortcuts = ClientGUICommon.RegexButton( self )
+        
+        self._regex_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+    
+        self._namespace.SetValue( namespace )
+        self._regex.SetValue( regex )
+        
+        #
+        
+        control_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        control_box.AddF( self._namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+        control_box.AddF( wx.StaticText( self, label = ':' ), CC.FLAGS_MIXED )
+        control_box.AddF( self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = 'Put the namespace (e.g. page) on the left.' + os.linesep + 'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + 'All files will be tagged with "namespace:regex".'
+        
+        vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._shortcuts, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._regex_link, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def EventOK( self, event ):
+        
+        ( namespace, regex ) = self.GetInfo()
+        
+        if namespace == '':
+            
+            wx.MessageBox( 'Please enter something for the namespace.' )
+            
+            return
+            
+        
+        try:
+            
+            re.compile( regex, flags = re.UNICODE )
+            
+        except Exception as e:
+            
+            text = 'That regex would not compile!'
+            text += os.linesep * 2
+            text += HydrusData.ToString( e )
+            
+            wx.MessageBox( text )
+            
+            return
+            
+        
+        self.EndModal( wx.ID_OK )
         
     
     def GetInfo( self ):
@@ -2727,9 +2701,14 @@ class DialogModifyAccounts( Dialog ):
     
     def _DoModification( self, action, **kwargs ):
         
-        request_args = kwargs
+        request_args = HydrusSerialisable.SerialisableDictionary()
         
-        request_args[ 'subject_identifiers' ] = self._subject_identifiers
+        for ( k, v ) in kwargs.items():
+            
+            request_args[ k ] = v
+            
+        
+        request_args[ 'subject_identifiers' ] = HydrusSerialisable.SerialisableList( self._subject_identifiers )
         request_args[ 'action' ] = action
         
         self._service.Request( HC.POST, 'account', request_args )
@@ -3593,6 +3572,21 @@ class DialogPathsToTags( Dialog ):
             regex = self._regex_box.GetValue()
             
             if regex != '':
+                
+                try:
+                    
+                    re.compile( regex, flags = re.UNICODE )
+                    
+                except Exception as e:
+                    
+                    text = 'That regex would not compile!'
+                    text += os.linesep * 2
+                    text += HydrusData.ToString( e )
+                    
+                    wx.MessageBox( text )
+                    
+                    return
+                    
                 
                 self._regexes.Append( regex )
                 

@@ -501,7 +501,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         serialisable_simples = dict( self._simples )
         
-        serialisable_serialisables = { name : HydrusSerialisable.GetSerialisableTuple( value ) for ( name, value ) in self._serialisables.items() }
+        serialisable_serialisables = { name : value.GetSerialisableTuple() for ( name, value ) in self._serialisables.items() }
         
         return ( self._management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
         
@@ -543,7 +543,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 hdd_import = ClientImporting.HDDImport( paths = paths, import_file_options = import_file_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
                 
-                serialisable_serialisables[ 'hdd_import' ] = HydrusSerialisable.GetSerialisableTuple( hdd_import )
+                serialisable_serialisables[ 'hdd_import' ] = hdd_import.GetSerialisableTuple()
                 
                 del serialisable_serialisables[ 'advanced_import_options' ]
                 del serialisable_serialisables[ 'paths_info' ]
@@ -1682,6 +1682,8 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._gallery_import.FinishCurrentQuery()
         
+        self._Update()
+        
     
     def EventGalleryPause( self, event ):
         
@@ -2231,6 +2233,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._num_petitions = None
         self._current_petition = None
         
+        #
+        
         self._petitions_info_panel = ClientGUICommon.StaticBox( self, 'petitions info' )
         
         self._num_petitions_text = wx.StaticText( self._petitions_info_panel )
@@ -2242,24 +2246,27 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._get_petition.Bind( wx.EVT_BUTTON, self.EventGetPetition )
         self._get_petition.Disable()
         
+        #
+        
         self._petition_panel = ClientGUICommon.StaticBox( self, 'petition' )
         
-        self._petition_info_text_ctrl = wx.TextCtrl( self._petition_panel, style = wx.TE_READONLY | wx.TE_MULTILINE )
+        self._action_text = wx.StaticText( self._petition_panel, label = '' )
+        self._reason_text = wx.TextCtrl( self._petition_panel, size = ( -1, 80 ), style = wx.TE_MULTILINE | wx.TE_READONLY )
         
-        self._approve = wx.Button( self._petition_panel, label = 'approve' )
-        self._approve.Bind( wx.EVT_BUTTON, self.EventApprove )
-        self._approve.SetForegroundColour( ( 0, 128, 0 ) )
-        self._approve.Disable()
+        self._contents = wx.CheckListBox( self._petition_panel )
+        self._contents.Bind( wx.EVT_LISTBOX_DCLICK, self.EventContentDoubleClick )
         
-        self._deny = wx.Button( self._petition_panel, label = 'deny' )
-        self._deny.Bind( wx.EVT_BUTTON, self.EventDeny )
-        self._deny.SetForegroundColour( ( 128, 0, 0 ) )
-        self._deny.Disable()
+        self._process = wx.Button( self._petition_panel, label = 'process' )
+        self._process.Bind( wx.EVT_BUTTON, self.EventProcess )
+        self._process.SetForegroundColour( ( 0, 128, 0 ) )
+        self._process.Disable()
         
         self._modify_petitioner = wx.Button( self._petition_panel, label = 'modify petitioner' )
         self._modify_petitioner.Bind( wx.EVT_BUTTON, self.EventModifyPetitioner )
         self._modify_petitioner.Disable()
         if not self._can_ban: self._modify_petitioner.Hide()
+        
+        #
         
         num_petitions_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2269,13 +2276,11 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._petitions_info_panel.AddF( num_petitions_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petitions_info_panel.AddF( self._get_petition, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        p_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        p_hbox.AddF( self._approve, CC.FLAGS_EXPAND_BOTH_WAYS )
-        p_hbox.AddF( self._deny, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._petition_panel.AddF( self._petition_info_text_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._petition_panel.AddF( p_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._petition_panel.AddF( wx.StaticText( self._petition_panel, label = 'Double click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.AddF( self._action_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.AddF( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.AddF( self._contents, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._petition_panel.AddF( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.AddF( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -2297,34 +2302,64 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _DrawCurrentPetition( self ):
         
-        file_service_key = self._controller.GetKey( 'file_service' )
+        hashes = []
         
         if self._current_petition is None:
             
-            self._petition_info_text_ctrl.SetValue( '' )
-            self._approve.Disable()
-            self._deny.Disable()
+            self._action_text.SetLabel( '' )
+            self._reason_text.SetValue( '' )
+            self._contents.Clear()
+            self._process.Disable()
             
-            if self._can_ban: self._modify_petitioner.Disable()
-            
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
+            if self._can_ban:
+                
+                self._modify_petitioner.Disable()
+                
             
         else:
             
-            self._petition_info_text_ctrl.SetValue( self._current_petition.GetPetitionString() )
-            self._approve.Enable()
-            self._deny.Enable()
+            ( action_text, action_colour ) = self._current_petition.GetActionTextAndColour()
             
-            if self._can_ban: self._modify_petitioner.Enable()
+            self._action_text.SetLabel( action_text )
+            self._action_text.SetForegroundColour( action_colour )
             
-            with wx.BusyCursor(): media_results = HydrusGlobals.client_controller.Read( 'media_results', file_service_key, self._current_petition.GetHashes() )
+            reason = self._current_petition.GetReason()
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
+            self._reason_text.SetValue( reason )
             
-            panel.Collect( self._page_key, self._collect_by.GetChoice() )
+            contents = self._current_petition.GetContents()
             
-            panel.Sort( self._page_key, self._sort_by.GetChoice() )
+            self._contents.Clear()
             
+            for content in contents:
+                
+                self._contents.Append( content.ToString(), content )
+                
+            
+            self._contents.SetChecked( range( self._contents.GetCount() ) )
+            
+            self._process.Enable()
+            
+            if self._can_ban:
+                
+                self._modify_petitioner.Enable()
+                
+            
+        
+        self._ShowHashes( [] )
+        
+    
+    def _ShowHashes( self, hashes ):
+        
+        file_service_key = self._controller.GetKey( 'file_service' )
+    
+        with wx.BusyCursor(): media_results = HydrusGlobals.client_controller.Read( 'media_results', file_service_key, hashes )
+        
+        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
+        
+        panel.Collect( self._page_key, self._collect_by.GetChoice() )
+        
+        panel.Sort( self._page_key, self._sort_by.GetChoice() )
         
         HydrusGlobals.client_controller.pub( 'swap_media_panel', self._page_key, panel )
         
@@ -2337,26 +2372,57 @@ class ManagementPanelPetitions( ManagementPanel ):
         else: self._get_petition.Disable()
         
     
-    def EventApprove( self, event ):
+    def EventContentDoubleClick( self, event ):
         
-        update = self._current_petition.GetApproval()
+        selection = self._contents.GetSelection()
         
-        self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
-        
-        HydrusGlobals.client_controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
-        
-        self._current_petition = None
-        
-        self._DrawCurrentPetition()
-        
-        self.EventRefreshNumPetitions( event )
+        if selection != wx.NOT_FOUND:
+            
+            content = self._contents.GetClientData( selection )
+            
+            if content.HasHashes():
+                
+                self._ShowHashes( content.GetHashes() )
+                
+            
         
     
-    def EventDeny( self, event ):
+    def EventProcess( self, event ):
         
-        update = self._current_petition.GetDenial()
+        approved_contents = []
+        denied_contents = []
         
-        self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
+        for index in range( self._contents.GetCount() ):
+            
+            content = self._contents.GetClientData( index )
+            
+            if self._contents.IsChecked( index ):
+                
+                approved_contents.append( content )
+                
+            else:
+                
+                denied_contents.append( content )
+                
+            
+        
+        if len( approved_contents ) > 0:
+            
+            update = self._current_petition.GetApproval( approved_contents )
+            
+            self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
+            
+            HydrusGlobals.client_controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+            
+        
+        if len( denied_contents ) > 0:
+            
+            update = self._current_petition.GetDenial( denied_contents )
+            
+            self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
+            
+            HydrusGlobals.client_controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+            
         
         self._current_petition = None
         
@@ -2369,9 +2435,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         def do_it():
             
-            response = self._service.Request( HC.GET, 'petition' )
-            
-            self._current_petition = response[ 'petition' ]
+            self._current_petition = self._service.Request( HC.GET, 'petition' )
             
             wx.CallAfter( self._DrawCurrentPetition )
             

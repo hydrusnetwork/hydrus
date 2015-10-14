@@ -135,8 +135,6 @@ def GetClientDefaultOptions():
     options[ 'sort_by' ] = default_sort_by_choices
     options[ 'show_all_tags_in_autocomplete' ] = True
     
-    options[ 'default_advanced_tag_options' ] = {}
-    
     shortcuts = {}
     
     shortcuts[ wx.ACCEL_NORMAL ] = {}
@@ -264,44 +262,31 @@ def GetDefaultImportFileOptions():
     
     return import_file_options
     
-def GetDefaultImportTagOptions( gallery_identifier ):
-    
-    ( namespaces, search_value ) = GetDefaultNamespacesAndSearchValue( gallery_identifier )
-    
-    # fill up the given namespaces appropriately
-    
-    '''
-    backup_lookup = None
-    
-    if type( lookup ) == tuple:
-        
-        ( site_type, site_name ) = lookup
-        
-        if site_type == HC.SITE_TYPE_BOORU: backup_lookup = HC.SITE_TYPE_BOORU
-        
-    
-    options = HydrusGlobals.client_controller.GetOptions()
-    
-    ato_options = options[ 'default_advanced_tag_options' ]
-    
-    if lookup in ato_options: service_keys_to_namespaces = ato_options[ lookup ]
-    elif backup_lookup is not None and backup_lookup in ato_options: service_keys_to_namespaces = ato_options[ backup_lookup ]
-    elif 'default' in ato_options: service_keys_to_namespaces = ato_options[ 'default' ]
-    else: service_keys_to_namespaces = {}
-    '''
-    return ClientData.ImportTagOptions()
-    
 def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
     
     site_type = gallery_identifier.GetSiteType()
     
-    if site_type == HC.SITE_TYPE_BOORU:
+    if site_type == HC.SITE_TYPE_DEFAULT:
+        
+        namespaces = [ 'all namespaces' ]
+        
+        search_value = ''
+        
+    elif site_type == HC.SITE_TYPE_BOORU:
         
         name = gallery_identifier.GetAdditionalInfo()
         
-        booru = HydrusGlobals.client_controller.Read( 'remote_booru', name )
+        if name is None:
+            
+            namespaces = [ 'all namespaces' ]
+            
+        else:
+            
+            booru = HydrusGlobals.client_controller.Read( 'remote_booru', name )
+            
+            namespaces = booru.GetNamespaces()
+            
         
-        namespaces = booru.GetNamespaces()
         search_value = 'search tags'
         
     elif site_type == HC.SITE_TYPE_DEVIANT_ART:

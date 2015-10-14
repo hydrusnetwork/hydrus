@@ -193,11 +193,26 @@ class HydrusResourceCommand( Resource ):
                 
             
         
-        if 'subject_account_key' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( account_key = hydrus_args[ 'subject_account_key' ] )
+        if 'subject_account_key' in hydrus_args:
+            
+            hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( account_key = hydrus_args[ 'subject_account_key' ] )
+            
         elif 'subject_hash' in hydrus_args:
             
-            if 'subject_tag' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( tag = hydrus_args[ 'subject_tag' ], hash = hydrus_args[ 'subject_hash' ] )
-            else: hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( hash = hydrus_args[ 'subject_hash' ] )
+            hash = hydrus_args[ 'subject_hash' ]
+            
+            if 'subject_tag' in hydrus_args:
+                
+                tag = hydrus_args[ 'subject_tag' ]
+                
+                content = HydrusData.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) )
+                
+            else:
+                
+                content = HydrusData.Content( HC.CONTENT_TYPE_FILES, [ hash ] )
+                
+            
+            hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( content = content )
             
         
         request.hydrus_args = hydrus_args
@@ -229,6 +244,14 @@ class HydrusResourceCommand( Resource ):
                 request.hydrus_request_data_usage += len( yaml_string )
                 
                 hydrus_args = yaml.safe_load( yaml_string )
+                
+            elif mime == HC.APPLICATION_JSON:
+                
+                json_string = request.content.read()
+                
+                request.hydrus_request_data_usage += len( json_string )
+                
+                hydrus_args = HydrusSerialisable.CreateFromNetworkString( json_string )
                 
             else:
                 
@@ -870,9 +893,9 @@ class HydrusResourceCommandRestrictedPetition( HydrusResourceCommandRestricted )
         
         petition = HydrusGlobals.controller.Read( 'petition', self._service_key )
         
-        body = yaml.safe_dump( { 'petition' : petition } )
+        body = petition.DumpToNetworkString()
         
-        response_context = ResponseContext( 200, body = body )
+        response_context = ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
         
         return response_context
         
@@ -1043,7 +1066,7 @@ class HydrusResourceCommandRestrictedImmediateContentUpdate( HydrusResourceComma
         
         content_update = HydrusGlobals.controller.Read( 'immediate_content_update', self._service_key )
         
-        network_string = HydrusSerialisable.DumpToNetworkString( content_update )
+        network_string = content_update.DumpToNetworkString()
         
         response_context = ResponseContext( 200, mime = HC.APPLICATION_JSON, body = network_string )
         

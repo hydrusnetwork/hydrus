@@ -69,16 +69,32 @@ def ConvertHydrusGETArgsToQuery( request_args ):
         
         del request_args[ 'subject_identifier' ]
         
-        data = subject_identifier.GetData()
-        
-        if subject_identifier.HasAccountKey(): request_args[ 'subject_account_key' ] = data.encode( 'hex' )
-        elif subject_identifier.HasHash(): request_args[ 'subject_hash' ] = data.encode( 'hex' )
-        if subject_identifier.HasMapping():
+        if subject_identifier.HasAccountKey():
             
-            ( subject_hash, subject_tag ) = data
+            account_key = subject_identifier.GetData()
             
-            request_args[ 'subject_hash' ] = subject_hash.encode( 'hex' )
-            request_args[ 'subject_tag' ] = subject_tag.encode( 'hex' )
+            request_args[ 'subject_account_key' ] = account_key.encode( 'hex' )
+            
+        elif subject_identifier.HasContent():
+            
+            content = subject_identifier.GetData()
+            
+            content_type = content.GetContentType()
+            content_data = content.GetContent()
+            
+            if content_type == HC.CONTENT_TYPE_FILES:
+                
+                hash = content_data[0]
+                
+                request_args[ 'subject_hash' ] = hash.encode( 'hex' )
+                
+            elif content_type == HC.CONTENT_TYPE_MAPPING:
+                
+                ( tag, hash ) = content_data
+                
+                request_args[ 'subject_hash' ] = hash.encode( 'hex' )
+                request_args[ 'subject_tag' ] = tag.encode( 'hex' )
+                
             
         
     

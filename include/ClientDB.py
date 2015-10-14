@@ -1578,6 +1578,10 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in ClientDefaults.GetDefaultImageboards() ) )
         
+        new_options = ClientData.ClientOptions()
+        
+        self._SetJSONDump( new_options )
+        
         self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
         
         self._c.execute( 'INSERT INTO version ( version ) VALUES ( ? );', ( HC.SOFTWARE_VERSION, ) )
@@ -2983,7 +2987,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetJSONDump( self, dump_type ):
         
-        ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
+        ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) ).fetchone()
         
         serialisable_info = json.loads( dump )
         
@@ -3317,7 +3321,7 @@ class DB( HydrusDB.HydrusDB ):
             
             max_update_weight = 50
             
-            content_data = HydrusData.GetEmptyDataDict()
+            content_data_dict = HydrusData.GetEmptyDataDict()
             
             all_hash_ids = set()
             
@@ -3342,7 +3346,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 pending = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids )
                 
-                content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PEND ].append( pending )
+                content_data_dict[ HC.CONTENT_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PEND ].append( pending )
                 
                 all_hash_ids.update( hash_ids )
                 
@@ -3352,9 +3356,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                     hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                     
-                    content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes ) )
+                    content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes ) )
                     
-                    content_data = HydrusData.GetEmptyDataDict()
+                    content_data_dict = HydrusData.GetEmptyDataDict()
                     
                     all_hash_ids = set()
                     
@@ -3381,7 +3385,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 petitioned = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids, self._GetReason( reason_id ) )
                 
-                content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ].append( petitioned )
+                content_data_dict[ HC.CONTENT_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ].append( petitioned )
                 
                 all_hash_ids.update( hash_ids )
                 
@@ -3391,9 +3395,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                     hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                     
-                    content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes ) )
+                    content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes ) )
                     
-                    content_data = HydrusData.GetEmptyDataDict()
+                    content_data_dict = HydrusData.GetEmptyDataDict()
                     
                     all_hash_ids = set()
                     
@@ -3401,13 +3405,13 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            if len( content_data ) > 0:
+            if len( content_data_dict ) > 0:
                 
                 hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                 
-                content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes ) )
+                content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes ) )
                 
-                content_data = HydrusData.GetEmptyDataDict()
+                content_data_dict = HydrusData.GetEmptyDataDict()
                 
                 all_hash_ids = set()
                 
@@ -3418,27 +3422,27 @@ class DB( HydrusDB.HydrusDB ):
             
             pending = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
-            if len( pending ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PEND ] = pending
+            if len( pending ) > 0: content_data_dict[ HC.CONTENT_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PEND ] = pending
             
             petitioned = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
-            if len( petitioned ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            if len( petitioned ) > 0: content_data_dict[ HC.CONTENT_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
             # tag parents
             
             pending = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
-            if len( pending ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PEND ] = pending
+            if len( pending ) > 0: content_data_dict[ HC.CONTENT_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PEND ] = pending
             
             petitioned = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
-            if len( petitioned ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            if len( petitioned ) > 0: content_data_dict[ HC.CONTENT_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
-            if len( content_data ) > 0:
+            if len( content_data_dict ) > 0:
                 
                 hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                 
-                content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes ) )
+                content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes ) )
                 
             
             return content_update_packages
@@ -3447,9 +3451,9 @@ class DB( HydrusDB.HydrusDB ):
             
             upload_hashes = [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes, file_transfers USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ) ]
             
-            content_data = HydrusData.GetEmptyDataDict()
+            content_data_dict = HydrusData.GetEmptyDataDict()
             
-            content_data[ HC.CONTENT_DATA_TYPE_FILES ] = {}
+            content_data_dict[ HC.CONTENT_TYPE_FILES ] = {}
             
             petitioned = [ ( hash_ids, reason ) for ( reason, hash_ids ) in HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason, hash_id FROM reasons, file_petitions USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ) ).items() ]
             
@@ -3457,9 +3461,9 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
             
-            content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            content_data_dict[ HC.CONTENT_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
-            content_update_package = HydrusData.ClientToServerContentUpdatePackage( content_data, hash_ids_to_hashes )
+            content_update_package = HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes )
             
             return ( upload_hashes, content_update_package )
             
@@ -3983,7 +3987,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._ArchiveFiles( ( hash_id, ) )
                 
-                self.pub_content_updates_after_commit( { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( hash, ) ) ) ] } )
+                self.pub_content_updates_after_commit( { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( hash, ) ) ) ] } )
                 
             
         elif status == CC.STATUS_NEW:
@@ -4041,7 +4045,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._AddFiles( self._local_file_service_id, [ ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) ] )
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
             
             self.pub_content_updates_after_commit( { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
             
@@ -4276,7 +4280,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
                     
-                    if data_type == HC.CONTENT_DATA_TYPE_FILES:
+                    if data_type == HC.CONTENT_TYPE_FILES:
                         
                         if action == HC.CONTENT_UPDATE_ADD:
                             
@@ -4346,7 +4350,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 elif service_type in ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
                     
-                    if data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+                    if data_type == HC.CONTENT_TYPE_MAPPINGS:
                         
                         if action == HC.CONTENT_UPDATE_ADVANCED:
                             
@@ -4486,7 +4490,7 @@ class DB( HydrusDB.HydrusDB ):
                             elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: ultimate_petitioned_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
                             
                         
-                    elif data_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS:
+                    elif data_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
                         
                         if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
                             
@@ -4548,7 +4552,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         notify_new_siblings = True
                         
-                    elif data_type == HC.CONTENT_DATA_TYPE_TAG_PARENTS:
+                    elif data_type == HC.CONTENT_TYPE_TAG_PARENTS:
                         
                         if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
                             
@@ -4580,7 +4584,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 self._UpdateMappings( service_id, mappings_ids = mappings_ids )
                                 
-                                special_content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( parent_tag, existing_hashes ) )
+                                special_content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( parent_tag, existing_hashes ) )
                                 
                                 self.pub_content_updates_after_commit( { service_key : [ special_content_update ] } )
                                 
@@ -4616,7 +4620,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 self._UpdateMappings( service_id, pending_mappings_ids = mappings_ids )
                                 
-                                special_content_update = HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( parent_tag, existing_hashes ) )
+                                special_content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( parent_tag, existing_hashes ) )
                                 
                                 self.pub_content_updates_after_commit( { service_key : [ special_content_update ] } )
                                 
@@ -4869,6 +4873,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'md5_status': result = self._GetMD5Status( *args, **kwargs )
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
+        elif action == 'new_options': result = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
         elif action == 'news': result = self._GetNews( *args, **kwargs )
         elif action == 'nums_pending': result = self._GetNumsPending( *args, **kwargs )
         elif action == 'oldest_trash_hashes': result = self._GetOldestTrashHashes( *args, **kwargs )
@@ -5015,7 +5020,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if isinstance( obj, HydrusSerialisable.SerialisableBaseNamed ):
             
-            ( dump_type, dump_name, version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( obj )
+            ( dump_type, dump_name, version, serialisable_info ) = obj.GetSerialisableTuple()
             
             dump = json.dumps( serialisable_info )
             
@@ -5025,7 +5030,7 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            ( dump_type, version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( obj )
+            ( dump_type, version, serialisable_info ) = obj.GetSerialisableTuple()
             
             dump = json.dumps( serialisable_info )
             
@@ -5127,7 +5132,7 @@ class DB( HydrusDB.HydrusDB ):
                 rows = [ ( tag, ( hash, )  ) for tag in desired_tags ]
                 
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, row ) for row in rows ]
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, row ) for row in rows ]
             
             service_keys_to_content_updates = { service_key : content_updates }
             
@@ -5470,7 +5475,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for obj in objs:
                 
-                ( dump_type, dump_name, dump_version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( obj )
+                ( dump_type, dump_name, dump_version, serialisable_info ) = obj.GetSerialisableTuple()
                 
                 dump = json.dumps( serialisable_info )
                 
@@ -5832,7 +5837,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for import_folder in import_folders:
                 
-                ( dump_type, dump_name, obj_version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( import_folder )
+                ( dump_type, dump_name, obj_version, serialisable_info ) = import_folder.GetSerialisableTuple()
                 
                 dump = json.dumps( serialisable_info )
                 
@@ -5966,7 +5971,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for subscription in subscriptions:
                 
-                ( dump_type, dump_name, obj_version, serialisable_info ) = HydrusSerialisable.GetSerialisableTuple( subscription )
+                ( dump_type, dump_name, obj_version, serialisable_info ) = subscription.GetSerialisableTuple()
                 
                 dump = json.dumps( serialisable_info )
                 
@@ -5996,14 +6001,23 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_GALLERY:
                         
-                        site_type = management_controller.GetVariable( 'site_type' )
-                        query_type = management_controller.GetVariable( 'gallery_type' )
-                        
-                        gallery_identifier = ConvertSiteTypeQueryTypeToGalleryIdentifier( site_type, query_type )
-                        
-                        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
-                        
-                        gallery_import = management_controller.GetVariable( 'gallery_import' )
+                        try:
+                            
+                            site_type = management_controller.GetVariable( 'site_type' )
+                            query_type = management_controller.GetVariable( 'gallery_type' )
+                            
+                            gallery_identifier = ConvertSiteTypeQueryTypeToGalleryIdentifier( site_type, query_type )
+                            
+                            management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
+                            
+                            gallery_import = management_controller.GetVariable( 'gallery_import' )
+                            
+                        except:
+                            
+                            traceback.print_exc()
+                            
+                            continue
+                            
                         
                     
                     new_session.AddPage( page_name, management_controller, hashes )
@@ -6011,6 +6025,74 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._SetJSONDump( new_session )
                 
+            
+        
+        if version == 176:
+            
+            old_options = self._GetOptions()
+            
+            new_options = ClientData.ClientOptions()
+            
+            for ( name, ato ) in old_options[ 'default_advanced_tag_options' ].items():
+                
+                try:
+                    
+                    if name == 'default':
+                        
+                        gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
+                        
+                    elif type( name ) == int:
+                        
+                        site_type = name
+                        
+                        gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
+                        
+                    else:
+                        
+                        ( booru_id, booru_name ) = name
+                        
+                        gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = booru_name )
+                        
+                    
+                    service_keys_to_namespaces = {}
+                    
+                    for ( service_key, namespace_object ) in ato.items():
+                        
+                        if isinstance( namespace_object, list ):
+                            
+                            service_keys_to_namespaces[ service_key ] = namespace_object
+                            
+                        elif isinstance( namespace_object, bool ):
+                            
+                            service_keys_to_namespaces[ service_key ] = [ 'all namespaces' ]
+                            
+                        
+                    
+                    import_tag_options = ClientData.ImportTagOptions( service_keys_to_namespaces = service_keys_to_namespaces )
+                    
+                    new_options.SetDefaultImportTagOptions( gallery_identifier, import_tag_options )
+                    
+                except:
+                    
+                    traceback.print_exc()
+                    
+                    continue
+                    
+                
+            
+            #
+            
+            ( dump_type, dump_version, serialisable_info ) = new_options.GetSerialisableTuple()
+            
+            dump = json.dumps( serialisable_info )
+            
+            self._c.execute( 'INSERT INTO json_dumps ( dump_type, version, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_version, sqlite3.Binary( dump ) ) )
+            
+            #
+            
+            del old_options[ 'default_advanced_tag_options' ]
+            
+            self._c.execute( 'UPDATE options SET options = ?;', ( old_options, ) )
             
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
@@ -6521,7 +6603,26 @@ class DB( HydrusDB.HydrusDB ):
         
         time.sleep( 1 )
         
-        self._c.execute( 'VACUUM' )
+        try:
+            
+            self._c.execute( 'VACUUM' )
+            
+        except sqlite3.OperationalError:
+            
+            HC.options[ 'maintenance_vacuum_period' ] = 0
+            
+            self._SaveOptions( HC.options )
+            
+            text = 'An attempt to vacuum the database caused a serious error.'
+            text += os.linesep * 2
+            text += 'This may be due to a limited size temporary directory or a more serious error.'
+            text += os.linesep * 2
+            text += 'For now, vacuuming has been disabled. Please run database->maintenance->check database integrity as soon as possible and contact the hydrus developer.'
+            
+            HydrusData.ShowText( text )
+            
+            return
+            
         
         job_key.SetVariable( 'popup_text_1', prefix + 'cleaning up' )
         
@@ -6570,6 +6671,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'import_folder': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+        elif action == 'new_options': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'pixiv_account': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
         elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'reset_service': result = self._ResetService( *args, **kwargs )

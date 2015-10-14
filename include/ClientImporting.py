@@ -58,7 +58,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._import_file_options = ClientDefaults.GetDefaultImportFileOptions()
         
-        self._import_tag_options = ClientDefaults.GetDefaultImportTagOptions( self._gallery_identifier )
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        self._import_tag_options = new_options.GetDefaultImportTagOptions( self._gallery_identifier )
         
         self._seed_cache = SeedCache()
         
@@ -71,8 +73,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_gallery_identifier = HydrusSerialisable.GetSerialisableTuple( self._gallery_identifier )
-        serialisable_gallery_stream_identifiers = [ HydrusSerialisable.GetSerialisableTuple( gallery_stream_identifier ) for gallery_stream_identifier in self._gallery_stream_identifiers ]
+        serialisable_gallery_identifier = self._gallery_identifier.GetSerialisableTuple()
+        serialisable_gallery_stream_identifiers = [ gallery_stream_identifier.GetSerialisableTuple() for gallery_stream_identifier in self._gallery_stream_identifiers ]
         
         if self._current_gallery_stream_identifier is None:
             
@@ -80,16 +82,16 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            serialisable_current_gallery_stream_identifier = HydrusSerialisable.GetSerialisableTuple( self._current_gallery_stream_identifier )
+            serialisable_current_gallery_stream_identifier = self._current_gallery_stream_identifier.GetSerialisableTuple()
             
         
         serialisable_current_gallery_stream_identifier_found_urls = list( self._current_gallery_stream_identifier_found_urls )
         
-        serialisable_pending_gallery_stream_identifiers = [ HydrusSerialisable.GetSerialisableTuple( pending_gallery_stream_identifier ) for pending_gallery_stream_identifier in self._pending_gallery_stream_identifiers ]
+        serialisable_pending_gallery_stream_identifiers = [ pending_gallery_stream_identifier.GetSerialisableTuple() for pending_gallery_stream_identifier in self._pending_gallery_stream_identifiers ]
         
-        serialisable_file_options = HydrusSerialisable.GetSerialisableTuple( self._import_file_options )
-        serialisable_tag_options = HydrusSerialisable.GetSerialisableTuple( self._import_tag_options )
-        serialisable_seed_cache = HydrusSerialisable.GetSerialisableTuple( self._seed_cache )
+        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_tag_options = self._import_tag_options.GetSerialisableTuple()
+        serialisable_seed_cache = self._seed_cache.GetSerialisableTuple()
         
         serialisable_current_query_stuff = ( self._current_query, self._current_query_num_urls, serialisable_current_gallery_stream_identifier, self._current_gallery_stream_identifier_page_index, serialisable_current_gallery_stream_identifier_found_urls, serialisable_pending_gallery_stream_identifiers )
         
@@ -369,7 +371,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             self._RegenerateSeedCacheStatus( page_key )
             
-            self._SetGalleryStatus( page_key, HydrusData.ConvertIntToPrettyString( self._current_query_num_urls ) + ' urls found so far for ' + self._current_query )
+            self._SetGalleryStatus( page_key, HydrusData.ConvertIntToPrettyString( self._current_query_num_urls ) + ' urls found so far for ' + query )
             
         
     
@@ -606,8 +608,8 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_url_cache = HydrusSerialisable.GetSerialisableTuple( self._paths_cache )
-        serialisable_options = HydrusSerialisable.GetSerialisableTuple( self._import_file_options )
+        serialisable_url_cache = self._paths_cache.GetSerialisableTuple()
+        serialisable_options = self._import_file_options.GetSerialisableTuple()
         serialisable_paths_to_tags = { path : { service_key.encode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags.items() } for ( path, service_keys_to_tags ) in self._paths_to_tags.items() }
         
         return ( serialisable_url_cache, serialisable_options, serialisable_paths_to_tags, self._delete_after_success, self._paused )
@@ -911,8 +913,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_import_file_options = HydrusSerialisable.GetSerialisableTuple( self._import_file_options )
-        serialisable_path_cache = HydrusSerialisable.GetSerialisableTuple( self._path_cache )
+        serialisable_import_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_path_cache = self._path_cache.GetSerialisableTuple()
         
         # json turns int dict keys to strings
         action_pairs = self._actions.items()
@@ -1105,8 +1107,8 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_url_cache = HydrusSerialisable.GetSerialisableTuple( self._urls_cache )
-        serialisable_file_options = HydrusSerialisable.GetSerialisableTuple( self._import_file_options )
+        serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
+        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
         
         return ( self._pending_page_urls, serialisable_url_cache, serialisable_file_options, self._download_image_links, self._download_unlinked_images, self._paused )
         
@@ -1852,11 +1854,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_gallery_identifier = HydrusSerialisable.GetSerialisableTuple( self._gallery_identifier )
-        serialisable_gallery_stream_identifiers = [ HydrusSerialisable.GetSerialisableTuple( gallery_stream_identifier ) for gallery_stream_identifier in self._gallery_stream_identifiers ]
-        serialisable_file_options = HydrusSerialisable.GetSerialisableTuple( self._import_file_options )
-        serialisable_tag_options = HydrusSerialisable.GetSerialisableTuple( self._import_tag_options )
-        serialisable_seed_cache = HydrusSerialisable.GetSerialisableTuple( self._seed_cache )
+        serialisable_gallery_identifier = self._gallery_identifier.GetSerialisableTuple()
+        serialisable_gallery_stream_identifiers = [ gallery_stream_identifier.GetSerialisableTuple() for gallery_stream_identifier in self._gallery_stream_identifiers ]
+        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_tag_options = self._import_tag_options.GetSerialisableTuple()
+        serialisable_seed_cache = self._seed_cache.GetSerialisableTuple()
         
         return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._last_error, serialisable_seed_cache )
         
@@ -2284,9 +2286,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_url_cache = HydrusSerialisable.GetSerialisableTuple( self._urls_cache )
-        serialisable_file_options = HydrusSerialisable.GetSerialisableTuple( self._import_file_options )
-        serialisable_tag_options = HydrusSerialisable.GetSerialisableTuple( self._import_tag_options )
+        serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
+        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_tag_options = self._import_tag_options.GetSerialisableTuple()
         
         return ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_file_options, serialisable_tag_options, self._times_to_check, self._check_period, self._last_time_checked, self._paused )
         

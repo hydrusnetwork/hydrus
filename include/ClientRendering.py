@@ -53,7 +53,7 @@ def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
         format = wx.BitmapBufferFormat_RGB
         
     
-    return HydrusBitmap( pil_image.tostring(), format, pil_image.size, compressed = compressed )
+    return HydrusBitmap( pil_image.tobytes(), format, pil_image.size, compressed = compressed )
     
 class RasterContainer( object ):
     

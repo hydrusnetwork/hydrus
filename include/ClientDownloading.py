@@ -29,23 +29,6 @@ import HydrusGlobals
 URL_EXTRA_INFO = {}
 URL_EXTRA_INFO_LOCK = threading.Lock()
 
-def ConvertGalleryIdentifierToPrettyString( gallery_identifier ):
-    
-    site_type = gallery_identifier.GetSiteType()
-    
-    if site_type == HC.SITE_TYPE_BOORU:
-        
-        booru_name = gallery_identifier.GetAdditionalInfo()
-        
-        text = booru_name
-        
-    else:
-        
-        text = HC.site_type_string_lookup[ site_type ]
-        
-    
-    return text
-    
 def GetExtraURLInfo( url ):
     
     with URL_EXTRA_INFO_LOCK:
@@ -374,6 +357,20 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
     def GetSiteType( self ):
         
         return self._site_type
+        
+    
+    def ToString( self ):
+        
+        text = HC.site_type_string_lookup[ self._site_type ]
+        
+        if self._site_type == HC.SITE_TYPE_BOORU and self._additional_info is not None:
+            
+            booru_name = self._additional_info
+            
+            text = HC.site_type_string_lookup[ self._site_type ] + ': ' + booru_name
+            
+        
+        return text
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IDENTIFIER ] = GalleryIdentifier

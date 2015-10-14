@@ -463,7 +463,7 @@ class MediaList( object ):
         
         for media in self._GetMedia( hashes, 'collections' ): media.ProcessContentUpdate( service_key, content_update )
         
-        if data_type == HC.CONTENT_DATA_TYPE_FILES:
+        if data_type == HC.CONTENT_TYPE_FILES:
             
             if action == HC.CONTENT_UPDATE_DELETE:
                 

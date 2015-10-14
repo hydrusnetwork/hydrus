@@ -178,7 +178,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
         
         for ( page_name, management_controller, hashes ) in self._pages:
             
-            serialisable_management_controller = HydrusSerialisable.GetSerialisableTuple( management_controller )
+            serialisable_management_controller = management_controller.GetSerialisableTuple()
             
             serialisable_hashes = [ hash.encode( 'hex' ) for hash in hashes ]
             

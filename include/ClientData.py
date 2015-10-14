@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientDefaults
 import ClientDownloading
 import ClientFiles
 import collections
@@ -104,7 +105,7 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_
         if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
         else: action = HC.CONTENT_UPDATE_PEND
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
         
         service_keys_to_content_updates[ service_key ] = content_updates
         
@@ -453,7 +454,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_predicates = [ HydrusSerialisable.GetSerialisableTuple( predicate ) for predicate in self._predicates ]
+        serialisable_predicates = [ predicate.GetSerialisableTuple() for predicate in self._predicates ]
         
         return ( self._file_service_key.encode( 'hex' ), self._tag_service_key.encode( 'hex' ), self._include_current_tags, self._include_pending_tags, serialisable_predicates, self._search_complete )
         
@@ -986,23 +987,25 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, default = False ):
+    def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         self._dictionary = HydrusSerialisable.SerialisableDictionary()
         
-        if default:
-            
-            self._InitialiseDefaults()
-            
+        self._lock = threading.Lock()
+        
+        self._InitialiseDefaults()
         
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_info = HydrusSerialisable.GetSerialisableTuple( self._dictionary )
-        
-        return serialisable_info
+        with self._lock:
+            
+            serialisable_info = self._dictionary.GetSerialisableTuple()
+            
+            return serialisable_info
+            
         
     
     def _InitialiseDefaults( self ):
@@ -1015,9 +1018,78 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
         
     
-    def GetDefaultImportTagOptions( self, gallery_identifier ):
+    def ClearDefaultImportTagOptions( self ):
         
-        pass
+        with self._lock:
+            
+            self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+            
+        
+    
+    def GetDefaultImportTagOptions( self, gallery_identifier = None ):
+        
+        with self._lock:
+            
+            default_import_tag_options = self._dictionary[ 'default_import_tag_options' ]
+            
+            if gallery_identifier is None:
+                
+                return default_import_tag_options
+                
+            else:
+                
+                if gallery_identifier in default_import_tag_options:
+                    
+                    import_tag_options = default_import_tag_options[ gallery_identifier ]
+                    
+                else:
+                    
+                    default_booru_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU )
+                    
+                    default_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
+                    
+                    guidance_import_tag_options = None
+                    
+                    if gallery_identifier.GetSiteType() == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_import_tag_options:
+                        
+                        guidance_import_tag_options = default_import_tag_options[ default_booru_gallery_identifier ]
+                        
+                    elif default_gallery_identifier in default_import_tag_options:
+                        
+                        guidance_import_tag_options = default_import_tag_options[ default_gallery_identifier ]
+                        
+                    
+                    service_keys_to_namespaces = {}
+                    
+                    if guidance_import_tag_options is not None:
+                        
+                        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+                        
+                        guidance_service_keys_to_namespaces = guidance_import_tag_options.GetServiceKeysToNamespaces()
+                        
+                        for ( service_key, guidance_namespaces ) in guidance_service_keys_to_namespaces.items():
+                            
+                            if 'all namespaces' in guidance_namespaces:
+                                
+                                service_keys_to_namespaces[ service_key ] = namespaces
+                                
+                            
+                        
+                    
+                    import_tag_options = ImportTagOptions( service_keys_to_namespaces )
+                    
+                
+                return import_tag_options
+                
+            
+        
+    
+    def SetDefaultImportTagOptions( self, gallery_identifier, import_tag_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = import_tag_options
+            
         
     
     def Save( self ):
@@ -1026,173 +1098,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS ] = ClientOptions
-
-class Periodic( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PERIODIC
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self, name ):
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        self._wavelength = CC.DAY
-        self._multiplier = 1
-        self._phase = 0
-        self._last_run = 0
-        self._failure_delay_timestamp = None
-        self._paused = False
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        return ( self._wavelength, self._multiplier, self._phase, self._last_run, self._failure_delay_timestamp, self._paused )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( self._wavelength, self._multiplier, self._phase, self._last_run, self._failure_delay_timestamp, self._paused ) = serialisable_info
-        
-    
-    def GetDue( self ):
-        
-        day_phase = self._phase / ( 24 * 3600 )
-        hour_phase = ( self._phase % ( 24 * 3600 ) ) / 3600
-        minute_phase = ( self._phase % 3600 ) / 60
-        
-        last_run_datetime = datetime.datetime.fromtimestamp( self._last_run )
-        
-        due_datetime = last_run_datetime.replace( hour = hour_phase, minute = minute_phase, second = 0, microsecond = 0 )
-        
-        one_day = datetime.timedelta( days = 1 )
-        
-        if self._wavelength == CC.DAY:
-            
-            due_datetime += one_day * self._multiplier
-            
-        elif self._wavelength == CC.WEEK:
-            
-            times_passed = 0
-            
-            while times_passed < self._multiplier:
-                
-                due_datetime += one_day
-                
-                if due_datetime.weekday() == day_phase:
-                    
-                    times_passed += 1
-                    
-                
-            
-        elif self._wavelength == CC.MONTH:
-            
-            times_passed = 0
-            
-            while times_passed < self._multiplier:
-                
-                due_datetime += one_day
-                
-                if due_datetime.day == day_phase + 1:
-                    
-                    times_passed += 1
-                    
-                
-            
-        
-        due_timestamp = time.mktime( due_datetime.timetuple() )
-        
-        return due_timestamp
-        
-    
-    def GetString( self ):
-        
-        s = 'last run was '
-        s += HydrusData.ConvertTimestampToPrettyAgo( self._last_run )
-        s += ', will next run in '
-        
-        if self.IsFailureDelaying():
-            
-            s += HydrusData.ConvertTimestampToPrettyPending( max( self.GetDue(), self._failure_delay_timestamp ) )
-            s += ', which may be slightly delayed because of an error'
-            
-        else:
-            
-            s += HydrusData.ConvertTimestampToPrettyPending( self.GetDue() )
-            
-        
-        return s
-        
-    
-    def GetPeriodics( self ):
-        
-        return ( self._wavelength, self._multiplier, self._phase )
-        
-    
-    def IsDue( self ):
-        
-        return HydrusData.TimeHasPassed( self.GetDue() )
-        
-    
-    def IsFailureDelaying( self ):
-        
-        if self._failure_delay_timestamp is None:
-            
-            return False
-            
-        else:
-            
-            return HydrusData.TimeHasPassed( self._failure_delay_timestamp )
-            
-        
-    
-    def IsPaused( self ): return self._paused
-    
-    def IsReadyToRun( self ):
-        
-        if self.IsPaused(): return False
-        
-        if not self.IsDue(): return False
-        
-        if self.IsFailureDelaying(): return False
-        
-        return True
-        
-    
-    def Pause( self ):
-        
-        self._paused = True
-        
-    
-    def ReportError( self, delay ):
-        
-        self._failure_delay_timestamp = HydrusData.GetNow() + delay
-        
-    
-    def ReportRun( self ):
-        
-        self._last_run = HydrusData.GetNow()
-        
-    
-    def Reset( self ):
-        
-        self._last_run = 0
-        self._failure_delay_timestamp = None
-        self._paused = False
-        
-    
-    def Resume( self ):
-        
-        self.paused = False
-        
-    
-    def SetPeriodics( self, wavelength, multiplier, phase ):
-        
-        self._wavelength = wavelength
-        self._multiplier = multiplier
-        self._phase = phase
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PERIODIC ] = Periodic
 
 class Service( HydrusData.HydrusYAMLBase ):
     
@@ -1449,9 +1354,18 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                 else:
                     
-                    content_type = HC.APPLICATION_YAML
-                    
-                    body = yaml.safe_dump( request_args )
+                    if isinstance( request_args, HydrusSerialisable.SerialisableDictionary ):
+                        
+                        content_type = HC.APPLICATION_JSON
+                        
+                        body = request_args.DumpToNetworkString()
+                        
+                    else:
+                        
+                        content_type = HC.APPLICATION_YAML
+                        
+                        body = yaml.safe_dump( request_args )
+                        
                     
                 
                 request_headers[ 'Content-Type' ] = HC.mime_string_lookup[ content_type ]
@@ -1635,7 +1549,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                             
                             content_update_package = self.Request( HC.GET, 'content_update_package', { 'begin' : begin, 'subindex' : subindex } )
                             
-                            obj_string = HydrusSerialisable.DumpToString( content_update_package )
+                            obj_string = content_update_package.DumpToString()
                             
                             job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'saving to disk' )
                             
@@ -1647,7 +1561,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                     path = ClientFiles.GetExpectedServiceUpdatePackagePath( self._service_key, begin )
                     
-                    obj_string = HydrusSerialisable.DumpToString( service_update_package )
+                    obj_string = service_update_package.DumpToString()
                     
                     with open( path, 'wb' ) as f: f.write( obj_string )
                     
@@ -2188,9 +2102,9 @@ class UndoManager( object ):
                 
                 ( data_type, action, row ) = content_update.ToTuple()
                 
-                if data_type == HC.CONTENT_DATA_TYPE_FILES:
+                if data_type == HC.CONTENT_TYPE_FILES:
                     if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION ): continue
-                elif data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+                elif data_type == HC.CONTENT_TYPE_MAPPINGS:
                     
                     if action in ( HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ): continue
                     
@@ -2224,7 +2138,7 @@ class UndoManager( object ):
                 
                 inverted_row = row
                 
-                if data_type == HC.CONTENT_DATA_TYPE_FILES:
+                if data_type == HC.CONTENT_TYPE_FILES:
                     
                     if action == HC.CONTENT_UPDATE_ARCHIVE: inverted_action = HC.CONTENT_UPDATE_INBOX
                     elif action == HC.CONTENT_UPDATE_INBOX: inverted_action = HC.CONTENT_UPDATE_ARCHIVE
@@ -2239,7 +2153,7 @@ class UndoManager( object ):
                         inverted_row = hashes
                         
                     
-                elif data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+                elif data_type == HC.CONTENT_TYPE_MAPPINGS:
                     
                     if action == HC.CONTENT_UPDATE_ADD: inverted_action = HC.CONTENT_UPDATE_DELETE
                     elif action == HC.CONTENT_UPDATE_DELETE: inverted_action = HC.CONTENT_UPDATE_ADD
