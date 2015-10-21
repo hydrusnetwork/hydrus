@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 177</h3></li>
+				<ul>
+					<li>the old YAML "default advanced tag options" is converted entirely to the new JSON "default import tag options"</li>
+					<li>created a new JSON object to store new options objects</li>
+					<li>updated the gui to handle new default import tag options objects</li>
+					<li>existing default advanced tag options data will be converted to the new system on update</li>
+					<li>the petition management panel now presents similar petitions from the same user together, with the relevant data rows in a checkbox list, so janitors can approve/deny many similar petitions all at once</li>
+					<li>the petetion management page no longer auto-loads file results for a petition--you can now see specific results for each sub-petition by double-clicking on them</li>
+					<li>the server-to-client petition object is converted from yaml to json</li>
+					<li>the new petition object now stores all the different 'content' rows for the same service/account/reason/action</li>
+					<li>small content rows are now stored and transmitted in their own object</li>
+					<li>the network now supports POST JSON requests</li>
+					<li>account modifications now work through JSON</li>
+					<li>the account identifier object is converted from yaml to json</li>
+					<li>in the path tagging dialog, regexes that do not compile will now say so, reporting their short regex error statement</li>
+					<li>fixed a bug that could sometimes occur when cancelling an ongoing gallery query</li>
+					<li>cancelling an ongoing gallery query is now reflected in the gui much faster</li>
+					<li>repositories will not burn CPU cleaning their updates if there are still pending file/mapping petitions to process</li>
+					<li>repositories will clean updates in smaller bursts to reduce the contiguous server_busy time</li>
+					<li>fixed drag and drop thumbnail ordering, which actually wasn't working but was accidentally randomly sorted when I tested it!</li>
+					<li>a certain kind of error during vacuum that can mean two different things is now caught, and automatic vacuums then suspended while the user figures out what is going on</li>
+					<li>revised some v176 update code that wasn't parsing some downloader pages correctly--now, if a downloader page cannot be updated, it will be discarded</li>
+					<li>updated to Pillow 3.0.0 on all platforms and fixed some obselete image calls</li>
+					<li>general code cleanup</li>
+					<li>general code refactoring</li>
+				</ul>
 				<li><h3>version 176</h3></li>
 				<ul>
 					<li>the gallery downloader is updated to the new system</li>
