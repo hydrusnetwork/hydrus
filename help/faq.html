@@ -9,7 +9,7 @@
 			<a name="repositories"><h3>what is a repository?</h3></a>
 			<p>A <i>repository</i> is a service in the hydrus network that stores a certain kind of information—files or tag mappings, for instance—as submitted by users all over the internet. Those users periodically synchronise with the repository so they know everything that it stores. Sometimes, like with tags, this means creating a complete local copy of everything on the repository. Hydrus network clients never send queries to repositories; they perform queries over their local cache of the repository's data, keeping everything confined to the same computer.</p>
 			<a name="tags"><h3>what is a tag?</h3></a>
-			<p><a href="http://en.wikipedia.org/wiki/Tag_(metadata)">wiki</a></p>
+			<p><a href="https://en.wikipedia.org/wiki/Tag_(metadata)">wiki</a></p>
 			<p>A <i>tag</i> is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. [ 'tiger woods', 'sports illustrated', '2008' ] or [ 'cosplay', 'the legend of zelda' ] ), a huge image collection is reduced to a tiny and easy-to-digest sample.</p>
 			<p>A good word for the connection of a particular tag to a particular file is <i>mapping</i>.</p>
 			<p>In the hydrus network, all tags are automatically converted to lower case. 'Sunset Drive' becomes 'sunset drive'. Why?</p>
@@ -31,9 +31,9 @@
 				<li>Folders can offer context, but they are clunky and time-consuming to change. If you put each chapter of a comic in a different folder, for instance, reading several volumes in one sitting can be a pain. Nesting many folders adds navigation-latency and tends to induce less informative "04.jpg"-type filenames.</li>
 			</ul>
 			<p>So, the client tracks files by their <i>hash</i>.</p>
-			<p>Please do not tag your files with their exact original 'filename.jpg' on my public tag repo. <a href="http://www.youtube.com/watch?v=_yYS0ZZdsnA">Shed the concept of filenames as you would chains.</a></p>
+			<p>Please do not tag your files with their exact original 'filename.jpg' on my public tag repo. <a href="https://www.youtube.com/watch?v=_yYS0ZZdsnA">Shed the concept of filenames as you would chains.</a></p>
 			<a name="hashes"><h3>what is a hash?</h3></a>
-			<p><a href="http://en.wikipedia.org/wiki/Hash_function">wiki</a></p>
+			<p><a href="https://en.wikipedia.org/wiki/Hash_function">wiki</a></p>
 			<p>Hashes are a subject you usually has to be a software engineer to find interesting. The simple answer is that they are unique names for things. It can be proven that f099b5823f4e36a4bd6562812582f60e49e818cf445902b504b5533c6a5dad94 refers to one particular file and no other. Hashes make excellent identifiers inside software. In the client's normal operation, you will never encounter a file's hash. If you want to see a thumbnail bigger, double-click it; the software handles the mathematics.</p>
 			<p><i>For those who </i>are<i> interested: hydrus uses SHA-256, which spits out 32-byte (256-bit) hashes. The software stores the hash densely, as 32 bytes, only encoding it to 64 hex characters when the user views it or copies to clipboard. SHA-256 is not perfect, but it is a great compromise candidate; it is secure for now, it is reasonably fast, it is available for most programming languages, and newer CPUs perform it more efficiently all the time.</i></p>
 			<a name="access_keys"><h3>what is an access key?</h3></a>
