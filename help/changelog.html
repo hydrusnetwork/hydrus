@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 178</h3></li>
+				<ul>
+					<li>import tag options now supports 'explicit tags', which will be added to all files imported</li>
+					<li>the default import tag options system supports explicit tags, and will propagate them to new import tag options objects</li>
+					<li>the gelbooru 503 Forbidden problem is fixed</li>
+					<li>all gallery downloaders now send the page_url as http Referer header when fetching their image_urls</li>
+					<li>pixiv parsing now grabs the correct tags for the image! previously, it was fetching the user's most common tags</li>
+					<li>for now pixiv manga (which is not yet supported), will be skipped over in the gallery parsing step</li>
+					<li>fixed a thumbnail drag-and-drop calculation that meant the DnD event would not start if the initial mouse movement went in an up-left direction</li>
+					<li>bad animated gif frame timing detection is improved</li>
+					<li>the fallback animated gif frame timing is scaled back to a more reasonable 12fps</li>
+					<li>fixed a critical bug in the manage ratings dialog that meant any NULL or MIXED numerical rating controls were mistakenly creating 'set rating to 0.0' content updates</li>
+					<li>fixed an obselete call with the new Pillow library that broke video thumbnail generation</li>
+					<li>added an explicit file import test to my test suite (previously, this was a manual test, and I did not notice the failed video files last week)</li>
+					<li>fixed a critical os x crash after navigating media with the manage tags dialog launched from the media viewer</li>
+					<li>improved speed and memory use of num_tags queries a little bit</li>
+					<li>reordered the predicate filters in the main query code so that num_tags happens right at the end, where it will run fastest</li>
+					<li>removed an unnecessary filter from the main query code</li>
+					<li>removed an accidental doubling of the simple predicate filters from the main query code where the file service domain is specified</li>
+					<li>improved an important db index and made sure the db uses it everywhere it can. it should speed up most non-'all known tags' queries</li>
+					<li>harmonised how all the new serialisable JSON objects are sent to and read from the db to a handful of simple general functions</li>
+					<li>externally opening a file is offloaded to a temporary thread to avoid gui lockups on OS flavours that have delayed 'open this file pls' calls</li>
+					<li>increased the commonly used read/write 64k block size to 256k, let's see if it reduces some file fragging</li>
+					<li>clientside hydrus bandwidth reporting is a bit faster and simpler</li>
+					<li>general code cleanup</li>
+					<li>general refactoring</li>
+					<li>a long-term refactoring job that aimed to better decouple the client, server, and hydrus parts is now completely done</li>
+					<li>delineated the layout of the gallery and page of images management panels a little</li>
+					<li>updated several links in the help and the program to https</li>
+					<li>the petition content checkbox list is now significantly taller</li>
+					<li>cleaned up the static folder a little bit</li>
+					<li>silenced an unhelpful webm last frame error</li>
+				</ul>
 				<li><h3>version 177</h3></li>
 				<ul>
 					<li>the old YAML "default advanced tag options" is converted entirely to the new JSON "default import tag options"</li>

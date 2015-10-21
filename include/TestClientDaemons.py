@@ -32,7 +32,7 @@ class TestDaemons( unittest.TestCase ):
             
             import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir, tag = 'local tag' )
             
-            HydrusGlobals.test_controller.SetRead( 'import_folders', [ import_folder ] )
+            HydrusGlobals.test_controller.SetRead( 'serialisable_named', [ import_folder ] )
             
             
             
@@ -48,7 +48,7 @@ class TestDaemons( unittest.TestCase ):
             
             # I need to expand tests here with the new file system
             
-            [ ( ( updated_import_folder, ), empty_dict ) ] = HydrusGlobals.test_controller.GetWrite( 'import_folder' )
+            [ ( ( updated_import_folder, ), empty_dict ) ] = HydrusGlobals.test_controller.GetWrite( 'serialisable' )
             
             self.assertEqual( updated_import_folder, import_folder )
             

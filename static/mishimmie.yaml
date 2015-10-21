@@ -1,9 +1,0 @@
-!Booru
-_gallery_advance_num: 1
-_image_data: null
-_image_id: main_image
-_name: mishimmie
-_search_separator: '%20'
-_search_url: http://shimmie.katawa-shoujo.com/post/list/%tags%/%index%
-_tag_classnames_to_namespaces: {tag_name: ''}
-_thumb_classname: thumb

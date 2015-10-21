@@ -8,10 +8,13 @@ import ClientGUIManagement
 import ClientGUIPages
 import ClientImporting
 import ClientRatings
+import ClientSearch
 import collections
 import HydrusConstants as HC
+import HydrusData
 import HydrusExceptions
 import HydrusGlobals
+import HydrusSerialisable
 import itertools
 import os
 import ServerDB
@@ -24,9 +27,6 @@ import time
 import threading
 import unittest
 import yaml
-import HydrusData
-import ClientSearch
-import HydrusNetworking
 import wx
 
 class TestClientDB( unittest.TestCase ):
@@ -132,8 +132,8 @@ class TestClientDB( unittest.TestCase ):
         
         preds = set()
         
-        preds.add( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
-        preds.add( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
+        preds.add( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
+        preds.add( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
         
         for p in result: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
         
@@ -145,8 +145,8 @@ class TestClientDB( unittest.TestCase ):
         
         preds = set()
         
-        preds.add( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
-        preds.add( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
+        preds.add( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
+        preds.add( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
         
         for p in result: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
         
@@ -162,7 +162,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'autocomplete_predicates', half_complete_tag = 'series:c' )
         
-        pred = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } )
+        pred = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } )
         
         ( read_pred, ) = result
         
@@ -174,7 +174,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'autocomplete_predicates', tag = 'car' )
         
-        pred = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } )
+        pred = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } )
         
         ( read_pred, ) = result
         
@@ -235,54 +235,15 @@ class TestClientDB( unittest.TestCase ):
             
         
     
-    def test_downloads( self ):
-        
-        result = self._read( 'downloads' )
-        
-        self.assertEqual( result, set() )
-        
-        #
-        
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
-        
-        service_keys_to_content_updates = {}
-        
-        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, ( hash, ) ), )
-        
-        self._write( 'content_updates', service_keys_to_content_updates )
-        
-        #
-        
-        result = self._read( 'downloads' )
-        
-        self.assertEqual( result, { hash } )
-        
-        #
-        
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
-        
-        service_keys_to_content_updates = {}
-        
-        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, ( hash, ) ), )
-        
-        self._write( 'content_updates', service_keys_to_content_updates )
-        
-        #
-        
-        result = self._read( 'downloads' )
-        
-        self.assertEqual( result, set() )
-        
-    
     def test_export_folders( self ):
         
-        file_search_context = ClientData.FileSearchContext(file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [ HydrusData.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'test' ) ] )
+        file_search_context = ClientData.FileSearchContext(file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [ ClientData.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'test' ) ] )
         
         export_folder = ClientFiles.ExportFolder( 'test path', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = file_search_context, period = 3600, phrase = '{hash}' )
         
-        self._write( 'export_folder', export_folder )
+        self._write( 'serialisable', export_folder )
         
-        [ result ] = self._read( 'export_folders' )
+        [ result ] = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
         self.assertEqual( result.GetName(), export_folder.GetName() )
         
@@ -295,7 +256,7 @@ class TestClientDB( unittest.TestCase ):
             
             for ( inclusive, namespace, result ) in tests:
                 
-                predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive ) ]
+                predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive ) ]
                 
                 search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
@@ -309,7 +270,7 @@ class TestClientDB( unittest.TestCase ):
             
             for ( predicate_type, info, result ) in tests:
                 
-                predicates = [ HydrusData.Predicate( predicate_type, info ) ]
+                predicates = [ ClientData.Predicate( predicate_type, info ) ]
                 
                 search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
@@ -323,7 +284,7 @@ class TestClientDB( unittest.TestCase ):
             
             for ( inclusive, tag, result ) in tests:
                 
-                predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive ) ]
+                predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive ) ]
                 
                 search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
@@ -589,10 +550,10 @@ class TestClientDB( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 1 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 0 } ) )
-        predicates.extend( [ HydrusData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 1 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 0 } ) )
+        predicates.extend( [ ClientData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
         
         self.assertEqual( result, predicates )
         
@@ -645,21 +606,21 @@ class TestClientDB( unittest.TestCase ):
         
         session.AddPage( 'files', management_controller, [] )
         
-        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] )
+        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
         
         session.AddPage( 'files', management_controller, [] )
         
-        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, HydrusData.GenerateKey() ) ), HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, HydrusData.GenerateKey() ) ) ] )
+        fsc = ClientData.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, HydrusData.GenerateKey() ) ), ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, HydrusData.GenerateKey() ) ) ] )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
         
         session.AddPage( 'files', management_controller, [] )
         
-        self._write( 'gui_session', session )
+        self._write( 'serialisable', session )
         
-        result = self._read( 'gui_sessions', 'test_session' )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, 'test_session' )
         
         page_names = []
         
@@ -689,37 +650,49 @@ class TestClientDB( unittest.TestCase ):
         
         self._clear_db()
         
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        test_files = []
         
-        path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
+        test_files.append( ( 'muh_swf.swf', 'edfef9905fdecde38e0752a5b6ab7b6df887c3968d4246adc9cffc997e168cdf', 456774, HC.APPLICATION_FLASH, 400, 400, 33, 1, None ) )
+        test_files.append( ( 'muh_mp4.mp4', '2fa293907144a046d043d74e9570b1c792cbfd77ee3f5c93b2b1a1cb3e4c7383', 570534, HC.VIDEO_MP4, 480, 480, 6266, 151, None ) )
+        test_files.append( ( 'muh_webm.webm', '55b6ce9d067326bf4b2fbe66b8f51f366bc6e5f776ba691b0351364383c43fcb', 84069, HC.VIDEO_WEBM, 640, 360, 4010, 121, None ) )
+        test_files.append( ( 'muh_jpg.jpg', '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444', 42296, HC.IMAGE_JPEG, 392, 498, None, None, None ) )
+        test_files.append( ( 'muh_png.png', 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49', 31452, HC.IMAGE_PNG, 191, 196, None, None, None ) )
+        test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.IMAGE_GIF, 329, 302, 600, 5, None ) )
         
-        ( written_result, written_hash ) = self._write( 'import_file', path )
-        
-        self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
-        self.assertEqual( written_hash, hash )
-        
-        ( written_result, written_hash ) = self._write( 'import_file', path )
-        
-        self.assertEqual( written_result, CC.STATUS_REDUNDANT )
-        
-        ( media_result, ) = self._read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( written_hash, ) )
-        
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
-        
-        now = HydrusData.GetNow()
-        
-        self.assertEqual( mr_hash, hash )
-        self.assertEqual( mr_inbox, True )
-        self.assertEqual( mr_size, 5270 )
-        self.assertEqual( mr_mime, HC.IMAGE_PNG )
-        self.assertEqual( mr_hash, hash )
-        self.assertLessEqual( now - 10, mr_timestamp )
-        self.assertLessEqual( mr_timestamp, now + 10 )
-        self.assertEqual( mr_width, 200 )
-        self.assertEqual( mr_height, 200 )
-        self.assertEqual( mr_duration, None )
-        self.assertEqual( mr_num_frames, None )
-        self.assertEqual( mr_num_words, None )
+        for ( filename, hex_hash, size, mime, width, height, duration, num_frames, num_words ) in test_files:
+            
+            path = HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + filename
+            
+            hash = hex_hash.decode( 'hex' )
+            
+            ( written_result, written_hash ) = self._write( 'import_file', path )
+            
+            self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
+            self.assertEqual( written_hash, hash )
+            
+            ( written_result, written_hash ) = self._write( 'import_file', path )
+            
+            self.assertEqual( written_result, CC.STATUS_REDUNDANT )
+            self.assertEqual( written_hash, hash )
+            
+            ( media_result, ) = self._read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( written_hash, ) )
+            
+            ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+            
+            now = HydrusData.GetNow()
+            
+            self.assertEqual( mr_hash, hash )
+            self.assertEqual( mr_inbox, True )
+            self.assertEqual( mr_size, size )
+            self.assertEqual( mr_mime, mime )
+            self.assertLessEqual( now - 10, mr_timestamp )
+            self.assertLessEqual( mr_timestamp, now + 10 )
+            self.assertEqual( mr_width, width )
+            self.assertEqual( mr_height, height )
+            self.assertEqual( mr_duration, duration )
+            self.assertEqual( mr_num_frames, num_frames )
+            self.assertEqual( mr_num_words, num_words )
+            
         
     
     def test_import_folders( self ):
@@ -729,16 +702,16 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'import_folders' )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
         self.assertEqual( result, [] )
         
         #
         
-        self._write( 'import_folder', import_folder_1 )
-        self._write( 'import_folder', import_folder_2 )
+        self._write( 'serialisable', import_folder_1 )
+        self._write( 'serialisable', import_folder_2 )
         
-        result = self._read( 'import_folders' )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
         for item in result:
             
@@ -747,9 +720,9 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        self._write( 'delete_import_folder', 'imp 2' )
+        self._write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, 'imp 2' )
         
-        result = self._read( 'import_folders' )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
         ( item, ) = result
         
@@ -1007,6 +980,45 @@ class TestClientDB( unittest.TestCase ):
         pass
         
     
+    def test_repo_downloads( self ):
+        
+        result = self._read( 'downloads' )
+        
+        self.assertEqual( result, set() )
+        
+        #
+        
+        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        service_keys_to_content_updates = {}
+        
+        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, ( hash, ) ), )
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        result = self._read( 'downloads' )
+        
+        self.assertEqual( result, { hash } )
+        
+        #
+        
+        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        service_keys_to_content_updates = {}
+        
+        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, ( hash, ) ), )
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        #
+        
+        result = self._read( 'downloads' )
+        
+        self.assertEqual( result, set() )
+        
+    
     def test_services( self ):
         
         result = self._read( 'services', ( HC.LOCAL_FILE, HC.LOCAL_TAG ) )
@@ -1166,7 +1178,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_shortcuts( self ):
         
-        result = self._read( 'shortcuts' )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
         
         self.assertEqual( result, [] )
         
@@ -1177,22 +1189,22 @@ class TestClientDB( unittest.TestCase ):
         shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ( HydrusData.GenerateKey(), 'action_data' ) )
         shortcuts.SetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END, ( None, 'other_action_data' ) )
         
-        self._write( 'shortcuts', shortcuts )
+        self._write( 'serialisable', shortcuts )
         
-        result = self._read( 'shortcuts' )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
         
         self.assertEqual( len( result ), 1 )
         
-        result = self._read( 'shortcuts', 'test' )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'test' )
         
         self.assertEqual( result.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ), shortcuts.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ) )
         self.assertEqual( result.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ), shortcuts.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ) )
         
         #
         
-        self._write( 'delete_shortcuts', 'test' )
+        self._write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'test' )
         
-        result = self._read( 'shortcuts' )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
         
         self.assertEqual( result, [] )
         

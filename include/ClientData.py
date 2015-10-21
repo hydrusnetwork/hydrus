@@ -2,11 +2,11 @@ import ClientConstants as CC
 import ClientDefaults
 import ClientDownloading
 import ClientFiles
+import ClientNetworking
 import collections
 import datetime
 import HydrusConstants as HC
 import HydrusExceptions
-import HydrusNetworking
 import HydrusSerialisable
 import HydrusTags
 import threading
@@ -21,7 +21,6 @@ import time
 import wx
 import yaml
 import HydrusData
-import ClientSearch
 import HydrusGlobals
 import HydrusThreading
 
@@ -95,6 +94,39 @@ def CatchExceptionClient( etype, value, tb ):
         
     
     time.sleep( 1 )
+    
+def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
+    
+    num_files = 0
+    actions = set()
+    locations = set()
+    
+    extra_words = ''
+    
+    for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        
+        if len( content_updates ) > 0:
+            
+            name = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key ).GetName()
+            
+            locations.add( name )
+            
+        
+        for content_update in content_updates:
+            
+            ( data_type, action, row ) = content_update.ToTuple()
+            
+            if data_type == HC.CONTENT_TYPE_MAPPINGS: extra_words = ' tags for'
+            
+            actions.add( HC.content_update_string_lookup[ action ] )
+            
+            num_files += len( content_update.GetHashes() )
+            
+        
+    
+    s = ', '.join( locations ) + '->' + ', '.join( actions ) + extra_words + ' ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
+    
+    return s
     
 def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_to_tags ):
     
@@ -290,6 +322,121 @@ class Booru( HydrusData.HydrusYAMLBase ):
     def GetNamespaces( self ): return self._tag_classnames_to_namespaces.values()
     
 sqlite3.register_adapter( Booru, yaml.safe_dump )
+
+class ClientOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._dictionary = HydrusSerialisable.SerialisableDictionary()
+        
+        self._lock = threading.Lock()
+        
+        self._InitialiseDefaults()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        with self._lock:
+            
+            serialisable_info = self._dictionary.GetSerialisableTuple()
+            
+            return serialisable_info
+            
+        
+    
+    def _InitialiseDefaults( self ):
+        
+        self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        self._dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+        
+    
+    def ClearDefaultImportTagOptions( self ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+            
+        
+    
+    def GetDefaultImportTagOptions( self, gallery_identifier = None ):
+        
+        with self._lock:
+            
+            default_import_tag_options = self._dictionary[ 'default_import_tag_options' ]
+            
+            if gallery_identifier is None:
+                
+                return default_import_tag_options
+                
+            else:
+                
+                if gallery_identifier in default_import_tag_options:
+                    
+                    import_tag_options = default_import_tag_options[ gallery_identifier ]
+                    
+                else:
+                    
+                    default_booru_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU )
+                    
+                    default_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
+                    
+                    guidance_import_tag_options = None
+                    
+                    if gallery_identifier.GetSiteType() == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_import_tag_options:
+                        
+                        guidance_import_tag_options = default_import_tag_options[ default_booru_gallery_identifier ]
+                        
+                    elif default_gallery_identifier in default_import_tag_options:
+                        
+                        guidance_import_tag_options = default_import_tag_options[ default_gallery_identifier ]
+                        
+                    
+                    service_keys_to_namespaces = {}
+                    service_keys_to_explicit_tags = {}
+                    
+                    if guidance_import_tag_options is not None:
+                        
+                        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+                        
+                        guidance_service_keys_to_namespaces = guidance_import_tag_options.GetServiceKeysToNamespaces()
+                        
+                        for ( service_key, guidance_namespaces ) in guidance_service_keys_to_namespaces.items():
+                            
+                            if 'all namespaces' in guidance_namespaces:
+                                
+                                service_keys_to_namespaces[ service_key ] = namespaces
+                                
+                            
+                        
+                        service_keys_to_explicit_tags = guidance_import_tag_options.GetServiceKeysToExplicitTags()
+                        
+                    
+                    import_tag_options = ImportTagOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+                    
+                
+                return import_tag_options
+                
+            
+        
+    
+    def SetDefaultImportTagOptions( self, gallery_identifier, import_tag_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = import_tag_options
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS ] = ClientOptions
 
 class Credentials( HydrusData.HydrusYAMLBase ):
     
@@ -902,9 +1049,9 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, service_keys_to_namespaces = None ):
+    def __init__( self, service_keys_to_namespaces = None, service_keys_to_explicit_tags = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -913,21 +1060,48 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
             service_keys_to_namespaces = {}
             
         
+        if service_keys_to_explicit_tags is None:
+            
+            service_keys_to_explicit_tags = {}
+            
+        
         self._service_keys_to_namespaces = service_keys_to_namespaces
+        self._service_keys_to_explicit_tags = service_keys_to_explicit_tags
         
     
     def _GetSerialisableInfo( self ):
         
         safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() }
+        safe_service_keys_to_explicit_tags = { service_key.encode( 'hex' ) : list( tags ) for ( service_key, tags ) in self._service_keys_to_explicit_tags.items() }
         
-        return safe_service_keys_to_namespaces
+        return ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        safe_service_keys_to_namespaces = serialisable_info
+        ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags ) = serialisable_info
         
         self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in safe_service_keys_to_namespaces.items() }
+        self._service_keys_to_explicit_tags = { service_key.decode( 'hex' ) : set( tags ) for ( service_key, tags ) in safe_service_keys_to_explicit_tags.items() }
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            safe_service_keys_to_namespaces = old_serialisable_info
+            
+            safe_service_keys_to_explicit_tags = {}
+            
+            new_serialisable_info = ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags )
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
+    def GetServiceKeysToExplicitTags( self ):
+        
+        return dict( self._service_keys_to_explicit_tags )
         
     
     def GetServiceKeysToNamespaces( self ):
@@ -939,16 +1113,16 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
         
         tags = [ tag for tag in tags if tag is not None ]
         
-        service_keys_to_tags = {}
+        service_keys_to_tags = collections.defaultdict( set )
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
         
         for ( service_key, namespaces ) in self._service_keys_to_namespaces.items():
             
+            tags_to_add_here = []
+            
             if len( namespaces ) > 0:
-                
-                tags_to_add_here = []
                 
                 for namespace in namespaces:
                     
@@ -956,15 +1130,28 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
                     else: tags_to_add_here.extend( [ tag for tag in tags if tag.startswith( namespace + ':' ) ] )
                     
                 
-                tags_to_add_here = HydrusTags.CleanTags( tags_to_add_here )
+            
+            tags_to_add_here = HydrusTags.CleanTags( tags_to_add_here )
+            
+            if len( tags_to_add_here ) > 0:
                 
-                if len( tags_to_add_here ) > 0:
-                    
-                    tags_to_add_here = siblings_manager.CollapseTags( tags_to_add_here )
-                    tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
-                    
-                    service_keys_to_tags[ service_key ] = tags_to_add_here
-                    
+                tags_to_add_here = siblings_manager.CollapseTags( tags_to_add_here )
+                tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
+                
+                service_keys_to_tags[ service_key ].update( tags_to_add_here )
+                
+            
+        
+        for ( service_key, explicit_tags ) in self._service_keys_to_explicit_tags.items():
+            
+            tags_to_add_here = HydrusTags.CleanTags( explicit_tags )
+            
+            if len( tags_to_add_here ) > 0:
+                
+                tags_to_add_here = siblings_manager.CollapseTags( tags_to_add_here )
+                tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
+                
+                service_keys_to_tags[ service_key ].update( tags_to_add_here )
                 
             
         
@@ -982,122 +1169,386 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS ] = ImportTagOptions
 
-class ClientOptions( HydrusSerialisable.SerialisableBase ):
+class Predicate( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_VERSION = 1
     
-    def __init__( self ):
+    def __init__( self, predicate_type = None, value = None, inclusive = True, counts = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        if counts is None: counts = {}
         
-        self._dictionary = HydrusSerialisable.SerialisableDictionary()
+        if type( value ) == list:
+            
+            value = tuple( value )
+            
         
-        self._lock = threading.Lock()
+        self._predicate_type = predicate_type
+        self._value = value
         
-        self._InitialiseDefaults()
+        self._inclusive = inclusive
+        self._counts = {}
+        
+        self._counts[ HC.CURRENT ] = 0
+        self._counts[ HC.PENDING ] = 0
+        
+        for ( current_or_pending, count ) in counts.items(): self.AddToCount( current_or_pending, count )
+        
+    
+    def __eq__( self, other ):
+        
+        return self.__hash__() == other.__hash__()
+        
+    
+    def __hash__( self ):
+        
+        return ( self._predicate_type, self._value ).__hash__()
+        
+    
+    def __ne__( self, other ):
+        
+        return self.__hash__() != other.__hash__()
+        
+    
+    def __repr__( self ):
+        
+        return 'Predicate: ' + HydrusData.ToString( ( self._predicate_type, self._value, self._counts ) )
         
     
     def _GetSerialisableInfo( self ):
         
-        with self._lock:
+        if self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ):
             
-            serialisable_info = self._dictionary.GetSerialisableTuple()
+            ( operator, value, service_key ) = self._value
             
-            return serialisable_info
+            serialisable_value = ( operator, value, service_key.encode( 'hex' ) )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            
+            ( hash, max_hamming ) = self._value
+            
+            serialisable_value = ( hash.encode( 'hex' ), max_hamming )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+            
+            hash = self._value
+            
+            serialisable_value = hash.encode( 'hex' )
+            
+        else:
+            
+            serialisable_value = self._value
             
         
-    
-    def _InitialiseDefaults( self ):
-        
-        self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+        return ( self._predicate_type, serialisable_value, self._inclusive )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        self._dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+        ( self._predicate_type, serialisable_value, self._inclusive ) = serialisable_info
+        
+        if self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ):
+            
+            ( operator, value, service_key ) = serialisable_value
+            
+            self._value = ( operator, value, service_key.decode( 'hex' ) )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            
+            ( serialisable_hash, max_hamming ) = serialisable_value
+            
+            self._value = ( serialisable_hash.decode( 'hex' ), max_hamming )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+            
+            self._value = serialisable_value.decode( 'hex' )
+            
+        else:
+            
+            self._value = serialisable_value
+            
+        
+        if type( self._value ) == list:
+            
+            self._value = tuple( self._value )
+            
         
     
-    def ClearDefaultImportTagOptions( self ):
+    def AddToCount( self, current_or_pending, count ): self._counts[ current_or_pending ] += count
+    
+    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive, self._counts )
+    
+    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive )
+    
+    def GetCount( self, current_or_pending = None ):
         
-        with self._lock:
-            
-            self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
-            
+        if current_or_pending is None: return sum( self._counts.values() )
+        else: return self._counts[ current_or_pending ]
         
     
-    def GetDefaultImportTagOptions( self, gallery_identifier = None ):
+    def GetInclusive( self ):
         
-        with self._lock:
+        # patch from an upgrade mess-up ~v144
+        if not hasattr( self, '_inclusive' ):
             
-            default_import_tag_options = self._dictionary[ 'default_import_tag_options' ]
+            if self._predicate_type not in HC.SYSTEM_PREDICATES:
+                
+                ( operator, value ) = self._value
+                
+                self._value = value
+                
+                self._inclusive = operator == '+'
+                
+            else: self._inclusive = True
             
-            if gallery_identifier is None:
+        
+        return self._inclusive
+        
+    
+    def GetInfo( self ): return ( self._predicate_type, self._value, self._inclusive )
+    
+    def GetType( self ): return self._predicate_type
+    
+    def GetUnicode( self, with_count = True ):
+        
+        count_text = u''
+        
+        if with_count:
+            
+            if self._counts[ HC.CURRENT ] > 0: count_text += u' (' + HydrusData.ConvertIntToPrettyString( self._counts[ HC.CURRENT ] ) + u')'
+            if self._counts[ HC.PENDING ] > 0: count_text += u' (+' + HydrusData.ConvertIntToPrettyString( self._counts[ HC.PENDING ] ) + u')'
+            
+        
+        if self._predicate_type in HC.SYSTEM_PREDICATES:
+            
+            if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_EVERYTHING: base = u'system:everything'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_INBOX: base = u'system:inbox'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_ARCHIVE: base = u'system:archive'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: base = u'system:untagged'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: base = u'system:local'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = u'system:not local'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = u'system:dimensions'
+            elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_WIDTH, HC.PREDICATE_TYPE_SYSTEM_HEIGHT, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
                 
-                return default_import_tag_options
+                if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: base = u'system:number of tags'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH: base = u'system:width'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HEIGHT: base = u'system:height'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION: base = u'system:duration'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: base = u'system:number of words'
                 
-            else:
-                
-                if gallery_identifier in default_import_tag_options:
+                if self._value is not None:
                     
-                    import_tag_options = default_import_tag_options[ gallery_identifier ]
+                    ( operator, value ) = self._value
+                    
+                    base += u' ' + operator + u' ' + HydrusData.ConvertIntToPrettyString( value )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATIO:
+                
+                base = u'system:ratio'
+                
+                if self._value is not None:
+                    
+                    ( operator, ratio_width, ratio_height ) = self._value
+                    
+                    base += u' ' + operator + u' ' + HydrusData.ToString( ratio_width ) + u':' + HydrusData.ToString( ratio_height )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
+                
+                base = u'system:size'
+                
+                if self._value is not None:
+                    
+                    ( operator, size, unit ) = self._value
+                    
+                    base += u' ' + operator + u' ' + HydrusData.ToString( size ) + HydrusData.ConvertIntToUnit( unit )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
+                
+                base = u'system:limit'
+                
+                if self._value is not None:
+                    
+                    value = self._value
+                    
+                    base += u' is ' + HydrusData.ConvertIntToPrettyString( value )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+                
+                base = u'system:age'
+                
+                if self._value is not None:
+                    
+                    ( operator, years, months, days, hours ) = self._value
+                    
+                    base += u' ' + operator + u' ' + HydrusData.ToString( years ) + u'y' + HydrusData.ToString( months ) + u'm' + HydrusData.ToString( days ) + u'd' + HydrusData.ToString( hours ) + u'h'
+                    
+                    
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
+                
+                base = u'system:num_pixels'
+                
+                if self._value is not None:
+                    
+                    ( operator, num_pixels, unit ) = self._value
+                    
+                    base += u' ' + operator + u' ' + HydrusData.ToString( num_pixels ) + ' ' + HydrusData.ConvertIntToPixels( unit )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+                
+                base = u'system:hash'
+                
+                if self._value is not None:
+                    
+                    hash = self._value
+                    
+                    base += u' is ' + hash.encode( 'hex' )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
+                
+                base = u'system:mime'
+                
+                if self._value is not None:
+                    
+                    mimes = self._value
+                    
+                    if set( mimes ) == set( HC.SEARCHABLE_MIMES ):
+                        
+                        mime_text = 'anything'
+                        
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.APPLICATIONS ) ):
+                        
+                        mime_text = 'application'
+                        
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.AUDIO ) ):
+                        
+                        mime_text = 'audio'
+                        
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.IMAGES ) ):
+                        
+                        mime_text = 'image'
+                        
+                    elif set( mimes ) == set( HC.SEARCHABLE_MIMES ).intersection( set( HC.VIDEO ) ):
+                        
+                        mime_text = 'video'
+                        
+                    else:
+                        
+                        mime_text = ', '.join( [ HC.mime_string_lookup[ mime ] for mime in mimes ] )
+                        
+                    
+                    base += u' is ' + mime_text
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
+                
+                base = u'system:rating'
+                
+                if self._value is not None:
+                    
+                    ( operator, value, service_key ) = self._value
+                    
+                    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                    
+                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + HydrusData.ToString( value )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+                
+                base = u'system:similar to'
+                
+                if self._value is not None:
+                    
+                    ( hash, max_hamming ) = self._value
+                    
+                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + HydrusData.ToString( max_hamming )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
+                
+                base = u'system:'
+                
+                if self._value is None:
+                    
+                    base += 'file service'
                     
                 else:
                     
-                    default_booru_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU )
+                    ( operator, current_or_pending, service_key ) = self._value
                     
-                    default_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
+                    if operator == True: base += u'is'
+                    else: base += u'is not'
                     
-                    guidance_import_tag_options = None
+                    if current_or_pending == HC.PENDING: base += u' pending to '
+                    else: base += u' currently in '
                     
-                    if gallery_identifier.GetSiteType() == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_import_tag_options:
-                        
-                        guidance_import_tag_options = default_import_tag_options[ default_booru_gallery_identifier ]
-                        
-                    elif default_gallery_identifier in default_import_tag_options:
-                        
-                        guidance_import_tag_options = default_import_tag_options[ default_gallery_identifier ]
-                        
+                    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                     
-                    service_keys_to_namespaces = {}
-                    
-                    if guidance_import_tag_options is not None:
-                        
-                        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-                        
-                        guidance_service_keys_to_namespaces = guidance_import_tag_options.GetServiceKeysToNamespaces()
-                        
-                        for ( service_key, guidance_namespaces ) in guidance_service_keys_to_namespaces.items():
-                            
-                            if 'all namespaces' in guidance_namespaces:
-                                
-                                service_keys_to_namespaces[ service_key ] = namespaces
-                                
-                            
-                        
-                    
-                    import_tag_options = ImportTagOptions( service_keys_to_namespaces )
+                    base += service.GetName()
                     
                 
-                return import_tag_options
-                
+            
+            base += count_text
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_TAG:
+            
+            tag = self._value
+            
+            if not self._inclusive: base = u'-'
+            else: base = u''
+            
+            base += tag
+            
+            base += count_text
+            
+            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: base += u' (will display as ' + sibling + ')'
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_PARENT:
+            
+            base = '    '
+            
+            tag = self._value
+            
+            base += tag
+            
+            base += count_text
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_NAMESPACE:
+            
+            namespace = self._value
+            
+            if not self._inclusive: base = u'-'
+            else: base = u''
+            
+            base += namespace + u':*anything*'
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_WILDCARD:
+            
+            wildcard = self._value
+            
+            if not self._inclusive: base = u'-'
+            else: base = u''
+            
+            base += wildcard
             
         
-    
-    def SetDefaultImportTagOptions( self, gallery_identifier, import_tag_options ):
-        
-        with self._lock:
-            
-            self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = import_tag_options
-            
+        return base
         
     
-    def Save( self ):
-        
-        HydrusGlobals.client_controller.WriteSynchronous( 'new_options', self )
-        
+    def GetValue( self ): return self._value
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS ] = ClientOptions
+    def SetInclusive( self, inclusive ): self._inclusive = inclusive
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE ] = Predicate
 
 class Service( HydrusData.HydrusYAMLBase ):
     
@@ -1118,6 +1569,14 @@ class Service( HydrusData.HydrusYAMLBase ):
         
     
     def __hash__( self ): return self._service_key.__hash__()
+    
+    def _RecordHydrusBandwidth( self, method, command, data_used ):
+        
+        if ( self._service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS:
+            
+            HydrusGlobals.client_controller.pub( 'service_updates_delayed', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, data_used ) ] } )
+            
+        
     
     def _ReportSyncProcessingError( self, path, error_text ):
         
@@ -1328,15 +1787,24 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             credentials = self.GetCredentials()
             
-            if command in ( 'access_key', 'init', '' ): pass
-            elif command in ( 'session_key', 'access_key_verification' ): HydrusNetworking.AddHydrusCredentialsToHeaders( credentials, request_headers )
-            else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self._service_key, request_headers )
+            if command in ( 'access_key', 'init', '' ):
+                
+                pass
+                
+            elif command in ( 'session_key', 'access_key_verification' ):
+                
+                ClientNetworking.AddHydrusCredentialsToHeaders( credentials, request_headers )
+                
+            else:
+                
+                ClientNetworking.AddHydrusSessionKeyToHeaders( self._service_key, request_headers )
+                
             
             path = '/' + command
             
             if method == HC.GET:
                 
-                query = HydrusNetworking.ConvertHydrusGETArgsToQuery( request_args )
+                query = ClientNetworking.ConvertHydrusGETArgsToQuery( request_args )
                 
                 body = ''
                 
@@ -1380,12 +1848,12 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             ( response, size_of_response, response_headers, cookies ) = HydrusGlobals.client_controller.DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True )
             
-            HydrusNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
+            ClientNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
             
             if method == HC.GET: data_used = size_of_response
             elif method == HC.POST: data_used = len( body )
             
-            HydrusNetworking.DoHydrusBandwidth( self._service_key, method, command, data_used )
+            self._RecordHydrusBandwidth( method, command, data_used )
             
             if return_cookies: return ( response, cookies )
             else: return response
@@ -2233,7 +2701,7 @@ class UndoManager( object ):
                     
                     ( service_keys_to_content_updates, ) = args
                     
-                    undo_string = 'undo ' + HydrusData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                    undo_string = 'undo ' + ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
                     
                 
             
@@ -2247,7 +2715,7 @@ class UndoManager( object ):
                     
                     ( service_keys_to_content_updates, ) = args
                     
-                    redo_string = 'redo ' + HydrusData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                    redo_string = 'redo ' + ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
                     
                 
             

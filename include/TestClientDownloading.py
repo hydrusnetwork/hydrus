@@ -1,5 +1,4 @@
 import ClientConstants as CC
-import ClientData
 import ClientDefaults
 import collections
 import HydrusConstants as HC
@@ -140,7 +139,7 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_image_page.html' ) as f: pixiv_page = f.read()
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
-        HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=51078392', pixiv_page )
+        HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=50926312', pixiv_page )
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://i3.pixiv.net/img-original/img/2014/01/25/19/21/56/41171994_p0.jpg', 'image file' )
         
@@ -152,7 +151,9 @@ class TestDownloaders( unittest.TestCase ):
         
         ( page_of_urls, definitely_no_more_pages ) = gallery.GetPage( 'naruto', 0 )
         
-        expected_gallery_urls = [ u'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=51078392', 'a bunch of others' ]
+        # a manga one, http://www.pixiv.net/member_illust.php?mode=medium&illust_id=51078392, is currently filtered
+        
+        expected_gallery_urls = [ u'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=50926312', 'a bunch of others' ]
         
         self.assertEqual( page_of_urls[0], expected_gallery_urls[0] )
         
@@ -162,7 +163,7 @@ class TestDownloaders( unittest.TestCase ):
         
         try:
             
-            tags = gallery.GetFileAndTags( temp_path, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=51078392' )
+            tags = gallery.GetFileAndTags( temp_path, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=50926312' )
             
             with open( temp_path, 'rb' ) as f: data = f.read()
             
@@ -173,7 +174,7 @@ class TestDownloaders( unittest.TestCase ):
         
         info = ( data, tags )
         
-        expected_tags = [u'Ib', u'VOCALOID', u'\u30a2\u30ca\u30ed\u30b0', u'\u30a4\u30ca\u30ba\u30de\u30a4\u30ec\u30d6\u30f3', u'\u30a4\u30f4', u'\u30aa\u30ea\u30b8\u30ca\u30eb', u'\u30ab\u30b2\u30ed\u30a6\u30d7\u30ed\u30b8\u30a7\u30af\u30c8', u'\u30ab\u30ce', u'\u30ab\u30e0\u30af\u30e9\u30a4\u30ba\u30eb', u'\u30ad\u30c9', u'\u30b9\u30fc\u30d1\u30fc\u30c0\u30f3\u30ac\u30f3\u30ed\u30f3\u30d12', u'\u30c0\u30f3\u30ac\u30f3\u30ed\u30f3\u30d1', u'\u30ea\u30c8\u30eb\u30d0\u30b9\u30bf\u30fc\u30ba!', u'\u5275\u4f5c', u'\u539f\u521b', u'\u5973\u306e\u5b50', u'\u72db\u65e5', u'\u72db\u679d\u51ea\u6597', u'\u843d\u66f8\u304d', u'\u925b\u7b46', u'creator:Canon', u'title:\u30ea\u30f3\u3061\u3083\u3093']
+        expected_tags = [u'VOCALOID', u'\u93e1\u97f3\u30ea\u30f3', u'\u5973\u306e\u5b50', u'creator:Canon', u'title:\u30ea\u30f3\u3061\u3083\u3093']
         
         expected_info = ( 'image file', expected_tags )
         

@@ -1035,7 +1035,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._last_checked = HydrusData.GetNow()
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'import_folder', self )
+            HydrusGlobals.client_controller.WriteSynchronous( 'serialisable', self )
             
         
     
@@ -2214,7 +2214,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 self._last_error = HydrusData.GetNow()
                 
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'subscription', self )
+            HydrusGlobals.client_controller.WriteSynchronous( 'serialisable', self )
             
             if job_key.HasVariable( 'popup_files' ):
                 

@@ -1,6 +1,7 @@
 import ClientCaches
 import ClientData
 import ClientDaemons
+import ClientNetworking
 import hashlib
 import httplib
 import HydrusConstants as HC
@@ -9,6 +10,7 @@ import HydrusData
 import HydrusExceptions
 import HydrusGlobals
 import HydrusNetworking
+import HydrusSerialisable
 import HydrusSessions
 import HydrusServer
 import HydrusTags
@@ -330,15 +332,15 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_text', 'booting db' )
         
-        self._http = HydrusNetworking.HTTPConnectionManager()
+        self._http = ClientNetworking.HTTPConnectionManager()
         
         HydrusController.HydrusController.InitModel( self )
         
         self._options = self.Read( 'options' )
-        self._new_options = self.Read( 'new_options' )
+        self._new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
         
         HC.options = self._options
-    
+        
         self._services_manager = ClientData.ServicesManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
@@ -353,7 +355,7 @@ class Controller( HydrusController.HydrusController ):
             
             ( proxytype, host, port, username, password ) = HC.options[ 'proxy' ]
             
-            HydrusNetworking.SetProxy( proxytype, host, port, username, password )
+            ClientNetworking.SetProxy( proxytype, host, port, username, password )
             
         
         def wx_code():
@@ -835,7 +837,10 @@ class Controller( HydrusController.HydrusController ):
         
         limit = search_context.GetSystemPredicates().GetLimit()
         
-        if limit is not None: query_hash_ids = query_hash_ids[ : limit ]
+        if limit is not None:
+            
+            query_hash_ids = query_hash_ids[ : limit ]
+            
         
         service_key = search_context.GetFileServiceKey()
         

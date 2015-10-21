@@ -1,9 +1,9 @@
 import bs4
+import ClientNetworking
 import collections
 import httplib
 import HydrusConstants as HC
 import HydrusExceptions
-import HydrusNetworking
 import HydrusSerialisable
 import HydrusThreading
 import json
@@ -20,7 +20,6 @@ import wx
 import HydrusTags
 import HydrusData
 import HydrusFileHandling
-import ClientData
 import ClientConstants as CC
 import HydrusGlobals
 
@@ -379,10 +378,16 @@ class Gallery( object ):
     
     def _AddSessionCookies( self, request_headers ): pass
     
-    def _FetchData( self, url, request_headers = None, report_hooks = None, temp_path = None ):
+    def _FetchData( self, url, referer_url = None, report_hooks = None, temp_path = None ):
         
-        if request_headers is None: request_headers = {}
         if report_hooks is None: report_hooks = []
+        
+        request_headers = {}
+        
+        if referer_url is not None:
+            
+            request_headers[ 'Referer' ] = referer_url
+            
         
         self._AddSessionCookies( request_headers )
         
@@ -697,14 +702,14 @@ class GalleryBooru( Gallery ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
         
-        self._FetchData( file_url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def GetFileAndTags( self, temp_path, url, report_hooks = None ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
         
-        self._FetchData( file_url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
         return tags
         
@@ -809,7 +814,7 @@ class GalleryDeviantArt( Gallery ):
         
         file_url = self._GetFileURL( url, report_hooks = report_hooks )
         
-        self._FetchData( file_url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def GetTags( self, url, report_hooks = None ):
@@ -900,7 +905,7 @@ class GalleryHentaiFoundry( Gallery ):
         
         cookies = manager.GetCookies( 'hentai foundry' )
         
-        HydrusNetworking.AddCookiesToHeaders( cookies, request_headers )
+        ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
         
     
     def _GetFileURLAndTags( self, url, report_hooks = None ):
@@ -1014,14 +1019,14 @@ class GalleryHentaiFoundry( Gallery ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
         
-        self._FetchData( file_url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def GetFileAndTags( self, temp_path, url, report_hooks = None ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
         
-        self._FetchData( file_url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
         return tags
         
@@ -1186,14 +1191,14 @@ class GalleryNewgrounds( Gallery ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
         
-        self._FetchData( file_url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def GetFileAndTags( self, temp_path, url, report_hooks = None ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
         
-        self._FetchData( file_url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
         return tags
         
@@ -1231,7 +1236,7 @@ class GalleryPixiv( Gallery ):
         
         cookies = manager.GetCookies( 'pixiv' )
         
-        HydrusNetworking.AddCookiesToHeaders( cookies, request_headers )
+        ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -1242,13 +1247,29 @@ class GalleryPixiv( Gallery ):
         
         soup = bs4.BeautifulSoup( html )
         
+        manga_links = soup.find_all( class_ = 'manga' )
         thumbnail_links = soup.find_all( class_ = 'work' )
         
-        for thumbnail_link in thumbnail_links:
+        manga_urls = { manga_link[ 'href' ] for manga_link in manga_links }
+        thumbnail_urls = [ thumbnail_link[ 'href' ] for thumbnail_link in thumbnail_links ]
+        
+        for thumbnail_url in thumbnail_urls:
             
-            url = urlparse.urljoin( url_base, thumbnail_link[ 'href' ] ) # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=33500690
-            
-            urls.append( url )
+            if thumbnail_url in manga_urls:
+                
+                # I think the best way to handle this is to wait until I have cbz support or whatever and sort it out in getfileandtags
+                # download each file in turn and write to a cbz on temp_path
+                # replace this with the mode=manga url so it is easily noticed at that stage
+                # but for now, just skip it
+                
+                pass
+                
+            else:
+                
+                url = urlparse.urljoin( url_base, thumbnail_url ) # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=33500690
+                
+                urls.append( url )
+                
             
         
         return ( urls, definitely_no_more_pages )
@@ -1267,22 +1288,16 @@ class GalleryPixiv( Gallery ):
         
         #
         
-        # this is the page that holds the full size of the image.
-        # pixiv won't serve the image unless it thinks this page is the referrer
-        #referral_url = page_url.replace( 'medium', 'big' ) # http://www.pixiv.net/member_illust.php?mode=big&illust_id=33500690
-        
-        #
-        
         original_image = soup.find( class_ = 'original-image' )
         
         image_url = original_image[ 'data-src' ] # http://i3.pixiv.net/img-original/img/2014/01/25/19/21/56/41171994_p0.jpg
         
         #
         
-        tags = soup.find( 'ul', class_ = 'tagCloud' )
+        tags_parent = soup.find( 'section', class_ = 'work-tags' )
         
-        # <a href="/member_illust.php?id=5754629&amp;tag=Ib">Ib<span class="cnt">(2)</span></a> -> Ib
-        tags = [ a_item.contents[0] for a_item in tags.find_all( 'a' ) ]
+        # <a href="/search.php?s_mode=s_tag_full&amp;word=%E3%83%8F%E3%83%B3%E3%83%89%E3%83%A1%E3%82%A4%E3%83%89" class="text">[unicode tag here]</a>
+        tags = [ link.string for link in tags_parent.find_all( 'a', class_ = 'text' ) ]
         
         user = soup.find( 'h1', class_ = 'user' )
         
@@ -1308,18 +1323,14 @@ class GalleryPixiv( Gallery ):
         
         ( image_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
         
-        request_headers = { 'Referer' : url }
-        
-        self._FetchData( image_url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( image_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def GetFileAndTags( self, temp_path, url, report_hooks = None ):
         
         ( image_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
         
-        request_headers = { 'Referer' : url }
-        
-        self._FetchData( image_url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( image_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
         
         return tags
         

@@ -48,7 +48,7 @@ def DecryptAESFile( aes_key, iv, path ):
         
         with open( path_to, 'wb' ) as decrypted_f:
             
-            next_block = encrypted_f.read( 65536 )
+            next_block = encrypted_f.read( HC.READ_BLOCK_SIZE )
             
             if next_block.startswith( 'hydrus encrypted zip' ): next_block = next_block.replace( 'hydrus encrypted zip', '', 1 )
             
@@ -56,7 +56,7 @@ def DecryptAESFile( aes_key, iv, path ):
                 
                 block = next_block
                 
-                next_block = encrypted_f.read( 65536 )
+                next_block = encrypted_f.read( HC.READ_BLOCK_SIZE )
                 
                 decrypted_block = aes_cipher.decrypt( block )
                 
@@ -104,13 +104,13 @@ def EncryptAESFile( path, preface = '' ):
             
             encrypted_f.write( preface )
             
-            next_block = decrypted_f.read( 65536 )
+            next_block = decrypted_f.read( HC.READ_BLOCK_SIZE )
             
             while True:
                 
                 block = next_block
                 
-                next_block = decrypted_f.read( 65536 )
+                next_block = decrypted_f.read( HC.READ_BLOCK_SIZE )
                 
                 if len( next_block ) == 0:
                     

@@ -24,7 +24,6 @@ import wx
 import yaml
 import HydrusData
 import HydrusFileHandling
-import HydrusNetworking
 import HydrusGlobals
 
 # Option Enums
@@ -1522,7 +1521,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
             
-            if delta_x > 5 or delta_y > 5:
+            if abs( delta_x ) > 5 or abs( delta_y ) > 5:
                 
                 hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL, ordered = True )
                 

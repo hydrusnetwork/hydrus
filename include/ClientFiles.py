@@ -382,10 +382,6 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                 
-                existing_filenames = os.listdir( folder_path )
-                
-                #
-                
                 query_hash_ids = HydrusGlobals.client_controller.Read( 'file_query_ids', self._file_search_context )
                 
                 query_hash_ids = list( query_hash_ids )
@@ -420,12 +416,15 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 terms = ParseExportPhrase( self._phrase )
                 
-                filenames_used = set()
+                previous_filenames = set( os.listdir( folder_path ) )
+                
+                sync_filenames = set()
                 
                 for media_result in media_results:
                     
                     hash = media_result.GetHash()
                     mime = media_result.GetMime()
+                    size = media_result.GetSize()
                     
                     source_path = GetFilePath( hash, mime )
                     
@@ -435,21 +434,17 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     do_copy = True
                     
-                    if filename in filenames_used:
+                    if filename in sync_filenames:
                         
                         do_copy = False
                         
                     elif os.path.exists( dest_path ):
                         
-                        source_info = os.lstat( source_path )
-                        
-                        source_size = source_info[6]
-                        
                         dest_info = os.lstat( dest_path )
                         
                         dest_size = dest_info[6]
                         
-                        if source_size == dest_size:
+                        if dest_size == size:
                             
                             do_copy = False
                             
@@ -464,16 +459,16 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         except: pass
                         
                     
-                    filenames_used.add( filename )
+                    sync_filenames.add( filename )
                     
                 
                 if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
                     
-                    all_filenames = os.listdir( folder_path )
+                    deletee_filenames = previous_filenames.difference( sync_filenames )
                     
-                    deletee_paths = { folder_path + os.path.sep + filename for filename in all_filenames if filename not in filenames_used }
-                    
-                    for deletee_path in deletee_paths:
+                    for deletee_filename in deletee_filenames:
+                        
+                        deletee_path = folder_path + os.path.sep + deletee_filename
                         
                         ClientData.DeletePath( deletee_path )
                         
@@ -482,7 +477,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._last_checked = HydrusData.GetNow()
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'export_folder', self )
+            HydrusGlobals.client_controller.WriteSynchronous( 'serialisable', self )
             
         
     

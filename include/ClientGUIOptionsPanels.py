@@ -4,8 +4,10 @@ import ClientGUICommon
 import ClientCaches
 import ClientData
 import ClientDefaults
+import ClientGUIDialogs
 import collections
 import HydrusConstants as HC
+import HydrusData
 import wx
 import wx.lib.masked.timectrl
 import HydrusGlobals
@@ -384,6 +386,8 @@ class OptionsPanelTags( OptionsPanel ):
         OptionsPanel.__init__( self, parent )
         
         self._service_keys_to_checkbox_info = {}
+        self._service_keys_to_explicit_button_info = {}
+        self._button_ids_to_service_keys = {}
         
         self._vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -397,23 +401,52 @@ class OptionsPanelTags( OptionsPanel ):
         event.Skip()
         
     
+    def EventExplicitTags( self, event ):
+        
+        button_id = event.GetId()
+        
+        service_key = self._button_ids_to_service_keys[ button_id ]
+        
+        ( explicit_tags, explicit_button ) = self._service_keys_to_explicit_button_info[ service_key ]
+        
+        with ClientGUIDialogs.DialogInputTags( self, service_key, explicit_tags ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                explicit_tags = dlg.GetTags()
+                
+            
+        
+        button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+        
+        explicit_button.SetLabel( button_label )
+        
+        self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+        
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'import_tag_options_changed' ) ) )
+        
+    
     def GetInfo( self ):
         
         result = {}
-        
-        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
-            
-            namespaces = [ namespace for ( namespace, checkbox ) in checkbox_info if checkbox.GetValue() == True ]
-            
-            result[ service_key ] = namespaces
-            
         
         return result
         
     
     def GetOptions( self ):
         
-        import_tag_options = ClientData.ImportTagOptions( service_keys_to_namespaces = self.GetInfo() )
+        service_keys_to_namespaces = {}
+        
+        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
+            
+            namespaces = [ namespace for ( namespace, checkbox ) in checkbox_info if checkbox.GetValue() == True ]
+            
+            service_keys_to_namespaces[ service_key ] = namespaces
+            
+        
+        service_keys_to_explicit_tags = { service_key : explicit_tags for ( service_key, ( explicit_tags, explicit_button ) ) in self._service_keys_to_explicit_button_info.items() }
+        
+        import_tag_options = ClientData.ImportTagOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
         
         return import_tag_options
         
@@ -423,8 +456,12 @@ class OptionsPanelTags( OptionsPanel ):
         self._vbox.Clear( True )
         
         self._service_keys_to_checkbox_info = {}
+        self._service_keys_to_explicit_button_info = {}
+        self._button_ids_to_service_keys = {}
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        
+        button_id = 1
         
         if len( services ) > 0:
             
@@ -453,45 +490,27 @@ class OptionsPanelTags( OptionsPanel ):
                     
                     self._service_keys_to_checkbox_info[ service_key ].append( ( namespace, namespace_checkbox ) )
                     
-                    vbox.AddF( namespace_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    vbox.AddF( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
+                
+                explicit_tags = set()
+                
+                button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+                
+                explicit_button = wx.Button( self, label = button_label, id = button_id )
+                explicit_button.Bind( wx.EVT_BUTTON, self.EventExplicitTags )
+                
+                self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+                self._button_ids_to_service_keys[ button_id ] = service_key
+                
+                button_id += 1
+                
+                vbox.AddF( explicit_button, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 outer_gridbox.AddF( vbox, CC.FLAGS_MIXED )
                 
             
             self._vbox.AddF( outer_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-        
-    
-    def SetInfo( self, new_service_keys_to_namespaces_info ):
-        
-        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
-            
-            if service_key in new_service_keys_to_namespaces_info:
-                
-                new_namespaces_info = new_service_keys_to_namespaces_info[ service_key ]
-                
-                for ( namespace, checkbox ) in checkbox_info:
-                    
-                    if type( new_namespaces_info ) == bool:
-                        
-                        value = new_namespaces_info
-                        
-                        checkbox.SetValue( value )
-                        
-                    else:
-                        
-                        new_namespaces = new_namespaces_info
-                        
-                        if namespace in new_namespaces: checkbox.SetValue( True )
-                        else: checkbox.SetValue( False )
-                        
-                    
-                
-            else:
-                
-                for ( namespace, checkbox ) in checkbox_info: checkbox.SetValue( False )
-                
             
         
     
@@ -503,18 +522,50 @@ class OptionsPanelTags( OptionsPanel ):
             
             if service_key in service_keys_to_namespaces:
                 
-                namespaces = service_keys_to_namespaces[ service_key ]
-                
-                for ( namespace, checkbox ) in checkbox_info:
-                    
-                    if namespace in namespaces: checkbox.SetValue( True )
-                    else: checkbox.SetValue( False )
-                    
+                namespaces_to_set = service_keys_to_namespaces[ service_key ]
                 
             else:
                 
-                for ( namespace, checkbox ) in checkbox_info: checkbox.SetValue( False )
+                namespaces_to_set = set()
                 
             
+            for ( namespace, checkbox ) in checkbox_info:
+                
+                if namespace in namespaces_to_set:
+                    
+                    checkbox.SetValue( True )
+                    
+                else:
+                    
+                    checkbox.SetValue( False )
+                    
+                
+            
+        
+        service_keys_to_explicit_tags = import_tag_options.GetServiceKeysToExplicitTags()
+        
+        new_service_keys_to_explicit_button_info = {}
+        
+        for ( service_key, button_info ) in self._service_keys_to_explicit_button_info.items():
+            
+            if service_key in service_keys_to_explicit_tags:
+                
+                explicit_tags = service_keys_to_explicit_tags[ service_key ]
+                
+            else:
+                
+                explicit_tags = set()
+                
+            
+            ( old_explicit_tags, explicit_button ) = button_info
+            
+            button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+            
+            explicit_button.SetLabel( button_label )
+            
+            new_service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+            
+        
+        self._service_keys_to_explicit_button_info = new_service_keys_to_explicit_button_info
         
     

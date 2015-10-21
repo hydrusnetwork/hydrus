@@ -380,14 +380,6 @@ class VideoRendererFFMPEG( object ):
             
             if len(s) != nbytes:
                 
-                print( "Warning: in file %s, "%(self._path)+
-                       "%d bytes wanted but %d bytes read,"%(nbytes, len(s))+
-                       "at frame %d/%d, at time %.02f/%.02f sec. "%(
-                        self.pos,self._num_frames,
-                        1.0*self.pos/self.fps,
-                        self._duration)+
-                       "Using the last valid frame instead.")
-                
                 result = self.lastread
                 
                 self.close()
@@ -477,7 +469,7 @@ class GIFRenderer( object ):
                 
                 self._pil_image.seek( self._next_render_index )
                 
-                if self._pil_image.palette == self._pil_global_palette: # for some reason, when pil falls back from local palette to global palette, a bunch of important variables reset!
+                if self._pil_global_palette is not None and self._pil_image.palette == self._pil_global_palette: # for some reason, when pil falls back from local palette to global palette, a bunch of important variables reset!
                     
                     self._pil_image.palette.dirty = self._pil_dirty
                     self._pil_image.palette.mode = self._pil_mode
@@ -511,9 +503,12 @@ class GIFRenderer( object ):
         
         self._pil_global_palette = self._pil_image.palette
         
-        self._pil_dirty = self._pil_image.palette.dirty
-        self._pil_mode = self._pil_image.palette.mode
-        self._pil_rawmode = self._pil_image.palette.rawmode
+        if self._pil_global_palette is not None:
+            
+            self._pil_dirty = self._pil_image.palette.dirty
+            self._pil_mode = self._pil_image.palette.mode
+            self._pil_rawmode = self._pil_image.palette.rawmode
+            
         
         self._next_render_index = 0
         self._last_frame = None

@@ -14,6 +14,7 @@ import HydrusImageHandling
 import HydrusVideoHandling
 import os
 import tempfile
+import threading
 import traceback
 import cStringIO
 import subprocess
@@ -89,7 +90,7 @@ def CleanUpTempPath( os_file_handle, temp_path ):
     
 def CopyFileLikeToFileLike( f_source, f_dest ):
     
-    for block in HydrusData.ReadFileLikeAsBlocks( f_source, 65536 ): f_dest.write( block )
+    for block in HydrusData.ReadFileLikeAsBlocks( f_source ): f_dest.write( block )
     
 def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
@@ -154,7 +155,7 @@ def GetExtraHashesFromPath( path ):
     
     with open( path, 'rb' ) as f:
         
-        for block in HydrusData.ReadFileLikeAsBlocks( f, 65536 ):
+        for block in HydrusData.ReadFileLikeAsBlocks( f ):
             
             h_md5.update( block )
             h_sha1.update( block )
@@ -216,7 +217,7 @@ def GetHashFromPath( path ):
     
     with open( path, 'rb' ) as f:
         
-        for block in HydrusData.ReadFileLikeAsBlocks( f, 65536 ): h.update( block )
+        for block in HydrusData.ReadFileLikeAsBlocks( f ): h.update( block )
         
     
     return h.digest()
@@ -278,41 +279,51 @@ def IsImage( mime ): return mime in ( HC.IMAGE_JPEG, HC.IMAGE_GIF, HC.IMAGE_PNG,
 
 def LaunchDirectory( path ):
     
-    if HC.PLATFORM_WINDOWS:
+    def do_it():
         
-        os.startfile( path )
+        if HC.PLATFORM_WINDOWS:
+            
+            os.startfile( path )
+            
+        else:
+            
+            if HC.PLATFORM_OSX: cmd = [ 'open' ]
+            elif HC.PLATFORM_LINUX: cmd = [ 'xdg-open' ]
+            
+            cmd.append( path )
+            
+            process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+            
+            process.wait()
+            
+            process.communicate()
+            
         
-    else:
-        
-        if HC.PLATFORM_OSX: cmd = [ 'open' ]
-        elif HC.PLATFORM_LINUX: cmd = [ 'xdg-open' ]
-        
-        cmd.append( path )
-        
-        process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
-        
-        process.wait()
-        
-        process.communicate()
-        
+    
+    threading.Thread( target = do_it ).start()
     
 def LaunchFile( path ):
     
-    if HC.PLATFORM_WINDOWS:
+    def do_it():
         
-        os.startfile( path )
+        if HC.PLATFORM_WINDOWS:
+            
+            os.startfile( path )
+            
+        else:
+            
+            if HC.PLATFORM_OSX: cmd = [ 'open' ]
+            elif HC.PLATFORM_LINUX: cmd = [ 'xdg-open' ]
+            
+            cmd.append( path )
+            
+            process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+            
+            process.wait()
+            
+            process.communicate()        
+            
         
-    else:
-        
-        if HC.PLATFORM_OSX: cmd = [ 'open' ]
-        elif HC.PLATFORM_LINUX: cmd = [ 'xdg-open' ]
-        
-        cmd.append( path )
-        
-        process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
-        
-        process.wait()
-        
-        process.communicate()        
-        
+    
+    threading.Thread( target = do_it ).start()
     

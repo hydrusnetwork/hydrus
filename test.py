@@ -7,7 +7,7 @@ from include import HydrusConstants as HC
 from include import ClientConstants as CC
 from include import HydrusGlobals
 from include import ClientDefaults
-from include import HydrusNetworking
+from include import ClientNetworking
 from include import HydrusPubSub
 from include import HydrusSessions
 from include import HydrusTags
@@ -60,7 +60,7 @@ class Controller( object ):
         
         self._call_to_threads = [ HydrusThreading.DAEMONCallToThread( self ) for i in range( 10 ) ]
         
-        self._http = HydrusNetworking.HTTPConnectionManager()
+        self._http = ClientNetworking.HTTPConnectionManager()
         
         self._reads = {}
         

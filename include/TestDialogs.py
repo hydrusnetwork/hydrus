@@ -1,5 +1,4 @@
 import ClientConstants as CC
-import ClientData
 import ClientDefaults
 import ClientGUIDialogs
 import collections

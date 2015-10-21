@@ -4,7 +4,6 @@ import ClientGUIManagement
 import ClientGUIDialogsManage
 import collections
 import HydrusConstants as HC
-import HydrusNetworking
 import os
 import TestConstants
 import unittest

@@ -221,8 +221,17 @@ def GeneratePerceptualHash( path ):
     
     return answer
     
-def GeneratePILImage( path ): return PILImage.open( path )
-
+def GeneratePILImage( path ):
+    
+    pil_image = PILImage.open( path )
+    
+    if pil_image is None:
+        
+        raise Exception( 'The file at ' + path + ' could not be rendered!' )
+        
+    
+    return pil_image
+    
 def GeneratePILImageFromNumpyImage( numpy_image ):
     
     ( h, w, depth ) = numpy_image.shape
@@ -230,13 +239,13 @@ def GeneratePILImageFromNumpyImage( numpy_image ):
     if depth == 3: format = 'RGB'
     elif depth == 4: format = 'RGBA'
     
-    pil_image = PILImage.fromstring( format, ( w, h ), numpy_image.data )
+    pil_image = PILImage.frombytes( format, ( w, h ), numpy_image.data )
     
     return pil_image
     
 def GetGIFFrameDurations( path ):
     
-    pil_image_for_duration = GeneratePILImage( path )
+    pil_image = GeneratePILImage( path )
     
     frame_durations = []
     
@@ -244,15 +253,22 @@ def GetGIFFrameDurations( path ):
     
     while True:
         
-        try: pil_image_for_duration.seek( i )
+        try: pil_image.seek( i )
         except: break
         
-        if 'duration' not in pil_image_for_duration.info: duration = 40 # 25 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+        if 'duration' not in pil_image.info:
+            
+            duration = 83 # Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+            
         else:
             
-            duration = pil_image_for_duration.info[ 'duration' ]
+            duration = pil_image.info[ 'duration' ]
             
-            if duration == 0: duration = 40
+            # In the gif frame header, 10 is stored as 1ms. This 1 is commonly as utterly wrong as 0.
+            if duration in ( 0, 10 ):
+                
+                duration = 80
+                
             
         
         frame_durations.append( duration )

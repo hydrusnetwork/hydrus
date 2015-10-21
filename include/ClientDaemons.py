@@ -1,4 +1,3 @@
-import ClientData
 import ClientDownloading
 import ClientFiles
 import collections
@@ -30,7 +29,6 @@ import time
 import traceback
 import wx
 import yaml
-import HydrusNetworking
 import HydrusGlobals
 
 def DAEMONCheckExportFolders():
@@ -39,9 +37,14 @@ def DAEMONCheckExportFolders():
     
     if not options[ 'pause_export_folders_sync' ]:
         
-        export_folders = HydrusGlobals.client_controller.Read( 'export_folders' )
+        export_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
         for export_folder in export_folders:
+            
+            if options[ 'pause_export_folders_sync' ]:
+                
+                break
+                
             
             export_folder.DoWork()
             
@@ -53,9 +56,14 @@ def DAEMONCheckImportFolders():
     
     if not options[ 'pause_import_folders_sync' ]:
         
-        import_folders = HydrusGlobals.client_controller.Read( 'import_folders' )
+        import_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
         for import_folder in import_folders:
+            
+            if options[ 'pause_import_folders_sync' ]:
+                
+                break
+                
             
             import_folder.DoWork()
             
@@ -271,7 +279,10 @@ def DAEMONSynchroniseAccounts():
             
         
     
-    if do_notify: HydrusGlobals.client_controller.pub( 'notify_new_permissions' )
+    if do_notify:
+        
+        HydrusGlobals.client_controller.pub( 'notify_new_permissions' )
+        
     
 def DAEMONSynchroniseRepositories():
     
@@ -301,7 +312,7 @@ def DAEMONSynchroniseSubscriptions():
     
     options = HydrusGlobals.client_controller.GetOptions()
     
-    subscription_names = HydrusGlobals.client_controller.Read( 'subscription_names' )
+    subscription_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
     
     for name in subscription_names:
         
@@ -313,7 +324,7 @@ def DAEMONSynchroniseSubscriptions():
             return
             
         
-        subscription = HydrusGlobals.client_controller.Read( 'subscription', name )
+        subscription = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
         
         subscription.Sync()
         

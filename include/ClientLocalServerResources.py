@@ -128,7 +128,7 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
         
         body += '''
         </div>
-        <div class="footer"><a href="http://hydrusnetwork.github.io/hydrus/">hydrus network</a></div>
+        <div class="footer"><a href="https://hydrusnetwork.github.io/hydrus/">hydrus network</a></div>
     </body>
 </html>'''
         
@@ -217,7 +217,7 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
         
         body += '''
         </div>
-        <div class="footer"><a href="http://hydrusnetwork.github.io/hydrus/">hydrus network</a></div>
+        <div class="footer"><a href="https://hydrusnetwork.github.io/hydrus/">hydrus network</a></div>
     </body>
 </html>'''
         

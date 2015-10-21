@@ -1,11 +1,11 @@
 import ClientDefaults
 import ClientFiles
+import ClientNetworking
 import ClientRendering
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
-import HydrusNetworking
 import os
 import random
 import Queue
@@ -863,7 +863,7 @@ class TagParentsManager( object ):
                     
                     for parent in parents:
                         
-                        parent_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
+                        parent_predicate = ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
                         
                         results.append( parent_predicate )
                         
@@ -1035,7 +1035,7 @@ class TagSiblingsManager( object ):
                         
                         ( old_pred_type, old_value, old_inclusive ) = old_predicate.GetInfo()
                         
-                        new_predicate = HydrusData.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
+                        new_predicate = ClientData.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
                         
                         tags_to_predicates[ new_tag ] = new_predicate
                         
@@ -1103,7 +1103,7 @@ class WebSessionManagerClient( object ):
     
     def __init__( self ):
         
-        existing_sessions = HydrusGlobals.controller.Read( 'web_sessions' )
+        existing_sessions = HydrusGlobals.client_controller.Read( 'web_sessions' )
         
         self._names_to_sessions = { name : ( cookies, expires ) for ( name, cookies, expires ) in existing_sessions }
         
@@ -1143,7 +1143,7 @@ class WebSessionManagerClient( object ):
                 body = urllib.urlencode( hentai_foundry_form_info )
                 
                 request_headers = {}
-                HydrusNetworking.AddCookiesToHeaders( cookies, request_headers )
+                ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
                 request_headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
                 
                 HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
@@ -1152,7 +1152,7 @@ class WebSessionManagerClient( object ):
                 
             elif name == 'pixiv':
                 
-                ( id, password ) = HydrusGlobals.controller.Read( 'pixiv_account' )
+                ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
                 
                 if id == '' and password == '':
                     
@@ -1171,7 +1171,7 @@ class WebSessionManagerClient( object ):
                 headers = {}
                 headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
                 
-                ( response_gumpf, cookies ) = HydrusGlobals.controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+                ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
                 
                 # _ only given to logged in php sessions
                 if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Pixiv login credentials not accepted!' )
@@ -1181,7 +1181,7 @@ class WebSessionManagerClient( object ):
             
             self._names_to_sessions[ name ] = ( cookies, expires )
             
-            HydrusGlobals.controller.Write( 'web_session', name, cookies, expires )
+            HydrusGlobals.client_controller.Write( 'web_session', name, cookies, expires )
             
             return cookies
             

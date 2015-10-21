@@ -21,7 +21,6 @@ import HydrusExceptions
 import HydrusFileHandling
 import HydrusGlobals
 import HydrusNATPunch
-import HydrusNetworking
 import HydrusSerialisable
 import HydrusTags
 import itertools
@@ -1396,7 +1395,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, use_display_tuple_for_sort = True )
         
-        export_folders = HydrusGlobals.client_controller.Read( 'export_folders' )
+        export_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
         self._original_paths = []
         
@@ -1589,7 +1588,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for export_folder in client_data:
             
-            HydrusGlobals.client_controller.Write( 'export_folder', export_folder )
+            HydrusGlobals.client_controller.Write( 'serialisable', export_folder )
             
             path = export_folder.GetName()
             
@@ -1598,7 +1597,10 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         deletees = set( self._original_paths ) - paths_set
         
-        for deletee in deletees: HydrusGlobals.client_controller.Write( 'delete_export_folder', deletee )
+        for deletee in deletees:
+            
+            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, deletee )
+            
         
         HydrusGlobals.client_controller.pub( 'notify_new_export_folders' )
         
@@ -1688,7 +1690,7 @@ synchronise - try to export the files to the directory, overwriting if the files
 If you select synchronise, be careful!'''
         
         st = wx.StaticText( self._type_box, label = text )
-        st.Wrap( 480 )
+        st.Wrap( 440 )
         
         self._type_box.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._type_box.AddF( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2533,7 +2535,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         self._names_to_import_folders = {}
         
-        import_folders = HydrusGlobals.client_controller.Read( 'import_folders' )
+        import_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
         for import_folder in import_folders:
             
@@ -2704,14 +2706,14 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         for name in names_to_delete:
             
-            HydrusGlobals.client_controller.Write( 'delete_import_folder', name )
+            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
             
         
         for name in names_to_save:
             
             import_folder = self._names_to_import_folders[ name ]
             
-            HydrusGlobals.client_controller.Write( 'import_folder', import_folder )
+            HydrusGlobals.client_controller.Write( 'serialisable', import_folder )
             
         
         HydrusGlobals.client_controller.pub( 'notify_new_import_folders' )
@@ -3916,7 +3918,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            gui_session_names = HydrusGlobals.client_controller.Read( 'gui_session_names' )
+            gui_session_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
             
             if 'last session' not in gui_session_names: gui_session_names.insert( 0, 'last session' )
             
@@ -4623,7 +4625,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             HydrusGlobals.client_controller.WriteSynchronous( 'save_options', HC.options )
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'new_options', self._new_options )
+            HydrusGlobals.client_controller.WriteSynchronous( 'serialisable', self._new_options )
             
         except: wx.MessageBox( traceback.format_exc() )
         
@@ -4748,55 +4750,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent, media ):
         
-        def InitialiseControls():
-            
-            like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-            numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
-            
-            self._panels = []
-            
-            if len( like_services ) > 0:
-                
-                self._panels.append( self._LikePanel( self, like_services, media ) )
-                
-            
-            if len( numerical_services ) > 0:
-                
-                self._panels.append( self._NumericalPanel( self, numerical_services, media ) )
-                
-            
-            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            buttonbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttonbox.AddF( self._apply, CC.FLAGS_MIXED )
-            buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            for panel in self._panels: vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         self._hashes = set()
         
         for m in media: self._hashes.update( m.GetHashes() )
@@ -4816,11 +4769,49 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files', position = my_position )
         
-        InitialiseControls()
+        #
         
-        PopulateControls()
+        like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
-        ArrangeControls()
+        self._panels = []
+        
+        if len( like_services ) > 0:
+            
+            self._panels.append( self._LikePanel( self, like_services, media ) )
+            
+        
+        if len( numerical_services ) > 0:
+            
+            self._panels.append( self._NumericalPanel( self, numerical_services, media ) )
+            
+        
+        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
+        self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttonbox.AddF( self._apply, CC.FLAGS_MIXED )
+        buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        for panel in self._panels: vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        #
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
@@ -4849,15 +4840,15 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             for panel in self._panels:
                 
-                if panel.HasChanges():
-                    
-                    sub_service_keys_to_content_updates = panel.GetContentUpdates()
-                    
-                    service_keys_to_content_updates.update( sub_service_keys_to_content_updates )
-                    
+                sub_service_keys_to_content_updates = panel.GetContentUpdates()
+                
+                service_keys_to_content_updates.update( sub_service_keys_to_content_updates )
                 
             
-            HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            if len( service_keys_to_content_updates ) > 0:
+                
+                HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                
             
             ( remember, position ) = HC.options[ 'rating_dialog_position' ]
             
@@ -4952,20 +4943,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             return service_keys_to_content_updates
             
         
-        def HasChanges( self ):
-            
-            for ( service_key, control ) in self._service_keys_to_controls.items():
-                
-                original_rating_state = self._service_keys_to_original_ratings_states[ service_key ]
-                
-                rating_state = control.GetRatingState()
-                
-                if rating_state != original_rating_state: return True
-                
-            
-            return False
-            
-        
     
     class _NumericalPanel( wx.Panel ):
         
@@ -5026,9 +5003,17 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 ( original_rating_state, original_rating ) = self._service_keys_to_original_ratings_states[ service_key ]
                 
                 rating_state = control.GetRatingState()
-                rating = control.GetRating()
                 
-                if rating_state != original_rating_state or rating != original_rating:
+                if rating_state != original_rating_state:
+                    
+                    if rating_state == ClientRatings.NULL:
+                        
+                        rating = None
+                        
+                    else:
+                        
+                        rating = control.GetRating()
+                        
                     
                     content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
                     
@@ -5038,22 +5023,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             return service_keys_to_content_updates
             
-        
-        def HasChanges( self ):
-            
-            for ( service_key, control ) in self._service_keys_to_controls.items():
-                
-                ( original_rating_state, original_rating ) = self._service_keys_to_original_ratings_states[ service_key ]
-                
-                rating_state = control.GetRatingState()
-                rating = control.GetRating()
-                
-                if rating_state != original_rating_state or rating != original_rating: return True
-                
-            
-            return False
-            
-        
+        #
     
 class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
     
@@ -6618,7 +6588,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage subscriptions' )
         
-        self._original_subscription_names = HydrusGlobals.client_controller.Read( 'subscription_names' )
+        self._original_subscription_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
         
         self._names_to_delete = set()
         
@@ -6751,14 +6721,14 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             for name in self._names_to_delete:
                 
-                HydrusGlobals.client_controller.Write( 'delete_subscription', name )
+                HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
                 
             
             for page in all_pages:
                 
                 subscription = page.GetSubscription()
                 
-                HydrusGlobals.client_controller.Write( 'subscription', subscription )
+                HydrusGlobals.client_controller.Write( 'serialisable', subscription )
                 
             
             HydrusGlobals.client_controller.pub( 'notify_new_subscriptions' )
@@ -6833,7 +6803,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
             else:
                 
-                self._original_subscription = HydrusGlobals.client_controller.Read( 'subscription', name )
+                self._original_subscription = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
                 
             
             #

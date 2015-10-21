@@ -1,9 +1,0 @@
-!Booru
-_gallery_advance_num: 25
-_image_data: Original image
-_image_id: null
-_name: rule34@booru.org
-_search_separator: '%20'
-_search_url: http://rule34.xxx/index.php?page=post&s=list&tags=%tags%&pid=%index%
-_tag_classnames_to_namespaces: {tag-type-general: ''}
-_thumb_classname: thumb

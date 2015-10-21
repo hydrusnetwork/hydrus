@@ -23,7 +23,6 @@ import traceback
 import yaml
 import HydrusData
 import HydrusTags
-import HydrusNetworking
 import HydrusGlobals
 
 class MessageDB( object ):

@@ -37,13 +37,14 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 177
+SOFTWARE_VERSION = 178
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
 HYDRUS_KEY_LENGTH = 32
 
 UPDATE_DURATION = 100000
+READ_BLOCK_SIZE = 256 * 1024
 
 lifetimes = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ), ( 'six months', 6 * 31 * 86400 ), ( 'one year', 12 * 31 * 86400 ), ( 'two years', 24 * 31 * 86400 ), ( 'five years', 60 * 31 * 86400 ), ( 'does not expire', None ) ]
 

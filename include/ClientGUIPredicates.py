@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientData
 import ClientGUICommon
 import ClientGUIOptionsPanels
 import ClientRatings
@@ -21,7 +22,7 @@ class PanelPredicateSystem( wx.Panel ):
         
         info = self.GetInfo()
         
-        predicates = ( HydrusData.Predicate( self.PREDICATE_TYPE, info ), )
+        predicates = ( ClientData.Predicate( self.PREDICATE_TYPE, info ), )
         
         return predicates
         
@@ -601,7 +602,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         infos = self.GetInfo()
         
-        predicates = [ HydrusData.Predicate( self.PREDICATE_TYPE, info ) for info in infos ]
+        predicates = [ ClientData.Predicate( self.PREDICATE_TYPE, info ) for info in infos ]
         
         return predicates
         

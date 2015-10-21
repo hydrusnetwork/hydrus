@@ -19,6 +19,7 @@ import HydrusGlobals
 import HydrusImageHandling
 import HydrusNATPunch
 import HydrusNetworking
+import HydrusSerialisable
 import HydrusThreading
 import itertools
 import os
@@ -144,7 +145,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         aboutinfo.SetLicense( license )
         
         aboutinfo.SetDevelopers( [ 'Anonymous' ] )
-        aboutinfo.SetWebSite( 'http://hydrusnetwork.github.io/hydrus/' )
+        aboutinfo.SetWebSite( 'https://hydrusnetwork.github.io/hydrus/' )
         
         wx.AboutBox( aboutinfo )
         
@@ -626,7 +627,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             menu.AppendSeparator()
             
-            gui_session_names = HydrusGlobals.client_controller.Read( 'gui_session_names' )
+            gui_session_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
             
             sessions = wx.Menu()
             
@@ -1096,7 +1097,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         try:
             
-            session = HydrusGlobals.client_controller.Read( 'gui_sessions', name )
+            session = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
             
         except Exception as e:
             
@@ -1625,7 +1626,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             session.AddPage( page_name, management_controller, hashes )
             
         
-        HydrusGlobals.client_controller.Write( 'gui_session', session )
+        HydrusGlobals.client_controller.Write( 'serialisable', session )
         
         HydrusGlobals.client_controller.pub( 'notify_new_sessions' )
         
@@ -2049,7 +2050,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
             elif command == 'delete_gui_session':
                 
-                HydrusGlobals.client_controller.Write( 'delete_gui_session', data )
+                HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, data )
                 
                 HydrusGlobals.client_controller.pub( 'notify_new_sessions' )
                 
@@ -2065,7 +2066,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HydrusGlobals.client_controller.ForceUnbusy()
                 
-            elif command == '8chan_board': webbrowser.open( 'http://8ch.net/hydrus/index.html' )
+            elif command == '8chan_board': webbrowser.open( 'https://8ch.net/hydrus/index.html' )
             elif command == 'file_integrity': self._CheckFileIntegrity()
             elif command == 'help': webbrowser.open( 'file://' + HC.BASE_DIR + '/help/index.html' )
             elif command == 'help_about': self._AboutWindow()
@@ -2135,7 +2136,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None: page.ShowHideSplit()
                 
-            elif command == 'site': webbrowser.open( 'http://hydrusnetwork.github.io/hydrus/' )
+            elif command == 'site': webbrowser.open( 'https://hydrusnetwork.github.io/hydrus/' )
             elif command == 'start_url_download': self._StartURLDownload()
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
@@ -2143,7 +2144,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'tab_menu_close_page': self._ClosePage( self._tab_right_click_index )
             elif command == 'tab_menu_rename_page': self._RenamePage( self._tab_right_click_index )
             elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
-            elif command == 'twitter': webbrowser.open( 'http://twitter.com/#!/hydrusnetwork' )
+            elif command == 'twitter': webbrowser.open( 'https://twitter.com/#!/hydrusnetwork' )
             elif command == 'unclose_page': self._UnclosePage( data )
             elif command == 'undo': HydrusGlobals.client_controller.pub( 'undo' )
             elif command == 'upload_pending': self._UploadPending( data )
@@ -2255,7 +2256,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         hamming_distance = HC.options[ 'file_system_predicates' ][ 'hamming_distance' ]
         
-        initial_predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, hamming_distance ) ) ]
+        initial_predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, hamming_distance ) ) ]
         
         self._NewPageQuery( file_service_key, initial_predicates = initial_predicates )
         

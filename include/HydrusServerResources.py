@@ -262,7 +262,7 @@ class HydrusResourceCommand( Resource ):
                 
                 with open( temp_path, 'wb' ) as f:
                     
-                    for block in HydrusData.ReadFileLikeAsBlocks( request.content, 65536 ): 
+                    for block in HydrusData.ReadFileLikeAsBlocks( request.content ): 
                         
                         f.write( block )
                         

@@ -805,7 +805,7 @@ class DialogInputImportTagOptions( Dialog ):
         
         ( x, y ) = self.GetEffectiveMinSize()
         
-        x = max( 200, x )
+        x = max( 300, x )
         y = max( 300, y )
         
         self.SetInitialSize( ( x, y ) )
@@ -2450,6 +2450,69 @@ class DialogInputShortcut( Dialog ):
         ( modifier, key ) = self._shortcut.GetValue()
         
         return ( modifier, key, self._actions.GetStringSelection() )
+        
+    
+class DialogInputTags( Dialog ):
+    
+    def __init__( self, parent, service_key, tags ):
+        
+        Dialog.__init__( self, parent, 'input tags' )
+        
+        self._tags = ClientGUICommon.ListBoxTagsStrings( self )
+        
+        self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+        
+        self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._tags.SetTags( tags )
+        
+        #
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        x = max( x, 300 )
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        wx.CallAfter( self._tag_box.SetFocus )
+        
+
+    def AddTag( self, tag, parents = None ):
+        
+        if parents is None: parents = []
+        
+        if tag is None:
+            
+            self.EndModal( wx.ID_OK )
+            
+        else:
+            
+            self._tags.AddTag( tag, parents )
+            
+        
+    
+    def GetTags( self ):
+        
+        return self._tags.GetTags()
         
     
 class DialogInputUPnPMapping( Dialog ):
@@ -4443,7 +4506,7 @@ class DialogShortcuts( Dialog ):
             
             self._shortcuts.AddPage( 'default', page )
             
-            all_shortcuts = HydrusGlobals.client_controller.Read( 'shortcuts' )
+            all_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
             
             names_to_shortcuts = { shortcuts.GetName() : shortcuts for shortcuts in all_shortcuts }
             
@@ -4551,7 +4614,7 @@ class DialogShortcuts( Dialog ):
                 
                 name = entry.GetIdentifier()
                 
-                HydrusGlobals.client_controller.Write( 'delete_shortcuts', name )
+                HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
                 
             
         
@@ -4561,7 +4624,7 @@ class DialogShortcuts( Dialog ):
                 
                 shortcuts = page.GetShortcuts()
                 
-                HydrusGlobals.client_controller.Write( 'shortcuts', shortcuts )
+                HydrusGlobals.client_controller.Write( 'serialisable', shortcuts )
                 
             
         

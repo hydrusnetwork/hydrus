@@ -399,149 +399,149 @@ class TestTagObjects( unittest.TestCase ):
     
     def test_predicates( self ):
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag' )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag' )
         
         self.assertEqual( p.GetUnicode(), u'tag' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
         
         self.assertEqual( p.GetUnicode( with_count = False ), u'tag' )
         self.assertEqual( p.GetUnicode( with_count = True ), u'tag (1) (+2)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False )
         
         self.assertEqual( p.GetUnicode(), u'-tag' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False, counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False, counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
         
         self.assertEqual( p.GetUnicode( with_count = False ), u'-tag' )
         self.assertEqual( p.GetUnicode( with_count = True ), u'-tag (1) (+2)' )
         
         #
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 1, 2, 3, 4 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 1, 2, 3, 4 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age < 1y2m3d4h' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 1, 2, 3, 4 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 1, 2, 3, 4 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age ' + u'\u2248' + ' 1y2m3d4h' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 1, 2, 3, 4 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 1, 2, 3, 4 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age > 1y2m3d4h' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 1000 } )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 1000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:archive (1,000)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 1000 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 1000 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:duration < 1,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 2000 } )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 2000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:everything (2,000)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.GetUnicode(), u'system:is currently in local files' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.GetUnicode(), u'system:is not pending to local files' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, 'abcd'.decode( 'hex' ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, 'abcd'.decode( 'hex' ) )
         
         self.assertEqual( p.GetUnicode(), u'system:hash is abcd' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:height < 2,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1000 } )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1000 } )
         
         self.assertEqual( p.GetUnicode(), u'system:inbox (1,000)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 2000 )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 2000 )
         
         self.assertEqual( p.GetUnicode(), u'system:limit is 2,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, counts = { HC.CURRENT : 100 } )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, counts = { HC.CURRENT : 100 } )
         
         self.assertEqual( p.GetUnicode(), u'system:local (100)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, set( HC.IMAGES ).intersection( HC.SEARCHABLE_MIMES ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, set( HC.IMAGES ).intersection( HC.SEARCHABLE_MIMES ) )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is image' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, ) )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is video/webm' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
         
         self.assertEqual( p.GetUnicode(), u'system:mime is video/webm, image/gif' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : 100 } )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : 100 } )
         
         self.assertEqual( p.GetUnicode(), u'system:not local (100)' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:number of tags < 2' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:number of words < 5,000' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, CC.LOCAL_FILE_SERVICE_KEY ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.GetUnicode(), u'system:rating for local files > 0.2' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:ratio = 16:9' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( 'abcd'.decode( 'hex' ), 5 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( 'abcd'.decode( 'hex' ), 5 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:similar to abcd using max hamming of 5' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5, 1048576 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5, 1048576 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:size > 5MB' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.IMAGES )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.IMAGES )
         
         self.assertEqual( p.GetUnicode(), u'system:untagged' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
         
         self.assertEqual( p.GetUnicode(), u'system:width = 1,920' )
         
         #
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
         
         self.assertEqual( p.GetUnicode(), u'series:*anything*' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'series', inclusive = False )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'series', inclusive = False )
         
         self.assertEqual( p.GetUnicode(), u'-series' )
         
         #
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
         
         self.assertEqual( p.GetUnicode(), u'a*i:o*' )
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', inclusive = False )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', inclusive = False )
         
         self.assertEqual( p.GetUnicode(), u'-a*i:o*' )
         
         #
         
-        p = HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
+        p = ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
         
         self.assertEqual( p.GetUnicode(), u'    series:game of thrones' )
         
@@ -587,45 +587,45 @@ class TestTagParents( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'grandmother', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'grandfather', counts = { HC.CURRENT : 15 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'not_exist', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'grandmother', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'grandfather', counts = { HC.CURRENT : 15 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'not_exist', counts = { HC.CURRENT : 20 } ) )
         
         self.assertEqual( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
         
         predicates = []
         
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
         
         results = []
         
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
         self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
         predicates = []
         
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
         
         results = []
         
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'aunt' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'uncle' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'aunt' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'uncle' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
         self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
@@ -748,19 +748,19 @@ class TestTagSiblings( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
         
-        results = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 35 } ) ]
+        results = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 35 } ) ]
         
         self.assertEqual( self._tag_siblings_manager.CollapsePredicates( predicates ), results )
         
         predicates = []
         
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
-        predicates.append( HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
+        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
         
         ( result, ) = self._tag_siblings_manager.CollapsePredicates( predicates )
         

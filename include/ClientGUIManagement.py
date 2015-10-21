@@ -4,7 +4,6 @@ import ClientDownloading
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
-import HydrusNetworking
 import HydrusSerialisable
 import HydrusThreading
 import ClientConstants as CC
@@ -1388,21 +1387,23 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, management_controller )
         
-        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import queue' )
+        self._gallery_downloader_panel = ClientGUICommon.StaticBox( self, 'gallery downloader' )
+        
+        self._import_queue_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'imports' )
         
         self._overall_status = wx.StaticText( self._import_queue_panel )
         self._current_action = wx.StaticText( self._import_queue_panel )
         self._file_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         
-        self._files_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
-        self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventFilesPause )
-        
         self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
-        self._gallery_panel = ClientGUICommon.StaticBox( self._import_queue_panel, 'gallery parser' )
+        self._files_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
+        self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventFilesPause )
+        
+        self._gallery_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'gallery parser' )
         
         self._gallery_status = wx.StaticText( self._gallery_panel )
         
@@ -1412,7 +1413,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._gallery_cancel_button = wx.BitmapButton( self._gallery_panel, bitmap = CC.GlobalBMPs.stop )
         self._gallery_cancel_button.Bind( wx.EVT_BUTTON, self.EventGalleryCancel )
         
-        self._pending_queries_panel = ClientGUICommon.StaticBox( self._import_queue_panel, 'pending queries' )
+        self._pending_queries_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'pending queries' )
         
         self._pending_queries_listbox = wx.ListBox( self._pending_queries_panel, size = ( -1, 200 ) )
         
@@ -1428,16 +1429,16 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._query_input = wx.TextCtrl( self._pending_queries_panel, style = wx.TE_PROCESS_ENTER )
         self._query_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        self._get_tags_if_redundant = wx.CheckBox( self._import_queue_panel, label = 'get tags even if file is already in db' )
+        self._get_tags_if_redundant = wx.CheckBox( self._gallery_downloader_panel, label = 'get tags even if file is already in db' )
         self._get_tags_if_redundant.Bind( wx.EVT_CHECKBOX, self.EventGetTagsIfRedundant )
         self._get_tags_if_redundant.SetToolTipString( 'only fetch tags from the gallery if the file is new' )
         
-        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._import_queue_panel, 'file limit', min = 1 )
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'file limit', min = 1 )
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
         self._file_limit.SetToolTipString( 'per query, stop searching the gallery once this many files has been reached' )
         
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._import_queue_panel )
-        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._import_queue_panel )
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._gallery_downloader_panel )
+        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._gallery_downloader_panel )
         
         #
         
@@ -1477,12 +1478,14 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._import_queue_panel.AddF( self._file_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
-        self._import_queue_panel.AddF( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._pending_queries_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._gallery_downloader_panel.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._pending_queries_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1490,7 +1493,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._gallery_downloader_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -1919,7 +1922,9 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, management_controller )
         
-        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import queue' )
+        self._page_of_images_panel = ClientGUICommon.StaticBox( self, 'page of images downloader' )
+        
+        self._import_queue_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'imports' )
         
         self._parser_status = wx.StaticText( self._import_queue_panel )
         self._overall_status = wx.StaticText( self._import_queue_panel )
@@ -1939,7 +1944,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
         button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
         
-        self._pending_page_urls_panel = ClientGUICommon.StaticBox( self._import_queue_panel, 'pending page urls' )
+        self._pending_page_urls_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'pending page urls' )
         
         self._pending_page_urls_listbox = wx.ListBox( self._pending_page_urls_panel, size = ( -1, 200 ) )
         
@@ -1955,15 +1960,15 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         self._page_url_input = wx.TextCtrl( self._pending_page_urls_panel, style = wx.TE_PROCESS_ENTER )
         self._page_url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        self._download_image_links = wx.CheckBox( self._import_queue_panel, label = 'download image links' )
+        self._download_image_links = wx.CheckBox( self._page_of_images_panel, label = 'download image links' )
         self._download_image_links.Bind( wx.EVT_CHECKBOX, self.EventDownloadImageLinks )
         self._download_image_links.SetToolTipString( 'i.e. download the href url of an <a> tag if there is an <img> tag nested beneath it' )
         
-        self._download_unlinked_images = wx.CheckBox( self._import_queue_panel, label = 'download unlinked images' )
+        self._download_unlinked_images = wx.CheckBox( self._page_of_images_panel, label = 'download unlinked images' )
         self._download_unlinked_images.Bind( wx.EVT_CHECKBOX, self.EventDownloadUnlinkedImages )
         self._download_unlinked_images.SetToolTipString( 'i.e. download the src url of an <img> tag if there is no parent <a> tag' )
         
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._import_queue_panel )
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._page_of_images_panel )
         
         #
         
@@ -1989,10 +1994,12 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         self._import_queue_panel.AddF( self._file_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
-        self._import_queue_panel.AddF( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._download_unlinked_images, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._page_of_images_panel.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.AddF( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.AddF( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.AddF( self._download_unlinked_images, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2000,7 +2007,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._page_of_images_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2253,7 +2260,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._action_text = wx.StaticText( self._petition_panel, label = '' )
         self._reason_text = wx.TextCtrl( self._petition_panel, size = ( -1, 80 ), style = wx.TE_MULTILINE | wx.TE_READONLY )
         
-        self._contents = wx.CheckListBox( self._petition_panel )
+        self._contents = wx.CheckListBox( self._petition_panel, size = ( -1, 300 ) )
         self._contents.Bind( wx.EVT_LISTBOX_DCLICK, self.EventContentDoubleClick )
         
         self._process = wx.Button( self._petition_panel, label = 'process' )
@@ -2608,7 +2615,7 @@ class ManagementPanelQuery( ManagementPanel ):
                         else: return
                         
                     
-                elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: predicates = ( HydrusData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), )
+                elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: predicates = ( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), )
                 else:
                     
                     predicates = ( predicate, )

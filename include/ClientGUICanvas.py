@@ -769,7 +769,9 @@ class Canvas( object ):
         
         if self._current_display_media is not None:
             
-            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key ) as dlg:
+                
+                dlg.ShowModal()
             
         
     
@@ -2329,7 +2331,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
                 elif command == 'inbox': self._Inbox()
                 elif command == 'manage_ratings': self._ManageRatings()
-                elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
+                elif command == 'manage_tags': wx.CallLater( 1, self._ManageTags )
                 elif command == 'open_externally': self._OpenExternally()
                 elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
@@ -2341,8 +2343,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                     elif command == 'pan_right': self._DoManualPan( distance, 0 )
                     
                 elif command == 'remove': self._Remove()
-                elif command == 'slideshow': wx.CallAfter( self._StartSlideshow, data )
-                elif command == 'slideshow_pause_play': wx.CallAfter( self._PausePlaySlideshow )
+                elif command == 'slideshow': wx.CallLater( 1, self._StartSlideshow, data )
+                elif command == 'slideshow_pause_play': wx.CallLater( 1, self._PausePlaySlideshow )
                 elif command == 'undelete': self._Undelete()
                 elif command == 'zoom_in': self._ZoomIn()
                 elif command == 'zoom_out': self._ZoomOut()
@@ -2585,7 +2587,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                     elif data == 'fullscreen_switch': self._FullscreenSwitch()
                     elif data == 'inbox': self._Inbox()
                     elif data == 'manage_ratings': self._ManageRatings()
-                    elif data == 'manage_tags': wx.CallAfter( self._ManageTags )
+                    elif data == 'manage_tags': wx.CallLater( 1, self._ManageTags )
                     elif data in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                         
                         distance = 20
@@ -2747,7 +2749,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
                 elif command == 'inbox': self._Inbox()
                 elif command == 'manage_ratings': self._ManageRatings()
-                elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
+                elif command == 'manage_tags': wx.CallLater( 1, self._ManageTags )
                 elif command == 'open_externally': self._OpenExternally()
                 elif command == 'remove': self._Remove()
                 elif command == 'undelete': self._Undelete()

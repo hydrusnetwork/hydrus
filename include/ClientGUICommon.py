@@ -682,7 +682,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         search_text = HydrusTags.CleanTag( search_text )
         
-        entry_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
+        entry_predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
         
         return ( inclusive, search_text, entry_predicate )
         
@@ -798,7 +798,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
                     if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
                     
-                    predicates = [ HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
+                    predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
                     
                 
                 predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = True )
@@ -810,20 +810,20 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 if '*' not in self._current_namespace:
                     
-                    matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
+                    matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
                     
                 
                 if half_complete_tag != '':
                     
                     if '*' in self._current_namespace or ( '*' in half_complete_tag and half_complete_tag != '*' ):
                         
-                        matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                        matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
                         
                     
                 
             elif '*' in search_text:
                 
-                matches.insert( 0, HydrusData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
                 
             
             try:
@@ -943,7 +943,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         search_text = HydrusTags.CleanTag( raw_entry )
         
-        entry_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, search_text )
+        entry_predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, search_text )
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
@@ -951,7 +951,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         if sibling is not None:
             
-            sibling_predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, sibling )
+            sibling_predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, sibling )
             
         else:
             
@@ -1081,7 +1081,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
                         
-                        parents = [ HydrusData.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
+                        parents = [ ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
                         
                     
                 
@@ -2504,7 +2504,7 @@ class ListBoxTags( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
+                if type( term ) == ClientData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
                 HydrusGlobals.client_controller.pub( 'clipboard', 'text', s )
@@ -2513,7 +2513,7 @@ class ListBoxTags( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
+                if type( term ) == ClientData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
                 sub_s = s.split( ':', 1 )[1]
@@ -2526,8 +2526,8 @@ class ListBoxTags( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HydrusData.Predicate: predicate = term
-                else: predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, term )
+                if type( term ) == ClientData.Predicate: predicate = term
+                else: predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term )
                 
                 HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ predicate ] )
                 
@@ -2569,7 +2569,7 @@ class ListBoxTags( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
+                if type( term ) == ClientData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
                 menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page_with_term' ), 'open a new search page for "' + s + '"' )
@@ -2584,7 +2584,7 @@ class ListBoxTags( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == HydrusData.Predicate: s = term.GetUnicode()
+                if type( term ) == ClientData.Predicate: s = term.GetUnicode()
                 else: s = term
                 
                 menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_term' ), 'copy "' + s + '"' )
@@ -2836,7 +2836,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
 class ListBoxTagsStrings( ListBoxTags ):
     
-    def __init__( self, parent, removed_callable ):
+    def __init__( self, parent, removed_callable = None ):
         
         ListBoxTags.__init__( self, parent )
         
@@ -2889,7 +2889,10 @@ class ListBoxTagsStrings( ListBoxTags ):
             
             self._RecalcTags()
             
-            self._removed_callable( tag )
+            if self._removed_callable is not None:
+                
+                self._removed_callable( tag )
+                
             
         
     
@@ -3220,7 +3223,7 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
     def _Activate( self, s, term ):
         
-        predicate = HydrusData.Predicate( HC.PREDICATE_TYPE_TAG, term )
+        predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term )
         
         HydrusGlobals.client_controller.pub( 'add_predicate', self._page_key, predicate )
         
@@ -4349,7 +4352,7 @@ class RatingNumericalDialog( RatingNumerical ):
         RatingNumerical.__init__( self, parent, service_key )
         
         self._rating_state = ClientRatings.NULL
-        self._rating = 0.0
+        self._rating = None
         
     
     def _Draw( self ):

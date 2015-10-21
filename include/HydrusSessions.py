@@ -114,7 +114,7 @@ class HydrusSessionManagerClient( object ):
             
             service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
             
-            ( response, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
+            ( response_gumpf, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
             
             try: session_key = cookies[ 'session_key' ].decode( 'hex' )
             except: raise Exception( 'Service did not return a session key!' )
