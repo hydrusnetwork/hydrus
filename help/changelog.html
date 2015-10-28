@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 179</h3></li>
+				<ul>
+					<li>all tag listboxes support multiple selection</li>
+					<li>all tag listboxes manipulate their data as sets of tags rather than individual tags</li>
+					<li>all tag listboxes report to their callbacks as sets of tags</li>
+					<li>many dialogs and other windows that use tag listboxes now deal with tags as sets</li>
+					<li>double clicking the media viewer's tag hover window now launches the manage tags dialog</li>
+					<li>the media viewer's tag hover window now includes (+1) counts like the manage tags dialog--harmonising the underlying canvas tag list will follow</li>
+					<li>lots of tag/sibling/parent code has been iterated over</li>
+					<li>ditched some misc redundant code and needlessly tightly coupled object relationships</li>
+					<li>some bizarro tag sibling dialog code has been rewritten</li>
+					<li>the autocomplete dropdown for 'writing' will now not expand search results to include parents when the receiving control isn't interested in them or it is otherwise not appropriate</li>
+					<li>when the autocomplete dropdown does have parents, they will be selected in a group with their child</li>
+					<li>the autocomplete dropdown for writing now broadcasts 'I'm done with tagging, close the dialog pls' in a better way</li>
+					<li>'activating' the sibling or parent dialogs' listcontrols (usually by hitting enter) now processes all rows that are selected, not just the first</li>
+					<li>manage siblings and parents dialogs can now take multiple initialising tags from the taglist right-click menu</li>
+					<li>removed some redundant listbox code</li>
+					<li>cleaned up and improved some tag list event processing</li>
+					<li>cleaned up some taglist right-click menu code</li>
+					<li>added system-wide mouse idle test to idle calculation. you can set this in files->options->maintenance and processing, and it defaults to ten minutes</li>
+					<li>import folders now support tag import options' explicit tags for multiple tags to any tag service</li>
+					<li>existing import folders will be updated to the new version, and if a local tag exists, it will be intserted into the new import tag options</li>
+					<li>fixed a hentai foundry page parsing bug</li>
+					<li>the deviant art downloader can now download >1024 pixel width versions of images via the download button (and a bit of cookie magic)</li>
+					<li>gallery page queries that 404 (like for a non-existent username) will now report 'Gallery 404' rather than spamming the gallery's whole custom 404 html page to the status box</li>
+					<li>fixed a bad layout flag that meant some namespace checkboxes in tag import options could remain hidden during first panel expand until first mouseover</li>
+					<li>the import status frame now initialises its status text properly</li>
+					<li>fixed last week's num_tags optimisations, which accidentally broke num_tags < x for x > 1</li>
+					<li>the client should work on both OpenCV 2.4.x and 3.0.0 (thankfully, the only difference for our purposes turned out to be some static variable renaming)</li>
+					<li>the Windows and OS X releases now come with OpenCV 3.0.0</li>
+					<li>increased the max period of import and export folders to 30 days</li>
+					<li>the launchfile/directory thread is now a daemon, so the (some flavours of Linux) client can shutdown even if an externally launched file/dir remains open</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 178</h3></li>
 				<ul>
 					<li>import tag options now supports 'explicit tags', which will be added to all files imported</li>
