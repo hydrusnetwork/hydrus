@@ -300,7 +300,11 @@ def LaunchDirectory( path ):
             
         
     
-    threading.Thread( target = do_it ).start()
+    thread = threading.Thread( target = do_it )
+    
+    thread.daemon = True
+    
+    thread.start()
     
 def LaunchFile( path ):
     
@@ -325,5 +329,9 @@ def LaunchFile( path ):
             
         
     
-    threading.Thread( target = do_it ).start()
+    thread = threading.Thread( target = do_it )
+    
+    thread.daemon = True
+    
+    thread.start()
     

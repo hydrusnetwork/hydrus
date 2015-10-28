@@ -723,6 +723,15 @@ class GalleryBooru( Gallery ):
     
 class GalleryDeviantArt( Gallery ):
     
+    def _AddSessionCookies( self, request_headers ):
+        
+        manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
+        
+        cookies = manager.GetCookies( 'deviant art' )
+        
+        ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
+        
+    
     def _GetGalleryPageURL( self, query, page_index ):
         
         artist = query
@@ -774,30 +783,45 @@ class GalleryDeviantArt( Gallery ):
         return ( urls, definitely_no_more_pages )
         
     
-    def _ParseImagePage( self, html ):
+    def _ParseImagePage( self, html, referer_url ):
         
         soup = bs4.BeautifulSoup( html )
         
-        img = soup.find( class_ = 'dev-content-full' )
+        download_button = soup.find( 'a', class_ = 'dev-page-download' )
         
-        if img is None:
+        if download_button is None:
             
-            # this probably means it is mature
-            # DA hide the url pretty much everywhere except the tumblr share thing
+            # this method maxes out at 1024 width
             
-            a_tumblr = soup.find( id = 'gmi-ResourceViewShareTumblr' )
+            img = soup.find( class_ = 'dev-content-full' )
             
-            tumblr_url = a_tumblr[ 'href' ] # http://www.tumblr.com/share/photo?source=http%3A%2F%2Fimg09.deviantart.net%2Ff19a%2Fi%2F2015%2F054%2Fe%2Fd%2Fass_by_gmgkaiser-d8j7ija.png&amp;caption=%3Ca+href%3D%22http%3A%2F%2Fgmgkaiser.deviantart.com%2Fart%2Fass-515992726%22%3Eass%3C%2Fa%3E+by+%3Ca+href%3D%22http%3A%2F%2Fgmgkaiser.deviantart.com%2F%22%3EGMGkaiser%3C%2Fa%3E&amp;clickthru=http%3A%2F%2Fgmgkaiser.deviantart.com%2Fart%2Fass-515992726
-            
-            parse_result = urlparse.urlparse( tumblr_url )
-            
-            query_parse_result = urlparse.parse_qs( parse_result.query )
-            
-            img_url = query_parse_result[ 'source' ][0] # http://img09.deviantart.net/f19a/i/2015/054/e/d/ass_by_gmgkaiser-d8j7ija.png
+            if img is None:
+                
+                # this probably means it is mature
+                # DA hide the url pretty much everywhere except the tumblr share thing
+                
+                a_tumblr = soup.find( id = 'gmi-ResourceViewShareTumblr' )
+                
+                tumblr_url = a_tumblr[ 'href' ] # http://www.tumblr.com/share/photo?source=http%3A%2F%2Fimg09.deviantart.net%2Ff19a%2Fi%2F2015%2F054%2Fe%2Fd%2Fass_by_gmgkaiser-d8j7ija.png&amp;caption=%3Ca+href%3D%22http%3A%2F%2Fgmgkaiser.deviantart.com%2Fart%2Fass-515992726%22%3Eass%3C%2Fa%3E+by+%3Ca+href%3D%22http%3A%2F%2Fgmgkaiser.deviantart.com%2F%22%3EGMGkaiser%3C%2Fa%3E&amp;clickthru=http%3A%2F%2Fgmgkaiser.deviantart.com%2Fart%2Fass-515992726
+                
+                parse_result = urlparse.urlparse( tumblr_url )
+                
+                query_parse_result = urlparse.parse_qs( parse_result.query )
+                
+                img_url = query_parse_result[ 'source' ][0] # http://img09.deviantart.net/f19a/i/2015/054/e/d/ass_by_gmgkaiser-d8j7ija.png
+                
+            else:
+                
+                img_url = img[ 'src' ]
+                
             
         else:
             
-            img_url = img[ 'src' ]
+            # something like http://www.deviantart.com/download/518046750/varda_and_the_sacred_trees_of_valinor_by_implosinoatic-d8kfjfi.jpg?token=476cb73aa2ab22bb8554542bc9f14982e09bd534&ts=1445717843
+            # given the right cookies, it redirects to the truly fullsize image_url
+            # otherwise, it seems to redirect to a small interstitial redirect page that heads back to the original image page
+            
+            img_url = download_button[ 'href' ]
             
         
         return img_url
@@ -807,7 +831,7 @@ class GalleryDeviantArt( Gallery ):
         
         html = self._FetchData( url, report_hooks = report_hooks )
         
-        return self._ParseImagePage( html )
+        return self._ParseImagePage( html, url )
         
     
     def GetFile( self, temp_path, url, report_hooks = None ):
@@ -924,6 +948,11 @@ class GalleryHentaiFoundry( Gallery ):
         soup = bs4.BeautifulSoup( html )
         
         def correct_url( href ):
+            
+            if href is None:
+                
+                return False
+                
             
             # a good url is in the form "/pictures/user/artist_name/file_id/title"
             

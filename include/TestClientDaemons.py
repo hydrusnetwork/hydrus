@@ -30,7 +30,7 @@ class TestDaemons( unittest.TestCase ):
             
             #
             
-            import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir, tag = 'local tag' )
+            import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir )
             
             HydrusGlobals.test_controller.SetRead( 'serialisable_named', [ import_folder ] )
             

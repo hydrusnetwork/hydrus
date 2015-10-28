@@ -1,5 +1,4 @@
 import ClientFiles
-import cv2
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions

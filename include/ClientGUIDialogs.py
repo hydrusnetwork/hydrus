@@ -286,7 +286,9 @@ class DialogAdvancedContentUpdate( Dialog ):
             self._go = wx.Button( self._internal_actions, label = 'Go!' )
             self._go.Bind( wx.EVT_BUTTON, self.EventGo )
             
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._internal_actions, self.SetSomeTag, CC.COMBINED_FILE_SERVICE_KEY, self._service_key )
+            expand_parents = False
+            
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._internal_actions, self.SetSomeTags, expand_parents, CC.COMBINED_FILE_SERVICE_KEY, self._service_key )
             self._specific_tag = wx.StaticText( self._internal_actions, label = '', size = ( 100, -1 ) )
             
             self._import_from_hta = wx.Button( self._internal_actions, label = 'one-time mass import or delete using a hydrus tag archive' )
@@ -418,6 +420,9 @@ class DialogAdvancedContentUpdate( Dialog ):
     
     def EventGo( self, event ):
         
+        # at some point, rewrite this to cope with multiple tags. setsometag is ready to go on that front
+        # this should prob be with a listbox so people can enter their new multiple tags in several separate goes, rather than overwriting every time
+        
         with DialogYesNo( self, 'Are you sure?' ) as dlg:
             
             if dlg.ShowModal() != wx.ID_YES: return
@@ -475,13 +480,14 @@ class DialogAdvancedContentUpdate( Dialog ):
             
         
     
-    def SetSomeTag( self, tag, parents = None ):
+    def SetSomeTags( self, tags ):
         
-        if parents is None: parents = []
-        
-        self._tag = tag
-        
-        self._specific_tag.SetLabel( tag )
+        if len( tags ) > 0:
+            
+            self._tag = list( tags )[0]
+            
+            self._specific_tag.SetLabel( self._tag )
+            
         
     
 class DialogButtonChoice( Dialog ):
@@ -844,7 +850,10 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._tag_service_keys = wx.Choice( self._tag_panel )
             self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
+            
+            expand_parents = False
+            
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
             
             self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
             self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
@@ -1142,6 +1151,8 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def EventOKTag( self, event ):
         
+        # this could support multiple tags now
+        
         selection = self._tag_service_keys.GetSelection()
         
         if selection != wx.NOT_FOUND:
@@ -1175,11 +1186,14 @@ class DialogInputCustomFilterAction( Dialog ):
         return ( ( pretty_modifier, pretty_key, pretty_service_key, self._pretty_action ), ( modifier, key, self._service_key, self._action ) )
         
     
-    def SetTag( self, tag, parents = None ):
+    def SetTags( self, tags ):
         
-        if parents is None: parents = []
-        
-        self._tag_value.SetValue( tag )
+        if len( tags ) > 0:
+            
+            tag = list( tags )[0]
+            
+            self._tag_value.SetValue( tag )
+            
         
     
 class DialogInputFileSystemPredicates( Dialog ):
@@ -2460,7 +2474,9 @@ class DialogInputTags( Dialog ):
         
         self._tags = ClientGUICommon.ListBoxTagsStrings( self )
         
-        self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+        expand_parents = True
+        
+        self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.Ok )
         
         self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -2496,23 +2512,28 @@ class DialogInputTags( Dialog ):
         wx.CallAfter( self._tag_box.SetFocus )
         
 
-    def AddTag( self, tag, parents = None ):
+    def EnterTags( self, tags, parents = None ):
         
-        if parents is None: parents = []
+        if parents is None:
+            
+            parents = []
+            
         
-        if tag is None:
+        if len( tags ) > 0:
             
-            self.EndModal( wx.ID_OK )
-            
-        else:
-            
-            self._tags.AddTag( tag, parents )
+            self._tags.EnterTags( tags )
+            self._tags.AddTags( parents )
             
         
     
     def GetTags( self ):
         
         return self._tags.GetTags()
+        
+    
+    def Ok( self ):
+        
+        self.EndModal( wx.ID_OK )
         
     
 class DialogInputUPnPMapping( Dialog ):
@@ -3404,19 +3425,23 @@ class DialogPathsToTags( Dialog ):
                 
                 self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
                 
-                self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagRemoved )
+                self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagsRemoved )
                 
-                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+                expand_parents = True
+                
+                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
                 #
                 
                 self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for selected files' )
                 
-                self._paths_to_single_tags = collections.defaultdict( list )
+                self._paths_to_single_tags = collections.defaultdict( set )
                 
-                self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagRemoved )
+                self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagsRemoved )
                 
-                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+                expand_parents = True
+                
+                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
             
             def PopulateControls():
@@ -3544,7 +3569,10 @@ class DialogPathsToTags( Dialog ):
                 except: pass
                 
             
-            if path in self._paths_to_single_tags: tags.extend( self._paths_to_single_tags[ path ] )
+            if path in self._paths_to_single_tags:
+                
+                tags.extend( list( self._paths_to_single_tags[ path ] ) )
+                
             
             num_namespace = self._num_namespace.GetValue()
             
@@ -3581,53 +3609,66 @@ class DialogPathsToTags( Dialog ):
                 
             
         
-        def AddTag( self, tag, parents = None ):
-            
-            if parents is None: parents = []
-            
-            if tag is not None:
-                
-                self._tags.AddTag( tag, parents )
-                
-                self._RefreshFileList()
-                
-            
-        
-        def AddTagSingle( self, tag, parents = None ):
-            
-            if parents is None: parents = []
-            
-            if tag is not None:
-                
-                self._single_tags.AddTag( tag, parents )
-                
-                indices = self._paths_list.GetAllSelected()
-                
-                for index in indices:
-                    
-                    ( ( original_num, processed_num ), path, old_tags ) = self._paths_list.GetClientData( index )
-                    
-                    if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
-                    else:
-                        
-                        self._paths_to_single_tags[ path ].append( tag )
-                        
-                        for parent in parents:
-                            
-                            if parent not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( parent )
-                            
-                        
-                    
-                
-                self._RefreshFileList()
-                
-            
-        
         def DeleteQuickNamespaces( self ):
             
             self._quick_namespaces_list.RemoveAllSelected()
             
             self._RefreshFileList()
+            
+        
+        def EnterTags( self, tags, parents = None ):
+            
+            if parents is None:
+                
+                parents = []
+                
+            
+            if len( tags ) > 0:
+                
+                self._tags.EnterTags( tags )
+                self._tags.AddTags( parents )
+                
+                self._RefreshFileList()
+                
+            
+        
+        def EnterTagsSingle( self, tags, parents = None ):
+            
+            if parents is None:
+                
+                parents = []
+                
+            
+            if len( tags ) > 0:
+                
+                self._single_tags.EnterTags( tags )
+                self._single_tags.AddTags( parents )
+                
+                indices = self._paths_list.GetAllSelected()
+                
+                for index in indices:
+                    
+                    ( ( original_num, processed_num ), path, old_pretty_tags ) = self._paths_list.GetClientData( index )
+                    
+                    current_tags = self._paths_to_single_tags[ path ]
+                    
+                    for tag in tags:
+                        
+                        if tag in current_tags:
+                            
+                            current_tags.discard( tag )
+                            
+                        else:
+                            
+                            current_tags.add( tag )
+                            
+                        
+                    
+                    current_tags.update( parents )
+                    
+                
+                self._RefreshFileList()
+                
             
         
         def EventAddRegex( self, event ):
@@ -3708,7 +3749,10 @@ class DialogPathsToTags( Dialog ):
                     
                     path = self._paths_list.GetClientData( index )[1]
                     
-                    if path in self._paths_to_single_tags: single_tags.update( self._paths_to_single_tags[ path ] )
+                    if path in self._paths_to_single_tags:
+                        
+                        single_tags.update( self._paths_to_single_tags[ path ] )
+                        
                     
                 
                 self._single_tag_box.Enable()
@@ -3760,7 +3804,7 @@ class DialogPathsToTags( Dialog ):
         
         def SetTagBoxFocus( self ): self._tag_box.SetFocus()
         
-        def SingleTagRemoved( self, tag ):
+        def SingleTagsRemoved( self, tags ):
             
             indices = self._paths_list.GetAllSelected()
             
@@ -3768,13 +3812,18 @@ class DialogPathsToTags( Dialog ):
                 
                 ( ( original_num, processed_num ), path, old_tags ) = self._paths_list.GetClientData( index )
                 
-                if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
+                current_tags = self._paths_to_single_tags[ path ]
+                
+                current_tags.difference_update( tags )
                 
             
             self._RefreshFileList()
             
         
-        def TagRemoved( self, tag ): self._RefreshFileList()
+        def TagsRemoved( self, tag ):
+            
+            self._RefreshFileList()
+            
         
     
 class DialogRegisterService( Dialog ):

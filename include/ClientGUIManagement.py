@@ -2542,7 +2542,6 @@ class ManagementPanelQuery( ManagementPanel ):
         if len( initial_predicates ) > 0 and not file_search_context.IsComplete(): wx.CallAfter( self._DoQuery )
         
         HydrusGlobals.client_controller.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
-        HydrusGlobals.client_controller.sub( self, 'AddPredicate', 'add_predicate' )
         HydrusGlobals.client_controller.sub( self, 'ChangeFileRepositoryPubsub', 'change_file_repository' )
         HydrusGlobals.client_controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
         HydrusGlobals.client_controller.sub( self, 'IncludeCurrent', 'notify_include_current' )
@@ -2550,7 +2549,6 @@ class ManagementPanelQuery( ManagementPanel ):
         HydrusGlobals.client_controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
         HydrusGlobals.client_controller.sub( self, 'ShowQuery', 'file_query_done' )
         HydrusGlobals.client_controller.sub( self, 'RefreshQuery', 'refresh_query' )
-        HydrusGlobals.client_controller.sub( self, 'RemovePredicate', 'remove_predicate' )
         
     
     def _DoQuery( self ):
@@ -2597,39 +2595,6 @@ class ManagementPanelQuery( ManagementPanel ):
     def AddMediaResultsFromQuery( self, query_key, media_results ):
         
         if query_key == self._query_key: HydrusGlobals.client_controller.pub( 'add_media_results', self._page_key, media_results, append = False )
-        
-    
-    def AddPredicate( self, page_key, predicate ): 
-        
-        if self._controller.GetVariable( 'search_enabled' ) and page_key == self._page_key:
-            
-            if predicate is not None:
-                
-                ( predicate_type, value, inclusive ) = predicate.GetInfo()
-                
-                if predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
-                    
-                    with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK: predicates = dlg.GetPredicates()
-                        else: return
-                        
-                    
-                elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: predicates = ( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), )
-                else:
-                    
-                    predicates = ( predicate, )
-                    
-                
-                for predicate in predicates:
-                    
-                    if self._current_predicates_box.HasPredicate( predicate ): self._current_predicates_box.RemovePredicate( predicate )
-                    else: self._current_predicates_box.AddPredicate( predicate )
-                    
-                
-            
-            self._DoQuery()
-            
         
     
     def ChangeFileRepositoryPubsub( self, page_key, service_key ):
@@ -2688,19 +2653,6 @@ class ManagementPanelQuery( ManagementPanel ):
     def RefreshQuery( self, page_key ):
         
         if page_key == self._page_key: self._DoQuery()
-        
-    
-    def RemovePredicate( self, page_key, predicate ):
-        
-        if page_key == self._page_key:
-            
-            if self._current_predicates_box.HasPredicate( predicate ):
-                
-                self._current_predicates_box.RemovePredicate( predicate )
-                
-                self._DoQuery()
-                
-            
         
     
     def SearchImmediately( self, page_key, value ):

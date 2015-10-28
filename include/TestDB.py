@@ -698,7 +698,7 @@ class TestClientDB( unittest.TestCase ):
     def test_import_folders( self ):
         
         import_folder_1 = ClientImporting.ImportFolder( 'imp 1', path = HC.DB_DIR, mimes = HC.VIDEO, open_popup = False )
-        import_folder_2 = ClientImporting.ImportFolder( 'imp 2', path = HC.DB_DIR, mimes = HC.IMAGES, period = 1200, open_popup = False, tag = 'test' )
+        import_folder_2 = ClientImporting.ImportFolder( 'imp 2', path = HC.DB_DIR, mimes = HC.IMAGES, period = 1200, open_popup = False )
         
         #
         

@@ -644,7 +644,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._tags = ClientGUICommon.ListBoxTags( self )
+        self._tags = ClientGUICommon.ListBoxTagsSelectionHoverFrame( self, self._canvas_key )
         
         vbox.AddF( self._tags, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
@@ -675,22 +675,10 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
     
     def _ResetTags( self ):
         
-        if self._current_media is None: tags_i_want_to_display = []
-        else:
+        if self._current_media is not None:
             
-            tags_manager = self._current_media.GetTagsManager()
+            self._tags.SetTagsByMedia( [ self._current_media ], force_reload = True )
             
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-            
-            current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
-            pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
-            
-            tags_i_want_to_display = list( current.union( pending ) )
-            
-            tags_i_want_to_display.sort()
-            
-        
-        self._tags.SetTexts( tags_i_want_to_display )
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -725,15 +713,6 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
             FullscreenHoverFrame.SetDisplayMedia( self, canvas_key, media )
             
             self._ResetTags()
-            
-        
-    
-            
-        
-    
-            
-        
-    
             
         
     

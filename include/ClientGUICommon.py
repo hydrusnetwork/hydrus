@@ -187,13 +187,16 @@ class AutoCompleteDropdown( wx.Panel ):
         wx.CallAfter( self._UpdateList )
         
     
-    def _BroadcastChoice( self, predicate ): pass
+    def _BroadcastChoices( self, predicates ):
+        
+        raise NotImplementedError()
+        
     
     def _BroadcastCurrentText( self ):
         
         text = self._text_ctrl.GetValue()
         
-        self._BroadcastChoice( text )
+        self._BroadcastChoices( { text } )
         
     
     def _GenerateMatches( self ):
@@ -309,9 +312,9 @@ class AutoCompleteDropdown( wx.Panel ):
         pass
         
     
-    def BroadcastChoice( self, predicate ):
+    def BroadcastChoices( self, predicates ):
         
-        self._BroadcastChoice( predicate )
+        self._BroadcastChoices( predicates )
         
     
     def EventCloseDropdown( self, event ):
@@ -342,8 +345,14 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
-            if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_previous' )
-            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_next' )
+            if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                
+                id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_previous' )
+                
+            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                
+                id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_next' )
+                
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
@@ -500,7 +509,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._tag_repo_button.SetLabel( name )
         
     
-    def _InitDropDownList( self ): return ListBoxTagsAutocompleteDropdown( self._dropdown_window, self.BroadcastChoice, min_height = self._list_height )
+    def _InitDropDownList( self ): return ListBoxTagsAutocompleteDropdown( self._dropdown_window, self.BroadcastChoices, min_height = self._list_height )
     
     def _UpdateList( self ):
         
@@ -623,14 +632,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         HydrusGlobals.client_controller.sub( self, 'IncludePending', 'notify_include_pending' )
         
     
-    def _BroadcastChoice( self, predicate ):
+    def _BroadcastChoices( self, predicates ):
         
         if self._text_ctrl.GetValue() != '':
             
             self._text_ctrl.SetValue( '' )
             
         
-        HydrusGlobals.client_controller.pub( 'add_predicate', self._page_key, predicate )
+        HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, predicates )
         
     
     def _BroadcastCurrentText( self ):
@@ -646,7 +655,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             return
             
         
-        self._BroadcastChoice( entry_predicate )
+        self._BroadcastChoices( { entry_predicate } )
         
     
     def _ChangeFileRepository( self, file_service_key ):
@@ -887,9 +896,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, chosen_tag_callable, file_service_key, tag_service_key ):
+    def __init__( self, parent, chosen_tag_callable, expand_parents, file_service_key, tag_service_key, null_entry_callable = None ):
         
         self._chosen_tag_callable = chosen_tag_callable
+        self._expand_parents = expand_parents
+        self._null_entry_callable = null_entry_callable
         
         if HC.options[ 'show_all_tags_in_autocomplete' ]: file_service_key = CC.COMBINED_FILE_SERVICE_KEY
         
@@ -908,31 +919,41 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._dropdown_window.SetSizer( vbox )
         
     
-    def _BroadcastChoice( self, predicate ):
+    def _BroadcastChoices( self, predicates ):
         
         if self._text_ctrl.GetValue() != '':
             
             self._text_ctrl.SetValue( '' )
             
         
-        if predicate is None: self._chosen_tag_callable( None )
-        else:
+        tags = { predicate.GetValue() for predicate in predicates }
+        
+        tag_censorship_manager = HydrusGlobals.client_controller.GetManager( 'tag_censorship' )
+        
+        tags = tag_censorship_manager.FilterTags( self._tag_service_key, tags )
+        
+        if len( tags ) > 0:
             
-            tag = predicate.GetValue()
-            
-            tag_censorship_manager = HydrusGlobals.client_controller.GetManager( 'tag_censorship' )
-            
-            result = tag_censorship_manager.FilterTags( self._tag_service_key, ( tag, ) )
-            
-            if len( result ) > 0:
+            if self._expand_parents:
                 
                 tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
                 
-                parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
+                parents = set()
+                
+                for tag in tags:
+                    
+                    some_parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
+                    
+                    parents.update( some_parents )
+                    
                 
                 parents = tag_censorship_manager.FilterTags( self._tag_service_key, parents )
                 
-                self._chosen_tag_callable( tag, parents )
+                self._chosen_tag_callable( tags, parents )
+                
+            else:
+                
+                self._chosen_tag_callable( tags )
                 
             
         
@@ -976,11 +997,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         if sibling_predicate is not None:
             
-            self._BroadcastChoice( sibling_predicate )
+            self._BroadcastChoices( { sibling_predicate } )
             
         else:
             
-            self._BroadcastChoice( entry_predicate )
+            self._BroadcastChoices( { entry_predicate } )
             
         
     
@@ -1034,7 +1055,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = False )
             
-            matches = ClientSearch.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = True )
+            matches = ClientSearch.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = self._expand_parents )
             
             # do the 'put whatever they typed in at the top, whether it has count or not'
             # now with sibling support!
@@ -1052,42 +1073,45 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             for predicate in top_predicates:
                 
-                parents = []
-                
-                try:
+                if self._expand_parents:
                     
-                    index = matches.index( predicate )
+                    parents = []
                     
-                    predicate = matches[ index ]
+                    try:
+                        
+                        index = matches.index( predicate )
+                        
+                        predicate = matches[ index ]
+                        
+                        matches.remove( predicate )
+                        
+                        while matches[ index ].GetType() == HC.PREDICATE_TYPE_PARENT:
+                            
+                            parent = matches[ index ]
+                            
+                            matches.remove( parent )
+                            
+                            parents.append( parent )
+                            
+                        
+                    except:
+                        
+                        if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
+                            
+                            tag = predicate.GetValue()
+                            
+                            parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                            
+                            raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
+                            
+                            parents = [ ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
+                            
+                        
                     
-                    matches.remove( predicate )
+                    parents.reverse()
                     
-                    while matches[ index ].GetType() == HC.PREDICATE_TYPE_PARENT:
-                        
-                        parent = matches[ index ]
-                        
-                        matches.remove( parent )
-                        
-                        parents.append( parent )
-                        
+                    for parent in parents: matches.insert( 0, parent )
                     
-                except:
-                    
-                    if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
-                        
-                        tag = predicate.GetValue()
-                        
-                        parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-                        
-                        raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
-                        
-                        parents = [ ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
-                        
-                    
-                
-                parents.reverse()
-                
-                for parent in parents: matches.insert( 0, parent )
                 
                 matches.insert( 0, predicate )
                 
@@ -1113,7 +1137,10 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         if self._text_ctrl.GetValue() == '':
             
-            self._BroadcastChoice( None )
+            if self._null_entry_callable is not None:
+                
+                self._null_entry_callable()
+                
             
         else:
             
@@ -1971,8 +1998,9 @@ class ListBox( wx.ScrolledWindow ):
         
         self._client_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
-        self._current_selected_index = None
-        self._current_selected_term = None
+        self._selected_indices = set()
+        self._selected_terms = set()
+        self._last_hit_index = None
         
         self._last_view_start = None
         self._dirty = True
@@ -1995,17 +2023,28 @@ class ListBox( wx.ScrolledWindow ):
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseSelect )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventDClick )
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventKeyDown )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
+    
+    def __len__( self ):
+        
+        return len( self._ordered_strings )
         
     
-    def __len__( self ): return len( self._ordered_strings )
+    def _Activate( self ):
+        
+        raise NotImplementedError()
+        
     
-    def _Activate( self, s, term ): pass
+    def _Deselect( self, index ):
+        
+        term = self._strings_to_terms[ self._ordered_strings[ index ] ]
+        
+        self._selected_indices.discard( index )
+        self._selected_terms.discard( term )
+        
     
     def _GetIndexUnderMouse( self, mouse_event ):
         
@@ -2019,12 +2058,122 @@ class ListBox( wx.ScrolledWindow ):
         
         row_index = ( y / self._text_y )
         
-        if row_index >= len( self._ordered_strings ): return None
+        if row_index >= len( self._ordered_strings ):
+            
+            return None
+            
         
         return row_index
         
     
     def _GetTextColour( self, text ): return ( 0, 111, 250 )
+    
+    def _Hit( self, shift, ctrl, hit_index ):
+        
+        if hit_index is not None:
+            
+            if hit_index == -1 or hit_index > len( self._ordered_strings ):
+                
+                hit_index = len( self._ordered_strings ) - 1
+                
+            elif hit_index == len( self._ordered_strings ) or hit_index < -1:
+                
+                hit_index = 0
+                
+            
+        
+        to_select = set()
+        to_deselect = set()
+        
+        if shift:
+            
+            if hit_index is not None:
+                
+                if self._last_hit_index is not None:
+                    
+                    lower = min( hit_index, self._last_hit_index )
+                    upper = max( hit_index, self._last_hit_index )
+                    
+                    to_select = range( lower, upper + 1 )
+                    
+                else:
+                    
+                    to_select.add( hit_index )
+                    
+                
+            
+        elif ctrl:
+            
+            if hit_index is not None:
+                
+                if hit_index in self._selected_indices:
+                    
+                    to_deselect.add( hit_index )
+                    
+                else:
+                    
+                    to_select.add( hit_index )
+                    
+                
+            
+        else:
+            
+            if hit_index is None:
+                
+                to_deselect = set( self._selected_indices )
+                
+            else:
+                
+                if hit_index not in self._selected_indices:
+                    
+                    to_select.add( hit_index )
+                    to_deselect = set( self._selected_indices )
+                    
+                
+            
+        
+        for index in to_select:
+            
+            self._Select( index )
+            
+        
+        for index in to_deselect:
+            
+            self._Deselect( index )
+            
+        
+        self._last_hit_index = hit_index
+        
+        if self._last_hit_index is not None:
+            
+            y = self._text_y * self._last_hit_index
+            
+            ( start_x, start_y ) = self.GetViewStart()
+            
+            ( x_unit, y_unit ) = self.GetScrollPixelsPerUnit()
+            
+            ( width, height ) = self.GetClientSize()
+            
+            if y < start_y * y_unit:
+                
+                y_to_scroll_to = y / y_unit
+                
+                self.Scroll( -1, y_to_scroll_to )
+                
+                wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE ) )
+                
+            elif y > ( start_y * y_unit ) + height - self._text_y:
+                
+                y_to_scroll_to = ( y - height ) / y_unit
+                
+                self.Scroll( -1, y_to_scroll_to + 2 )
+                
+                wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE ) )
+                
+            
+        
+        self._SetDirty()
+        
     
     def _Redraw( self, dc ):
         
@@ -2063,7 +2212,7 @@ class ListBox( wx.ScrolledWindow ):
             
             text_colour = wx.Colour( r, g, b )
             
-            if self._current_selected_index is not None and current_index == self._current_selected_index:
+            if current_index in self._selected_indices:
                 
                 dc.SetBrush( wx.Brush( text_colour ) )
                 
@@ -2085,54 +2234,11 @@ class ListBox( wx.ScrolledWindow ):
         
     
     def _Select( self, index ):
+    
+        term = self._strings_to_terms[ self._ordered_strings[ index ] ]
         
-        old_index = self._current_selected_index
-        
-        if index is not None:
-            
-            if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
-            elif index == len( self._ordered_strings ) or index < -1: index = 0
-            
-        
-        self._current_selected_index = index
-        
-        if self._current_selected_index is None:
-            
-            self._current_selected_term = None
-            
-        else:
-            
-            self._current_selected_term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-            
-            # scroll to index, if needed
-            
-            y = self._text_y * self._current_selected_index
-            
-            ( start_x, start_y ) = self.GetViewStart()
-            
-            ( x_unit, y_unit ) = self.GetScrollPixelsPerUnit()
-            
-            ( width, height ) = self.GetClientSize()
-            
-            if y < start_y * y_unit:
-                
-                y_to_scroll_to = y / y_unit
-                
-                self.Scroll( -1, y_to_scroll_to )
-                
-                wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE ) )
-                
-            elif y > ( start_y * y_unit ) + height - self._text_y:
-                
-                y_to_scroll_to = ( y - height ) / y_unit
-                
-                self.Scroll( -1, y_to_scroll_to + 2 )
-                
-                wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE ) )
-                
-            
-        
-        self._SetDirty()
+        self._selected_indices.add( index )
+        self._selected_terms.add( term )
         
     
     def _SetDirty( self ):
@@ -2144,21 +2250,20 @@ class ListBox( wx.ScrolledWindow ):
     
     def _TextsHaveChanged( self ):
         
-        self._current_selected_index = None
+        previous_selected_terms = self._selected_terms
         
-        if self._current_selected_term is not None:
+        self._selected_indices = set()
+        self._selected_terms = set()
+        
+        for ( s, term ) in self._strings_to_terms.items():
             
-            for ( s, term ) in self._strings_to_terms.items():
+            if term in previous_selected_terms:
                 
-                if term == self._current_selected_term:
-                    
-                    self._current_selected_index = self._ordered_strings.index( s )
-                    
-                    break
-                    
+                index = self._ordered_strings.index( s )
                 
-            
-            if self._current_selected_index is None: self._current_selected_term = None
+                self._Select( index )
+                
+                
             
         
         ( my_x, my_y ) = self.GetClientSize()
@@ -2179,16 +2284,7 @@ class ListBox( wx.ScrolledWindow ):
     
     def EventDClick( self, event ):
         
-        index = self._GetIndexUnderMouse( event )
-        
-        if index is not None and index == self._current_selected_index:
-            
-            s = self._ordered_strings[ self._current_selected_index ]
-            
-            term = self._strings_to_terms[ s ]
-            
-            self._Activate( s, term )
-            
+        self._Activate()
         
     
     def EventEraseBackground( self, event ): pass
@@ -2197,92 +2293,64 @@ class ListBox( wx.ScrolledWindow ):
         
         key_code = event.GetKeyCode()
         
-        if self._current_selected_index is not None:
+        if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
-            if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-                
-                s = self._ordered_strings[ self._current_selected_index ]
-                
-                term = self._strings_to_terms[ s ]
-                
-                self._Activate( s, term )
-                
-            elif key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Select( self._current_selected_index - 1 )
-            elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._Select( self._current_selected_index + 1 )
-            elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): self._Select( self._current_selected_index - self._num_rows_per_page )
-            elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): self._Select( self._current_selected_index + self._num_rows_per_page )
-            elif key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ): self._Select( 0 )
-            elif key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ): self._Select( len( self._ordered_strings ) - 1 )
-            else: event.Skip()
+            self._Activate()
             
-        else: event.Skip()
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
+        else:
             
-            ( command, data ) = action
+            hit_index = None
             
-            if command == 'copy_term':
+            if key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ):
                 
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                hit_index = 0
                 
-                HydrusGlobals.client_controller.pub( 'clipboard', 'text', term )
+            elif key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
                 
-            elif command == 'copy_sub_term':
+                hit_index = len( self._ordered_strings ) - 1
                 
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+            elif self._last_hit_index is not None:
                 
-                sub_term = term.split( ':', 1 )[1]
+                if key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                    
+                    hit_index = self._last_hit_index - 1
+                    
+                elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                    
+                    hit_index = self._last_hit_index + 1
+                    
+                elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                    
+                    hit_index = self._last_hit_index - self._num_rows_per_page
+                    
+                elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                    
+                    hit_index = min( len( self._ordered_strings ) - 1, self._last_hit_index + self._num_rows_per_page )
+                    
                 
-                HydrusGlobals.client_controller.pub( 'clipboard', 'text', sub_term )
-                
-            else:
+            
+            if hit_index is None:
                 
                 event.Skip()
                 
-                return # this is about select_up and select_down
+            else:
+                
+                shift = event.ShiftDown()
+                ctrl = event.CmdDown() or event.ControlDown()
+                
+                self._Hit( shift, ctrl, hit_index )
                 
             
-        
-    
-    def EventMouseRightClick( self, event ):
-        
-        index = self._GetIndexUnderMouse( event )
-        
-        self._Select( index )
-        
-        if self._current_selected_index is not None:
-            
-            menu = wx.Menu()
-            
-            term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-            
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_term' ), 'copy "' + term + '"' )
-            
-            if ':' in term:
-                
-                sub_term = term.split( ':', 1 )[1]
-                
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_term' ), 'copy "' + sub_term + '"' )
-                
-            
-            self.PopupMenu( menu )
-            
-            wx.CallAfter( menu.Destroy )
-            
-        
-        event.Skip()
         
     
     def EventMouseSelect( self, event ):
         
-        index = self._GetIndexUnderMouse( event )
+        hit_index = self._GetIndexUnderMouse( event )
         
-        self._Select( index )
+        shift = event.ShiftDown()
+        ctrl = event.CmdDown() or event.ControlDown()
+        
+        self._Hit( shift, ctrl, hit_index )
         
         event.Skip()
         
@@ -2337,122 +2405,6 @@ class ListBox( wx.ScrolledWindow ):
             
             self._TextsHaveChanged()
             
-            if len( ordered_strings ) > 0: self._Select( 0 )
-            
-        
-    
-class ListBoxMessages( ListBox ):
-    
-    def _GetTextColour( self, predicate_string ):
-        
-        if predicate_string.startswith( 'system:' ): ( r, g, b ) = ( 153, 101, 21 )
-        else: ( r, g, b ) = ( 0, 111, 250 )
-        
-        return ( r, g, b )
-        
-    
-class ListBoxMessagesActiveOnly( ListBoxMessages ):
-    
-    def __init__( self, parent, callable ):
-        
-        ListBoxMessages.__init__( self, parent )
-        
-        self._callable = callable
-        
-        self._matches = {}
-        
-    
-    def _Activate( self, s, term ): self._callable( term )
-    
-    def SetTerms( self, matches ):
-        
-        if matches != self._matches:
-            
-            self._matches = matches
-            
-            self._ordered_strings = []
-            self._strings_to_terms = {}
-            
-            for ( term, count ) in matches:
-                
-                if count is None: term_string = term
-                else: term_string = term + ' (' + HydrusData.ConvertIntToPrettyString( count ) + ')'
-                
-                self._ordered_strings.append( term_string )
-                self._strings_to_terms[ term_string ] = term
-                
-            
-            self._TextsHaveChanged()
-            
-            if len( matches ) > 0: self._Select( 0 )
-            
-        
-    
-class ListBoxMessagesPredicates( ListBoxMessages ):
-    
-    def __init__( self, parent, page_key, initial_predicates = None ):
-        
-        if initial_predicates is None: initial_predicates = []
-        
-        ListBoxMessages.__init__( self, parent )
-        
-        self._page_key = page_key
-        
-        if len( initial_predicates ) > 0:
-            
-            for predicate in initial_predicates:
-                
-                self._ordered_strings.append( predicate )
-                self._strings_to_terms[ predicate ] = predicate
-                
-            
-            self._TextsHaveChanged()
-            
-        
-    
-    def _Activate( self, s, term ): HydrusGlobals.client_controller.pub( 'remove_predicate', self._page_key, term )
-    
-    def ActivatePredicate( self, term ):
-        
-        if term in self._ordered_strings:
-            
-            self._ordered_strings.remove( term )
-            del self._strings_to_terms[ term ]
-            
-        else:
-            
-            if term == 'system:inbox' and 'system:archive' in self._ordered_strings: self._ordered_strings.remove( 'system:archive' )
-            elif term == 'system:archive' and 'system:inbox' in self._ordered_strings: self._ordered_strings.remove( 'system:inbox' )
-            
-            self._ordered_strings.append( term )
-            self._strings_to_terms[ term ] = term
-            
-            self._ordered_strings.sort()
-            
-        
-        self._TextsHaveChanged()
-        
-    
-    def AddPredicate( self, predicate ):
-        
-        self._ordered_strings.append( predicate )
-        self._strings_to_terms[ predicate ] = predicate
-        
-        self._ordered_strings.sort()
-        
-        self._TextsHaveChanged()
-        
-    
-    def GetPredicates( self ): return self._ordered_strings
-    
-    def HasPredicate( self, predicate ): return predicate in self._ordered_strings
-    
-    def RemovePredicate( self, predicate ):
-        
-        self._ordered_strings.remove( predicate )
-        del self._strings_to_terms[ predicate ]
-        
-        self._TextsHaveChanged()
         
     
 class ListBoxTags( ListBox ):
@@ -2465,10 +2417,16 @@ class ListBoxTags( ListBox ):
         
         self._background_colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'tags_box' ] )
         
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
     
     def _GetNamespaceColours( self ): return HC.options[ 'namespace_colours' ]
     
-    def _GetAllTagsForClipboard( self, with_counts = False ): return self._ordered_strings
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        return self._ordered_strings
+        
     
     def _GetTextColour( self, tag_string ):
         
@@ -2500,50 +2458,76 @@ class ListBoxTags( ListBox ):
             
             ( command, data ) = action
             
-            if command == 'copy_term':
+            if command in ( 'copy_terms', 'copy_sub_terms', 'copy_all_tags', 'copy_all_tags_with_counts' ):
                 
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                if type( term ) == ClientData.Predicate: s = term.GetUnicode()
-                else: s = term
+                if command in ( 'copy_terms', 'copy_sub_terms' ):
+                    
+                    texts = []
+                    
+                    for term in self._selected_terms:
+                        
+                        if isinstance( term, ClientData.Predicate ):
+                            
+                            text = term.GetUnicode()
+                            
+                        else:
+                            
+                            text = term
+                            
+                        
+                        if command == 'copy_sub_terms' and ':' in text:
+                            
+                            ( namespace_gumpf, text ) = text.split( ':', 1 )
+                            
+                        
+                        texts.append( text )
+                        
+                    
+                    texts.sort()
+                    
+                    text = os.linesep.join( texts )
+                    
+                elif command == 'copy_all_tags':
+                    
+                    text = os.linesep.join( self._GetAllTagsForClipboard() )
+                    
+                elif command == 'copy_all_tags_with_counts':
+                    
+                    text = os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) )
+                    
                 
-                HydrusGlobals.client_controller.pub( 'clipboard', 'text', s )
+                HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
                 
-            elif command == 'copy_sub_term':
+            elif command == 'new_search_page':
                 
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                predicates = []
                 
-                if type( term ) == ClientData.Predicate: s = term.GetUnicode()
-                else: s = term
+                for term in self._selected_terms:
+                    
+                    if isinstance( term, ClientData.Predicate ):
+                        
+                        predicates.append( term )
+                        
+                    else:
+                        
+                        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
+                        
+                    
                 
-                sub_s = s.split( ':', 1 )[1]
-                
-                HydrusGlobals.client_controller.pub( 'clipboard', 'text', sub_s )
-                
-            elif command == 'copy_all_tags': HydrusGlobals.client_controller.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
-            elif command == 'copy_all_tags_with_counts': HydrusGlobals.client_controller.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
-            elif command == 'new_search_page_with_term':
-                
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                if type( term ) == ClientData.Predicate: predicate = term
-                else: predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term )
-                
-                HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ predicate ] )
+                HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates )
                 
             elif command in ( 'parent', 'sibling' ):
-                
-                tag = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
                 import ClientGUIDialogsManage
                 
                 if command == 'parent':
                     
-                    with ClientGUIDialogsManage.DialogManageTagParents( self, tag ) as dlg: dlg.ShowModal()
+                    with ClientGUIDialogsManage.DialogManageTagParents( self, self._selected_terms ) as dlg: dlg.ShowModal()
                     
                 elif command == 'sibling':
                     
-                    with ClientGUIDialogsManage.DialogManageTagSiblings( self, tag ) as dlg: dlg.ShowModal()
+                    with ClientGUIDialogsManage.DialogManageTagSiblings( self, self._selected_terms ) as dlg: dlg.ShowModal()
                     
                 
             else:
@@ -2557,51 +2541,91 @@ class ListBoxTags( ListBox ):
     
     def EventMouseRightClick( self, event ):
         
-        index = self._GetIndexUnderMouse( event )
+        hit_index = self._GetIndexUnderMouse( event )
         
-        self._Select( index )
+        shift = event.ShiftDown()
+        ctrl = event.CmdDown() or event.ControlDown()
+        
+        self._Hit( shift, ctrl, hit_index )
         
         if len( self._ordered_strings ) > 0:
         
             menu = wx.Menu()
             
-            if self._current_selected_index is not None:
+            if len( self._selected_terms ) > 0:
                 
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                if type( term ) == ClientData.Predicate: s = term.GetUnicode()
-                else: s = term
-                
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page_with_term' ), 'open a new search page for "' + s + '"' )
-                
-                menu.AppendSeparator()
-                
-            
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags' ), 'copy all tags' )
-            if self.has_counts: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
-            
-            if self._current_selected_index is not None:
-                
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                if type( term ) == ClientData.Predicate: s = term.GetUnicode()
-                else: s = term
-                
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_term' ), 'copy "' + s + '"' )
-                
-                if ':' in s:
+                if len( self._selected_terms ) == 1:
                     
-                    sub_s = s.split( ':', 1 )[1]
+                    ( term, ) = self._selected_terms
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_term' ), 'copy "' + sub_s + '"' )
+                    if type( term ) == ClientData.Predicate:
+                        
+                        s = term.GetUnicode()
+                        
+                    else:
+                        
+                        s = term
+                        
                     
-                
-                if type( term ) in ( str, unicode ):
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for ' + s )
                     
                     menu.AppendSeparator()
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'parent' ), 'add parent to ' + s )
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'sibling' ), 'add sibling to ' + s )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_terms' ), 'copy "' + s + '"')
+                    
+                    if ':' in s:
+                        
+                        sub_s = s.split( ':', 1 )[1]
+                        
+                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy "' + sub_s + '"' )
+                        
+                    
+                else:
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for selection' )
+                    
+                    menu.AppendSeparator()
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_terms' ), 'copy selected tags' )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy selected subtags' )
+                    
+                
+            
+            if len( self._ordered_strings ) > len( self._selected_terms ):
+                
+                if menu.GetMenuItemCount() > 0:
+                    
+                    menu.AppendSeparator()
+                    
+                
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags' ), 'copy all tags' )
+                if self.has_counts: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
+                
+            
+            if len( self._selected_terms ) > 0:
+                
+                term_types = [ type( term ) for term in self._selected_terms ]
+                
+                if str in term_types or unicode in term_types:
+                    
+                    if menu.GetMenuItemCount() > 0:
+                        
+                        menu.AppendSeparator()
+                        
+                    
+                    if len( self._selected_terms ) == 1:
+                        
+                        ( tag, ) = self._selected_terms
+                        
+                        text = tag
+                        
+                    else:
+                        
+                        text = 'selection'
+                        
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'parent' ), 'add parents to ' + text )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'sibling' ), 'add siblings to ' + text )
                     
                 
             
@@ -2613,10 +2637,9 @@ class ListBoxTags( ListBox ):
         event.Skip()
         
     
-    def GetSelectedTag( self ):
+    def GetSelectedTags( self ):
         
-        if self._current_selected_index is not None: return self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-        else: return None
+        return self._selected_terms
         
     
 class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
@@ -2632,42 +2655,141 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
         self._predicates = {}
         
     
-    def _Activate( self, s, term ): self._callable( term )
+    def _Activate( self ):
+        
+        callable_terms = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
+        
+        if len( callable_terms ) > 0:
+            
+            self._callable( callable_terms )
+            
+        
+    
+    def _GetWithParentIndices( self, index ):
+        
+        indices = [ index ]
+        
+        index += 1
+        
+        while index < len( self._ordered_strings ):
+            
+            term = self._strings_to_terms[ self._ordered_strings[ index ] ]
+            
+            if term.GetType() == HC.PREDICATE_TYPE_PARENT:
+                
+                indices.append( index )
+                
+            else:
+                
+                break
+                
+            
+            index += 1
+            
+        
+        return indices
+        
+    
+    def _Deselect( self, index ):
+        
+        to_deselect = self._GetWithParentIndices( index )
+        
+        for index in to_deselect:
+            
+            ListBoxTags._Deselect( self, index )
+            
+        
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
         return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
         
     
+    def _Hit( self, shift, ctrl, hit_index ):
+        
+        # this realigns the hit index in the up direction
+        
+        if hit_index is not None:
+            
+            hit_term = self._strings_to_terms[ self._ordered_strings[ hit_index ] ]
+            
+            while hit_term.GetType() == HC.PREDICATE_TYPE_PARENT:
+                
+                hit_index -= 1
+                
+                hit_term = self._strings_to_terms[ self._ordered_strings[ hit_index ] ]
+                
+            
+        
+        ListBoxTags._Hit( self, shift, ctrl, hit_index )
+        
+    
     def _Select( self, index ):
         
-        if index is not None:
+        to_select = self._GetWithParentIndices( index )
+        
+        for index in to_select:
             
-            if self._current_selected_index is None: direction = 1
-            elif index - self._current_selected_index in ( -1, 1 ): direction = index - self._current_selected_index
-            else: direction = 1
+            ListBoxTags._Select( self, index )
             
-            if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
-            elif index == len( self._ordered_strings ) or index < -1: index = 0
+        
+    
+    def EventKeyDown( self, event ):
+        
+        # this realigns the hit index in the down direction
+        
+        key_code = event.GetKeyCode()
+        
+        hit_index = None
+        
+        if key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
             
-            s = self._ordered_strings[ index ]
+            hit_index = len( self._ordered_strings ) - 1
             
-            new_term = self._strings_to_terms[ s ]
+        elif self._last_hit_index is not None:
             
-            while new_term.GetType() == HC.PREDICATE_TYPE_PARENT:
+            if key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
                 
-                index += direction
+                hit_index = self._last_hit_index + 1
                 
-                if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
-                elif index == len( self._ordered_strings ) or index < -1: index = 0
+            elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
                 
-                s = self._ordered_strings[ index ]
-                
-                new_term = self._strings_to_terms[ s ]
+                hit_index = min( len( self._ordered_strings ) - 1, self._last_hit_index + self._num_rows_per_page )
                 
             
         
-        ListBoxTags._Select( self, index )
+        if hit_index is None:
+            
+            ListBoxTags.EventKeyDown( self, event )
+            
+        else:
+            
+            if hit_index >= len( self._ordered_strings ):
+                
+                hit_index = 0
+                
+            
+            hit_term = self._strings_to_terms[ self._ordered_strings[ hit_index ] ]
+            
+            while hit_term.GetType() == HC.PREDICATE_TYPE_PARENT:
+                
+                hit_index += 1
+                
+                if hit_index >= len( self._ordered_strings ):
+                    
+                    hit_index = 0
+                    
+                
+                hit_term = self._strings_to_terms[ self._ordered_strings[ hit_index ] ]
+                
+            
+            
+            shift = event.ShiftDown()
+            ctrl = event.CmdDown() or event.ControlDown()
+            
+            self._Hit( shift, ctrl, hit_index )
+            
+        
         
     
     def SetPredicates( self, predicates ):
@@ -2716,13 +2838,41 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
             
             self._TextsHaveChanged()
             
-            if len( predicates ) > 0: self._Select( 0 )
+            if len( predicates ) > 0:
+                
+                self._Hit( False, False, None )
+                self._Hit( False, False, 0 )
+                
             
         
     
 class ListBoxTagsCensorship( ListBoxTags ):
     
-    def _Activate( self, s, term ): self.RemoveTag( term )
+    def _Activate( self ):
+        
+        if len( self._selected_terms ) > 0:
+            
+            tags = set( self._selected_terms )
+            
+            for tag in tags:
+                
+                self._RemoveTag( self._selected_terms )
+                
+            
+            self._TextsHaveChanged()
+            
+        
+    
+    def _AddTag( self, tag ):
+        
+        tag_string = self._GetTagString( tag )
+        
+        if tag_string not in self._strings_to_terms:
+            
+            self._ordered_strings.append( tag_string )
+            self._strings_to_terms[ tag_string ] = tag
+            
+        
     
     def _GetTagString( self, tag ):
         
@@ -2731,27 +2881,55 @@ class ListBoxTagsCensorship( ListBoxTags ):
         else: return tag
         
     
-    def AddTag( self, tag ):
+    def _RemoveTag( self, tag ):
         
         tag_string = self._GetTagString( tag )
         
-        if tag_string in self._strings_to_terms: self.RemoveTag( tag )
-        else:
+        if tag_string in self._strings_to_terms:
             
-            self._ordered_strings.append( tag_string )
-            self._strings_to_terms[ tag_string ] = tag
+            tag_string = self._GetTagString( tag )
             
-            self._TextsHaveChanged()
+            self._ordered_strings.remove( tag_string )
+            
+            del self._strings_to_terms[ tag_string ]
             
         
     
-    def RemoveTag( self, tag ):
+    def AddTags( self, tags ):
         
-        tag_string = self._GetTagString( tag )
+        for tag in tags:
+            
+            self._AddTag( tag )
+            
         
-        self._ordered_strings.remove( tag_string )
+        self._TextsHaveChanged()
         
-        del self._strings_to_terms[ tag_string ]
+    
+    def EnterTags( self, tags ):
+        
+        for tag in tags:
+            
+            tag_string = self._GetTagString( tag )
+            
+            if tag_string in self._strings_to_terms:
+                
+                self._RemoveTag( tag )
+                
+            else:
+                
+                self._AddTag( tag )
+                
+            
+        
+        self._TextsHaveChanged()
+        
+    
+    def _RemoveTags( self, tags ):
+        
+        for tag in tags:
+            
+            self._RemoveTag( tag )
+            
         
         self._TextsHaveChanged()
         
@@ -2777,9 +2955,34 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         self._TextsHaveChanged()
         
     
-    def _Activate( self, s, term ): self.RemoveNamespace( term )
+    def _Activate( self ):
+        
+        if len( self._selected_terms ) > 0:
+            
+            self._RemoveNamespaces( self._selected_terms )
+            
+        
     
     def _GetNamespaceColours( self ): return self._namespace_colours
+    
+    def _RemoveNamespaces( self, namespaces ):
+        
+        for namespace in namespaces:
+            
+            if namespace is not None and namespace != '':
+                
+                namespace_string = namespace + ':tag'
+                
+                self._ordered_strings.remove( namespace_string )
+                
+                del self._strings_to_terms[ namespace_string ]
+                
+                del self._namespace_colours[ namespace ]
+                
+            
+        
+        self._TextsHaveChanged()
+        
     
     def SetNamespaceColour( self, namespace, colour ):
         
@@ -2800,38 +3003,20 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
     def GetNamespaceColours( self ): return self._namespace_colours
     
-    def GetSelectedNamespaceColour( self ):
+    def GetSelectedNamespaceColours( self ):
         
-        if self._current_selected_index is not None:
-            
-            namespace_string = self._ordered_strings[ self._current_selected_index ]
-            
-            namespace = self._strings_to_terms[ namespace_string ]
+        results = []
+        
+        for namespace in self._selected_terms:
             
             ( r, g, b ) = self._namespace_colours[ namespace ]
             
             colour = wx.Colour( r, g, b )
             
-            return ( namespace, colour )
+            results.append( ( namespace, colour ) )
             
         
-        return None
-        
-    
-    def RemoveNamespace( self, namespace ):
-        
-        if namespace is not None and namespace != '':
-            
-            namespace_string = namespace + ':tag'
-            
-            self._ordered_strings.remove( namespace_string )
-            
-            del self._strings_to_terms[ namespace_string ]
-            
-            del self._namespace_colours[ namespace ]
-            
-            self._TextsHaveChanged()
-            
+        return results
         
     
 class ListBoxTagsStrings( ListBoxTags ):
@@ -2842,17 +3027,6 @@ class ListBoxTagsStrings( ListBoxTags ):
         
         self._removed_callable = removed_callable
         self._tags = set()
-        
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        tags = list( self._tags )
-        
-        tags.sort()
-        
-        return tags
         
     
     def _RecalcTags( self ):
@@ -2879,56 +3053,91 @@ class ListBoxTagsStrings( ListBoxTags ):
         self._TextsHaveChanged()
         
     
-    def _Activate( self, s, tag ): self._RemoveTag( tag )
-    
-    def _RemoveTag( self, tag ):
+    def _Activate( self ):
         
-        if tag in self._tags:
+        if len( self._selected_terms ) > 0:
             
-            self._tags.discard( tag )
+            tags = set( self._selected_terms )
             
-            self._RecalcTags()
-            
-            if self._removed_callable is not None:
-                
-                self._removed_callable( tag )
-                
+            self._RemoveTags( tags )
             
         
     
-    def AddTag( self, tag, parents = None ):
+    def _RemoveTags( self, tags ):
         
-        if parents is None: parents = []
+        self._tags.difference_update( tags )
         
-        if tag in self._tags: self._tags.discard( tag )
-        else:
+        self._RecalcTags()
+        
+        if self._removed_callable is not None:
             
-            self._tags.add( tag )
+            self._removed_callable( tags )
             
-            self._tags.update( parents )
+        
+    
+    def AddTags( self, tags ):
+        
+        self._tags.update( tags )
+        
+        self._RecalcTags()
+        
+    
+    def EnterTags( self, tags ):
+        
+        removed = set()
+        
+        for tag in tags:
+            
+            if tag in self._tags:
+                
+                self._tags.discard( tag )
+                
+                removed.add( tag )
+                
+            else:
+                
+                self._tags.add( tag )
+                
             
         
         self._RecalcTags()
+        
+        if len( removed ) > 0 and self._removed_callable is not None:
+            
+            self._removed_callable( removed )
+            
         
     
     def EventKeyDown( self, event ):
         
         if event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ):
             
-            tag = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+            self._Activate()
             
-            self._RemoveTag( tag )
+        else:
             
-        else: event.Skip()
+            event.Skip()
+            
         
     
-    def GetTags( self ): return self._tags
+    def GetTags( self ):
+        
+        return self._tags
+        
+    
+    def RemoveTags( self, tags ):
+        
+        self._RemoveTags( tags )
+        
     
     def SetTags( self, tags ):
         
         self._tags = set()
         
-        for tag in tags: self._tags.add( tag )
+        for tag in tags:
+            
+            self._tags.add( tag )
+            
         
         self._RecalcTags()
         
@@ -2958,58 +3167,134 @@ class ListBoxTagsPredicates( ListBoxTags ):
             self._TextsHaveChanged()
             
         
+        HydrusGlobals.client_controller.sub( self, 'EnterPredicates', 'enter_predicates' )
+        
     
-    def _Activate( self, s, term ): HydrusGlobals.client_controller.pub( 'remove_predicate', self._page_key, term )
+    def _Activate( self ):
+        
+        if len( self._selected_terms ) > 0:
+            
+            self._EnterPredicates( set( self._selected_terms ) )
+            
+        
+    
+    def _EnterPredicates( self, predicates ):
+        
+        if len( predicates ) == 0:
+            
+            return
+            
+        
+        inbox_predicate = ClientSearch.SYSTEM_PREDICATE_INBOX
+        archive_predicate = ClientSearch.SYSTEM_PREDICATE_ARCHIVE
+        
+        local_predicate = ClientSearch.SYSTEM_PREDICATE_LOCAL
+        not_local_predicate = ClientSearch.SYSTEM_PREDICATE_NOT_LOCAL
+        
+        for proto_predicate in predicates:
+            
+            predicates_to_be_added = set()
+            predicates_to_be_removed = set()
+            
+            proto_predicate = proto_predicate.GetCountlessCopy()
+            
+            ( predicate_type, value, inclusive ) = proto_predicate.GetInfo()
+            
+            if predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
+                
+                import ClientGUIDialogs
+                
+                with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK: entry_predicates = dlg.GetPredicates()
+                    else: return
+                    
+                
+            elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: entry_predicates = ( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), )
+            else:
+                
+                entry_predicates = ( proto_predicate, )
+                
+            
+            for predicate in entry_predicates:
+                
+                if self._HasPredicate( predicate ):
+                    
+                    predicates_to_be_removed.add( predicate )
+                    
+                else:
+                    
+                    predicates_to_be_added.add( predicate )
+                    
+                    if predicate == inbox_predicate and self._HasPredicate( archive_predicate ):
+                        
+                        predicates_to_be_removed.add( archive_predicate )
+                        
+                    elif predicate == archive_predicate and self._HasPredicate( inbox_predicate ):
+                        
+                        predicates_to_be_removed.add( inbox_predicate )
+                        
+                    
+                    if predicate == local_predicate and self._HasPredicate( not_local_predicate ):
+                        
+                        predicates_to_be_removed.add( not_local_predicate )
+                        
+                    elif predicate == not_local_predicate and self._HasPredicate( local_predicate ):
+                        
+                        predicates_to_be_removed.add( local_predicate )
+                        
+                    
+                
+            
+            for predicate in predicates_to_be_added:
+                
+                predicate_string = predicate.GetUnicode()
+                
+                self._ordered_strings.append( predicate_string )
+                self._strings_to_terms[ predicate_string ] = predicate
+                
+            
+            for predicate in predicates_to_be_removed:
+                
+                for ( s, existing_predicate ) in self._strings_to_terms.items():
+                    
+                    if existing_predicate == predicate:
+                        
+                        self._ordered_strings.remove( s )
+                        del self._strings_to_terms[ s ]
+                        
+                        break
+                        
+                    
+                
+            
+            
+        
+        self._ordered_strings.sort()
+        
+        self._TextsHaveChanged()
+        
+        HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
+        
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
         return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
         
     
-    def AddPredicate( self, predicate ):
-        
-        predicate = predicate.GetCountlessCopy()
-        
-        predicate_string = predicate.GetUnicode()
-        
-        inbox_predicate = ClientSearch.SYSTEM_PREDICATE_INBOX
-        archive_predicate = ClientSearch.SYSTEM_PREDICATE_ARCHIVE
-        
-        if predicate == inbox_predicate and self.HasPredicate( archive_predicate ): self.RemovePredicate( archive_predicate )
-        elif predicate == archive_predicate and self.HasPredicate( inbox_predicate ): self.RemovePredicate( inbox_predicate )
-        
-        local_predicate = ClientSearch.SYSTEM_PREDICATE_LOCAL
-        not_local_predicate = ClientSearch.SYSTEM_PREDICATE_NOT_LOCAL
-        
-        if predicate == local_predicate and self.HasPredicate( not_local_predicate ): self.RemovePredicate( not_local_predicate )
-        elif predicate == not_local_predicate and self.HasPredicate( local_predicate ): self.RemovePredicate( local_predicate )
-        
-        self._ordered_strings.append( predicate_string )
-        self._strings_to_terms[ predicate_string ] = predicate
-        
-        self._ordered_strings.sort()
-        
-        self._TextsHaveChanged()
-        
+    def _HasPredicate( self, predicate ): return predicate in self._strings_to_terms.values()
     
-    def GetPredicates( self ): return self._strings_to_terms.values()
-    
-    def HasPredicate( self, predicate ): return predicate in self._strings_to_terms.values()
-    
-    def RemovePredicate( self, predicate ):
+    def EnterPredicates( self, page_key, predicates ):
         
-        for ( s, existing_predicate ) in self._strings_to_terms.items():
+        if page_key == self._page_key:
             
-            if existing_predicate == predicate:
-                
-                self._ordered_strings.remove( s )
-                del self._strings_to_terms[ s ]
-                
-                self._TextsHaveChanged()
-                
-                break
-                
+            self._EnterPredicates( predicates )
             
+        
+    
+    def GetPredicates( self ):
+        
+        return self._strings_to_terms.values()
         
     
 class ListBoxTagsSelection( ListBoxTags ):
@@ -3041,8 +3326,14 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
-        if with_counts: return self._ordered_strings
-        else: return [ self._strings_to_terms[ s ] for s in self._ordered_strings ]
+        if with_counts:
+            
+            return self._ordered_strings
+            
+        else:
+            
+            return [ self._strings_to_terms[ s ] for s in self._ordered_strings ]
+            
         
     
     def _RecalcStrings( self ):
@@ -3209,6 +3500,20 @@ class ListBoxTagsSelection( ListBoxTags ):
         self._last_media = media
         
     
+class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
+    
+    def __init__( self, parent, canvas_key ):
+        
+        ListBoxTagsSelection.__init__( self, parent, collapse_siblings = True )
+        
+        self._canvas_key = canvas_key
+        
+    
+    def _Activate( self ):
+        
+        HydrusGlobals.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
+        
+    
 class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
     def __init__( self, parent, page_key ):
@@ -3221,11 +3526,14 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         HydrusGlobals.client_controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
         
     
-    def _Activate( self, s, term ):
+    def _Activate( self ):
         
-        predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term )
+        predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
         
-        HydrusGlobals.client_controller.pub( 'add_predicate', self._page_key, predicate )
+        if len( predicates ) > 0:
+            
+            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+            
         
     
     def ChangeTagRepositoryPubsub( self, page_key, service_key ):
@@ -3247,7 +3555,13 @@ class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
         self._callable = callable
         
     
-    def _Activate( self, s, term ): self._callable( term )
+    def _Activate( self ):
+        
+        if len( self._selected_terms ) > 0:
+            
+            self._callable( self._selected_terms )
+            
+        
     
 class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     

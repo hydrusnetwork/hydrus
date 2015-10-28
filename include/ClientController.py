@@ -43,6 +43,8 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusGlobals.client_controller = self
         
+        self._last_mouse_position = None
+        
     
     def _InitDB( self ):
         
@@ -148,6 +150,31 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def CheckMouseIdle( self ):
+        
+        mouse_position = wx.GetMousePosition()
+        
+        if self._last_mouse_position is None:
+            
+            self._last_mouse_position = mouse_position
+            
+        elif mouse_position != self._last_mouse_position:
+            
+            idle_before = self.CurrentlyIdle()
+            
+            self._timestamps[ 'last_mouse_action' ] = HydrusData.GetNow()
+            
+            self._last_mouse_position = mouse_position
+            
+            idle_after = self.CurrentlyIdle()
+            
+            if idle_before != idle_after:
+                
+                self.pub( 'refresh_status' )
+                
+            
+        
+    
     def Clipboard( self, data_type, data ):
         
         # need this cause can't do it in a non-gui thread
@@ -234,12 +261,48 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyIdle( self ):
         
-        if self._options[ 'idle_period' ] == 0:
+        # the existence of an idle test permits a True result
+        # any single fail vetoes a True
+        
+        possibly_idle = False
+        definitely_not_idle = False
+        
+        if self._options[ 'idle_period' ] > 0:
+            
+            if HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + self._options[ 'idle_period' ] ):
+                
+                possibly_idle = True
+                
+            else:
+                
+                definitely_not_idle = True
+                
+            
+        
+        if self._options[ 'idle_mouse_period' ] > 0:
+            
+            if HydrusData.TimeHasPassed( self._timestamps[ 'last_mouse_action' ] + self._options[ 'idle_mouse_period' ] ):
+                
+                possibly_idle = True
+                
+            else:
+                
+                definitely_not_idle = True
+                
+            
+        
+        if definitely_not_idle:
             
             return False
             
-        
-        return HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + self._options[ 'idle_period' ] )
+        elif possibly_idle:
+            
+            return True
+            
+        else:
+            
+            return False
+            
         
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
@@ -295,7 +358,10 @@ class Controller( HydrusController.HydrusController ):
     
     def ForceIdle( self ):
         
-        self._timestamps[ 'last_user_action' ] = 0
+        del self._timestamps[ 'last_user_action' ]
+        del self._timestamps[ 'last_mouse_action' ]
+        
+        self._last_mouse_position = None
         
         self.pub( 'wake_daemons' )
         self.pub( 'refresh_status' )
@@ -422,6 +488,7 @@ class Controller( HydrusController.HydrusController ):
         self.RestartBooru()
         
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckMouseIdle', ClientDaemons.DAEMONCheckMouseIdle, period = 10 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ), pre_callable_wait = 0 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 60 ) )
@@ -506,7 +573,10 @@ class Controller( HydrusController.HydrusController ):
         else: return text.lower()
         
     
-    def ResetIdleTimer( self ): self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
+    def ResetIdleTimer( self ):
+        
+        self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
+        
     
     def ResetPageChangeTimer( self ):
         

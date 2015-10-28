@@ -1656,7 +1656,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._period = wx.SpinCtrl( self._period_box )
         
-        self._period.SetRange( 3, 180 )
+        self._period.SetRange( 3, 60 * 24 * 30 )
         
         self._period.SetValue( period / 60 )
         
@@ -1729,17 +1729,6 @@ If you select synchronise, be careful!'''
         
         wx.CallAfter( self._ok.SetFocus )
         
-        HydrusGlobals.client_controller.sub( self, 'AddPredicate', 'add_predicate' )
-        HydrusGlobals.client_controller.sub( self, 'RemovePredicate', 'remove_predicate' )
-        
-    
-    def AddPredicate( self, page_key, predicate ):
-        
-        if page_key == self._page_key:
-            
-            if self._predicates_box.HasPredicate( predicate ): self._predicates_box.RemovePredicate( predicate )
-            else: self._predicates_box.AddPredicate( predicate )
-            
         
     
     def EventOK( self, event ):
@@ -1776,17 +1765,6 @@ If you select synchronise, be careful!'''
         self._export_folder.SetTuple( path, export_type, file_search_context, period, phrase )
         
         return self._export_folder
-        
-    
-    def RemovePredicate( self, page_key, predicate ):
-        
-        if page_key == self._page_key:
-            
-            if self._predicates_box.HasPredicate( predicate ):
-                
-                self._predicates_box.RemovePredicate( predicate )
-                
-            
         
     
 class DialogManageImageboards( ClientGUIDialogs.Dialog ):
@@ -2513,7 +2491,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage import folders' )
         
-        self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ), ( 'local tag', 120 ) ], delete_key_callback = self.Delete )
+        self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ) ], delete_key_callback = self.Delete )
         
         self._add_button = wx.Button( self, label = 'add' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -2539,11 +2517,11 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         for import_folder in import_folders:
             
-            ( name, path, check_period, tag ) = import_folder.ToListBoxTuple()
+            ( name, path, check_period ) = import_folder.ToListBoxTuple()
             
-            ( pretty_check_period, pretty_tag ) = self._GetPrettyVariables( check_period, tag )
+            pretty_check_period = self._GetPrettyVariables( check_period )
             
-            self._import_folders.Append( ( name, path, pretty_check_period, pretty_tag ), ( name, path, check_period, tag ) )
+            self._import_folders.Append( ( name, path, pretty_check_period ), ( name, path, check_period ) )
             
             self._names_to_import_folders[ name ] = import_folder
             
@@ -2596,11 +2574,11 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
                     
                     import_folder = dlg.GetInfo()
                     
-                    ( name, path, check_period, tag ) = import_folder.ToListBoxTuple()
+                    ( name, path, check_period ) = import_folder.ToListBoxTuple()
                     
-                    ( pretty_check_period, pretty_tag ) = self._GetPrettyVariables( check_period, tag )
+                    pretty_check_period = self._GetPrettyVariables( check_period )
                     
-                    self._import_folders.Append( ( name, path, pretty_check_period, pretty_tag ), ( name, path, check_period, tag ) )
+                    self._import_folders.Append( ( name, path, pretty_check_period ), ( name, path, check_period ) )
                     
                     self._names_to_import_folders[ name ] = import_folder
                     
@@ -2608,14 +2586,11 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
         
     
-    def _GetPrettyVariables( self, check_period, tag ):
+    def _GetPrettyVariables( self, check_period ):
         
         pretty_check_period = HydrusData.ToString( check_period / 60 ) + ' minutes'
         
-        if tag == None: pretty_tag = ''
-        else: pretty_tag = tag
-        
-        return ( pretty_check_period, pretty_tag )
+        return pretty_check_period
         
     
     def Delete( self ):
@@ -2629,7 +2604,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         existing_names = set()
         
-        for ( name, path, check_period, tag ) in client_data:
+        for ( name, path, check_period ) in client_data:
             
             existing_names.add( name )
             
@@ -2669,7 +2644,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         for index in indices:
             
-            ( name, path, check_period, tag ) = self._import_folders.GetClientData( index )
+            ( name, path, check_period ) = self._import_folders.GetClientData( index )
             
             import_folder = self._names_to_import_folders[ name ]
             
@@ -2679,11 +2654,11 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
                     
                     import_folder = dlg.GetInfo()
                     
-                    ( name, path, check_period, tag ) = import_folder.ToListBoxTuple()
+                    ( name, path, check_period ) = import_folder.ToListBoxTuple()
                     
-                    ( pretty_check_period, pretty_tag ) = self._GetPrettyVariables( check_period, tag )
+                    pretty_check_period = self._GetPrettyVariables( check_period )
                     
-                    self._import_folders.UpdateRow( index, ( name, path, pretty_check_period, pretty_tag ), ( name, path, check_period, tag ) )
+                    self._import_folders.UpdateRow( index, ( name, path, pretty_check_period ), ( name, path, check_period ) )
                     
                     self._names_to_import_folders[ name ] = import_folder
                     
@@ -2697,7 +2672,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         names_to_save = set()
         
-        for ( name, path, check_period, tag ) in client_data:
+        for ( name, path, check_period ) in client_data:
             
             names_to_save.add( name )
             
@@ -2729,7 +2704,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._import_folder = import_folder
         
-        ( name, path, mimes, import_file_options, actions, action_locations, period, open_popup, tag, paused ) = self._import_folder.ToTuple()
+        ( name, path, mimes, import_file_options, import_tag_options, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
         
         self._folder_box = ClientGUICommon.StaticBox( self, 'folder options' )
         
@@ -2739,10 +2714,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._open_popup = wx.CheckBox( self._folder_box )
         
-        self._tag = wx.TextCtrl( self._folder_box )
-        self._tag.SetToolTipString( 'add this tag on the local tag service to anything imported from the folder' )
-        
-        self._period = wx.SpinCtrl( self._folder_box, min = 3, max = 1440 )
+        self._period = wx.SpinCtrl( self._folder_box, min = 3, max = 60 * 24 * 30 )
         
         self._paused = wx.CheckBox( self._folder_box )
         
@@ -2783,6 +2755,8 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._location_failed = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
         
         self._import_file_options = ClientGUIOptionsPanels.OptionsPanelImportFiles( self._file_box )
+        self._import_tag_options = ClientGUIOptionsPanels.OptionsPanelTags( self._file_box )
+        self._import_tag_options.SetNamespaces( [] )
         
         #
         
@@ -2798,11 +2772,6 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._name.SetValue( name )
         self._path.SetPath( path )
         self._open_popup.SetValue( open_popup )
-        
-        if tag is not None:
-            
-            self._tag.SetValue( tag )
-            
         
         self._period.SetValue( period / 60 )
         self._paused.SetValue( paused )
@@ -2834,6 +2803,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             
         
         self._import_file_options.SetOptions( import_file_options )
+        self._import_tag_options.SetOptions( import_tag_options )
         
         #
         
@@ -2852,9 +2822,6 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         gridbox.AddF( wx.StaticText( self._folder_box, label = 'currently paused: '), CC.FLAGS_MIXED )
         gridbox.AddF( self._paused, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( self._folder_box, label = 'local tag to add to all imported files: '), CC.FLAGS_MIXED )
-        gridbox.AddF( self._tag, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         gridbox.AddF( wx.StaticText( self._folder_box, label = 'open a popup if new files imported: '), CC.FLAGS_MIXED )
         gridbox.AddF( self._open_popup, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2892,6 +2859,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._file_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._file_box.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -3016,6 +2984,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         path = self._path.GetPath()
         mimes = self._mimes.GetInfo()
         import_file_options = self._import_file_options.GetOptions()
+        import_tag_options = self._import_tag_options.GetOptions()
         
         actions = {}
         action_locations = {}
@@ -3047,16 +3016,9 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         period = self._period.GetValue() * 60
         open_popup = self._open_popup.GetValue()
         
-        tag = self._tag.GetValue()
-        
-        if tag == '':
-            
-            tag = None
-            
-        
         paused = self._paused.GetValue()
         
-        self._import_folder.SetTuple( name, path, mimes, import_file_options, actions, action_locations, period, open_popup, tag, paused )
+        self._import_folder.SetTuple( name, path, mimes, import_file_options, import_tag_options, actions, action_locations, period, open_popup, paused )
         
         return self._import_folder
         
@@ -3205,11 +3167,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         def EventEditNamespaceColour( self, event ):
             
-            result = self._namespace_colours.GetSelectedNamespaceColour()
+            results = self._namespace_colours.GetSelectedNamespaceColours()
             
-            if result is not None:
-                
-                ( namespace, colour ) = result
+            for ( namespace, colour ) in results:
                 
                 colour_data = wx.ColourData()
                 
@@ -3495,6 +3455,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
             
             self._idle_period = wx.SpinCtrl( self._idle_panel, min = 0, max = 1000 )
+            self._idle_mouse_period = wx.SpinCtrl( self._idle_panel, min = 0, max = 1000 )
             self._idle_cpu_max = wx.SpinCtrl( self._idle_panel, min = 0, max = 100 )
             
             self._idle_shutdown = ClientGUICommon.BetterChoice( self._idle_panel )
@@ -3514,6 +3475,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             #
             
             self._idle_period.SetValue( HC.options[ 'idle_period' ] / 60 )
+            self._idle_mouse_period.SetValue( HC.options[ 'idle_mouse_period' ] / 60 )
             self._idle_cpu_max.SetValue( HC.options[ 'idle_cpu_max' ] )
             self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
             self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
@@ -3528,8 +3490,11 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of inactivity until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of general client inactivity until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_period, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of unmoving mouse until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._idle_mouse_period, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Do not start a job if any CPU core has more than this percent usage: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_cpu_max, CC.FLAGS_MIXED )
@@ -3585,6 +3550,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         def UpdateOptions( self ):
             
             HC.options[ 'idle_period' ] = 60 * self._idle_period.GetValue()
+            HC.options[ 'idle_mouse_period' ] = 60 * self._idle_mouse_period.GetValue()
             HC.options[ 'idle_cpu_max' ] = self._idle_cpu_max.GetValue()
             HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
             HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
@@ -4533,7 +4499,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for preview cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( previews_sizer, CC.FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for fullscreen cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for media viewer cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
             
             gridbox.AddF( wx.StaticText( self, label = 'Autocomplete character threshold: ' ), CC.FLAGS_MIXED )
@@ -7207,48 +7173,37 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         def __init__( self, parent, service_key ):
             
-            def InitialiseControls():
-                
-                choice_pairs = [ ( 'blacklist', True ), ( 'whitelist', False ) ]
-                
-                self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
-                
-                self._tags = ClientGUICommon.ListBoxTagsCensorship( self )
-                
-                self._tag_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-                self._tag_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownTag )
-                
-            
-            def PopulateControls():
-                
-                ( blacklist, tags ) = HydrusGlobals.client_controller.Read( 'tag_censorship', service_key )
-                
-                if blacklist: self._blacklist.SetSelection( 0 )
-                else: self._blacklist.SetSelection( 1 )
-                
-                for tag in tags: self._tags.AddTag( tag )
-                
-            
-            def ArrangeControls():
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( self._blacklist, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                self.SetSizer( vbox )
-                
-            
             wx.Panel.__init__( self, parent )
             
             self._service_key = service_key
             
-            InitialiseControls()
+            choice_pairs = [ ( 'blacklist', True ), ( 'whitelist', False ) ]
             
-            PopulateControls()
+            self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
             
-            ArrangeControls()
+            self._tags = ClientGUICommon.ListBoxTagsCensorship( self )
+            
+            self._tag_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+            self._tag_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownTag )
+            
+            #
+            
+            ( blacklist, tags ) = HydrusGlobals.client_controller.Read( 'tag_censorship', service_key )
+            
+            if blacklist: self._blacklist.SetSelection( 0 )
+            else: self._blacklist.SetSelection( 1 )
+            
+            self._tags.AddTags( tags )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._blacklist, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
             
         
         def EventKeyDownTag( self, event ):
@@ -7257,7 +7212,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
                 
                 tag = self._tag_input.GetValue()
                 
-                self._tags.AddTag( tag )
+                self._tags.EnterTags( { tag } )
                 
                 self._tag_input.SetValue( '' )
                 
@@ -7413,7 +7368,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_key, tag = None ):
+        def __init__( self, parent, service_key, tags = None ):
             
             wx.Panel.__init__( self, parent )
             
@@ -7439,13 +7394,13 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
-            removed_callable = lambda tag: 1
+            self._children = ClientGUICommon.ListBoxTagsStrings( self )
+            self._parents = ClientGUICommon.ListBoxTagsStrings( self )
             
-            self._children = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
-            self._parents = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
+            expand_parents = True
             
-            self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddChild, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-            self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddParent, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
@@ -7475,7 +7430,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._tag_parents.SortListItems( 2 )
             
-            if tag is not None: self.AddChild( tag )
+            if tags is not None:
+                
+                self.EnterChildren( tags )
+                
             
             #
             
@@ -7737,29 +7695,25 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             else: self._add.Enable()
             
         
-        def AddChild( self, tag, parents = None ):
+        def EnterChildren( self, tags, parents = None ):
             
-            if parents is None: parents = []
-            
-            if tag is not None:
+            if len( tags ) > 0:
                 
-                if tag in self._parents.GetTags(): self._parents.AddTag( tag )
+                self._parents.RemoveTags( tags )
                 
-                self._children.AddTag( tag )
+                self._children.AddTags( tags )
                 
                 self._SetButtonStatus()
                 
             
         
-        def AddParent( self, tag, parents = None ):
+        def EnterParents( self, tags, parents = None ):
             
-            if parents is None: parents = []
-            
-            if tag is not None:
+            if len( tags ) > 0:
                 
-                if tag in self._children.GetTags(): self._children.AddTag( tag )
+                self._children.RemoveTags( tags )
                 
-                self._parents.AddTag( tag )
+                self._parents.AddTags( tags )
                 
                 self._SetButtonStatus()
                 
@@ -7767,15 +7721,23 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def EventActivated( self, event ):
             
+            parents_to_children = collections.defaultdict( set )
+            
             all_selected = self._tag_parents.GetAllSelected()
             
-            if len( all_selected ) > 0:
-                
-                selection = all_selected[0]
+            for selection in all_selected:
                 
                 ( status, child, parent ) = self._tag_parents.GetClientData( selection )
                 
-                self._AddPairs( ( child, ), parent )
+                parents_to_children[ parent ].add( child )
+                
+            
+            if len( parents_to_children ) > 0:
+                
+                for ( parent, children ) in parents_to_children.items():
+                    
+                    self._AddPairs( children, parent )
+                    
                 
             
         
@@ -7843,73 +7805,64 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent, tag = None ):
         
-        def InitialiseControls():
-            
-            self._tag_repositories = ClientGUICommon.ListBook( self )
-            self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, tag )
-            
-            name = CC.LOCAL_TAG_SERVICE_KEY
-            
-            self._tag_repositories.AddPage( name, page )
-            
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
-            
-            for service in services:
-                
-                account = service.GetInfo( 'account' )
-                
-                if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
-                    
-                    name = service.GetName()
-                    service_key = service.GetServiceKey()
-                    
-                    self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
-                    
-                
-            
-            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-            
-            service = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
-            
-            self._tag_repositories.Select( service.GetName() )
-            
-        
-        def ArrangeControls():
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            self.SetInitialSize( ( 550, 780 ) )
-            
-        
         ClientGUIDialogs.Dialog.__init__( self, parent, 'tag siblings' )
         
-        InitialiseControls()
+        self._tag_repositories = ClientGUICommon.ListBook( self )
+        self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
         
-        PopulateControls()
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
-        ArrangeControls()
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, tag )
+        
+        name = CC.LOCAL_TAG_SERVICE_KEY
+        
+        self._tag_repositories.AddPage( name, page )
+        
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+        
+        for service in services:
+            
+            account = service.GetInfo( 'account' )
+            
+            if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
+                
+                name = service.GetName()
+                service_key = service.GetServiceKey()
+                
+                self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
+                
+            
+        
+        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
+        
+        self._tag_repositories.Select( service.GetName() )
+        
+        #
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
+        buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        self.SetInitialSize( ( 550, 780 ) )
+        
+        #
         
         interested_actions = [ 'set_search_focus' ]
         
@@ -7969,7 +7922,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_key, tag = None ):
+        def __init__( self, parent, service_key, tags = None ):
             
             wx.Panel.__init__( self, parent )
             
@@ -7999,11 +7952,13 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             removed_callable = lambda tags: 1
             
-            self._old_siblings = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
+            self._old_siblings = ClientGUICommon.ListBoxTagsStrings( self )
             self._new_sibling = wx.StaticText( self )
             
-            self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddOld, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-            self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            expand_parents = False
+            
+            self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
@@ -8033,7 +7988,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._tag_siblings.SortListItems( 2 )
             
-            if tag is not None: self.AddOld( tag )
+            if tags is not None:
+                
+                self.EnterOlds( tags )
+                
             
             #
             
@@ -8314,35 +8272,41 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             else: self._add.Enable()
             
         
-        def AddOld( self, old, parents = None ):
+        def EnterOlds( self, olds ):
             
-            if parents is None: parents = []
+            potential_olds = olds
             
-            if old is not None:
+            olds = set()
+            
+            for potential_old in potential_olds:
+                
+                do_it = True
                 
                 current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
                 
                 current_olds = { current_old for ( current_old, current_new ) in current_pairs }
                 
-                # test for ambiguity
-                
-                while old in current_olds:
+                while potential_old in current_olds:
                     
                     olds_to_news = dict( current_pairs )
                     
-                    new = olds_to_news[ old ]
+                    conflicting_new = olds_to_news[ potential_old ]
                     
-                    message = 'There already is a relationship set for ' + old + '! It goes to ' + new + '.'
+                    message = 'There already is a relationship set for ' + potential_old + '! It goes to ' + conflicting_new + '.'
                     message += os.linesep * 2
                     message += 'You cannot have two siblings for the same original term.'
                     
                     with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'I want to overwrite the existing record', no_label = 'do nothing' ) as dlg:
                         
-                        if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                        if dlg.ShowModal() == wx.ID_YES:
                             
-                            if dlg.ShowModal() != wx.ID_YES: return
+                            self._AddPairs( [ potential_old ], conflicting_new )
                             
-                            self._AddPairs( [ old ] , new )
+                        else:
+                            
+                            do_it = False
+                            
+                            break
                             
                         
                     
@@ -8351,30 +8315,41 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     current_olds = { current_old for ( current_old, current_new ) in current_pairs }
                     
                 
+                if do_it:
+                    
+                    olds.add( potential_old )
+                    
+                
             
-            #
+            if self._current_new in olds:
+                
+                self.SetNew( set() )
+                
             
-            if old is not None:
-                
-                if old == self._current_new: self.SetNew( None )
-                
-                self._old_siblings.AddTag( old )
-                
+            self._old_siblings.EnterTags( olds )
             
             self._SetButtonStatus()
             
         
         def EventActivated( self, event ):
             
+            news_to_olds = collections.defaultdict( set )
+            
             all_selected = self._tag_siblings.GetAllSelected()
             
-            if len( all_selected ) > 0:
-                
-                selection = all_selected[0]
+            for selection in all_selected:
                 
                 ( status, old, new ) = self._tag_siblings.GetClientData( selection )
                 
-                self._AddPairs( [ old ], new )
+                news_to_olds[ new ].add( old )
+                
+            
+            if len( news_to_olds ) > 0:
+                
+                for ( new, olds ) in news_to_olds.items():
+                    
+                    self._AddPairs( olds, new )
+                    
                 
             
         
@@ -8386,8 +8361,8 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 self._AddPairs( olds, self._current_new )
                 
-                self._old_siblings.SetTags( [] )
-                self.SetNew( None )
+                self._old_siblings.SetTags( set() )
+                self.SetNew( set() )
                 
                 self._SetButtonStatus()
                 
@@ -8435,19 +8410,24 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             return ( self._service_key, content_updates )
             
         
-        def SetNew( self, new, parents = None ):
+        def SetNew( self, new_tags ):
             
-            if parents is None: parents = []
-            
-            if new is None: self._new_sibling.SetLabel( '' )
+            if len( new_tags ) == 0:
+                
+                self._new_sibling.SetLabel( '' )
+                
+                self._current_new = None
+                
             else:
                 
-                if new in self._old_siblings.GetTags(): self._old_siblings.AddTag( new )
+                new = list( new_tags )[0]
+                
+                self._old_siblings.RemoveTags( { new } )
                 
                 self._new_sibling.SetLabel( new )
                 
-            
-            self._current_new = new
+                self._current_new = new
+                
             
             self._SetButtonStatus()
             
@@ -8788,7 +8768,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
             
-            self._tags_box = ClientGUICommon.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTag )
+            self._tags_box = ClientGUICommon.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTags )
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
@@ -8797,7 +8777,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._tags_box_sorter.AddF( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
             
-            self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_key, self._tag_service_key )
+            expand_parents = True
+            
+            self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.Ok )
             
             self._modify_mappers = wx.Button( self, label = 'Modify mappers' )
             self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
@@ -8972,16 +8954,24 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
         
-        def AddTag( self, tag, parents = None ):
+        def AddTags( self, tags, parents = None ):
             
-            if parents is None: parents = []
+            if parents is None:
+                
+                parents = []
+                
             
-            if tag is None: wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
-            else:
+            if len( tags ) > 0:
                 
-                self._AddTag( tag )
+                for tag in tags:
+                    
+                    self._AddTag( tag )
+                    
                 
-                for parent in parents: self._AddTag( parent, only_add = True )
+                for parent in parents:
+                    
+                    self._AddTag( parent, only_add = True )
+                    
                 
             
         
@@ -8998,11 +8988,16 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def EventModify( self, event ):
             
-            tag = self._tags_box.GetSelectedTag()
+            contents = []
             
-            if tag is not None:
+            tags = self._tags_box.GetSelectedTags()
+            
+            for tag in tags:
                 
-                contents = [ HydrusData.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in self._hashes ]
+                contents.extend( [ HydrusData.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in self._hashes ] )
+                
+            
+            if len( contents ) > 0:
                 
                 subject_identifiers = [ HydrusData.AccountIdentifier( content = content ) for content in contents ]
                 
@@ -9028,7 +9023,10 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                     tags = HydrusTags.CleanTags( tags )
                     
-                    for tag in tags: self._AddTag( tag, only_add = True )
+                    for tag in tags:
+                        
+                        self._AddTag( tag, only_add = True )
+                        
                     
                 except: wx.MessageBox( 'I could not understand what was in the clipboard' )
                 
@@ -9090,6 +9088,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         def GetServiceKey( self ): return self._tag_service_key
         
         def HasChanges( self ): return len( self._content_updates ) > 0
+        
+        def Ok( self ):
+            
+            wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+            
         
         def SetMedia( self, media ):
             

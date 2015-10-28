@@ -28,7 +28,7 @@ Ctrl + A - Select all
 Escape - Deselect all
 Ctrl + C - Copy selected files to clipboard
 
-- In Fullscreen -
+- In Media Viewer -
 Shift-LeftClick-Drag - Drag (in Filter)
 Ctrl + MouseWheel - Zoom
 Z - Zoom Full/Fit'''

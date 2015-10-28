@@ -2733,6 +2733,7 @@ class DB( HydrusDB.HydrusDB ):
             
             num_tags_zero = False
             num_tags_nonzero = False
+            max_num_tags_exists = False
             
             tag_predicates = []
             
@@ -2778,10 +2779,12 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            if num_tags_zero or num_tags_nonzero:
-                
-                if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
-                else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
+            tag_predicates_care_about_zero_counts = len( tag_predicates ) > 0 and False not in ( pred( 0 ) for pred in tag_predicates )
+            
+            if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
+            else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
+            
+            if num_tags_zero or num_tags_nonzero or tag_predicates_care_about_zero_counts:
                 
                 nonzero_tag_query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + ';' ) }
                 
@@ -2791,20 +2794,15 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( tag_predicates ) > 0:
                 
-                if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
-                else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
-                
                 old_query_hash_ids = query_hash_ids
                 
                 nonzero_counts_query = 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HydrusData.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HydrusData.SplayListForDB( statuses ) + ' GROUP BY hash_id;'
                 
                 query_hash_ids = { id for ( id, count ) in self._c.execute( nonzero_counts_query ) if False not in ( pred( count ) for pred in tag_predicates ) }
                 
-                include_zero_count_in_calculation = False not in ( pred( 0 ) for pred in tag_predicates )
-                
-                if include_zero_count_in_calculation:
+                if tag_predicates_care_about_zero_counts:
                     
-                    zero_hash_ids = old_query_hash_ids.difference( query_hash_ids )
+                    zero_hash_ids = old_query_hash_ids.difference( nonzero_tag_query_hash_ids )
                     
                     query_hash_ids.update( zero_hash_ids )
                     
@@ -5836,9 +5834,19 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 period = details[ 'check_period' ]
+                
                 tag = details[ 'local_tag' ]
                 
-                import_folder = ClientImporting.ImportFolder( name, path, import_file_options = import_file_options, actions = actions, action_locations = {}, period = period, open_popup = True, tag = tag )
+                service_keys_to_explicit_tags = dict()
+                
+                if tag is not None:
+                    
+                    service_keys_to_explicit_tags[ CC.LOCAL_TAG_SERVICE_KEY ] = { tag }
+                    
+                
+                import_tag_options = ClientData.ImportTagOptions( service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+                
+                import_folder = ClientImporting.ImportFolder( name, path, import_file_options = import_file_options, import_tag_options = import_tag_options, actions = actions, action_locations = {}, period = period, open_popup = True )
                 
                 import_folder._last_checked = details[ 'last_checked' ]
                 

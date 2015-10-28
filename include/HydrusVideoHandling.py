@@ -21,13 +21,31 @@ if HC.PLATFORM_LINUX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
 elif HC.PLATFORM_OSX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
 elif HC.PLATFORM_WINDOWS: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg.exe'
 
+if cv2.__version__.startswith( '2' ):
+    
+    CAP_PROP_FRAME_COUNT = cv2.cv.CV_CAP_PROP_FRAME_COUNT
+    CAP_PROP_FPS = cv2.cv.CV_CAP_PROP_FPS
+    CAP_PROP_FRAME_WIDTH = cv2.cv.CV_CAP_PROP_FRAME_WIDTH
+    CAP_PROP_FRAME_HEIGHT = cv2.cv.CV_CAP_PROP_FRAME_HEIGHT
+    CAP_PROP_CONVERT_RGB = cv2.cv.CV_CAP_PROP_CONVERT_RGB
+    CAP_PROP_POS_FRAMES = cv2.cv.CV_CAP_PROP_POS_FRAMES
+    
+else:
+    
+    CAP_PROP_FRAME_COUNT = cv2.CAP_PROP_FRAME_COUNT
+    CAP_PROP_FPS = cv2.CAP_PROP_FPS
+    CAP_PROP_FRAME_WIDTH = cv2.CAP_PROP_FRAME_WIDTH
+    CAP_PROP_FRAME_HEIGHT = cv2.CAP_PROP_FRAME_HEIGHT
+    CAP_PROP_CONVERT_RGB = cv2.CAP_PROP_CONVERT_RGB
+    CAP_PROP_POS_FRAMES = cv2.CAP_PROP_POS_FRAMES
+    
 def GetCVVideoProperties( path ):
     
     capture = cv2.VideoCapture( path )
     
-    num_frames = int( capture.get( cv2.cv.CV_CAP_PROP_FRAME_COUNT ) )
+    num_frames = int( capture.get( CAP_PROP_FRAME_COUNT ) )
     
-    fps = capture.get( cv2.cv.CV_CAP_PROP_FPS )
+    fps = capture.get( CAP_PROP_FPS )
     
     length_in_seconds = num_frames / fps
     
@@ -35,9 +53,9 @@ def GetCVVideoProperties( path ):
     
     duration = length_in_ms
     
-    width = int( capture.get( cv2.cv.CV_CAP_PROP_FRAME_WIDTH ) )
+    width = int( capture.get( CAP_PROP_FRAME_WIDTH ) )
     
-    height = int( capture.get( cv2.cv.CV_CAP_PROP_FRAME_HEIGHT ) )
+    height = int( capture.get( CAP_PROP_FRAME_HEIGHT ) )
     
     return ( ( width, height ), duration, num_frames )
     
@@ -98,7 +116,7 @@ def GetVideoFrameDuration( path ):
 
     cv_video = cv2.VideoCapture( path )
     
-    fps = cv_video.get( cv2.cv.CV_CAP_PROP_FPS )
+    fps = cv_video.get( CAP_PROP_FPS )
     
     if fps == 0: raise HydrusExceptions.CantRenderWithCVException()
     
@@ -487,7 +505,7 @@ class GIFRenderer( object ):
         
         self._cv_video = cv2.VideoCapture( self._path )
         
-        self._cv_video.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
+        self._cv_video.set( CAP_PROP_CONVERT_RGB, True )
         
         self._next_render_index = 0
         self._last_frame = None
@@ -560,7 +578,7 @@ class GIFRenderer( object ):
             self._cv_video.release()
             self._cv_video.open( self._path )
             
-            #self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, 0.0 )
+            #self._cv_video.set( CAP_PROP_POS_FRAMES, 0.0 )
             
         else:
             
@@ -579,6 +597,6 @@ class GIFRenderer( object ):
         
         while self._next_render_index < index: self._GetCurrentFrame()
         
-        #self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, index )
+        #self._cv_video.set( CV_CAP_PROP_POS_FRAMES, index )
         
     

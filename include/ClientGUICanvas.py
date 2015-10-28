@@ -588,6 +588,7 @@ class Canvas( object ):
         HydrusGlobals.client_controller.sub( self, 'ZoomOut', 'canvas_zoom_out' )
         HydrusGlobals.client_controller.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
         HydrusGlobals.client_controller.sub( self, 'OpenExternally', 'canvas_open_externally' )
+        HydrusGlobals.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         
     
     def _Archive( self ): HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
@@ -772,6 +773,7 @@ class Canvas( object ):
             with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key ) as dlg:
                 
                 dlg.ShowModal()
+                
             
         
     
@@ -1022,6 +1024,14 @@ class Canvas( object ):
         
     
     def KeepCursorAlive( self ): pass
+    
+    def ManageTags( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._ManageTags()
+            
+        
     
     def MouseIsNearAnimationBar( self ):
         
@@ -1487,7 +1497,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     
     def __init__( self, my_parent, page_key, media_results ):
         
-        ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
+        ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client media viewer' )
         CanvasWithDetails.__init__( self, HydrusGlobals.client_controller.GetCache( 'fullscreen' ) )
         ClientMedia.ListeningMediaList.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         

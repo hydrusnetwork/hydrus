@@ -1012,10 +1012,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
             
             db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'db_profile_mode' )
+            special_debug_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'special_debug_mode' )
             
             debug = wx.Menu()
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
+            debug.AppendCheckItem( special_debug_mode_id, p( '&Special Debug Mode' ) )
+            debug.Check( special_debug_mode_id, HydrusGlobals.special_debug_mode )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle' ), p( 'Force Idle Mode' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_unbusy' ), p( 'Force Unbusy Mode' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
@@ -2137,6 +2140,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.ShowHideSplit()
                 
             elif command == 'site': webbrowser.open( 'https://hydrusnetwork.github.io/hydrus/' )
+            elif command == 'special_debug_mode':
+                
+                HydrusGlobals.special_debug_mode = not HydrusGlobals.special_debug_mode
+                
             elif command == 'start_url_download': self._StartURLDownload()
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
@@ -3342,16 +3349,23 @@ class FrameSeedCache( ClientGUICommon.Frame ):
         
         HydrusGlobals.client_controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
         
+        wx.CallAfter( self._UpdateText )
+        
         wx.CallAfter( self.Raise )
         
     
-    def NotifySeedUpdated( self, seed ):
+    def _UpdateText( self ):
         
         ( status, ( total_processed, total ) ) = self._seed_cache.GetStatus()
         
         self._text.SetLabel( status )
         
         self.Layout()
+        
+    
+    def NotifySeedUpdated( self, seed ):
+        
+        self._UpdateText()
         
     
 class FrameSplash( ClientGUICommon.Frame ):

@@ -231,7 +231,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
             
-        except Exception as e:
+        except Exception:
             
             error_text = traceback.format_exc()
             
@@ -353,13 +353,22 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         except Exception as e:
             
-            traceback.print_exc()
+            if isinstance( e, HydrusExceptions.NotFoundException ):
+                
+                text = 'Gallery 404'
+                
+            else:
+                
+                text = str( e )
+                
+                traceback.print_exc()
+                
             
             with self._lock:
                 
                 self._current_gallery_stream_identifier = None
                 
-                self._SetGalleryStatus( page_key, str( e ) )
+                self._SetGalleryStatus( page_key, text )
                 
             
             time.sleep( 5 )
@@ -774,9 +783,9 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, name, path = '', import_file_options = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True, tag = None ):
+    def __init__( self, name, path = '', import_file_options = None, import_tag_options = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
         
         if mimes is None:
             
@@ -786,6 +795,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         if import_file_options is None:
             
             import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+            
+        
+        if import_tag_options is None:
+            
+            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            
+            import_tag_options = new_options.GetDefaultImportTagOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT ) )
             
         
         if actions is None:
@@ -808,11 +824,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path = path
         self._mimes = mimes
         self._import_file_options = import_file_options
+        self._import_tag_options = import_tag_options
         self._actions = actions
         self._action_locations = action_locations
         self._period = period
         self._open_popup = open_popup
-        self._tag = tag
         
         self._path_cache = SeedCache()
         self._last_checked = 0
@@ -914,24 +930,49 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     def _GetSerialisableInfo( self ):
         
         serialisable_import_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_import_tag_options = self._import_tag_options.GetSerialisableTuple()
         serialisable_path_cache = self._path_cache.GetSerialisableTuple()
         
         # json turns int dict keys to strings
         action_pairs = self._actions.items()
         action_location_pairs = self._action_locations.items()
         
-        return ( self._path, self._mimes, serialisable_import_file_options, action_pairs, action_location_pairs, self._period, self._open_popup, self._tag, serialisable_path_cache, self._last_checked, self._paused )
+        return ( self._path, self._mimes, serialisable_import_file_options, serialisable_import_tag_options, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._mimes, serialisable_import_file_options, action_pairs, action_location_pairs, self._period, self._open_popup, self._tag, serialisable_path_cache, self._last_checked, self._paused ) = serialisable_info
+        ( self._path, self._mimes, serialisable_import_file_options, serialisable_import_tag_options, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused ) = serialisable_info
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
         
         self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_file_options )
+        self._import_tag_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_tag_options )
         self._path_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_cache )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( path, mimes, serialisable_import_file_options, action_pairs, action_location_pairs, period, open_popup, tag, serialisable_path_cache, last_checked, paused ) = old_serialisable_info
+            
+            service_keys_to_explicit_tags = {}
+            
+            if tag is not None:
+                
+                service_keys_to_explicit_tags[ CC.LOCAL_TAG_SERVICE_KEY ] = { tag }
+                
+            
+            import_tag_options = ClientData.ImportTagOptions( service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+            
+            serialisable_import_tag_options = import_tag_options.GetSerialisableTuple()
+            
+            new_serialisable_info = ( path, mimes, serialisable_import_file_options, serialisable_import_tag_options, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def DoWork( self ):
@@ -976,22 +1017,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         if mime in self._mimes:
                             
-                            if self._tag is None:
-                                
-                                service_keys_to_tags = {}
-                                
-                            else:
-                                
-                                service_keys_to_tags = { CC.LOCAL_TAG_SERVICE_KEY : [ self._tag ] }
-                                
-                            
                             ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', path, import_file_options = self._import_file_options )
                             
                             self._path_cache.UpdateSeedStatus( path, status )
                             
                             if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                                 
-                                service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+                                service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, set() )
                                 
                                 if len( service_keys_to_content_updates ) > 0:
                                     
@@ -1009,7 +1041,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             self._path_cache.UpdateSeedStatus( path, CC.STATUS_UNINTERESTING_MIME )
                             
                         
-                    except Exception as e:
+                    except Exception:
                         
                         error_text = traceback.format_exc()
                         
@@ -1046,15 +1078,15 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToListBoxTuple( self ):
         
-        return ( self._name, self._path, self._period, self._tag )
+        return ( self._name, self._path, self._period )
         
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._mimes, self._import_file_options, self._actions, self._action_locations, self._period, self._open_popup, self._tag, self._paused )
+        return ( self._name, self._path, self._mimes, self._import_file_options, self._import_tag_options, self._actions, self._action_locations, self._period, self._open_popup, self._paused )
         
     
-    def SetTuple( self, name, path, mimes, import_file_options, actions, action_locations, period, open_popup, tag, paused ):
+    def SetTuple( self, name, path, mimes, import_file_options, import_tag_options, actions, action_locations, period, open_popup, paused ):
         
         if path != self._path:
             
@@ -1070,11 +1102,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path = path
         self._mimes = mimes
         self._import_file_options = import_file_options
+        self._import_tag_options
         self._actions = actions
         self._action_locations = action_locations
         self._period = period
         self._open_popup = open_popup
-        self._tag = tag
         self._paused = paused
         
     
@@ -1203,7 +1235,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
             
-        except Exception as e:
+        except Exception:
             
             error_text = traceback.format_exc()
             print( error_text )
@@ -1824,8 +1856,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( self._gallery_identifier )
         
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( self._gallery_identifier )
-        
         self._query = ''
         self._period = 86400 * 7
         self._get_tags_if_redundant = False
@@ -2151,7 +2181,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         if error_next_check_time > periodic_next_check_time and not HydrusData.TimeHasPassed( error_next_check_time ):
             
-            interim_text = ' | due to error + ' + HydrusData.ConvertTimestampToPrettySync( self._last_error ) + ', next check '
+            interim_text = ' | due to error ' + HydrusData.ConvertTimestampToPrettySync( self._last_error ) + ', next check '
             next_check_time = error_next_check_time
             
         else:

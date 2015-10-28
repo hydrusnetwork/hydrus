@@ -27,6 +27,7 @@ def GetClientDefaultOptions():
     options[ 'ac_timings' ] = ( 3, 500, 250 )
     options[ 'thread_checker_timings' ] = ( 3, 1200 )
     options[ 'idle_period' ] = 60 * 30
+    options[ 'idle_mouse_period' ] = 60 * 10
     options[ 'idle_cpu_max' ] = 50
     options[ 'idle_shutdown' ] = CC.IDLE_ON_SHUTDOWN_ASK_FIRST
     options[ 'idle_shutdown_max_minutes' ] = 30

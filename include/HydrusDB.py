@@ -82,7 +82,7 @@ class HydrusDB( object ):
     
     def _AnalyzeAfterUpdate( self ):
         
-        print( 'Analysing db after update.' )
+        print( 'Analyzing db after update...' )
         
         self._c.execute( 'ANALYZE' )
         

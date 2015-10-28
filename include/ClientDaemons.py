@@ -69,6 +69,10 @@ def DAEMONCheckImportFolders():
             
         
     
+def DAEMONCheckMouseIdle():
+    
+    HydrusGlobals.client_controller.CheckMouseIdle()
+    
 def DAEMONDownloadFiles():
     
     hashes = HydrusGlobals.client_controller.Read( 'downloads' )

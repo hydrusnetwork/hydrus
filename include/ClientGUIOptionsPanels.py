@@ -453,11 +453,11 @@ class OptionsPanelTags( OptionsPanel ):
     
     def SetNamespaces( self, namespaces ):
         
-        self._vbox.Clear( True )
-        
         self._service_keys_to_checkbox_info = {}
         self._service_keys_to_explicit_button_info = {}
         self._button_ids_to_service_keys = {}
+        
+        self._vbox.Clear( True )
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
@@ -505,12 +505,12 @@ class OptionsPanelTags( OptionsPanel ):
                 
                 button_id += 1
                 
-                vbox.AddF( explicit_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( explicit_button, CC.FLAGS_MIXED )
                 
-                outer_gridbox.AddF( vbox, CC.FLAGS_MIXED )
+                outer_gridbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
             
-            self._vbox.AddF( outer_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._vbox.AddF( outer_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
     

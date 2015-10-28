@@ -1126,6 +1126,12 @@ class WebSessionManagerClient( object ):
             
             # name not found, or expired
             
+            if name == 'deviant art':
+                
+                ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.GET, 'http://www.deviantart.com/', return_cookies = True )
+                
+                expires = now + 30 * 86400
+                
             if name == 'hentai foundry':
                 
                 ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
