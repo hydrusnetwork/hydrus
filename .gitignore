@@ -1,0 +1,41 @@
+### Compiled Python detritus
+__pycache__/
+*.py[cod]
+
+### IDE's
+
+## IntelliJ and related IDE's (RubyMine, PhpStorm, AppCode, PyCharm)
+*.iml
+
+# Directory-based project format:
+.idea/
+
+
+## Eclipse
+*.pydevproject
+.metadata
+.gradle
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+
+# Eclipse Core
+.project
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+### Some rules to keep out installation-specific stuff that's generated when Hydrus is run from source
+temp/
+export/
+logs/
+crash.log
+db/
