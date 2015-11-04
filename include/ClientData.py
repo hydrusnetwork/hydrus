@@ -36,7 +36,11 @@ def CatchExceptionClient( etype, value, tb ):
         
         job_key = HydrusThreading.JobKey()
         
-        if etype == HydrusExceptions.DBException:
+        if etype == HydrusExceptions.ShutdownException:
+            
+            return
+            
+        elif etype == HydrusExceptions.DBException:
             
             ( text, caller_traceback, db_traceback ) = value
             
@@ -54,15 +58,15 @@ def CatchExceptionClient( etype, value, tb ):
             if etype == wx.PyDeadObjectError:
                 
                 print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-                print( HydrusData.ToString( value ) )
+                print( HydrusData.ToUnicode( value ) )
                 print( trace )
                 
                 return
                 
             
-            try: job_key.SetVariable( 'popup_title', HydrusData.ToString( etype.__name__ ) )
-            except: job_key.SetVariable( 'popup_title', HydrusData.ToString( etype ) )
-            job_key.SetVariable( 'popup_text_1', HydrusData.ToString( value ) )
+            try: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype.__name__ ) )
+            except: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype ) )
+            job_key.SetVariable( 'popup_text_1', HydrusData.ToUnicode( value ) )
             job_key.SetVariable( 'popup_traceback', trace )
             
         
@@ -85,7 +89,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         text += os.linesep
         
-        text += HydrusData.ToString( ( etype, value, tb ) )
+        text += HydrusData.ToUnicode( ( etype, value, tb ) )
         
         try: text += traceback.format_exc()
         except: pass
@@ -210,27 +214,15 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
-def IsWXAncestor( child, ancestor ):
-    
-    parent = child
-    
-    while not isinstance( parent, wx.TopLevelWindow ):
-        
-        if parent == ancestor:
-            
-            return True
-            
-        
-        parent = parent.GetParent()
-        
-    
-    return False
-    
 def ShowExceptionClient( e ):
     
     job_key = HydrusThreading.JobKey()
     
-    if isinstance( e, HydrusExceptions.DBException ):
+    if isinstance( e, HydrusExceptions.ShutdownException ):
+        
+        return
+        
+    elif isinstance( e, HydrusExceptions.DBException ):
         
         ( text, caller_traceback, db_traceback ) = e.args
         
@@ -246,7 +238,7 @@ def ShowExceptionClient( e ):
         if etype is None:
             
             etype = type( e )
-            value = HydrusData.ToString( e )
+            value = HydrusData.ToUnicode( e )
             
             trace = ''.join( traceback.format_stack() )
             
@@ -255,17 +247,17 @@ def ShowExceptionClient( e ):
         if etype == wx.PyDeadObjectError:
             
             print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-            print( HydrusData.ToString( value ) )
+            print( HydrusData.ToUnicode( value ) )
             print( trace )
             
             return
             
         
-        if hasattr( etype, '__name__' ): title = HydrusData.ToString( etype.__name__ )
-        else: title = HydrusData.ToString( etype )
+        if hasattr( etype, '__name__' ): title = HydrusData.ToUnicode( etype.__name__ )
+        else: title = HydrusData.ToUnicode( etype )
         
         job_key.SetVariable( 'popup_title', title )
-        job_key.SetVariable( 'popup_text_1', HydrusData.ToString( value ) )
+        job_key.SetVariable( 'popup_text_1', HydrusData.ToUnicode( value ) )
         job_key.SetVariable( 'popup_traceback', trace )
         
     
@@ -288,7 +280,7 @@ def ShowTextClient( text ):
     
     job_key = HydrusThreading.JobKey()
     
-    job_key.SetVariable( 'popup_text_1', HydrusData.ToString( text ) )
+    job_key.SetVariable( 'popup_text_1', HydrusData.ToUnicode( text ) )
     
     text = job_key.ToString()
     
@@ -459,7 +451,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Credentials: ' + HydrusData.ToString( ( self._host, self._port, self._access_key.encode( 'hex' ) ) )
+    def __repr__( self ): return 'Credentials: ' + HydrusData.ToUnicode( ( self._host, self._port, self._access_key.encode( 'hex' ) ) )
     
     def GetAccessKey( self ): return self._access_key
     
@@ -471,7 +463,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
         
         if self.HasAccessKey(): connection_string += self._access_key.encode( 'hex' ) + '@'
         
-        connection_string += self._host + ':' + HydrusData.ToString( self._port )
+        connection_string += self._host + ':' + str( self._port )
         
         return connection_string
         
@@ -1212,7 +1204,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Predicate: ' + HydrusData.ToString( ( self._predicate_type, self._value, self._counts ) )
+        return 'Predicate: ' + HydrusData.ToUnicode( ( self._predicate_type, self._value, self._counts ) )
         
     
     def _GetSerialisableInfo( self ):
@@ -1351,7 +1343,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, ratio_width, ratio_height ) = self._value
                     
-                    base += u' ' + operator + u' ' + HydrusData.ToString( ratio_width ) + u':' + HydrusData.ToString( ratio_height )
+                    base += u' ' + operator + u' ' + str( ratio_width ) + u':' + str( ratio_height )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
@@ -1362,7 +1354,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, size, unit ) = self._value
                     
-                    base += u' ' + operator + u' ' + HydrusData.ToString( size ) + HydrusData.ConvertIntToUnit( unit )
+                    base += u' ' + operator + u' ' + str( size ) + HydrusData.ConvertIntToUnit( unit )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
@@ -1384,9 +1376,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, years, months, days, hours ) = self._value
                     
-                    base += u' ' + operator + u' ' + HydrusData.ToString( years ) + u'y' + HydrusData.ToString( months ) + u'm' + HydrusData.ToString( days ) + u'd' + HydrusData.ToString( hours ) + u'h'
+                    base += u' ' + operator + u' ' + str( years ) + u'y' + str( months ) + u'm' + str( days ) + u'd' + str( hours ) + u'h'
                     
-                    
+                
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
                 
                 base = u'system:num_pixels'
@@ -1395,7 +1387,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, num_pixels, unit ) = self._value
                     
-                    base += u' ' + operator + u' ' + HydrusData.ToString( num_pixels ) + ' ' + HydrusData.ConvertIntToPixels( unit )
+                    base += u' ' + operator + u' ' + str( num_pixels ) + ' ' + HydrusData.ConvertIntToPixels( unit )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
@@ -1455,7 +1447,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                     
-                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + HydrusData.ToString( value )
+                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + HydrusData.ToUnicode( value )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
@@ -1466,7 +1458,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( hash, max_hamming ) = self._value
                     
-                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + HydrusData.ToString( max_hamming )
+                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + str( max_hamming )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
@@ -1844,7 +1836,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             ( host, port ) = credentials.GetAddress()
             
-            url = 'http://' + host + ':' + HydrusData.ToString( port ) + path_and_query
+            url = 'http://' + host + ':' + str( port ) + path_and_query
             
             ( response, size_of_response, response_headers, cookies ) = HydrusGlobals.client_controller.DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, return_everything = True )
             
@@ -1869,7 +1861,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                     session_manager.DeleteSessionKey( self._service_key )
                     
                 
-                HydrusGlobals.client_controller.Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HydrusData.ToString( e ) ) ] } )
+                HydrusGlobals.client_controller.Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HydrusData.ToUnicode( e ) ) ] } )
                 
                 if isinstance( e, HydrusExceptions.PermissionException ):
                     
@@ -2797,7 +2789,7 @@ class ClientServiceIdentifier( HydrusData.HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Client Service Identifier: ' + HydrusData.ToString( ( self._name, HC.service_string_lookup[ self._type ] ) )
+    def __repr__( self ): return 'Client Service Identifier: ' + HydrusData.ToUnicode( ( self._name, HC.service_string_lookup[ self._type ] ) )
     
     def GetInfo( self ): return ( self._service_key, self._type, self._name )
     

@@ -17,9 +17,9 @@ import traceback
 import threading
 import time
 
-if HC.PLATFORM_LINUX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
-elif HC.PLATFORM_OSX: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg'
-elif HC.PLATFORM_WINDOWS: FFMPEG_PATH = '' + HC.BIN_DIR + os.path.sep + 'ffmpeg.exe'
+if HC.PLATFORM_LINUX: FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg' )
+elif HC.PLATFORM_OSX: FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg' )
+elif HC.PLATFORM_WINDOWS: FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg.exe' )
 
 if cv2.__version__.startswith( '2' ):
     
@@ -433,7 +433,7 @@ class GIFRenderer( object ):
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         
-        if HC.PLATFORM_LINUX or HC.PLATFORM_OSX:
+        if cv2.__version__.startswith( '2' ):
             
             self._InitialisePIL()
             
@@ -453,7 +453,7 @@ class GIFRenderer( object ):
                 
                 self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
                 
-                raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + HydrusData.ToString( self._next_render_index - 1 ) + '.' )
+                raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + str( self._next_render_index - 1 ) + '.' )
                 
             
         else:

@@ -101,7 +101,7 @@ eris = '''<html><head><title>hydrus</title></head><body><pre>
                  <font color="gray">MM</font>:::::<font color="gray">M</font>:::::::::::::::::::::<font color="gray">MMM</font>
                   <font color="gray">MM</font>::::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font> 
                   <font color="gray">MM</font>:::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font>
-                   <font color="gray">MM</font>::<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>              THIS IS THE HYDRUS SERVER ADMIN SERVICE, VERSION ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + '''
+                   <font color="gray">MM</font>::<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>              THIS IS THE HYDRUS SERVER ADMIN SERVICE, VERSION ''' + str( HC.SOFTWARE_VERSION ) + '''
                    <font color="gray">MM</font>:<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>
                     <font color="gray">MMM</font>::::::::::::::::::<font color="gray">MMM</font>
                     <font color="gray">MM</font>::::::::::::::::::<font color="gray">MMM</font>
@@ -173,7 +173,7 @@ CLIENT_ROOT_MESSAGE = '''<html>
         <title>hydrus client</title>
     </head>
     <body>
-        <p>This hydrus client uses software version ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HydrusData.ToString( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus client uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
         <p>It only serves requests from 127.0.0.1.</p>
     </body>
 </html>'''
@@ -183,7 +183,7 @@ ROOT_MESSAGE_BEGIN = '''<html>
         <title>hydrus service</title>
     </head>
     <body>
-        <p>This hydrus service uses software version ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HydrusData.ToString( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus service uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
         <p>'''
 
 ROOT_MESSAGE_END = '''</p>

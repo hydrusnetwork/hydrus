@@ -16,7 +16,9 @@ import stat
 import wx
 
 def GenerateExportFilename( media, terms ):
-
+    
+    mime = media.GetMime()
+    
     filename = ''
     
     for ( term_type, term ) in terms:
@@ -70,7 +72,7 @@ def GenerateExportFilename( media, terms ):
         filename = re.sub( '/', '_', filename, flags = re.UNICODE )
         
     
-    return filename
+    return filename + HC.mime_ext_lookup[ mime ]
     
 def GetAllPaths( raw_paths ):
     
@@ -86,11 +88,14 @@ def GetAllPaths( raw_paths ):
             
             if os.path.isdir( path ):
                 
-                subpaths = [ path + os.path.sep + filename for filename in os.listdir( path ) ]
+                subpaths = [ os.path.join( path, filename ) for filename in os.listdir( path ) ]
                 
                 next_paths_to_process.extend( subpaths )
                 
-            else: file_paths.append( path )
+            else:
+                
+                file_paths.append( path )
+                
             
         
         paths_to_process = next_paths_to_process
@@ -125,7 +130,7 @@ def GetExpectedFilePath( hash, mime ):
     
     first_two_chars = hash_encoded[:2]
     
-    return HC.CLIENT_FILES_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded + HC.mime_ext_lookup[ mime ]
+    return os.path.join( HC.CLIENT_FILES_DIR, first_two_chars, hash_encoded + HC.mime_ext_lookup[ mime ] )
     
 def GetExportPath():
     
@@ -135,9 +140,12 @@ def GetExportPath():
     
     if path is None:
         
-        path = os.path.expanduser( '~' ) + os.path.sep + 'hydrus_export'
+        path = os.path.join( os.path.expanduser( '~' ), 'hydrus_export' )
         
-        if not os.path.exists( path ): os.mkdir( path )
+        if not os.path.exists( path ):
+            
+            os.mkdir( path )
+            
         
     
     path = os.path.normpath( path ) # converts slashes to backslashes for windows
@@ -176,9 +184,12 @@ def GetExpectedThumbnailPath( hash, full_size = True ):
     
     first_two_chars = hash_encoded[:2]
     
-    path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded
+    path = os.path.join( HC.CLIENT_THUMBNAILS_DIR, first_two_chars, hash_encoded )
     
-    if not full_size: path += '_resized'
+    if not full_size:
+        
+        path += '_resized'
+        
     
     return path
 
@@ -214,15 +225,15 @@ def GetThumbnailPath( hash, full_size = True ):
     
 def GetExpectedContentUpdatePackagePath( service_key, begin, subindex ):
     
-    return GetExpectedUpdateDir( service_key ) + os.path.sep + str( begin ) + '_' + str( subindex ) + '.json'
+    return os.path.join( GetExpectedUpdateDir( service_key ), str( begin ) + '_' + str( subindex ) + '.json' )
     
 def GetExpectedServiceUpdatePackagePath( service_key, begin ):
     
-    return GetExpectedUpdateDir( service_key ) + os.path.sep + str( begin ) + '_metadata.json'
+    return os.path.join( GetExpectedUpdateDir( service_key ), str( begin ) + '_metadata.json' )
     
 def GetExpectedUpdateDir( service_key ):
     
-    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' )
+    return os.path.join( HC.CLIENT_UPDATES_DIR, service_key.encode( 'hex' ) )
     
 def IterateAllFileHashes():
     
@@ -248,11 +259,14 @@ def IterateAllFilePaths():
     
     for ( one, two ) in itertools.product( hex_chars, hex_chars ):
         
-        dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
+        dir = os.path.join( HC.CLIENT_FILES_DIR, one + two )
         
         next_paths = os.listdir( dir )
         
-        for path in next_paths: yield dir + os.path.sep + path
+        for path in next_paths:
+            
+            yield os.path.join( dir, path )
+            
         
 
 def IterateAllThumbnailPaths():
@@ -261,11 +275,14 @@ def IterateAllThumbnailPaths():
     
     for ( one, two ) in itertools.product( hex_chars, hex_chars ):
         
-        dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
+        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, one + two )
         
         next_paths = os.listdir( dir )
         
-        for path in next_paths: yield dir + os.path.sep + path
+        for path in next_paths:
+            
+            yield os.path.join( dir, path )
+            
         
     
 def ParseExportPhrase( phrase ):
@@ -428,7 +445,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 terms = ParseExportPhrase( self._phrase )
                 
-                previous_filenames = set( os.listdir( folder_path ) )
+                previous_filenames = set( os.listdir( HydrusData.ToUnicode( folder_path ) ) )
                 
                 if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' existing filenames: ' + str( len( previous_filenames ) ) )
                 if HydrusGlobals.special_debug_mode:
@@ -436,6 +453,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         print( previous_filename )
                         
+                    
                 
                 sync_filenames = set()
                 
@@ -447,9 +465,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     source_path = GetFilePath( hash, mime )
                     
-                    filename = GenerateExportFilename( media_result, terms ) + HC.mime_ext_lookup[ mime ]
+                    filename = GenerateExportFilename( media_result, terms )
                     
-                    dest_path = folder_path + os.path.sep + filename
+                    dest_path = os.path.join( folder_path, filename )
                     if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' dest path: ' + dest_path )
                     do_copy = True
                     
@@ -487,7 +505,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' delete filenames: ' + str( len( deletee_filenames ) ) )
                     for deletee_filename in deletee_filenames:
                         
-                        deletee_path = folder_path + os.path.sep + deletee_filename
+                        deletee_path = os.path.join( folder_path, deletee_filename )
                         if HydrusGlobals.special_debug_mode: print( deletee_path )
                         ClientData.DeletePath( deletee_path )
                         

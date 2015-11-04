@@ -5,18 +5,33 @@ import sys
 
 BASE_DIR = sys.path[0]
 
-BIN_DIR = BASE_DIR + os.path.sep + 'bin'
-DB_DIR = BASE_DIR + os.path.sep + 'db'
-CLIENT_ARCHIVES_DIR = DB_DIR + os.path.sep + 'client_archives'
-CLIENT_FILES_DIR = DB_DIR + os.path.sep + 'client_files'
-SERVER_FILES_DIR = DB_DIR + os.path.sep + 'server_files'
-CLIENT_THUMBNAILS_DIR = DB_DIR + os.path.sep + 'client_thumbnails'
-SERVER_THUMBNAILS_DIR = DB_DIR + os.path.sep + 'server_thumbnails'
-SERVER_MESSAGES_DIR = DB_DIR + os.path.sep + 'server_messages'
-CLIENT_UPDATES_DIR = DB_DIR + os.path.sep + 'client_updates'
-SERVER_UPDATES_DIR = DB_DIR + os.path.sep + 'server_updates'
-LOGS_DIR = BASE_DIR + os.path.sep + 'logs'
-STATIC_DIR = BASE_DIR + os.path.sep + 'static'
+if BASE_DIR == '':
+    
+    BASE_DIR = os.getcwdu()
+    
+else:
+    
+    try:
+        
+        BASE_DIR = BASE_DIR.decode( 'utf-8' )
+        
+    except:
+        
+        pass
+        
+    
+BIN_DIR = os.path.join( BASE_DIR, 'bin' )
+DB_DIR = os.path.join( BASE_DIR, 'db' )
+CLIENT_ARCHIVES_DIR = os.path.join( DB_DIR, 'client_archives' )
+CLIENT_FILES_DIR = os.path.join( DB_DIR, 'client_files' )
+SERVER_FILES_DIR = os.path.join( DB_DIR, 'server_files' )
+CLIENT_THUMBNAILS_DIR = os.path.join( DB_DIR, 'client_thumbnails' )
+SERVER_THUMBNAILS_DIR = os.path.join( DB_DIR, 'server_thumbnails' )
+SERVER_MESSAGES_DIR = os.path.join( DB_DIR, 'server_messages' )
+CLIENT_UPDATES_DIR = os.path.join( DB_DIR, 'client_updates' )
+SERVER_UPDATES_DIR = os.path.join( DB_DIR, 'server_updates' )
+LOGS_DIR = os.path.join( BASE_DIR, 'logs' )
+STATIC_DIR = os.path.join( BASE_DIR, 'static' )
 
 #
 
@@ -37,7 +52,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 179
+SOFTWARE_VERSION = 180
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

@@ -12,9 +12,9 @@ from twisted.python import log
 
 # new stuff starts here
 
-if HC.PLATFORM_LINUX: upnpc_path = HC.BIN_DIR + os.path.sep + 'upnpc_linux'
-elif HC.PLATFORM_OSX: upnpc_path = HC.BIN_DIR + os.path.sep + 'upnpc_osx'
-elif HC.PLATFORM_WINDOWS: upnpc_path = HC.BIN_DIR + os.path.sep + 'upnpc_win32.exe'
+if HC.PLATFORM_LINUX: upnpc_path = os.path.join( HC.BIN_DIR, 'upnpc_linux' )
+elif HC.PLATFORM_OSX: upnpc_path = os.path.join( HC.BIN_DIR, 'upnpc_osx' )
+elif HC.PLATFORM_WINDOWS: upnpc_path = os.path.join( HC.BIN_DIR, 'upnpc_win32.exe' )
 
 EXTERNAL_IP = {}
 EXTERNAL_IP[ 'ip' ] = None
@@ -37,7 +37,7 @@ def GetExternalIP():
         
         ( output, error ) = p.communicate()
         
-        if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + HydrusData.ToString( error ) )
+        if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
         else:
             
             try:
@@ -79,7 +79,7 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     ( output, error ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToString( error ) )
+    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
     
 def GetUPnPMappings():
     
@@ -93,7 +93,7 @@ def GetUPnPMappings():
     
     ( output, error ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + HydrusData.ToString( error ) )
+    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
     else:
         
         try:
@@ -147,7 +147,7 @@ def GetUPnPMappings():
             
             print( traceback.format_exc() )
             
-            raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep * 2 + HydrusData.ToString( e ) )
+            raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep * 2 + HydrusData.ToUnicode( e ) )
             
         
     
@@ -161,5 +161,5 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     ( output, error ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + HydrusData.ToString( error ) )
+    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
     

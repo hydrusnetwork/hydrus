@@ -12,6 +12,7 @@ import ClientRatings
 import collections
 import gc
 import HydrusImageHandling
+import HydrusPaths
 import HydrusTags
 import HydrusVideoHandling
 import os
@@ -25,7 +26,6 @@ import wx
 import wx.media
 import ClientRendering
 import HydrusData
-import HydrusFileHandling
 import HydrusGlobals
 
 if HC.PLATFORM_WINDOWS: import wx.lib.flashwin
@@ -131,7 +131,7 @@ class Animation( wx.Window ):
         
         self._paused = start_paused
         
-        self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
+        self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
         
         self._timer_video = wx.Timer( self, id = ID_TIMER_VIDEO )
         
@@ -287,6 +287,14 @@ class Animation( wx.Window ):
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
+                dc = wx.MemoryDC( self._canvas_bmp )
+                
+                dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
+                
+                dc.Clear()
+                
+                del dc
+                
                 self._a_frame_has_been_drawn = False
                 
                 if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
@@ -342,7 +350,7 @@ class Animation( wx.Window ):
     
     def TIMEREventVideo( self, event ):
         
-        if self.IsShown():
+        if self.IsShownOnScreen():
             
             if self._current_frame_drawn:
                 
@@ -514,7 +522,7 @@ class AnimationBar( wx.Window ):
     
     def TIMEREventUpdate( self, event ):
         
-        if self.IsShown():
+        if self.IsShownOnScreen():
             
             if self._media.GetMime() == HC.APPLICATION_FLASH:
                 
@@ -577,7 +585,7 @@ class Canvas( object ):
         
         self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) )
         
-        self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
+        self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
         
         self.Bind( wx.EVT_SIZE, self.EventResize )
         
@@ -786,7 +794,7 @@ class Canvas( object ):
             
             path = ClientFiles.GetFilePath( hash, mime )
             
-            HydrusFileHandling.LaunchFile( path )
+            HydrusPaths.LaunchFile( path )
             
             if self._current_display_media.HasDuration() and mime != HC.APPLICATION_FLASH:
                 
@@ -1062,15 +1070,22 @@ class Canvas( object ):
         
         if media is not None:
             
-            locations_manager = media.GetLocationsManager()
-            
-            if not locations_manager.HasLocal():
+            if not self.IsShownOnScreen():
                 
                 media = None
                 
-            elif HC.options[ 'mime_media_viewer_actions' ][ media.GetDisplayMedia().GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+            else:
                 
-                media = None
+                locations_manager = media.GetLocationsManager()
+                
+                if not locations_manager.HasLocal():
+                    
+                    media = None
+                    
+                elif HC.options[ 'mime_media_viewer_actions' ][ media.GetDisplayMedia().GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+                    
+                    media = None
+                    
                 
             
         
@@ -3155,7 +3170,7 @@ class EmbedButton( wx.Window ):
         
         self._dirty = True
         
-        self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
+        self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
@@ -3262,7 +3277,7 @@ class OpenExternallyButton( wx.Button ):
         
         path = ClientFiles.GetFilePath( hash, mime )
         
-        HydrusFileHandling.LaunchFile( path )
+        HydrusPaths.LaunchFile( path )
         
     
 class StaticImage( wx.Window ):
@@ -3277,7 +3292,7 @@ class StaticImage( wx.Window ):
         self._image_container = None
         self._image_cache = image_cache
         
-        self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
+        self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
         
         self._timer_render_wait = wx.Timer( self, id = ID_TIMER_RENDER_WAIT )
         
@@ -3295,7 +3310,7 @@ class StaticImage( wx.Window ):
     def _Redraw( self ):
         
         dc = wx.MemoryDC( self._canvas_bmp )
-    
+        
         dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         dc.Clear()

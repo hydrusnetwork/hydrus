@@ -11,6 +11,7 @@ import HydrusDocumentHandling
 import HydrusExceptions
 import HydrusFlashHandling
 import HydrusImageHandling
+import HydrusPaths
 import HydrusVideoHandling
 import os
 import tempfile
@@ -41,57 +42,6 @@ header_and_mime = [
     ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
     ]
 
-def ConvertAbsPathToPortablePath( abs_path ):
-    
-    if abs_path == '': return None
-    
-    try: return os.path.relpath( abs_path, HC.BASE_DIR )
-    except: return abs_path
-
-def CleanUpTempPath( os_file_handle, temp_path ):
-    
-    try:
-        
-        os.close( os_file_handle )
-        
-    except OSError:
-        
-        gc.collect()
-        
-        try:
-            
-            os.close( os_file_handle )
-            
-        except OSError:
-            
-            print( 'Could not close the temporary file ' + temp_path )
-            
-            return
-            
-        
-    
-    try:
-        
-        os.remove( temp_path )
-        
-    except OSError:
-        
-        gc.collect()
-        
-        try:
-            
-            os.remove( temp_path )
-            
-        except OSError:
-            
-            print( 'Could not delete the temporary file ' + temp_path )
-            
-        
-    
-def CopyFileLikeToFileLike( f_source, f_dest ):
-    
-    for block in HydrusData.ReadFileLikeAsBlocks( f_source ): f_dest.write( block )
-    
 def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     mime = GetMime( path )
@@ -155,7 +105,7 @@ def GetExtraHashesFromPath( path ):
     
     with open( path, 'rb' ) as f:
         
-        for block in HydrusData.ReadFileLikeAsBlocks( f ):
+        for block in HydrusPaths.ReadFileLikeAsBlocks( f ):
             
             h_md5.update( block )
             h_sha1.update( block )
@@ -217,7 +167,7 @@ def GetHashFromPath( path ):
     
     with open( path, 'rb' ) as f:
         
-        for block in HydrusData.ReadFileLikeAsBlocks( f ): h.update( block )
+        for block in HydrusPaths.ReadFileLikeAsBlocks( f ): h.update( block )
         
     
     return h.digest()
@@ -270,68 +220,4 @@ def GetMime( path ):
         
     
     return HC.APPLICATION_UNKNOWN
-    
-def GetTempFile(): return tempfile.TemporaryFile()
-def GetTempFileQuick(): return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
-def GetTempPath(): return tempfile.mkstemp( prefix = 'hydrus' )
-
-def IsImage( mime ): return mime in ( HC.IMAGE_JPEG, HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_BMP )
-
-def LaunchDirectory( path ):
-    
-    def do_it():
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            os.startfile( path )
-            
-        else:
-            
-            if HC.PLATFORM_OSX: cmd = [ 'open' ]
-            elif HC.PLATFORM_LINUX: cmd = [ 'xdg-open' ]
-            
-            cmd.append( path )
-            
-            process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
-            
-            process.wait()
-            
-            process.communicate()
-            
-        
-    
-    thread = threading.Thread( target = do_it )
-    
-    thread.daemon = True
-    
-    thread.start()
-    
-def LaunchFile( path ):
-    
-    def do_it():
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            os.startfile( path )
-            
-        else:
-            
-            if HC.PLATFORM_OSX: cmd = [ 'open' ]
-            elif HC.PLATFORM_LINUX: cmd = [ 'xdg-open' ]
-            
-            cmd.append( path )
-            
-            process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
-            
-            process.wait()
-            
-            process.communicate()        
-            
-        
-    
-    thread = threading.Thread( target = do_it )
-    
-    thread.daemon = True
-    
-    thread.start()
     

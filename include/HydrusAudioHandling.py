@@ -70,7 +70,7 @@ def PlayNoise( name ):
         if name == 'success': filename = 'success.mp3'
         elif name == 'error': filename = 'error.mp3'
         
-        path = HC.STATIC_DIR + os.path.sep + filename
+        path = os.path.join( HC.STATIC_DIR, filename )
         
         noise = mp3play.load( path )
         

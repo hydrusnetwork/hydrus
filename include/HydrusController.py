@@ -22,6 +22,9 @@ class HydrusController( object ):
         
         HydrusGlobals.controller = self
         
+        self._model_shutdown = False
+        self._view_shutdown = False
+        
         self._pubsub = HydrusPubSub.HydrusPubSub( self, self.pubsub_binding_errors_to_ignore )
         
         self._currently_doing_pubsub = False
@@ -152,6 +155,11 @@ class HydrusController( object ):
         gc.collect()
         
     
+    def ModelIsShutdown( self ):
+        
+        return self._model_shutdown
+        
+    
     def NotifyPubSubs( self ):
         
         raise NotImplementedError()
@@ -169,6 +177,7 @@ class HydrusController( object ):
     
     def ShutdownModel( self ):
         
+        self._model_shutdown = True
         HydrusGlobals.model_shutdown = True
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )
@@ -176,6 +185,7 @@ class HydrusController( object ):
     
     def ShutdownView( self ):
         
+        self._view_shutdown = True
         HydrusGlobals.view_shutdown = True
         
         self._ShutdownDaemons()
@@ -219,11 +229,16 @@ class HydrusController( object ):
         return self._system_busy
         
     
+    def ViewIsShutdown( self ):
+        
+        return self._view_shutdown
+        
+    
     def WaitUntilPubSubsEmpty( self ):
         
         while True:
             
-            if HydrusGlobals.view_shutdown: raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
+            if self._view_shutdown: raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
             elif self._pubsub.NoJobsQueued() and not self._currently_doing_pubsub: return
             else: time.sleep( 0.00001 )
             

@@ -6,20 +6,19 @@ import threading
 import time
 import traceback
 import HydrusData
-import HydrusGlobals
 
-def DAEMONMaintainDB():
+def DAEMONMaintainDB( controller ):
     
-    if HydrusGlobals.controller.CurrentlyIdle():
+    if controller.CurrentlyIdle():
         
-        HydrusGlobals.controller.MaintainDB()
+        controller.MaintainDB()
         
     
-def DAEMONMaintainMemory():
+def DAEMONMaintainMemory( controller ):
     
-    HydrusGlobals.controller.MaintainMemory()
+    controller.MaintainMemory()
     
-def DAEMONSleepCheck():
+def DAEMONSleepCheck( controller ):
     
-    HydrusGlobals.controller.SleepCheck()
+    controller.SleepCheck()
     

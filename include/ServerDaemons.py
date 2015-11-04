@@ -4,7 +4,6 @@ import httplib
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusFileHandling
 import HydrusGlobals
 import HydrusNATPunch
 import HydrusServer
@@ -21,21 +20,31 @@ import time
 import traceback
 import yaml
 
-def DAEMONCheckDataUsage(): HydrusGlobals.server_controller.WriteSynchronous( 'check_data_usage' )
-
-def DAEMONCheckMonthlyData(): HydrusGlobals.server_controller.WriteSynchronous( 'check_monthly_data' )
-
-def DAEMONClearBans(): HydrusGlobals.server_controller.WriteSynchronous( 'clear_bans' )
-
-def DAEMONDeleteOrphans(): HydrusGlobals.server_controller.WriteSynchronous( 'delete_orphans' )
-
-def DAEMONFlushRequestsMade( all_requests ): HydrusGlobals.server_controller.WriteSynchronous( 'flush_requests_made', all_requests )
-
-def DAEMONGenerateUpdates():
+def DAEMONCheckDataUsage( controller ):
+    
+    controller.WriteSynchronous( 'check_data_usage' )
+    
+def DAEMONCheckMonthlyData( controller ):
+    
+    controller.WriteSynchronous( 'check_monthly_data' )
+    
+def DAEMONClearBans( controller ):
+    
+    controller.WriteSynchronous( 'clear_bans' )
+    
+def DAEMONDeleteOrphans( controller ):
+    
+    controller.WriteSynchronous( 'delete_orphans' )
+    
+def DAEMONFlushRequestsMade( controller, all_requests ):
+    
+    controller.WriteSynchronous( 'flush_requests_made', all_requests )
+    
+def DAEMONGenerateUpdates( controller ):
     
     if not HydrusGlobals.server_busy:
         
-        update_ends = HydrusGlobals.server_controller.Read( 'update_ends' )
+        update_ends = controller.Read( 'update_ends' )
         
         for ( service_key, biggest_end ) in update_ends.items():
             
@@ -53,7 +62,7 @@ def DAEMONGenerateUpdates():
             
             while next_end < now:
                 
-                HydrusGlobals.server_controller.WriteSynchronous( 'create_update', service_key, next_begin, next_end )
+                controller.WriteSynchronous( 'create_update', service_key, next_begin, next_end )
                 
                 biggest_end = next_end
                 
@@ -70,29 +79,36 @@ def DAEMONGenerateUpdates():
         
         time_to_stop = HydrusData.GetNow() + 30
         
-        dirty_updates = HydrusGlobals.server_controller.Read( 'dirty_updates' )
+        service_keys = controller.Read( 'service_keys', HC.REPOSITORIES )
         
-        for ( service_key, tuples ) in dirty_updates.items():
+        for service_key in service_keys:
             
-            for ( begin, end ) in tuples:
+            num_petitions = controller.Read( 'num_petitions', service_key )
+            
+            if num_petitions == 0:
                 
-                if HydrusGlobals.view_shutdown or HydrusData.TimeHasPassed( time_to_stop ):
+                dirty_updates = controller.Read( 'dirty_updates', service_key )
+                
+                for ( begin, end ) in dirty_updates:
                     
-                    return
+                    if HydrusGlobals.view_shutdown or HydrusData.TimeHasPassed( time_to_stop ):
+                        
+                        return
+                        
                     
-                
-                HydrusGlobals.server_busy = True
-                
-                HydrusGlobals.server_controller.WriteSynchronous( 'clean_update', service_key, begin, end )
-                
-                HydrusGlobals.server_busy = False
-                
-                time.sleep( 1 )
+                    HydrusGlobals.server_busy = True
+                    
+                    controller.WriteSynchronous( 'clean_update', service_key, begin, end )
+                    
+                    HydrusGlobals.server_busy = False
+                    
+                    time.sleep( 1 )
+                    
                 
             
         
     
-def DAEMONUPnP():
+def DAEMONUPnP( controller ):
     
     try:
         
@@ -104,7 +120,7 @@ def DAEMONUPnP():
         
     except: return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
     
-    services_info = HydrusGlobals.server_controller.Read( 'services_info' )
+    services_info = controller.Read( 'services_info' )
     
     for ( service_key, service_type, options ) in services_info:
         

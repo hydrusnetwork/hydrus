@@ -113,7 +113,7 @@ def CleanTag( tag ):
         
         tag = tag.lower()
         
-        tag = HydrusData.ToString( tag )
+        tag = HydrusData.ToUnicode( tag )
         
         tag.replace( '\r', '' )
         tag.replace( '\n', '' )

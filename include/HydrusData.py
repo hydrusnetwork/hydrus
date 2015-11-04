@@ -167,7 +167,7 @@ def ConvertIntToPixels( i ):
     elif i == 1000000: return 'megapixels'
     else: return 'megapixels'
     
-def ConvertIntToPrettyString( num ): return ToString( locale.format( "%d", num, grouping = True ) )
+def ConvertIntToPrettyString( num ): return locale.format( "%d", num, grouping = True )
 
 def ConvertIntToUnit( unit ):
     
@@ -181,21 +181,21 @@ def ConvertMillisecondsToPrettyTime( ms ):
     hours = ms / 3600000
     
     if hours == 1: hours_result = '1 hour'
-    else: hours_result = ToString( hours ) + ' hours'
+    else: hours_result = str( hours ) + ' hours'
     
     ms = ms % 3600000
     
     minutes = ms / 60000
     
     if minutes == 1: minutes_result = '1 minute'
-    else: minutes_result = ToString( minutes ) + ' minutes'
+    else: minutes_result = str( minutes ) + ' minutes'
     
     ms = ms % 60000
     
     seconds = ms / 1000
     
     if seconds == 1: seconds_result = '1 second'
-    else: seconds_result = ToString( seconds ) + ' seconds'
+    else: seconds_result = str( seconds ) + ' seconds'
     
     detailed_seconds = float( ms ) / 1000.0
     
@@ -205,7 +205,7 @@ def ConvertMillisecondsToPrettyTime( ms ):
     ms = ms % 1000
     
     if ms == 1: milliseconds_result = '1 millisecond'
-    else: milliseconds_result = ToString( ms ) + ' milliseconds'
+    else: milliseconds_result = str( ms ) + ' milliseconds'
     
     if hours > 0: return hours_result + ' ' + minutes_result
     
@@ -219,12 +219,12 @@ def ConvertNumericalRatingToPrettyString( lower, upper, rating, rounded_result =
     
     rating_converted = ( rating * ( upper - lower ) ) + lower
     
-    if rounded_result: s = ToString( '%.2f' % round( rating_converted ) )
-    else: s = ToString( '%.2f' % rating_converted )
+    if rounded_result: s = '%.2f' % round( rating_converted )
+    else: s = '%.2f' % rating_converted
     
     if out_of:
         
-        if lower in ( 0, 1 ): s += '/' + ToString( '%.2f' % upper )
+        if lower in ( 0, 1 ): s += '/%.2f' % upper
         
     
     return s
@@ -240,7 +240,7 @@ def ConvertPortablePathToAbsPath( portable_path ):
     if portable_path is None: return None
     
     if os.path.isabs( portable_path ): abs_path = portable_path
-    else: abs_path = os.path.normpath( HC.BASE_DIR + os.path.sep + portable_path )
+    else: abs_path = os.path.normpath( os.path.join( HC.BASE_DIR, portable_path ) )
     
     if os.path.exists( abs_path ): return abs_path
     else: return None
@@ -269,31 +269,31 @@ def ConvertTimestampToPrettyAge( timestamp ):
     
     seconds = age % 60
     if seconds == 1: s = '1 second'
-    else: s = ToString( seconds ) + ' seconds'
+    else: s = str( seconds ) + ' seconds'
     
     age = age / 60
     minutes = age % 60
     if minutes == 1: m = '1 minute'
-    else: m = ToString( minutes ) + ' minutes'
+    else: m = str( minutes ) + ' minutes'
     
     age = age / 60
     hours = age % 24
     if hours == 1: h = '1 hour'
-    else: h = ToString( hours ) + ' hours'
+    else: h = str( hours ) + ' hours'
     
     age = age / 24
     days = age % 30
     if days == 1: d = '1 day'
-    else: d = ToString( days ) + ' days'
+    else: d = str( days ) + ' days'
     
     age = age / 30
     months = age % 12
     if months == 1: mo = '1 month'
-    else: mo = ToString( months ) + ' months'
+    else: mo = str( months ) + ' months'
     
     years = age / 12
     if years == 1: y = '1 year'
-    else: y = ToString( years ) + ' years'
+    else: y = str( years ) + ' years'
     
     if years > 0: return ' '.join( ( y, mo ) ) + ' old'
     elif months > 0: return ' '.join( ( mo, d ) ) + ' old'
@@ -309,31 +309,31 @@ def ConvertTimestampToPrettyAgo( timestamp ):
     
     seconds = age % 60
     if seconds == 1: s = '1 second'
-    else: s = ToString( seconds ) + ' seconds'
+    else: s = str( seconds ) + ' seconds'
     
     age = age / 60
     minutes = age % 60
     if minutes == 1: m = '1 minute'
-    else: m = ToString( minutes ) + ' minutes'
+    else: m = str( minutes ) + ' minutes'
     
     age = age / 60
     hours = age % 24
     if hours == 1: h = '1 hour'
-    else: h = ToString( hours ) + ' hours'
+    else: h = str( hours ) + ' hours'
     
     age = age / 24
     days = age % 30
     if days == 1: d = '1 day'
-    else: d = ToString( days ) + ' days'
+    else: d = str( days ) + ' days'
     
     age = age / 30
     months = age % 12
     if months == 1: mo = '1 month'
-    else: mo = ToString( months ) + ' months'
+    else: mo = str( months ) + ' months'
     
     years = age / 12
     if years == 1: y = '1 year'
-    else: y = ToString( years ) + ' years'
+    else: y = str( years ) + ' years'
     
     if years > 0: return ' '.join( ( y, mo ) ) + ' ago'
     elif months > 0: return ' '.join( ( mo, d ) ) + ' ago'
@@ -358,31 +358,31 @@ def ConvertTimestampToPrettyExpires( timestamp ):
     
     seconds = expires % 60
     if seconds == 1: s = '1 second'
-    else: s = ToString( seconds ) + ' seconds'
+    else: s = str( seconds ) + ' seconds'
     
     expires = expires / 60
     minutes = expires % 60
     if minutes == 1: m = '1 minute'
-    else: m = ToString( minutes ) + ' minutes'
+    else: m = str( minutes ) + ' minutes'
     
     expires = expires / 60
     hours = expires % 24
     if hours == 1: h = '1 hour'
-    else: h = ToString( hours ) + ' hours'
+    else: h = str( hours ) + ' hours'
     
     expires = expires / 24
     days = expires % 30
     if days == 1: d = '1 day'
-    else: d = ToString( days ) + ' days'
+    else: d = str( days ) + ' days'
     
     expires = expires / 30
     months = expires % 12
     if months == 1: mo = '1 month'
-    else: mo = ToString( months ) + ' months'
+    else: mo = str( months ) + ' months'
     
     years = expires / 12
     if years == 1: y = '1 year'
-    else: y = ToString( years ) + ' years'
+    else: y = str( years ) + ' years'
     
     if already_happend:
         
@@ -413,31 +413,31 @@ def ConvertTimestampToPrettyPending( timestamp ):
     
     seconds = pending % 60
     if seconds == 1: s = '1 second'
-    else: s = ToString( seconds ) + ' seconds'
+    else: s = str( seconds ) + ' seconds'
     
     pending = pending / 60
     minutes = pending % 60
     if minutes == 1: m = '1 minute'
-    else: m = ToString( minutes ) + ' minutes'
+    else: m = str( minutes ) + ' minutes'
     
     pending = pending / 60
     hours = pending % 24
     if hours == 1: h = '1 hour'
-    else: h = ToString( hours ) + ' hours'
+    else: h = str( hours ) + ' hours'
     
     pending = pending / 24
     days = pending % 30
     if days == 1: d = '1 day'
-    else: d = ToString( days ) + ' days'
+    else: d = str( days ) + ' days'
     
     pending = pending / 30
     months = pending % 12
     if months == 1: mo = '1 month'
-    else: mo = ToString( months ) + ' months'
+    else: mo = str( months ) + ' months'
     
     years = pending / 12
     if years == 1: y = '1 year'
-    else: y = ToString( years ) + ' years'
+    else: y = str( years ) + ' years'
     
     if years > 0: return 'in ' + ' '.join( ( y, mo ) )
     elif months > 0: return 'in ' + ' '.join( ( mo, d ) )
@@ -453,31 +453,31 @@ def ConvertTimestampToPrettySync( timestamp ):
     
     seconds = age % 60
     if seconds == 1: s = '1 second'
-    else: s = ToString( seconds ) + ' seconds'
+    else: s = str( seconds ) + ' seconds'
     
     age = age / 60
     minutes = age % 60
     if minutes == 1: m = '1 minute'
-    else: m = ToString( minutes ) + ' minutes'
+    else: m = str( minutes ) + ' minutes'
     
     age = age / 60
     hours = age % 24
     if hours == 1: h = '1 hour'
-    else: h = ToString( hours ) + ' hours'
+    else: h = str( hours ) + ' hours'
     
     age = age / 24
     days = age % 30
     if days == 1: d = '1 day'
-    else: d = ToString( days ) + ' days'
+    else: d = str( days ) + ' days'
     
     age = age / 30
     months = age % 12
     if months == 1: mo = '1 month'
-    else: mo = ToString( months ) + ' months'
+    else: mo = str( months ) + ' months'
     
     years = age / 12
     if years == 1: y = '1 year'
-    else: y = ToString( years ) + ' years'
+    else: y = str( years ) + ' years'
     
     if years > 0: return ' '.join( ( y, mo ) ) + ' ago'
     elif months > 0: return ' '.join( ( mo, d ) ) + ' ago'
@@ -587,7 +587,7 @@ def GetNowPrecise():
     
 def GetSiblingProcessPorts( instance ):
     
-    path = HC.BASE_DIR + os.path.sep + instance + '_running'
+    path = os.path.join( HC.BASE_DIR, instance + '_running' )
     
     if os.path.exists( path ):
         
@@ -678,7 +678,7 @@ def IntelligentMassIntersect( sets_to_reduce ):
     
 def IsAlreadyRunning( instance ):
     
-    path = HC.BASE_DIR + os.path.sep + instance + '_running'
+    path = os.path.join( HC.BASE_DIR, instance + '_running' )
     
     if os.path.exists( path ):
         
@@ -730,20 +730,9 @@ def MergeKeyToListDicts( key_to_list_dicts ):
     
     return result
     
-def ReadFileLikeAsBlocks( f ):
-    
-    next_block = f.read( HC.READ_BLOCK_SIZE )
-    
-    while next_block != '':
-        
-        yield next_block
-        
-        next_block = f.read( HC.READ_BLOCK_SIZE )
-        
-    
 def RecordRunningStart( instance ):
     
-    path = HC.BASE_DIR + os.path.sep + instance + '_running'
+    path = os.path.join( HC.BASE_DIR, instance + '_running' )
     
     record_string = ''
     
@@ -805,15 +794,20 @@ def RecyclePath( path ):
     
 def ShowExceptionDefault( e ):
     
+    if isinstance( e, HydrusExceptions.ShutdownException ):
+        
+        return
+        
+    
     etype = type( e )
     
-    value = ToString( e )
+    value = ToUnicode( e )
     
     trace_list = traceback.format_stack()
     
     trace = ''.join( trace_list )
     
-    message = ToString( etype.__name__ ) + ': ' + ToString( value ) + os.linesep + ToString( trace )
+    message = ToUnicode( etype.__name__ ) + ': ' + ToUnicode( value ) + os.linesep + ToUnicode( trace )
     
     print( '' )
     print( 'The following exception occured at ' + ConvertTimestampToPrettyTime( GetNow() ) + ':' )
@@ -834,7 +828,7 @@ def ShowTextDefault( text ):
     
 ShowText = ShowTextDefault
 
-def SplayListForDB( xs ): return '("' + '","'.join( ( ToString( x ) for x in xs ) ) + '")'
+def SplayListForDB( xs ): return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
 
 def SplitListIntoChunks( xs, n ):
     
@@ -852,24 +846,67 @@ def TimeUntil( timestamp ):
     
     return timestamp - GetNow()
     
-def ToBytes( text_producing_object ):
+def ToByteString( text_producing_object ):
     
-    if type( text_producing_object ) == unicode: return text_producing_object.encode( 'utf-8' )
-    else: return str( text_producing_object )
-    
-def ToString( text_producing_object ):
-    
-    if type( text_producing_object ) in ( str, unicode, bs4.element.NavigableString ): text = text_producing_object
+    if type( text_producing_object ) == unicode:
+        
+        return text_producing_object.encode( 'utf-8' )
+        
+    elif type( text_producing_object ) == str:
+        
+        return text_producing_object
+        
     else:
-        try: text = str( text_producing_object ) # dealing with exceptions, etc...
-        except: text = repr( text_producing_object )
+        
+        try:
+            
+            return str( text_producing_object )
+            
+        except:
+            
+            return str( repr( text_producing_object ) )
+            
+        
     
-    try: return unicode( text )
-    except:
+def ToUnicode( text_producing_object ):
+    
+    if type( text_producing_object ) in ( str, unicode, bs4.element.NavigableString ):
         
-        try: return text.decode( locale.getpreferredencoding() )
-        except: return str( text )
+        text = text_producing_object
         
+    else:
+        
+        try:
+            
+            text = str( text_producing_object ) # dealing with exceptions, etc...
+            
+        except:
+            
+            text = repr( text_producing_object )
+            
+        
+    
+    if type( text ) != unicode:
+        
+        try:
+            
+            text = text.decode( 'utf-8' )
+            
+        except:
+            
+            try:
+                
+                text = text.decode( locale.getpreferredencoding() )
+                
+            except:
+                
+                pass
+                
+            
+            
+        
+    
+    return text
     
 class HydrusYAMLBase( yaml.YAMLObject ):
     
@@ -1069,7 +1106,7 @@ class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Account Identifier: ' + ToString( ( self._type, self._data ) )
+    def __repr__( self ): return 'Account Identifier: ' + ToUnicode( ( self._type, self._data ) )
     
     def _GetSerialisableInfo( self ):
         
@@ -1467,7 +1504,7 @@ class ContentUpdate( object ):
     
     def __ne__( self, other ): return not self.__eq__( other )
     
-    def __repr__( self ): return 'Content Update: ' + ToString( ( self._data_type, self._action, self._row ) )
+    def __repr__( self ): return 'Content Update: ' + ToUnicode( ( self._data_type, self._action, self._row ) )
     
     def GetHashes( self ):
         

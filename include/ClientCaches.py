@@ -6,6 +6,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusPaths
 import os
 import random
 import Queue
@@ -86,7 +87,7 @@ class DataCache( object ):
         
         with self._lock:
             
-            if key not in self._keys_to_data: raise Exception( 'Cache error! Looking for ' + HydrusData.ToString( key ) + ', but it was missing.' )
+            if key not in self._keys_to_data: raise Exception( 'Cache error! Looking for ' + HydrusData.ToUnicode( key ) + ', but it was missing.' )
             
             for ( i, ( fifo_key, last_access_time ) ) in enumerate( self._keys_fifo ):
                 
@@ -436,7 +437,12 @@ class ThumbnailCache( object ):
         
         self._data_cache = DataCache( 'thumbnail_cache_size' )
         
-        self._queue = Queue.Queue()
+        self._lock = threading.Lock()
+        
+        self._waterfall_queue_quick = set()
+        self._waterfall_queue_random = []
+        
+        self._waterfall_event = threading.Event()
         
         self._special_thumbs = {}
         
@@ -447,6 +453,23 @@ class ThumbnailCache( object ):
         HydrusGlobals.client_controller.sub( self, 'Clear', 'thumbnail_resize' )
         
     
+    def _RecalcWaterfallQueueRandom( self ):
+    
+        self._waterfall_queue_random = list( self._waterfall_queue_quick )
+        
+        random.shuffle( self._waterfall_queue_random )
+        
+    
+    def CancelWaterfall( self, page_key, medias ):
+        
+        with self._lock:
+            
+            self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
+            
+            self._RecalcWaterfallQueueRandom()
+            
+        
+    
     def Clear( self ):
         
         self._data_cache.Clear()
@@ -455,13 +478,13 @@ class ThumbnailCache( object ):
         
         names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video' ]
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
             for name in names:
                 
-                path = HC.STATIC_DIR + os.path.sep + name + '.png'
+                path = os.path.join( HC.STATIC_DIR, name + '.png' )
                 
                 options = HydrusGlobals.client_controller.GetOptions()
                 
@@ -476,7 +499,7 @@ class ThumbnailCache( object ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
     
@@ -517,7 +540,17 @@ class ThumbnailCache( object ):
         else: return self._special_thumbs[ 'hydrus' ]
         
     
-    def Waterfall( self, page_key, medias ): self._queue.put( ( page_key, medias ) )
+    def Waterfall( self, page_key, medias ):
+        
+        with self._lock:
+            
+            self._waterfall_queue_quick.update( ( ( page_key, media ) for media in medias ) )
+            
+            self._RecalcWaterfallQueueRandom()
+            
+        
+        self._waterfall_event.set()
+        
     
     def DAEMONWaterfall( self ):
         
@@ -525,25 +558,47 @@ class ThumbnailCache( object ):
         
         while not HydrusGlobals.view_shutdown:
             
-            try: ( page_key, medias ) = self._queue.get( timeout = 1 )
-            except Queue.Empty: continue
+            with self._lock:
+                
+                do_wait = len( self._waterfall_queue_random ) == 0
+                
+            
+            if do_wait:
+                
+                self._waterfall_event.wait( 1 )
+                
+                self._waterfall_event.clear()
+                
+                last_paused = HydrusData.GetNowPrecise()
+                
+            
+            with self._lock:
+                
+                if len( self._waterfall_queue_random ) == 0:
+                    
+                    continue
+                    
+                else:
+                    
+                    result = self._waterfall_queue_random.pop( 0 )
+                    
+                    self._waterfall_queue_quick.discard( result )
+                    
+                    ( page_key, media ) = result
+                    
+                
             
             try:
                 
-                random.shuffle( medias )
+                thumbnail = self.GetThumbnail( media )
                 
-                for media in medias:
+                HydrusGlobals.client_controller.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
+                
+                if HydrusData.GetNowPrecise() - last_paused > 0.005:
                     
-                    thumbnail = self.GetThumbnail( media )
+                    time.sleep( 0.00001 )
                     
-                    HydrusGlobals.client_controller.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
-                    
-                    if HydrusData.GetNowPrecise() - last_paused > 0.005:
-                        
-                        time.sleep( 0.00001 )
-                        
-                        last_paused = HydrusData.GetNowPrecise()
-                        
+                    last_paused = HydrusData.GetNowPrecise()
                     
                 
             except Exception as e:

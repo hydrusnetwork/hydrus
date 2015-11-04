@@ -96,7 +96,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
     def _GetPrettyStatus( self ):
         
         if len( self._conversations ) == 1: return '1 conversation'
-        else: return HydrusData.ToString( len( self._conversations ) ) + ' conversations'
+        else: return str( len( self._conversations ) ) + ' conversations'
         
     
     def _SetConversations( self, conversations ):
@@ -129,7 +129,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
                 updated_string = HydrusData.ConvertTimestampToHumanPrettyTime( updated )
                 
             
-            self.Append( ( '', subject, name_from, ', '.join( [ contact.GetName() for contact in participants if contact.GetName() != name_from ] ), HydrusData.ToString( message_count ), HydrusData.ToString( unread_count ), created_string, updated_string ) )
+            self.Append( ( '', subject, name_from, ', '.join( [ contact.GetName() for contact in participants if contact.GetName() != name_from ] ), str( message_count ), str( unread_count ), created_string, updated_string ) )
             
             data_index = i
             
@@ -168,8 +168,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
             if inbox: self.SetItemImage( selection, 1 )
             else: self.SetItemImage( selection, 0 )
             
-            self.SetStringItem( selection, 4, HydrusData.ToString( message_count ) )
-            self.SetStringItem( selection, 5, HydrusData.ToString( unread_count ) )
+            self.SetStringItem( selection, 4, str( message_count ) )
+            self.SetStringItem( selection, 5, str( unread_count ) )
             
             if created is None:
                 

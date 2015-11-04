@@ -8,9 +8,9 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusEncryption
 import HydrusExceptions
-import HydrusFileHandling
 import HydrusImageHandling
 import HydrusNATPunch
+import HydrusPaths
 import HydrusServer
 import HydrusSerialisable
 import HydrusTagArchive
@@ -29,15 +29,14 @@ import time
 import traceback
 import wx
 import yaml
-import HydrusGlobals
 
-def DAEMONCheckExportFolders():
+def DAEMONCheckExportFolders( controller ):
     
-    options = HydrusGlobals.client_controller.GetOptions()
+    options = controller.GetOptions()
     
     if not options[ 'pause_export_folders_sync' ]:
         
-        export_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+        export_folders = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
         for export_folder in export_folders:
             
@@ -50,13 +49,13 @@ def DAEMONCheckExportFolders():
             
         
     
-def DAEMONCheckImportFolders():
+def DAEMONCheckImportFolders( controller ):
     
-    options = HydrusGlobals.client_controller.GetOptions()
+    options = controller.GetOptions()
     
     if not options[ 'pause_import_folders_sync' ]:
         
-        import_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+        import_folders = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
         for import_folder in import_folders:
             
@@ -69,13 +68,13 @@ def DAEMONCheckImportFolders():
             
         
     
-def DAEMONCheckMouseIdle():
+def DAEMONCheckMouseIdle( controller ):
     
-    HydrusGlobals.client_controller.CheckMouseIdle()
+    wx.CallAfter( controller.CheckMouseIdle )
     
-def DAEMONDownloadFiles():
+def DAEMONDownloadFiles( controller ):
     
-    hashes = HydrusGlobals.client_controller.Read( 'downloads' )
+    hashes = controller.Read( 'downloads' )
     
     num_downloads = len( hashes )
     
@@ -87,13 +86,13 @@ def DAEMONDownloadFiles():
         
         job_key.SetVariable( 'popup_text_1', 'initialising downloader' )
         
-        HydrusGlobals.client_controller.pub( 'message', job_key )
+        controller.pub( 'message', job_key )
         
         for hash in hashes:
             
             job_key.SetVariable( 'popup_text_1', 'downloading ' + HydrusData.ConvertIntToPrettyString( num_downloads - len( successful_hashes ) ) + ' files from repositories' )
             
-            ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = controller.Read( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
             
             service_keys = list( media_result.GetLocationsManager().GetCurrent() )
             
@@ -104,7 +103,7 @@ def DAEMONDownloadFiles():
                 if service_key == CC.LOCAL_FILE_SERVICE_KEY: break
                 elif service_key == CC.TRASH_SERVICE_KEY: continue
                 
-                try: file_repository = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                try: file_repository = controller.GetServicesManager().GetService( service_key )
                 except HydrusExceptions.NotFoundException: continue
                 
                 if file_repository.CanDownload(): 
@@ -113,15 +112,15 @@ def DAEMONDownloadFiles():
                         
                         request_args = { 'hash' : hash.encode( 'hex' ) }
                         
-                        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+                        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
                         
                         try:
                             
                             file_repository.Request( HC.GET, 'file', request_args = request_args, temp_path = temp_path )
                             
-                            HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                            controller.WaitUntilPubSubsEmpty()
                             
-                            HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, override_deleted = True )
+                            controller.WriteSynchronous( 'import_file', temp_path, override_deleted = True )
                             
                             successful_hashes.add( hash )
                             
@@ -129,7 +128,7 @@ def DAEMONDownloadFiles():
                             
                         finally:
                             
-                            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+                            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                             
                         
                     except HydrusExceptions.ServerBusyException:
@@ -140,7 +139,7 @@ def DAEMONDownloadFiles():
                         
                         job_key.Delete()
                         
-                        HydrusGlobals.client_controller.pub( 'notify_new_downloads' )
+                        controller.pub( 'notify_new_downloads' )
                         
                         return
                         
@@ -170,19 +169,19 @@ def DAEMONDownloadFiles():
         job_key.Delete()
         
     
-def DAEMONFlushServiceUpdates( list_of_service_keys_to_service_updates ):
+def DAEMONFlushServiceUpdates( controller, list_of_service_keys_to_service_updates ):
     
     service_keys_to_service_updates = HydrusData.MergeKeyToListDicts( list_of_service_keys_to_service_updates )
     
-    HydrusGlobals.client_controller.WriteSynchronous( 'service_updates', service_keys_to_service_updates )
+    controller.WriteSynchronous( 'service_updates', service_keys_to_service_updates )
     
-def DAEMONMaintainTrash():
+def DAEMONMaintainTrash( controller ):
     
     if HC.options[ 'trash_max_size' ] is not None:
         
         max_size = HC.options[ 'trash_max_size' ] * 1048576
         
-        service_info = HydrusGlobals.client_controller.Read( 'service_info', CC.TRASH_SERVICE_KEY )
+        service_info = controller.Read( 'service_info', CC.TRASH_SERVICE_KEY )
         
         while service_info[ HC.SERVICE_INFO_TOTAL_SIZE ] > max_size:
             
@@ -191,7 +190,7 @@ def DAEMONMaintainTrash():
                 return
                 
             
-            hashes = HydrusGlobals.client_controller.Read( 'oldest_trash_hashes' )
+            hashes = controller.Read( 'oldest_trash_hashes' )
             
             if len( hashes ) == 0:
                 
@@ -202,11 +201,11 @@ def DAEMONMaintainTrash():
             
             service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
             
-            HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+            controller.WaitUntilPubSubsEmpty()
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
-            service_info = HydrusGlobals.client_controller.Read( 'service_info', CC.TRASH_SERVICE_KEY )
+            service_info = controller.Read( 'service_info', CC.TRASH_SERVICE_KEY )
             
         
     
@@ -214,7 +213,7 @@ def DAEMONMaintainTrash():
         
         max_age = HC.options[ 'trash_max_age' ] * 3600
         
-        hashes = HydrusGlobals.client_controller.Read( 'oldest_trash_hashes', minimum_age = max_age )
+        hashes = controller.Read( 'oldest_trash_hashes', minimum_age = max_age )
         
         while len( hashes ) > 0:
             
@@ -227,19 +226,19 @@ def DAEMONMaintainTrash():
             
             service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
             
-            HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+            controller.WaitUntilPubSubsEmpty()
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
-            hashes = HydrusGlobals.client_controller.Read( 'oldest_trash_hashes', minimum_age = max_age )
+            hashes = controller.Read( 'oldest_trash_hashes', minimum_age = max_age )
             
         
     
-def DAEMONSynchroniseAccounts():
+def DAEMONSynchroniseAccounts( controller ):
     
-    services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.RESTRICTED_SERVICES )
+    services = controller.GetServicesManager().GetServices( HC.RESTRICTED_SERVICES )
     
-    options = HydrusGlobals.client_controller.GetOptions()
+    options = controller.GetOptions()
     
     do_notify = False
     
@@ -270,7 +269,7 @@ def DAEMONSynchroniseAccounts():
                 
                 account.MakeFresh()
                 
-                HydrusGlobals.client_controller.WriteSynchronous( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
+                controller.WriteSynchronous( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
                 
                 do_notify = True
                 
@@ -285,16 +284,16 @@ def DAEMONSynchroniseAccounts():
     
     if do_notify:
         
-        HydrusGlobals.client_controller.pub( 'notify_new_permissions' )
+        controller.pub( 'notify_new_permissions' )
         
     
-def DAEMONSynchroniseRepositories():
+def DAEMONSynchroniseRepositories( controller ):
     
-    options = HydrusGlobals.client_controller.GetOptions()
+    options = controller.GetOptions()
     
     if not options[ 'pause_repo_sync' ]:
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.REPOSITORIES )
+        services = controller.GetServicesManager().GetServices( HC.REPOSITORIES )
         
         for service in services:
             
@@ -303,7 +302,7 @@ def DAEMONSynchroniseRepositories():
                 break
                 
             
-            if HydrusGlobals.client_controller.CurrentlyIdle():
+            if controller.CurrentlyIdle():
                 
                 service.Sync( only_when_idle = True )
                 
@@ -312,28 +311,28 @@ def DAEMONSynchroniseRepositories():
         time.sleep( 5 )
         
     
-def DAEMONSynchroniseSubscriptions():
+def DAEMONSynchroniseSubscriptions( controller ):
     
-    options = HydrusGlobals.client_controller.GetOptions()
+    options = controller.GetOptions()
     
-    subscription_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+    subscription_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
     
     for name in subscription_names:
         
         p1 = options[ 'pause_subs_sync' ]
-        p2 = HydrusGlobals.view_shutdown
+        p2 = controller.ViewIsShutdown()
         
         if p1 or p2:
             
             return
             
         
-        subscription = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
+        subscription = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
         
         subscription.Sync()
         
     
-def DAEMONUPnP():
+def DAEMONUPnP( controller ):
     
     try:
         
@@ -345,7 +344,7 @@ def DAEMONUPnP():
         
     except: return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
     
-    services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_BOORU, ) )
+    services = controller.GetServicesManager().GetServices( ( HC.LOCAL_BOORU, ) )
     
     for service in services:
         

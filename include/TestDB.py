@@ -53,8 +53,8 @@ class TestClientDB( unittest.TestCase ):
         
         HC.DB_DIR = tempfile.mkdtemp()
         
-        HC.CLIENT_FILES_DIR = HC.DB_DIR + os.path.sep + 'client_files'
-        HC.CLIENT_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'client_thumbnails'
+        HC.CLIENT_FILES_DIR = os.path.join( HC.DB_DIR, 'client_files' )
+        HC.CLIENT_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'client_thumbnails' )
         
         self._db = ClientDB.DB( HydrusGlobals.test_controller )
         
@@ -108,7 +108,7 @@ class TestClientDB( unittest.TestCase ):
         
         hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
-        path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
         self._write( 'import_file', path )
         
@@ -312,7 +312,7 @@ class TestClientDB( unittest.TestCase ):
         
         hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
-        path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
         self._write( 'import_file', path )
         
@@ -540,7 +540,7 @@ class TestClientDB( unittest.TestCase ):
         
         hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
-        path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
         self._write( 'import_file', path )
         
@@ -661,7 +661,7 @@ class TestClientDB( unittest.TestCase ):
         
         for ( filename, hex_hash, size, mime, width, height, duration, num_frames, num_words ) in test_files:
             
-            path = HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + filename
+            path = os.path.join( HC.STATIC_DIR, 'testing', filename )
             
             hash = hex_hash.decode( 'hex' )
             
@@ -733,7 +733,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertTrue( os.path.exists( HC.DB_DIR ) )
         
-        self.assertTrue( os.path.exists( HC.DB_DIR + os.path.sep + 'client.db' ) )
+        self.assertTrue( os.path.exists( os.path.join( HC.DB_DIR, 'client.db' ) ) )
         
         self.assertTrue( os.path.exists( HC.CLIENT_FILES_DIR ) )
         
@@ -743,11 +743,11 @@ class TestClientDB( unittest.TestCase ):
         
         for ( one, two ) in itertools.product( hex_chars, hex_chars ):
             
-            dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
+            dir = os.path.join( HC.CLIENT_FILES_DIR, one + two )
             
             self.assertTrue( os.path.exists( dir ) )
             
-            dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
+            dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, one + two )
             
             self.assertTrue( os.path.exists( dir ) )
             
@@ -761,7 +761,7 @@ class TestClientDB( unittest.TestCase ):
         
         md5 = 'fdadb2cae78f2dfeb629449cd005f2a2'.decode( 'hex' )
         
-        path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
         #
         
@@ -800,7 +800,7 @@ class TestClientDB( unittest.TestCase ):
         
         self._clear_db()
         
-        path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
         HC.options[ 'exclude_deleted_files' ] = False
         
@@ -1236,8 +1236,8 @@ class TestServerDB( unittest.TestCase ):
         
         HC.DB_DIR = tempfile.mkdtemp()
         
-        HC.SERVER_FILES_DIR = HC.DB_DIR + os.path.sep + 'server_files'
-        HC.SERVER_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'server_thumbnails'
+        HC.SERVER_FILES_DIR = os.path.join( HC.DB_DIR, 'server_files' )
+        HC.SERVER_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'server_thumbnails' )
         
         self._db = ServerDB.DB( HydrusGlobals.test_controller )
         

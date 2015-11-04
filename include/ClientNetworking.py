@@ -1,5 +1,6 @@
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusPaths
 import HydrusSerialisable
 import httplib
 import os
@@ -57,7 +58,7 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
         if network_version > HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
         else: message = 'The server is out of date; please ask its admin to update to the latest release.'
         
-        raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + HydrusData.ToString( network_version ) + ', whereas your client\'s is ' + HydrusData.ToString( HC.NETWORK_VERSION ) + '! ' + message )
+        raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + str( network_version ) + ', whereas your client\'s is ' + str( HC.NETWORK_VERSION ) + '! ' + message )
         
     
 def ConvertHydrusGETArgsToQuery( request_args ):
@@ -102,7 +103,7 @@ def ConvertHydrusGETArgsToQuery( request_args ):
         request_args[ 'title' ] = request_args[ 'title' ].encode( 'hex' )
         
     
-    query = '&'.join( [ key + '=' + HydrusData.ToString( value ) for ( key, value ) in request_args.items() ] )
+    query = '&'.join( [ key + '=' + HydrusData.ToByteString( value ) for ( key, value ) in request_args.items() ] )
     
     return query
     
@@ -246,7 +247,10 @@ class HTTPConnectionManager( object ):
         
         while True:
             
-            if HydrusGlobals.model_shutdown: break
+            if HydrusGlobals.model_shutdown:
+                
+                break
+                
             
             last_checked = 0
             
@@ -343,9 +347,12 @@ class HTTPConnection( object ):
         
         data = ''
         
-        for block in HydrusData.ReadFileLikeAsBlocks( response ):
+        for block in HydrusPaths.ReadFileLikeAsBlocks( response ):
             
-            if HydrusGlobals.model_shutdown: raise Exception( 'Application is shutting down!' )
+            if HydrusGlobals.model_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+                
             
             data += block
             
@@ -387,7 +394,7 @@ class HTTPConnection( object ):
                 try: parsed_response = yaml.safe_load( data )
                 except yaml.error.YAMLError as e:
                     
-                    raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HydrusData.ToString( e ) )
+                    raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HydrusData.ToUnicode( e ) )
                     
                 
             elif content_type == 'application/json':
@@ -423,9 +430,9 @@ class HTTPConnection( object ):
             
         except Exception as e:
             
-            text = 'Could not connect to ' + HydrusData.ToString( self._host ) + ':'
+            text = 'Could not connect to ' + HydrusData.ToUnicode( self._host ) + ':'
             text += os.linesep * 2
-            text += HydrusData.ToString( e )
+            text += HydrusData.ToUnicode( e )
             
             raise Exception( text )
             
@@ -441,9 +448,12 @@ class HTTPConnection( object ):
         
         with open( temp_path, 'wb' ) as f:
             
-            for block in HydrusData.ReadFileLikeAsBlocks( response ):
+            for block in HydrusPaths.ReadFileLikeAsBlocks( response ):
                 
-                if HydrusGlobals.model_shutdown: raise Exception( 'Application is shutting down!' )
+                if HydrusGlobals.model_shutdown:
+                    
+                    raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+                    
                 
                 size_of_response += len( block )
                 
@@ -481,7 +491,7 @@ class HTTPConnection( object ):
         if method == HC.GET: method_string = 'GET'
         elif method == HC.POST: method_string = 'POST'
         
-        if 'User-Agent' not in request_headers: request_headers[ 'User-Agent' ] = 'hydrus/' + HydrusData.ToString( HC.NETWORK_VERSION )
+        if 'User-Agent' not in request_headers: request_headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
         
         # it is important to only send str, not unicode, to httplib
         # it uses += to extend the message body, which propagates the unicode (and thus fails) when
@@ -540,7 +550,7 @@ class HTTPConnection( object ):
                     
                     # some booru is giving daft redirect responses
                     print( url )
-                    url = urllib.quote( url.encode( 'utf-8' ), safe = '/?=&' )
+                    url = urllib.quote( HydrusData.ToByteString( url ), safe = '/?=&' )
                     print( url )
                     
                 

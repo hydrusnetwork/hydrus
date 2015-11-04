@@ -5,6 +5,7 @@ import ClientDownloading
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
+import HydrusPaths
 import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
@@ -52,8 +53,14 @@ def ExportToHTA( parent, service_key, hashes ):
     
     with wx.FileDialog( parent, style = wx.FD_SAVE, defaultFile = 'archive.db' ) as dlg:
         
-        if dlg.ShowModal() == wx.ID_OK: path = dlg.GetPath()
-        else: return
+        if dlg.ShowModal() == wx.ID_OK:
+            
+            path = HydrusData.ToUnicode( dlg.GetPath() )
+            
+        else:
+            
+            return
+            
         
     
     message = 'Would you like to use hydrus\'s normal hash type, or an alternative?'
@@ -238,7 +245,7 @@ class Dialog( wx.Dialog ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
-        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
+        self.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
         
         self.Bind( wx.EVT_BUTTON, self.EventDialogButton )
         
@@ -473,7 +480,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             if dlg_file.ShowModal() == wx.ID_OK:
                 
-                path = dlg_file.GetPath()
+                path = HydrusData.ToUnicode( dlg_file.GetPath() )
                 
                 ImportFromHTA( self, path, self._service_key )
                 
@@ -1129,7 +1136,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 value = self._ratings_numerical_slider.GetValue()
                 
-                self._pretty_action = HydrusData.ToString( value )
+                self._pretty_action = HydrusData.ToUnicode( value )
                 
                 num_stars = self._current_ratings_numerical_service.GetInfo( 'num_stars' )
                 allow_zero = self._current_ratings_numerical_service.GetInfo( 'allow_zero' )
@@ -1554,6 +1561,8 @@ class DialogInputLocalFiles( Dialog ):
     
     def _AddPathsToList( self, paths ):
         
+        paths = [ HydrusData.ToUnicode( path ) for path in paths ]
+        
         self._processing_queue.append( paths )
         
         self._ProcessQueue()
@@ -1621,7 +1630,7 @@ class DialogInputLocalFiles( Dialog ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                paths = dlg.GetPaths()
+                paths = [ HydrusData.ToUnicode( path ) for path in dlg.GetPaths() ]
                 
                 self._AddPathsToList( paths )
                 
@@ -1634,7 +1643,7 @@ class DialogInputLocalFiles( Dialog ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = dlg.GetPath()
+                path = HydrusData.ToUnicode( dlg.GetPath() )
                 
                 self._AddPathsToList( ( path, ) )
                 
@@ -1753,7 +1762,10 @@ class DialogInputLocalFiles( Dialog ):
         
         for ( i, path ) in enumerate( file_paths ):
             
-            if path.endswith( os.path.sep + 'Thumbs.db' ) or path.endswith( os.path.sep + 'thumbs.db' ): continue
+            if path.endswith( os.path.sep + 'Thumbs.db' ) or path.endswith( os.path.sep + 'thumbs.db' ):
+                
+                continue
+                
             
             if i % 500 == 0: gc.collect()
             
@@ -1802,14 +1814,14 @@ class DialogInputLocalFiles( Dialog ):
         if num_good_files > 0:
             
             if num_good_files == 1: message = '1 file was parsed successfully'
-            else: message = HydrusData.ToString( num_good_files ) + ' files were parsed successfully'
+            else: message = str( num_good_files ) + ' files were parsed successfully'
             
-            if num_odd_files > 0: message += ', but ' + HydrusData.ToString( num_odd_files ) + ' failed.'
+            if num_odd_files > 0: message += ', but ' + str( num_odd_files ) + ' failed.'
             else: message += '.'
             
         else:
             
-            message = HydrusData.ToString( num_odd_files ) + ' files could not be parsed.'
+            message = str( num_odd_files ) + ' files could not be parsed.'
             
         
         wx.CallAfter( self.SetGaugeInfo, num_file_paths, num_file_paths, message )
@@ -2065,11 +2077,11 @@ class DialogInputMessageSystemPredicate( Dialog ):
     
     def GetString( self ):
         
-        if self._type == 'system:age': return 'system:age' + self._sign.GetStringSelection() + HydrusData.ToString( self._years.GetValue() ) + 'y' + HydrusData.ToString( self._months.GetValue() ) + 'm' + HydrusData.ToString( self._days.GetValue() ) + 'd'
+        if self._type == 'system:age': return 'system:age' + self._sign.GetStringSelection() + str( self._years.GetValue() ) + 'y' + str( self._months.GetValue() ) + 'm' + str( self._days.GetValue() ) + 'd'
         elif self._type == 'system:started_by': return 'system:started_by=' + self._contact.GetStringSelection()
         elif self._type == 'system:from': return 'system:from=' + self._contact.GetStringSelection()
         elif self._type == 'system:to': return 'system:to=' + self._contact.GetStringSelection()
-        elif self._type == 'system:numattachments': return 'system:numattachments' + self._sign.GetStringSelection() + HydrusData.ToString( self._num_attachments.GetValue() )
+        elif self._type == 'system:numattachments': return 'system:numattachments' + self._sign.GetStringSelection() + str( self._num_attachments.GetValue() )
         
     
 class DialogInputNamespaceRegex( Dialog ):
@@ -2148,7 +2160,7 @@ class DialogInputNamespaceRegex( Dialog ):
             
             text = 'That regex would not compile!'
             text += os.linesep * 2
-            text += HydrusData.ToString( e )
+            text += HydrusData.ToUnicode( e )
             
             wx.MessageBox( text )
             
@@ -2688,7 +2700,7 @@ class DialogModifyAccounts( Dialog ):
                 
                 response = self._service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_identifier } )
                 
-                subject_string = HydrusData.ToString( response[ 'account_info' ] )
+                subject_string = HydrusData.ToUnicode( response[ 'account_info' ] )
                 
             else: subject_string = 'modifying ' + HydrusData.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
             
@@ -2805,7 +2817,7 @@ class DialogModifyAccounts( Dialog ):
             
             account_info = response[ 'account_info' ]
             
-            self._subject_text.SetLabel( HydrusData.ToString( account_info ) )
+            self._subject_text.SetLabel( HydrusData.ToUnicode( account_info ) )
             
         
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
@@ -3578,7 +3590,7 @@ class DialogPathsToTags( Dialog ):
             
             if num_namespace != '':
                 
-                tags.append( num_namespace + ':' + HydrusData.ToString( num ) )
+                tags.append( num_namespace + ':' + str( num ) )
                 
             
             tags = HydrusTags.CleanTags( tags )
@@ -3685,7 +3697,7 @@ class DialogPathsToTags( Dialog ):
                     
                     text = 'That regex would not compile!'
                     text += os.linesep * 2
-                    text += HydrusData.ToString( e )
+                    text += HydrusData.ToUnicode( e )
                     
                     wx.MessageBox( text )
                     
@@ -4333,7 +4345,7 @@ class DialogSetupExport( Dialog ):
             
             mime = media.GetMime()
             
-            pretty_tuple = ( HydrusData.ToString( i + 1 ), HC.mime_string_lookup[ mime ], '' )
+            pretty_tuple = ( str( i + 1 ), HC.mime_string_lookup[ mime ], '' )
             data_tuple = ( ( i, media ), mime, '' )
             
             self._paths.Append( pretty_tuple, data_tuple )
@@ -4393,15 +4405,11 @@ class DialogSetupExport( Dialog ):
     
     def _GetPath( self, media, terms ):
         
-        directory = self._directory_picker.GetPath()
+        directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
         
         filename = ClientFiles.GenerateExportFilename( media, terms )
         
-        mime = media.GetMime()
-        
-        ext = HC.mime_ext_lookup[ mime ]
-        
-        return directory + os.path.sep + filename + ext
+        return os.path.join( directory, filename )
         
     
     def _RecalcPaths( self ):
@@ -4420,9 +4428,9 @@ class DialogSetupExport( Dialog ):
                 
                 i = 1
                 
-                while self._GetPath( media, terms + [ ( 'string', HydrusData.ToString( i ) ) ] ) in all_paths: i += 1
+                while self._GetPath( media, terms + [ ( 'string', str( i ) ) ] ) in all_paths: i += 1
                 
-                path = self._GetPath( media, terms + [ ( 'string', HydrusData.ToString( i ) ) ] )
+                path = self._GetPath( media, terms + [ ( 'string', str( i ) ) ] )
                 
             
             all_paths.add( path )
@@ -4431,7 +4439,7 @@ class DialogSetupExport( Dialog ):
                 
                 mime = media.GetMime()
                 
-                self._paths.UpdateRow( index, ( HydrusData.ToString( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
+                self._paths.UpdateRow( index, ( str( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
                 
             
         
@@ -4469,7 +4477,7 @@ class DialogSetupExport( Dialog ):
                     
                     filename = ClientFiles.GenerateExportFilename( media, terms )
                     
-                    txt_path = directory + os.path.sep + filename + '.txt'
+                    txt_path = os.path.join( directory, filename + '.txt' )
                     
                     with open( txt_path, 'wb' ) as f:
                         
@@ -4486,7 +4494,7 @@ class DialogSetupExport( Dialog ):
                 
             except:
                 
-                wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HydrusData.ToString( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
+                wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
                 
                 break
                 
@@ -4501,7 +4509,7 @@ class DialogSetupExport( Dialog ):
             
             try:
                 
-                HydrusFileHandling.LaunchDirectory( directory )
+                HydrusPaths.LaunchDirectory( directory )
                 
             except: wx.MessageBox( 'Could not open that location!' )
         
@@ -4690,7 +4698,7 @@ class DialogShortcuts( Dialog ):
                 
                 if name == '': return
                 
-                while self._shortcuts.NameExists( name ): name += HydrusData.ToString( random.randint( 0, 9 ) )
+                while self._shortcuts.NameExists( name ): name += str( random.randint( 0, 9 ) )
                 
                 shortcuts = ClientData.Shortcuts( name )
                 

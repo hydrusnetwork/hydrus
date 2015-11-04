@@ -221,7 +221,7 @@ class Controller( HydrusController.HydrusController ):
                         connection = HydrusNetworking.GetLocalConnection( port )
                         connection.close()
                         
-                        raise Exception( 'Something was already bound to port ' + HydrusData.ToString( port ) )
+                        raise Exception( 'Something was already bound to port ' + str( port ) )
                         
                     except:
                         
@@ -241,7 +241,7 @@ class Controller( HydrusController.HydrusController ):
                             
                         except:
                             
-                            raise Exception( 'Tried to bind port ' + HydrusData.ToString( port ) + ' but it failed.' )
+                            raise Exception( 'Tried to bind port ' + str( port ) + ' but it failed.' )
                             
                         
                     
@@ -287,7 +287,7 @@ class Controller( HydrusController.HydrusController ):
         
         if already_bound:
             
-            raise HydrusExceptions.PermissionException( 'Something was already bound to port ' + HydrusData.ToString( port ) )
+            raise HydrusExceptions.PermissionException( 'Something was already bound to port ' + str( port ) )
             
         
     
@@ -357,7 +357,7 @@ class Controller( HydrusController.HydrusController ):
         
         interrupt_received = False
         
-        while not HydrusGlobals.model_shutdown:
+        while not self._model_shutdown:
             
             try:
                 

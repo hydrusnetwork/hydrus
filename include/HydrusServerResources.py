@@ -3,6 +3,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusPaths
 import HydrusSerialisable
 import HydrusThreading
 import os
@@ -23,7 +24,7 @@ CLIENT_ROOT_MESSAGE = '''<html>
         <title>hydrus client</title>
     </head>
     <body>
-        <p>This hydrus client uses software version ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HydrusData.ToString( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus client uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
         <p>It only serves requests from 127.0.0.1.</p>
     </body>
 </html>'''
@@ -33,7 +34,7 @@ ROOT_MESSAGE_BEGIN = '''<html>
         <title>hydrus service</title>
     </head>
     <body>
-        <p>This hydrus service uses software version ''' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HydrusData.ToString( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus service uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
         <p>'''
 
 ROOT_MESSAGE_END = '''</p>
@@ -60,7 +61,7 @@ def ParseFileArguments( path ):
         
     except Exception as e:
         
-        raise HydrusExceptions.ForbiddenException( HydrusData.ToString( e ) )
+        raise HydrusExceptions.ForbiddenException( HydrusData.ToUnicode( e ) )
         
     
     args = {}
@@ -86,8 +87,8 @@ def ParseFileArguments( path ):
     
     return args
     
-hydrus_favicon = FileResource( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', defaultType = 'image/x-icon' )
-local_booru_css = FileResource( HC.STATIC_DIR + os.path.sep + 'local_booru_style.css', defaultType = 'text/css' )
+hydrus_favicon = FileResource( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), defaultType = 'image/x-icon' )
+local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
 
 class HydrusDomain( object ):
     
@@ -127,7 +128,7 @@ class HydrusResourceWelcome( Resource ):
         if service_type == HC.LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
         else: body = ROOT_MESSAGE_BEGIN + message + ROOT_MESSAGE_END
         
-        self._body = body.encode( 'utf-8' )
+        self._body = HydrusData.ToByteString( body )
         
         self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
         
@@ -256,13 +257,13 @@ class HydrusResourceCommand( Resource ):
             else:
                 
                 
-                ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+                ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
                 
                 request.temp_file_info = ( os_file_handle, temp_path )
                 
                 with open( temp_path, 'wb' ) as f:
                     
-                    for block in HydrusData.ReadFileLikeAsBlocks( request.content ): 
+                    for block in HydrusPaths.ReadFileLikeAsBlocks( request.content ): 
                         
                         f.write( block )
                         
@@ -304,9 +305,7 @@ class HydrusResourceCommand( Resource ):
             request.setHeader( 'Content-Type', content_type )
             request.setHeader( 'Content-Length', str( content_length ) )
             
-            if type( body ) == unicode: body = body.encode( 'utf-8' )
-            
-            request.write( body )
+            request.write( HydrusData.ToByteString( body ) )
             
         elif response_context.HasPath():
             
@@ -333,7 +332,8 @@ class HydrusResourceCommand( Resource ):
             
             content_length = size
             
-            request.setHeader( 'Content-Type', content_type )
+            # can't be unicode!
+            request.setHeader( 'Content-Type', str( content_type ) )
             request.setHeader( 'Content-Length', str( content_length ) )
             
             request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + 86400 * 365 ) ) )
@@ -427,7 +427,7 @@ class HydrusResourceCommand( Resource ):
                             if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
                             else: message = 'This server is out of date; please ask its admin to update to the latest release.'
                             
-                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + HydrusData.ToString( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HydrusData.ToString( network_version ) + '! ' + message )
+                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
                             
                         
                     
@@ -465,12 +465,12 @@ class HydrusResourceCommand( Resource ):
         if do_yaml:
             
             default_mime = HC.APPLICATION_YAML
-            default_encoding = lambda x: yaml.safe_dump( HydrusData.ToString( x ) )
+            default_encoding = lambda x: yaml.safe_dump( HydrusData.ToUnicode( x ) )
             
         else:
             
             default_mime = HC.TEXT_HTML
-            default_encoding = lambda x: HydrusData.ToString( x )
+            default_encoding = lambda x: HydrusData.ToByteString( x )
             
         
         if failure.type == KeyError: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
@@ -518,7 +518,7 @@ class HydrusResourceCommand( Resource ):
             
             ( os_file_handle, temp_path ) = request.temp_file_info
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
             del request.temp_file_info
             

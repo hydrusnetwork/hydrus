@@ -22,11 +22,11 @@ class TestDaemons( unittest.TestCase ):
             
             if not os.path.exists( test_dir ): os.mkdir( test_dir )
             
-            with open( test_dir + os.path.sep + '0', 'wb' ) as f: f.write( TestConstants.tinest_gif )
-            with open( test_dir + os.path.sep + '1', 'wb' ) as f: f.write( TestConstants.tinest_gif ) # previously imported
-            with open( test_dir + os.path.sep + '2', 'wb' ) as f: f.write( TestConstants.tinest_gif )
-            with open( test_dir + os.path.sep + '3', 'wb' ) as f: f.write( 'blarg' ) # broken
-            with open( test_dir + os.path.sep + '4', 'wb' ) as f: f.write( 'blarg' ) # previously failed
+            with open( os.path.join( test_dir, '0' ), 'wb' ) as f: f.write( TestConstants.tinest_gif )
+            with open( os.path.join( test_dir, '1' ), 'wb' ) as f: f.write( TestConstants.tinest_gif ) # previously imported
+            with open( os.path.join( test_dir, '2' ), 'wb' ) as f: f.write( TestConstants.tinest_gif )
+            with open( os.path.join( test_dir, '3' ), 'wb' ) as f: f.write( 'blarg' ) # broken
+            with open( os.path.join( test_dir, '4' ), 'wb' ) as f: f.write( 'blarg' ) # previously failed
             
             #
             
@@ -34,9 +34,7 @@ class TestDaemons( unittest.TestCase ):
             
             HydrusGlobals.test_controller.SetRead( 'serialisable_named', [ import_folder ] )
             
-            
-            
-            ClientDaemons.DAEMONCheckImportFolders()
+            ClientDaemons.DAEMONCheckImportFolders( HydrusGlobals.test_controller )
             
             #(('C:\\code\\Hydrus\\temp\\7baa9a818a14b7a9cbefb04c16bdc45ac651eb7400c1996e66e2efeef9e3ee5d',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
             #(('C:\\code\\Hydrus\\temp\\e0dbdcb1a13c0565ffb73f2f497528adbe1703ca1dfc69680202487187b9fcfa',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
@@ -52,11 +50,11 @@ class TestDaemons( unittest.TestCase ):
             
             self.assertEqual( updated_import_folder, import_folder )
             
-            self.assertTrue( not os.path.exists( test_dir + os.path.sep + '0' ) )
-            self.assertTrue( not os.path.exists( test_dir + os.path.sep + '1' ) )
-            self.assertTrue( not os.path.exists( test_dir + os.path.sep + '2' ) )
-            self.assertTrue( os.path.exists( test_dir + os.path.sep + '3' ) )
-            self.assertTrue( os.path.exists( test_dir + os.path.sep + '4' ) )
+            self.assertTrue( not os.path.exists( os.path.join( test_dir, '0' ) ) )
+            self.assertTrue( not os.path.exists( os.path.join( test_dir, '1' ) ) )
+            self.assertTrue( not os.path.exists( os.path.join( test_dir, '2' ) ) )
+            self.assertTrue( os.path.exists( os.path.join( test_dir, '3' ) ) )
+            self.assertTrue( os.path.exists( os.path.join( test_dir, '4' ) ) )
             
         finally:
             

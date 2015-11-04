@@ -15,8 +15,8 @@ import threading
 import time
 import traceback
 import HydrusData
-import HydrusFileHandling
 import HydrusGlobals
+import HydrusPaths
 
 if cv2.__version__.startswith( '2' ):
     
@@ -32,7 +32,7 @@ def ConvertToPngIfBmp( path ):
     
     if header == 'BM':
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -40,7 +40,7 @@ def ConvertToPngIfBmp( path ):
                 
                 with open( temp_path, 'wb' ) as f_dest:
                     
-                    HydrusFileHandling.CopyFileLikeToFileLike( f_source, f_dest )
+                    HydrusPaths.CopyFileLikeToFileLike( f_source, f_dest )
                     
                 
             
@@ -50,7 +50,7 @@ def ConvertToPngIfBmp( path ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
     

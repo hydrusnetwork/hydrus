@@ -28,7 +28,7 @@ try:
     initial_sys_stdout = sys.stdout
     initial_sys_stderr = sys.stderr
     
-    with open( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
+    with open( os.path.join( HC.LOGS_DIR, 'client.log' ), 'a' ) as f:
         
         sys.stdout = f
         sys.stderr = f

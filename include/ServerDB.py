@@ -4,8 +4,8 @@ import httplib
 import HydrusConstants as HC
 import HydrusDB
 import HydrusExceptions
-import HydrusFileHandling
 import HydrusNATPunch
+import HydrusPaths
 import HydrusSerialisable
 import itertools
 import json
@@ -157,7 +157,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 with open( dest_path, 'wb' ) as f_dest:
                     
-                    HydrusFileHandling.CopyFileLikeToFileLike( f_source, f_dest )
+                    HydrusPaths.CopyFileLikeToFileLike( f_source, f_dest )
                     
                 
             
@@ -543,9 +543,12 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( one, two ) in itertools.product( hex_chars, hex_chars ):
                 
-                new_dir = dir + os.path.sep + one + two
+                new_dir = os.path.join( dir, one + two )
                 
-                if not os.path.exists( new_dir ): os.mkdir( new_dir )
+                if not os.path.exists( new_dir ):
+                    
+                    os.mkdir( new_dir )
+                    
                 
             
         
@@ -1135,7 +1138,7 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT account_type_id FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + HydrusData.ToString( title ) + ' in db for this service.' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + HydrusData.ToUnicode( title ) + ' in db for this service.' )
         
         ( account_type_id, ) = result
         
@@ -1149,28 +1152,13 @@ class DB( HydrusDB.HydrusDB ):
         return [ account_type for ( account_type, ) in self._c.execute( 'SELECT account_type FROM account_types WHERE service_id = ?;', ( service_id, ) ) ]
         
     
-    def _GetDirtyUpdates( self ):
+    def _GetDirtyUpdates( self, service_key ):
         
-        service_ids_to_tuples = HydrusData.BuildKeyToListDict( [ ( service_id, ( begin, end ) ) for ( service_id, begin, end ) in self._c.execute( 'SELECT service_id, begin, end FROM update_cache WHERE dirty = ?;', ( True, ) ) ] )
+        service_id = self._GetServiceId( service_key )
         
-        service_keys_to_tuples = {}
+        result = self._c.execute( 'SELECT begin, end FROM update_cache WHERE service_id = ? AND dirty = ?;', ( service_id, True ) ).fetchall()
         
-        for ( service_id, tuples ) in service_ids_to_tuples.items():
-            
-            result_1 = self._c.execute( 'SELECT 1 FROM file_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
-            result_2 = self._c.execute( 'SELECT 1 FROM mapping_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
-            
-            if result_1 is not None or result_2 is not None:
-                
-                continue
-                
-            
-            service_key = self._GetServiceKey( service_id )
-            
-            service_keys_to_tuples[ service_key ] = tuples
-            
-        
-        return service_keys_to_tuples
+        return result
         
     
     def _GetFile( self, hash ):
@@ -1844,7 +1832,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 title = account_type.GetTitle()
                 
-                if self._AccountTypeExists( service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HydrusData.ToString( title ) + ' in the db for this service, so could not add!' )
+                if self._AccountTypeExists( service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HydrusData.ToUnicode( title ) + ' in the db for this service, so could not add!' )
                 
                 self._c.execute( 'INSERT OR IGNORE INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( service_id, title, account_type ) )
                 
@@ -1867,7 +1855,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 title = account_type.GetTitle()
                 
-                if old_title != title and self._AccountTypeExists( service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HydrusData.ToString( title ) + ' in the database, so could not rename ' + HydrusData.ToString( old_title ) + '!' )
+                if old_title != title and self._AccountTypeExists( service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HydrusData.ToUnicode( title ) + ' in the database, so could not rename ' + HydrusData.ToUnicode( old_title ) + '!' )
                 
                 account_type_id = self._GetAccountTypeId( service_id, old_title )
                 
@@ -1906,6 +1894,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if service_type in HC.REPOSITORIES:
                     
+                    update_dir = ServerFiles.GetExpectedUpdateDir( service_key )
+                    
+                    if not os.path.exists( update_dir ):
+                        
+                        os.mkdir( update_dir )
+                        
+                    
                     begin = 0
                     end = HydrusData.GetNow()
                     
@@ -1921,6 +1916,13 @@ class DB( HydrusDB.HydrusDB ):
                 service_id = self._GetServiceId( service_key )
                 
                 self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                
+                update_dir = ServerFiles.GetExpectedUpdateDir( service_key )
+                
+                if os.path.exists( update_dir ):
+                    
+                    HydrusData.DeletePath( update_dir )
+                    
                 
                 self.pub_after_commit( 'action_service', service_key, 'stop' )
                 
@@ -2219,56 +2221,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateDB( self, version ):
         
-        if version == 128:
-            
-            self._c.execute( 'COMMIT' )
-            
-            self._c.execute( 'PRAGMA foreign_keys = OFF;' )
-            
-            self._c.execute( 'BEGIN IMMEDIATE' )
-            
-            #
-            
-            old_account_info = self._c.execute( 'SELECT * FROM accounts;' ).fetchall()
-            
-            self._c.execute( 'DROP TABLE accounts;' )
-            
-            self._c.execute( 'CREATE TABLE accounts ( account_id INTEGER PRIMARY KEY, account_key BLOB_BYTES, access_key BLOB_BYTES );' )
-            self._c.execute( 'CREATE UNIQUE INDEX accounts_account_key_index ON accounts ( account_key );' )
-            self._c.execute( 'CREATE UNIQUE INDEX accounts_access_key_index ON accounts ( access_key );' )
-            
-            for ( account_id, access_key ) in old_account_info:
-                
-                account_key = HydrusData.GenerateKey()
-                
-                self._c.execute( 'INSERT INTO accounts ( account_id, account_key, access_key ) VALUES ( ?, ?, ? );', ( account_id, sqlite3.Binary( account_key ), sqlite3.Binary( access_key ) ) )
-                
-            
-            #
-            
-            old_r_k_info = self._c.execute( 'SELECT * FROM registration_keys;' ).fetchall()
-            
-            self._c.execute( 'DROP TABLE registration_keys;' )
-            
-            self._c.execute( 'CREATE TABLE registration_keys ( registration_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, account_key BLOB_BYTES, access_key BLOB_BYTES, expiry INTEGER );' )
-            self._c.execute( 'CREATE UNIQUE INDEX registration_keys_access_key_index ON registration_keys ( access_key );' )
-            
-            for ( registration_key, service_id, account_type_id, access_key, expires ) in old_r_k_info:
-                
-                account_key = HydrusData.GenerateKey()
-                
-                self._c.execute( 'INSERT INTO registration_keys ( registration_key, service_id, account_type_id, account_key, access_key, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( sqlite3.Binary( registration_key ), service_id, account_type_id, sqlite3.Binary( account_key ), sqlite3.Binary( access_key ), expires ) )
-                
-            
-            #
-            
-            self._c.execute( 'COMMIT' )
-            
-            self._c.execute( 'PRAGMA foreign_keys = ON;' )
-            
-            self._c.execute( 'BEGIN IMMEDIATE' )
-            
-        
         if version == 131:
             
             accounts_info = self._c.execute( 'SELECT * FROM accounts;' ).fetchall()
@@ -2346,7 +2298,10 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( account_log_text ) > 0:
                 
-                with open( HC.BASE_DIR + os.path.sep + 'update to v132 new access keys.txt', 'wb' ) as f: f.write( account_log_text )
+                with open( os.path.join( HC.BASE_DIR, 'update to v132 new access keys.txt' ), 'wb' ) as f:
+                    
+                    f.write( account_log_text )
+                    
                 
             
             for ( service_id, account_type_id ) in account_type_map_info:
@@ -2383,9 +2338,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for ( one, two ) in itertools.product( hex_chars, hex_chars ):
                     
-                    new_dir = dir + os.path.sep + one + two
+                    new_dir = os.path.join( dir, one + two )
                     
-                    if not os.path.exists( new_dir ): os.mkdir( new_dir )
+                    if not os.path.exists( new_dir ):
+                        
+                        os.mkdir( new_dir )
+                        
                     
                 
             
@@ -2410,7 +2368,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
                 
-                path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
+                path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
                 
                 HydrusData.RecyclePath( path )
                 
@@ -2427,7 +2385,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
                 
-                path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
+                path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
                 
                 with open( path, 'rb' ) as f:
                     
@@ -2480,6 +2438,35 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             self._c.executemany( 'DELETE FROM mappings WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in bad_tag_ids ) )
+            
+        
+        if version == 179:
+            
+            print( 'moving updates about' )
+            
+            for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
+                
+                try:
+                    
+                    ( service_key_encoded, gumpf ) = filename.split( '_', 1 )
+                    
+                except ValueError:
+                    
+                    continue
+                    
+                
+                dest_dir = os.path.join( HC.SERVER_UPDATES_DIR, service_key_encoded )
+                
+                if not os.path.exists( dest_dir ):
+                    
+                    os.mkdir( dest_dir )
+                    
+                
+                source_path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
+                dest_path = os.path.join( dest_dir, gumpf )
+                
+                shutil.move( source_path, dest_path )
+                
             
         
         print( 'The server has updated to version ' + str( version + 1 ) )

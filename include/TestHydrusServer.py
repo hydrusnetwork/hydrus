@@ -41,6 +41,9 @@ class TestServer( unittest.TestCase ):
         services_manager._keys_to_services[ self._tag_service.GetServiceKey() ] = self._tag_service
         services_manager._keys_to_services[ self._admin_service.GetServiceKey() ] = self._admin_service
         
+        os.mkdir( ServerFiles.GetExpectedUpdateDir( self._file_service.GetServiceKey() ) )
+        os.mkdir( ServerFiles.GetExpectedUpdateDir( self._tag_service.GetServiceKey() ) )
+        
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
         account_key = HydrusData.GenerateKey()
@@ -69,6 +72,13 @@ class TestServer( unittest.TestCase ):
         time.sleep( 1 )
         
     
+    @classmethod
+    def tearDownClass( self ):
+        
+        shutil.rmtree( ServerFiles.GetExpectedUpdateDir( self._file_service.GetServiceKey() ) )
+        shutil.rmtree( ServerFiles.GetExpectedUpdateDir( self._tag_service.GetServiceKey() ) )
+        
+    
     def _test_basics( self, host, port ):
         
         connection = httplib.HTTPConnection( host, port, timeout = 10 )
@@ -88,7 +98,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        with open( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', 'rb' ) as f: favicon = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), 'rb' ) as f: favicon = f.read()
         
         connection.request( 'GET', '/favicon.ico' )
         
@@ -157,7 +167,7 @@ class TestServer( unittest.TestCase ):
         try: os.remove( path )
         except: pass
         
-        path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
 
         with open( path, 'rb' ) as f: file = f.read()
         
@@ -209,7 +219,10 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        with open( HC.STATIC_DIR + os.path.sep + 'local_booru_style.css', 'rb' ) as f: css = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), 'rb' ) as f:
+            
+            css = f.read()
+            
         
         connection.request( 'GET', '/style.css' )
         

@@ -122,7 +122,7 @@ class MessagingServiceProtocol( HydrusAMP ):
             if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
             else: message = 'This server is out of date; please ask its admin to update to the latest release.'
             
-            message = 'Network version mismatch! This server\'s network version is ' + HydrusData.ToString( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HydrusData.ToString( network_version ) + '! ' + message
+            message = 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message
             
             raise HydrusExceptions.NetworkVersionException( message )
             

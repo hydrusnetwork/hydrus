@@ -17,6 +17,7 @@ import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import HydrusNATPunch
+import HydrusPaths
 import HydrusSerialisable
 import HydrusServer
 import HydrusTagArchive
@@ -107,7 +108,7 @@ class MessageDB( object ):
                 
                 for file in files:
                     
-                    ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+                    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
                     
                     try:
                         
@@ -119,7 +120,7 @@ class MessageDB( object ):
                         
                     finally:
                         
-                        HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+                        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                         
                     
                 
@@ -294,7 +295,7 @@ class MessageDB( object ):
             
         else:
             
-            sql_predicates = [ '( contact_id_from = ' + HydrusData.ToString( contact_id ) + ' OR contact_id_to = ' + HydrusData.ToString( contact_id ) + ' )' ]
+            sql_predicates = [ '( contact_id_from = ' + str( contact_id ) + ' OR contact_id_to = ' + str( contact_id ) + ' )' ]
             
             if name != 'Anonymous':
                 
@@ -309,32 +310,32 @@ class MessageDB( object ):
                 
                 status_id = self._GetStatusId( status )
                 
-                sql_predicates.append( '( contact_id_to = ' + HydrusData.ToString( contact_id ) + ' AND status_id = ' + HydrusData.ToString( status_id ) + ')' )
+                sql_predicates.append( '( contact_id_to = ' + str( contact_id ) + ' AND status_id = ' + str( status_id ) + ')' )
                 
             
             if contact_from is not None:
                 
                 contact_id_from = self._GetContactId( contact_from )
                 
-                sql_predicates.append( 'contact_id_from = ' + HydrusData.ToString( contact_id_from ) )
+                sql_predicates.append( 'contact_id_from = ' + str( contact_id_from ) )
                 
             
             if contact_to is not None:
                 
                 contact_id_to = self._GetContactId( contact_to )
                 
-                sql_predicates.append( 'contact_id_to = ' + HydrusData.ToString( contact_id_to ) )
+                sql_predicates.append( 'contact_id_to = ' + str( contact_id_to ) )
                 
             
             if contact_started is not None:
                 
                 contact_id_started = self._GetContactId( contact_started )
                 
-                sql_predicates.append( 'conversation_id = message_id AND contact_id_from = ' + HydrusData.ToString( contact_id_started ) )
+                sql_predicates.append( 'conversation_id = message_id AND contact_id_from = ' + str( contact_id_started ) )
                 
             
-            if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + HydrusData.ToString( min_timestamp ) )
-            if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + HydrusData.ToString( max_timestamp ) )
+            if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + str( min_timestamp ) )
+            if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + str( max_timestamp ) )
             
             query_message_ids = { message_id for ( message_id, ) in self._c.execute( 'SELECT message_id FROM messages, message_destination_map USING ( message_id ) WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
             
@@ -375,7 +376,7 @@ class MessageDB( object ):
         num_inbox = len( convo_ids )
         
         if num_inbox == 0: inbox_string = 'message inbox empty'
-        else: inbox_string = HydrusData.ToString( num_inbox ) + ' in message inbox'
+        else: inbox_string = str( num_inbox ) + ' in message inbox'
         
         self.pub_after_commit( 'inbox_status', inbox_string )
         
@@ -491,7 +492,7 @@ class MessageDB( object ):
                     # we have a new contact from an outside source!
                     # let's generate a name that'll fit into the db
                     
-                    while self._c.execute( 'SELECT 1 FROM contacts WHERE name = ?;', ( name, ) ).fetchone() is not None: name += HydrusData.ToString( random.randint( 0, 9 ) )
+                    while self._c.execute( 'SELECT 1 FROM contacts WHERE name = ?;', ( name, ) ).fetchone() is not None: name += str( random.randint( 0, 9 ) )
                     
                 
             else:
@@ -1185,18 +1186,18 @@ class DB( HydrusDB.HydrusDB ):
         
         for deletee_filename in deletee_filenames:
             
-            deletee_path = path + os.path.sep + deletee_filename
+            deletee_path = os.path.join( path, deletee_filename )
             
             ClientData.DeletePath( deletee_path )
             
         
-        shutil.copy( self._db_path, path + os.path.sep + 'client.db' )
-        if os.path.exists( self._db_path + '-wal' ): shutil.copy( self._db_path + '-wal', path + os.path.sep + 'client.db-wal' )
+        shutil.copy( self._db_path, os.path.join( path, 'client.db' ) )
+        if os.path.exists( self._db_path + '-wal' ): shutil.copy( self._db_path + '-wal', os.path.join( path, 'client.db-wal' ) )
         
-        shutil.copytree( HC.CLIENT_ARCHIVES_DIR, path + os.path.sep + 'client_archives'  )
-        shutil.copytree( HC.CLIENT_FILES_DIR, path + os.path.sep + 'client_files' )
-        shutil.copytree( HC.CLIENT_THUMBNAILS_DIR, path + os.path.sep + 'client_thumbnails'  )
-        shutil.copytree( HC.CLIENT_UPDATES_DIR, path + os.path.sep + 'client_updates'  )
+        shutil.copytree( HC.CLIENT_ARCHIVES_DIR, os.path.join( path, 'client_archives' ) ) 
+        shutil.copytree( HC.CLIENT_FILES_DIR, os.path.join( path, 'client_files' ) )
+        shutil.copytree( HC.CLIENT_THUMBNAILS_DIR, os.path.join( path, 'client_thumbnails' ) )
+        shutil.copytree( HC.CLIENT_UPDATES_DIR, os.path.join( path, 'client_updates' ) )
         
         HydrusData.ShowText( 'Database backup done!' )
         
@@ -1300,7 +1301,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if move_location is not None:
                         
-                        move_path = move_location + os.path.sep + 'believed ' + hash.encode( 'hex' ) + ' actually ' + actual_hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                        move_filename = 'believed ' + hash.encode( 'hex' ) + ' actually ' + actual_hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                        
+                        move_path = os.path.join( move_location, move_filename )
                         
                         shutil.move( path, move_path )
                         
@@ -1375,7 +1378,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 except Exception as e:
                     
-                    error_messages.add( HydrusData.ToString( e ) )
+                    error_messages.add( HydrusData.ToUnicode( e ) )
                     
                 
             
@@ -1398,11 +1401,11 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( one, two ) in itertools.product( hex_chars, hex_chars ):
             
-            dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
+            dir = os.path.join( HC.CLIENT_FILES_DIR, one + two )
             
             if not os.path.exists( dir ): os.mkdir( dir )
             
-            dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
+            dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, one + two )
             
             if not os.path.exists( dir ): os.mkdir( dir )
             
@@ -1413,7 +1416,7 @@ class DB( HydrusDB.HydrusDB ):
         try: self._c.execute( 'BEGIN IMMEDIATE' )
         except Exception as e:
             
-            raise HydrusExceptions.DBAccessException( HydrusData.ToString( e ) )
+            raise HydrusExceptions.DBAccessException( HydrusData.ToUnicode( e ) )
             
         
         self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
@@ -2072,7 +2075,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             ( namespace_id, ) = result
                             
-                            predicates_phrase_1 = 'namespace_id = ' + HydrusData.ToString( namespace_id )
+                            predicates_phrase_1 = 'namespace_id = ' + str( namespace_id )
                             
                         
                     
@@ -2094,8 +2097,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
                 
-                if ':' in tag: predicates_phrase = 'namespace_id = ' + HydrusData.ToString( namespace_id ) + ' AND tag_id = ' + HydrusData.ToString( tag_id )
-                else: predicates_phrase = 'tag_id = ' + HydrusData.ToString( tag_id )
+                if ':' in tag: predicates_phrase = 'namespace_id = ' + str( namespace_id ) + ' AND tag_id = ' + str( tag_id )
+                else: predicates_phrase = 'tag_id = ' + str( tag_id )
                 
             except: predicates_phrase = '1 = 1'
             
@@ -2152,7 +2155,7 @@ class DB( HydrusDB.HydrusDB ):
             
             count_phrase = 'SELECT tag_id, COUNT( * ) FROM '
             
-            predicates.append( 'mappings.service_id = ' + HydrusData.ToString( tag_service_id ) )
+            predicates.append( 'mappings.service_id = ' + str( tag_service_id ) )
             
         
         if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
@@ -2163,7 +2166,7 @@ class DB( HydrusDB.HydrusDB ):
             
             table_phrase = 'mappings, files_info USING ( hash_id ) '
             
-            predicates.append( 'files_info.service_id = ' + HydrusData.ToString( file_service_id ) )
+            predicates.append( 'files_info.service_id = ' + str( file_service_id ) )
             
         
         predicates_phrase = 'WHERE ' + ' AND '.join( predicates ) + ' AND '
@@ -2417,14 +2420,14 @@ class DB( HydrusDB.HydrusDB ):
             
             file_service_id = self._GetServiceId( file_service_key )
             
-            predicates.append( 'files_info.service_id = ' + HydrusData.ToString( file_service_id ) )
+            predicates.append( 'files_info.service_id = ' + str( file_service_id ) )
             
         
         if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
             
             tag_service_id = self._GetServiceId( tag_service_key )
             
-            predicates.append( 'mappings.service_id = ' + HydrusData.ToString( tag_service_id ) )
+            predicates.append( 'mappings.service_id = ' + str( tag_service_id ) )
             
         
         if len( predicates ) > 0: predicates_phrase = ' AND '.join( predicates ) + ' AND '
@@ -2471,9 +2474,9 @@ class DB( HydrusDB.HydrusDB ):
         
         simple_preds = system_predicates.GetSimpleInfo()
         
-        if 'min_size' in simple_preds: sql_predicates.append( 'size > ' + HydrusData.ToString( simple_preds[ 'min_size' ] ) )
-        if 'size' in simple_preds: sql_predicates.append( 'size = ' + HydrusData.ToString( simple_preds[ 'size' ] ) )
-        if 'max_size' in simple_preds: sql_predicates.append( 'size < ' + HydrusData.ToString( simple_preds[ 'max_size' ] ) )
+        if 'min_size' in simple_preds: sql_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
+        if 'size' in simple_preds: sql_predicates.append( 'size = ' + str( simple_preds[ 'size' ] ) )
+        if 'max_size' in simple_preds: sql_predicates.append( 'size < ' + str( simple_preds[ 'max_size' ] ) )
         
         if 'mimes' in simple_preds:
             
@@ -2483,75 +2486,75 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( mime, ) = mimes
                 
-                sql_predicates.append( 'mime = ' + HydrusData.ToString( mime ) )
+                sql_predicates.append( 'mime = ' + str( mime ) )
                 
             else: sql_predicates.append( 'mime IN ' + HydrusData.SplayListForDB( mimes ) )
             
         
-        if 'min_timestamp' in simple_preds: sql_predicates.append( 'timestamp >= ' + HydrusData.ToString( simple_preds[ 'min_timestamp' ] ) )
-        if 'max_timestamp' in simple_preds: sql_predicates.append( 'timestamp <= ' + HydrusData.ToString( simple_preds[ 'max_timestamp' ] ) )
+        if 'min_timestamp' in simple_preds: sql_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_timestamp' ] ) )
+        if 'max_timestamp' in simple_preds: sql_predicates.append( 'timestamp <= ' + str( simple_preds[ 'max_timestamp' ] ) )
         
-        if 'min_width' in simple_preds: sql_predicates.append( 'width > ' + HydrusData.ToString( simple_preds[ 'min_width' ] ) )
-        if 'width' in simple_preds: sql_predicates.append( 'width = ' + HydrusData.ToString( simple_preds[ 'width' ] ) )
-        if 'max_width' in simple_preds: sql_predicates.append( 'width < ' + HydrusData.ToString( simple_preds[ 'max_width' ] ) )
+        if 'min_width' in simple_preds: sql_predicates.append( 'width > ' + str( simple_preds[ 'min_width' ] ) )
+        if 'width' in simple_preds: sql_predicates.append( 'width = ' + str( simple_preds[ 'width' ] ) )
+        if 'max_width' in simple_preds: sql_predicates.append( 'width < ' + str( simple_preds[ 'max_width' ] ) )
         
-        if 'min_height' in simple_preds: sql_predicates.append( 'height > ' + HydrusData.ToString( simple_preds[ 'min_height' ] ) )
-        if 'height' in simple_preds: sql_predicates.append( 'height = ' + HydrusData.ToString( simple_preds[ 'height' ] ) )
-        if 'max_height' in simple_preds: sql_predicates.append( 'height < ' + HydrusData.ToString( simple_preds[ 'max_height' ] ) )
+        if 'min_height' in simple_preds: sql_predicates.append( 'height > ' + str( simple_preds[ 'min_height' ] ) )
+        if 'height' in simple_preds: sql_predicates.append( 'height = ' + str( simple_preds[ 'height' ] ) )
+        if 'max_height' in simple_preds: sql_predicates.append( 'height < ' + str( simple_preds[ 'max_height' ] ) )
         
-        if 'min_num_pixels' in simple_preds: sql_predicates.append( 'width * height > ' + HydrusData.ToString( simple_preds[ 'min_num_pixels' ] ) )
-        if 'num_pixels' in simple_preds: sql_predicates.append( 'width * height = ' + HydrusData.ToString( simple_preds[ 'num_pixels' ] ) )
-        if 'max_num_pixels' in simple_preds: sql_predicates.append( 'width * height < ' + HydrusData.ToString( simple_preds[ 'max_num_pixels' ] ) )
+        if 'min_num_pixels' in simple_preds: sql_predicates.append( 'width * height > ' + str( simple_preds[ 'min_num_pixels' ] ) )
+        if 'num_pixels' in simple_preds: sql_predicates.append( 'width * height = ' + str( simple_preds[ 'num_pixels' ] ) )
+        if 'max_num_pixels' in simple_preds: sql_predicates.append( 'width * height < ' + str( simple_preds[ 'max_num_pixels' ] ) )
         
         if 'min_ratio' in simple_preds:
             
             ( ratio_width, ratio_height ) = simple_preds[ 'min_ratio' ]
             
-            sql_predicates.append( '( width * 1.0 ) / height > ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
+            sql_predicates.append( '( width * 1.0 ) / height > ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
             
         if 'ratio' in simple_preds:
             
             ( ratio_width, ratio_height ) = simple_preds[ 'ratio' ]
             
-            sql_predicates.append( '( width * 1.0 ) / height = ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
+            sql_predicates.append( '( width * 1.0 ) / height = ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
             
         if 'max_ratio' in simple_preds:
             
             ( ratio_width, ratio_height ) = simple_preds[ 'max_ratio' ]
             
-            sql_predicates.append( '( width * 1.0 ) / height < ' + HydrusData.ToString( float( ratio_width ) ) + ' / ' + HydrusData.ToString( ratio_height ) )
+            sql_predicates.append( '( width * 1.0 ) / height < ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
             
         
-        if 'min_num_words' in simple_preds: sql_predicates.append( 'num_words > ' + HydrusData.ToString( simple_preds[ 'min_num_words' ] ) )
+        if 'min_num_words' in simple_preds: sql_predicates.append( 'num_words > ' + str( simple_preds[ 'min_num_words' ] ) )
         if 'num_words' in simple_preds:
             
             num_words = simple_preds[ 'num_words' ]
             
             if num_words == 0: sql_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
-            else: sql_predicates.append( 'num_words = ' + HydrusData.ToString( num_words ) )
+            else: sql_predicates.append( 'num_words = ' + str( num_words ) )
             
         if 'max_num_words' in simple_preds:
             
             max_num_words = simple_preds[ 'max_num_words' ]
             
-            if max_num_words == 0: sql_predicates.append( 'num_words < ' + HydrusData.ToString( max_num_words ) )
-            else: sql_predicates.append( '( num_words < ' + HydrusData.ToString( max_num_words ) + ' OR num_words IS NULL )' )
+            if max_num_words == 0: sql_predicates.append( 'num_words < ' + str( max_num_words ) )
+            else: sql_predicates.append( '( num_words < ' + str( max_num_words ) + ' OR num_words IS NULL )' )
             
         
-        if 'min_duration' in simple_preds: sql_predicates.append( 'duration > ' + HydrusData.ToString( simple_preds[ 'min_duration' ] ) )
+        if 'min_duration' in simple_preds: sql_predicates.append( 'duration > ' + str( simple_preds[ 'min_duration' ] ) )
         if 'duration' in simple_preds:
             
             duration = simple_preds[ 'duration' ]
             
             if duration == 0: sql_predicates.append( '( duration IS NULL OR duration = 0 )' )
-            else: sql_predicates.append( 'duration = ' + HydrusData.ToString( duration ) )
+            else: sql_predicates.append( 'duration = ' + str( duration ) )
             
         if 'max_duration' in simple_preds:
             
             max_duration = simple_preds[ 'max_duration' ]
             
-            if max_duration == 0: sql_predicates.append( 'duration < ' + HydrusData.ToString( max_duration ) )
-            else: sql_predicates.append( '( duration < ' + HydrusData.ToString( max_duration ) + ' OR duration IS NULL )' )
+            if max_duration == 0: sql_predicates.append( 'duration < ' + str( max_duration ) )
+            else: sql_predicates.append( '( duration < ' + str( max_duration ) + ' OR duration IS NULL )' )
             
         
         if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
@@ -2579,6 +2582,11 @@ class DB( HydrusDB.HydrusDB ):
                 else: query_hash_ids.intersection_update( wildcard_query_hash_ids )
                 
             
+            if len( sql_predicates ) > 0:
+                
+                query_hash_ids.intersection_update( [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
+                
+            
         else:
             
             if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
@@ -2598,7 +2606,7 @@ class DB( HydrusDB.HydrusDB ):
                     query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
                     
                 
-                if len( sql_predicates ) > 1:
+                if len( sql_predicates ) > 0:
                     
                     query_hash_ids.intersection_update( [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
                     
@@ -2687,8 +2695,8 @@ class DB( HydrusDB.HydrusDB ):
             elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
             else:
                 
-                if operator == u'\u2248': predicate = HydrusData.ToString( value * 0.95 ) + ' < rating AND rating < ' + HydrusData.ToString( value * 1.05 )
-                else: predicate = 'rating ' + operator + ' ' + HydrusData.ToString( value )
+                if operator == u'\u2248': predicate = str( value * 0.95 ) + ' < rating AND rating < ' + str( value * 1.05 )
+                else: predicate = 'rating ' + operator + ' ' + str( value )
                 
                 query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
                 
@@ -2782,7 +2790,7 @@ class DB( HydrusDB.HydrusDB ):
             tag_predicates_care_about_zero_counts = len( tag_predicates ) > 0 and False not in ( pred( 0 ) for pred in tag_predicates )
             
             if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
-            else: service_phrase = 'service_id = ' + HydrusData.ToString( tag_service_id ) + ' AND '
+            else: service_phrase = 'service_id = ' + str( tag_service_id ) + ' AND '
             
             if num_tags_zero or num_tags_nonzero or tag_predicates_care_about_zero_counts:
                 
@@ -2849,14 +2857,14 @@ class DB( HydrusDB.HydrusDB ):
             
             file_service_id = self._GetServiceId( file_service_key )
             
-            predicates.append( 'files_info.service_id = ' + HydrusData.ToString( file_service_id ) )
+            predicates.append( 'files_info.service_id = ' + str( file_service_id ) )
             
         
         if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
             
             tag_service_id = self._GetServiceId( tag_service_key )
             
-            predicates.append( 'mappings.service_id = ' + HydrusData.ToString( tag_service_id ) )
+            predicates.append( 'mappings.service_id = ' + str( tag_service_id ) )
             
         
         if len( predicates ) > 0: predicates_phrase = ' AND '.join( predicates ) + ' AND '
@@ -2903,14 +2911,14 @@ class DB( HydrusDB.HydrusDB ):
             
             file_service_id = self._GetServiceId( file_service_key )
             
-            predicates.append( 'files_info.service_id = ' + HydrusData.ToString( file_service_id ) )
+            predicates.append( 'files_info.service_id = ' + str( file_service_id ) )
             
         
         if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
             
             tag_service_id = self._GetServiceId( tag_service_key )
             
-            predicates.append( 'mappings.service_id = ' + HydrusData.ToString( tag_service_id ) )
+            predicates.append( 'mappings.service_id = ' + str( tag_service_id ) )
             
         
         if len( predicates ) > 0: predicates_phrase = ' AND '.join( predicates ) + ' AND '
@@ -4142,7 +4150,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    hta = HydrusTagArchive.HydrusTagArchive( HC.CLIENT_ARCHIVES_DIR + os.path.sep + filename )
+                    hta = HydrusTagArchive.HydrusTagArchive( os.path.join( HC.CLIENT_ARCHIVES_DIR, filename ) )
                     
                     archive_name = filename[:-3]
                     
@@ -4183,7 +4191,7 @@ class DB( HydrusDB.HydrusDB ):
         
         db_traceback = os.linesep.join( traceback.format_exception( etype, value, tb ) )
         
-        new_e = HydrusExceptions.DBException( HydrusData.ToString( e ), 'Unknown Caller, probably GUI.', db_traceback )
+        new_e = HydrusExceptions.DBException( HydrusData.ToUnicode( e ), 'Unknown Caller, probably GUI.', db_traceback )
         
         if job.IsSynchronous(): job.PutResult( new_e )
         else: HydrusData.ShowException( new_e )
@@ -4922,20 +4930,6 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
-    def _RecalcCombinedMappings( self ):
-        
-        self._c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
-        
-        service_ids = self._GetServiceIds( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
-        
-        for service_id in service_ids:
-            
-            self._c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, status FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status IN ( ?, ? );', ( self._combined_tag_service_id, service_id, HC.CURRENT, HC.PENDING ) )
-            
-        
-        self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
-        
-    
     def _ResetService( self, service_key, delete_updates = False ):
         
         service_id = self._GetServiceId( service_key )
@@ -5240,56 +5234,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateDB( self, version ):
         
-        self._controller.pub( 'splash_set_title_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
-        
-        if version == 125:
-            
-            options = self._GetOptions()
-            
-            options[ 'default_tag_repository' ] = options[ 'default_tag_repository' ].GetServiceKey()
-            
-            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
-            
-            #
-            
-            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) ).fetchall()
-            
-            for ( dump_type, dump_name, dump ) in results:
-                
-                advanced_tag_options = dump[ 'advanced_tag_options' ]
-                
-                new_advanced_tag_options = {}
-                
-                for ( service_identifier, namespaces ) in advanced_tag_options:
-                    
-                    new_advanced_tag_options[ service_identifier.GetServiceKey() ] = namespaces
-                    
-                
-                dump[ 'advanced_tag_options' ] = new_advanced_tag_options
-                
-                self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
-                
-            
-        
-        if version == 126:
-            
-            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
-            
-        
-        if version == 130:
-            
-            self._c.execute( 'DROP TABLE tag_service_precedence;' )
-            
-            #
-            
-            self._combined_tag_service_id = self._GetServiceId( CC.COMBINED_TAG_SERVICE_KEY ) # needed for recalccombinedmappings
-            
-            service_ids = self._GetServiceIds( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
-            
-            for service_id in service_ids: self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
-            
-            self._RecalcCombinedMappings()
-            
+        self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
         
         if version == 131:
             
@@ -5351,7 +5296,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 with open( path, 'rb' ) as f:
                     
-                    for block in HydrusData.ReadFileLikeAsBlocks( f ): h_sha512.update( block )
+                    for block in HydrusPaths.ReadFileLikeAsBlocks( f ): h_sha512.update( block )
                     
                     sha512 = h_sha512.digest()
                     
@@ -5618,7 +5563,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
                 
-                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                path = os.path.join( HC.CLIENT_UPDATES_DIR, filename )
                 
                 ClientData.DeletePath( path )
                 
@@ -5652,7 +5597,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
                 
-                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                path = os.path.join( HC.CLIENT_UPDATES_DIR, filename )
                 
                 with open( path, 'rb' ) as f:
                     
@@ -5778,15 +5723,15 @@ class DB( HydrusDB.HydrusDB ):
                     continue
                     
                 
-                dest_dir = HC.CLIENT_UPDATES_DIR + os.path.sep + service_key_encoded
+                dest_dir = os.path.join( HC.CLIENT_UPDATES_DIR, service_key_encoded )
                 
                 if not os.path.exists( dest_dir ):
                     
                     os.mkdir( dest_dir )
                     
                 
-                source_path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
-                dest_path = dest_dir + os.path.sep + gumpf
+                source_path = os.path.join( HC.CLIENT_UPDATES_DIR, filename )
+                dest_path = os.path.join( dest_dir, gumpf )
                 
                 shutil.move( source_path, dest_path )
                 
@@ -6133,7 +6078,7 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
             
         
-        self._controller.pub( 'splash_set_title_text', 'updating db to v' + HydrusData.ToString( version + 1 ) )
+        self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
@@ -6453,7 +6398,7 @@ class DB( HydrusDB.HydrusDB ):
                 info[ 'port' ] = server_options[ 'port' ]
                 info[ 'access_key' ] = service_keys_to_access_keys[ service_key ]
                 
-                name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + HydrusData.ToString( info[ 'port' ] )
+                name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + str( info[ 'port' ] )
                 
                 self._AddService( service_key, service_type, name, info )
                 
@@ -6740,18 +6685,20 @@ class DB( HydrusDB.HydrusDB ):
             
             if deletee_filename.startswith( 'client' ):
                 
-                deletee_path = HC.DB_DIR + os.path.sep + deletee_filename
+                deletee_path = os.path.join( HC.DB_DIR, deletee_filename )
                 
                 ClientData.DeletePath( deletee_path )
                 
             
         
-        shutil.copy( path + os.path.sep + 'client.db', self._db_path )
-        if os.path.exists( path + os.path.sep + 'client.db-wal' ): shutil.copy( path + os.path.sep + 'client.db-wal', self._db_path + '-wal' )
+        shutil.copy( os.path.join( path, 'client.db' ), self._db_path )
         
-        shutil.copytree( path + os.path.sep + 'client_archives', HC.CLIENT_ARCHIVES_DIR )
-        shutil.copytree( path + os.path.sep + 'client_files', HC.CLIENT_FILES_DIR )
-        shutil.copytree( path + os.path.sep + 'client_thumbnails', HC.CLIENT_THUMBNAILS_DIR )
-        shutil.copytree( path + os.path.sep + 'client_updates', HC.CLIENT_UPDATES_DIR )
+        wal_path = os.path.join( path, 'client.db-wal' )
+        if os.path.exists( wal_path ): shutil.copy( wal_path, self._db_path + '-wal' )
+        
+        shutil.copytree( os.path.join( path, 'client_archives' ), HC.CLIENT_ARCHIVES_DIR )
+        shutil.copytree( os.path.join( path, 'client_files' ), HC.CLIENT_FILES_DIR )
+        shutil.copytree( os.path.join( path, 'client_thumbnails' ), HC.CLIENT_THUMBNAILS_DIR )
+        shutil.copytree( os.path.join( path, 'client_updates' ), HC.CLIENT_UPDATES_DIR )
         
     

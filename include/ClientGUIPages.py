@@ -52,7 +52,13 @@ class Page( wx.SplitterWindow ):
         self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, initial_media_results )
         
         self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
+        
         wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
+        
+        if HC.options[ 'hide_preview' ]:
+            
+            wx.CallAfter( self._search_preview_split.Unsplit, self._preview_panel )
+            
         
         HydrusGlobals.client_controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
         HydrusGlobals.client_controller.sub( self, 'SwapMediaPanel', 'swap_media_panel' )
@@ -60,9 +66,19 @@ class Page( wx.SplitterWindow ):
     
     def CleanBeforeDestroy( self ): self._management_panel.CleanBeforeDestroy()
     
-    def EventPreviewUnsplit( self, event ): self._search_preview_split.Unsplit( self._preview_panel )
+    def EventPreviewUnsplit( self, event ):
+        
+        self._search_preview_split.Unsplit( self._preview_panel )
+        
+        HydrusGlobals.client_controller.pub( 'set_focus', self._page_key, None )
+        
     
-    def EventUnsplit( self, event ): self.Unsplit( self._search_preview_split )
+    def EventUnsplit( self, event ):
+        
+        self.Unsplit( self._search_preview_split )
+        
+        HydrusGlobals.client_controller.pub( 'set_focus', self._page_key, None )
+        
     
     def GetManagementController( self ):
         
@@ -87,10 +103,24 @@ class Page( wx.SplitterWindow ):
     
     def GetSashPositions( self ):
         
-        if self.IsSplit(): x = self.GetSashPosition()
+        if self.IsSplit():
+            
+            x = self.GetSashPosition()
+            
         else: x = HC.options[ 'hpos' ]
         
-        if self._search_preview_split.IsSplit(): y = -1 * self._preview_panel.GetSize()[1]
+        if self._search_preview_split.IsSplit():
+            
+            # I used to do:
+            # y = -1 * self._preview_panel.GetSize()[1]
+            # but that crept 4 pixels smaller every time, I assume due to sash caret height
+            
+            ( sps_x, sps_y ) = self._search_preview_split.GetClientSize()
+            
+            sash_y = self._search_preview_split.GetSashPosition()
+            
+            y = -1 * ( sps_y - sash_y )
+            
         else: y = HC.options[ 'vpos' ]
         
         return ( x, y )
@@ -112,6 +142,8 @@ class Page( wx.SplitterWindow ):
         if self.IsSplit():
             
             self.Unsplit( self._search_preview_split )
+            
+            HydrusGlobals.client_controller.pub( 'set_focus', self._page_key, None )
             
         else:
             

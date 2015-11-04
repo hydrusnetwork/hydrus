@@ -32,6 +32,22 @@ ID_TIMER_DROPDOWN_HIDE = wx.NewId()
 ID_TIMER_AC_LAG = wx.NewId()
 ID_TIMER_POPUP = wx.NewId()
 
+def IsWXAncestor( child, ancestor ):
+    
+    parent = child
+    
+    while not isinstance( parent, wx.TopLevelWindow ):
+        
+        if parent == ancestor:
+            
+            return True
+            
+        
+        parent = parent.GetParent()
+        
+    
+    return False
+    
 class AnimatedStaticTextTimestamp( wx.StaticText ):
     
     def __init__( self, parent, prefix, rendering_function, timestamp, suffix ):
@@ -239,7 +255,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 current_page = gui.GetCurrentPage()
                 
-                visible = ClientData.IsWXAncestor( self, current_page )
+                visible = IsWXAncestor( self, current_page )
                 
             
         else:
@@ -639,7 +655,41 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._text_ctrl.SetValue( '' )
             
         
-        HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+        entry_predicates = []
+        
+        for predicate in predicates:
+            
+            predicate = predicate.GetCountlessCopy()
+            
+            ( predicate_type, value, inclusive ) = predicate.GetInfo()
+            
+            if predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
+                
+                import ClientGUIDialogs
+                
+                with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        entry_predicates.extend( dlg.GetPredicates() )
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+            elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED:
+                
+                entry_predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
+                
+            else:
+                
+                entry_predicates.append( predicate )
+                
+            
+        
+        HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, entry_predicates )
         
     
     def _BroadcastCurrentText( self ):
@@ -1160,7 +1210,7 @@ class BufferedWindow( wx.Window ):
             
             self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
             
-        else: self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
+        else: self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
@@ -1544,7 +1594,7 @@ class Frame( wx.Frame ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
-        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
+        self.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
         
     
     def SetInitialSize( self, ( width, height ) ):
@@ -1996,7 +2046,7 @@ class ListBox( wx.ScrolledWindow ):
         self._ordered_strings = []
         self._strings_to_terms = {}
         
-        self._client_bmp = wx.EmptyBitmap( 0, 0, 24 )
+        self._client_bmp = wx.EmptyBitmap( 20, 20, 24 )
         
         self._selected_indices = set()
         self._selected_terms = set()
@@ -2321,7 +2371,7 @@ class ListBox( wx.ScrolledWindow ):
                     
                 elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
                     
-                    hit_index = self._last_hit_index - self._num_rows_per_page
+                    hit_index = max( 0, self._last_hit_index - self._num_rows_per_page )
                     
                 elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
                     
@@ -2418,6 +2468,7 @@ class ListBoxTags( ListBox ):
         self._background_colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'tags_box' ] )
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
+        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseMiddleClick )
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
@@ -2448,6 +2499,28 @@ class ListBoxTags( ListBox ):
         else: ( r, g, b ) = namespace_colours[ '' ]
         
         return ( r, g, b )
+        
+    
+    def _NewSearchPage( self ):
+
+        predicates = []
+        
+        for term in self._selected_terms:
+            
+            if isinstance( term, ClientData.Predicate ):
+                
+                predicates.append( term )
+                
+            else:
+                
+                predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
+                
+            
+        
+        if len( predicates ) > 0:
+            
+            HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates )
+            
         
     
     def EventMenu( self, event ):
@@ -2501,21 +2574,7 @@ class ListBoxTags( ListBox ):
                 
             elif command == 'new_search_page':
                 
-                predicates = []
-                
-                for term in self._selected_terms:
-                    
-                    if isinstance( term, ClientData.Predicate ):
-                        
-                        predicates.append( term )
-                        
-                    else:
-                        
-                        predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
-                        
-                    
-                
-                HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates )
+                self._NewSearchPage()
                 
             elif command in ( 'parent', 'sibling' ):
                 
@@ -2537,6 +2596,18 @@ class ListBoxTags( ListBox ):
                 return # this is about select_up and select_down
                 
             
+        
+    
+    def EventMouseMiddleClick( self, event ):
+        
+        hit_index = self._GetIndexUnderMouse( event )
+        
+        shift = event.ShiftDown()
+        ctrl = event.CmdDown() or event.ControlDown()
+        
+        self._Hit( shift, ctrl, hit_index )
+        
+        self._NewSearchPage()
         
     
     def EventMouseRightClick( self, event ):
@@ -2707,9 +2778,18 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
     
     def _Hit( self, shift, ctrl, hit_index ):
         
-        # this realigns the hit index in the up direction
-        
         if hit_index is not None:
+            
+            if hit_index == -1 or hit_index > len( self._ordered_strings ):
+                
+                hit_index = len( self._ordered_strings ) - 1
+                
+            elif hit_index == len( self._ordered_strings ) or hit_index < -1:
+                
+                hit_index = 0
+                
+            
+            # this realigns the hit index in the up direction
             
             hit_term = self._strings_to_terms[ self._ordered_strings[ hit_index ] ]
             
@@ -3191,83 +3271,61 @@ class ListBoxTagsPredicates( ListBoxTags ):
         local_predicate = ClientSearch.SYSTEM_PREDICATE_LOCAL
         not_local_predicate = ClientSearch.SYSTEM_PREDICATE_NOT_LOCAL
         
-        for proto_predicate in predicates:
+        predicates_to_be_added = set()
+        predicates_to_be_removed = set()
+        
+        for predicate in predicates:
             
-            predicates_to_be_added = set()
-            predicates_to_be_removed = set()
+            predicate = predicate.GetCountlessCopy()
             
-            proto_predicate = proto_predicate.GetCountlessCopy()
-            
-            ( predicate_type, value, inclusive ) = proto_predicate.GetInfo()
-            
-            if predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
+            if self._HasPredicate( predicate ):
                 
-                import ClientGUIDialogs
+                predicates_to_be_removed.add( predicate )
                 
-                with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK: entry_predicates = dlg.GetPredicates()
-                    else: return
-                    
-                
-            elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: entry_predicates = ( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), )
             else:
                 
-                entry_predicates = ( proto_predicate, )
+                predicates_to_be_added.add( predicate )
                 
-            
-            for predicate in entry_predicates:
+                if predicate == inbox_predicate and self._HasPredicate( archive_predicate ):
+                    
+                    predicates_to_be_removed.add( archive_predicate )
+                    
+                elif predicate == archive_predicate and self._HasPredicate( inbox_predicate ):
+                    
+                    predicates_to_be_removed.add( inbox_predicate )
+                    
                 
-                if self._HasPredicate( predicate ):
+                if predicate == local_predicate and self._HasPredicate( not_local_predicate ):
                     
-                    predicates_to_be_removed.add( predicate )
+                    predicates_to_be_removed.add( not_local_predicate )
                     
-                else:
+                elif predicate == not_local_predicate and self._HasPredicate( local_predicate ):
                     
-                    predicates_to_be_added.add( predicate )
-                    
-                    if predicate == inbox_predicate and self._HasPredicate( archive_predicate ):
-                        
-                        predicates_to_be_removed.add( archive_predicate )
-                        
-                    elif predicate == archive_predicate and self._HasPredicate( inbox_predicate ):
-                        
-                        predicates_to_be_removed.add( inbox_predicate )
-                        
-                    
-                    if predicate == local_predicate and self._HasPredicate( not_local_predicate ):
-                        
-                        predicates_to_be_removed.add( not_local_predicate )
-                        
-                    elif predicate == not_local_predicate and self._HasPredicate( local_predicate ):
-                        
-                        predicates_to_be_removed.add( local_predicate )
-                        
+                    predicates_to_be_removed.add( local_predicate )
                     
                 
             
-            for predicate in predicates_to_be_added:
-                
-                predicate_string = predicate.GetUnicode()
-                
-                self._ordered_strings.append( predicate_string )
-                self._strings_to_terms[ predicate_string ] = predicate
-                
+        
+        for predicate in predicates_to_be_added:
             
-            for predicate in predicates_to_be_removed:
-                
-                for ( s, existing_predicate ) in self._strings_to_terms.items():
-                    
-                    if existing_predicate == predicate:
-                        
-                        self._ordered_strings.remove( s )
-                        del self._strings_to_terms[ s ]
-                        
-                        break
-                        
-                    
-                
+            predicate_string = predicate.GetUnicode()
             
+            self._ordered_strings.append( predicate_string )
+            self._strings_to_terms[ predicate_string ] = predicate
+            
+        
+        for predicate in predicates_to_be_removed:
+            
+            for ( s, existing_predicate ) in self._strings_to_terms.items():
+                
+                if existing_predicate == predicate:
+                    
+                    self._ordered_strings.remove( s )
+                    del self._strings_to_terms[ s ]
+                    
+                    break
+                    
+                
             
         
         self._ordered_strings.sort()
@@ -4023,7 +4081,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_text_1' )
             
-            if self._text_1.GetLabel() != text: self._text_1.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
+            if self._text_1.GetLabel() != text: self._text_1.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._text_1.Show()
             
@@ -4048,7 +4106,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_text_2' )
             
-            if self._text_2.GetLabel() != text: self._text_2.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
+            if self._text_2.GetLabel() != text: self._text_2.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._text_2.Show()
             
@@ -4088,7 +4146,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_traceback' )
             
-            if self._tb_text.GetLabel() != text: self._tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
+            if self._tb_text.GetLabel() != text: self._tb_text.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._show_tb_button.Show()
             
@@ -4102,7 +4160,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_caller_traceback' )
             
-            if self._caller_tb_text.GetLabel() != text: self._caller_tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
+            if self._caller_tb_text.GetLabel() != text: self._caller_tb_text.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._show_caller_tb_button.Show()
             
@@ -4116,7 +4174,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_db_traceback' )
             
-            if self._db_tb_text.GetLabel() != text: self._db_tb_text.SetLabel( self._ProcessText( HydrusData.ToString( text ) ) )
+            if self._db_tb_text.GetLabel() != text: self._db_tb_text.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._show_db_tb_button.Show()
             
@@ -5233,7 +5291,7 @@ class SeedCacheControl( SaneListCtrl ):
         
         ( seed, status, added_timestamp, last_modified_timestamp, note ) = info_tuple
         
-        pretty_seed = HydrusData.ToString( seed )
+        pretty_seed = HydrusData.ToUnicode( seed )
         pretty_status = CC.status_string_lookup[ status ]
         pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp )
         pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp )
@@ -5580,7 +5638,9 @@ class ShowKeys( Frame ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                with open( dlg.GetPath(), 'wb' ) as f: f.write( self._text )
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                with open( path, 'wb' ) as f: f.write( self._text )
                 
             
         

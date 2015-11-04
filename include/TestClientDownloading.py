@@ -2,11 +2,11 @@ import ClientConstants as CC
 import ClientDefaults
 import collections
 import HydrusConstants as HC
+import HydrusPaths
 import ClientDownloading
 import os
 import TestConstants
 import unittest
-import HydrusFileHandling
 import HydrusGlobals
 
 class TestDownloaders( unittest.TestCase ):
@@ -27,8 +27,8 @@ class TestDownloaders( unittest.TestCase ):
     
     def test_deviantart( self ):
         
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_gallery.html' ) as f: da_gallery = f.read()
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_page.html' ) as f: da_page = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'da_gallery.html' ) ) as f: da_gallery = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'da_page.html' ) ) as f: da_page = f.read()
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://sakimichan.deviantart.com/gallery/?catpath=/&offset=0', da_gallery )
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', da_page )
@@ -52,7 +52,7 @@ class TestDownloaders( unittest.TestCase ):
         
         tags = ['title:Sailor moon in PJs', 'creator:sakimichan']
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -62,7 +62,7 @@ class TestDownloaders( unittest.TestCase ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         info = ( data, tags )
@@ -74,8 +74,8 @@ class TestDownloaders( unittest.TestCase ):
     
     def test_newgrounds( self ):
         
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_games.html' ) as f: newgrounds_gallery_games = f.read()
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_movies.html' ) as f: newgrounds_gallery_movies = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'newgrounds_gallery_games.html' ) ) as f: newgrounds_gallery_games = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'newgrounds_gallery_movies.html' ) ) as f: newgrounds_gallery_movies = f.read()
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/games/', newgrounds_gallery_games )
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/movies/', newgrounds_gallery_movies )
@@ -105,13 +105,13 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_page.html' ) as f: newgrounds_page = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'newgrounds_page.html' ) ) as f: newgrounds_page = f.read()
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://www.newgrounds.com/portal/view/583715', newgrounds_page )
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://uploads.ungrounded.net/583000/583715_catdust.swf', 'swf file' )
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -123,7 +123,7 @@ class TestDownloaders( unittest.TestCase ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         info = ( data, tags )
@@ -135,8 +135,8 @@ class TestDownloaders( unittest.TestCase ):
     
     def test_pixiv( self ):
         
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_gallery.html' ) as f: pixiv_gallery = f.read()
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_image_page.html' ) as f: pixiv_page = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'pixiv_gallery.html' ) ) as f: pixiv_gallery = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'pixiv_image_page.html' ) ) as f: pixiv_page = f.read()
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=50926312', pixiv_page )
@@ -159,7 +159,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -169,7 +169,7 @@ class TestDownloaders( unittest.TestCase ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         info = ( data, tags )
@@ -183,8 +183,8 @@ class TestDownloaders( unittest.TestCase ):
     
     def test_sankaku( self ):
         
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_gallery.html' ) as f: sankaku_gallery = f.read()
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_page.html' ) as f: sankaku_page = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'sankaku_gallery.html' ) ) as f: sankaku_gallery = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'sankaku_page.html' ) ) as f: sankaku_page = f.read()
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/?tags=animal_ears&page=1', sankaku_gallery )
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4324703', sankaku_page )
@@ -208,7 +208,7 @@ class TestDownloaders( unittest.TestCase ):
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/c5/c3/c5c3c91ca68bd7662f546cc44fe0d378.jpg?4324703', 'image file' )
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -218,7 +218,7 @@ class TestDownloaders( unittest.TestCase ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         info = ( data, tags )
@@ -229,12 +229,12 @@ class TestDownloaders( unittest.TestCase ):
         
         # flash is tricky for sankaku
         
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_flash.html' ) as f: sankaku_flash = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'sankaku_flash.html' ) ) as f: sankaku_flash = f.read()
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4318061', sankaku_flash )
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/48/ce/48cecd707d8a562d47db74d934505f51.swf?4318061', 'swf file' )
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -244,7 +244,7 @@ class TestDownloaders( unittest.TestCase ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         self.assertEqual( data, 'swf file' )
@@ -252,8 +252,8 @@ class TestDownloaders( unittest.TestCase ):
     
     def test_booru_e621( self ):
         
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_gallery.html' ) as f: e621_gallery = f.read()
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_page.html' ) as f: e621_page = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'e621_gallery.html' ) ) as f: e621_gallery = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'e621_page.html' ) ) as f: e621_page = f.read()
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'https://e621.net/post/index/1/hair', e621_gallery )
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'https://e621.net/post/show/672179/2015-ambiguous_gender-animal_genitalia-anon-balls-', e621_page )
@@ -277,7 +277,7 @@ class TestDownloaders( unittest.TestCase ):
         
         HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'https://static1.e621.net/data/75/88/758892ccca10cef5d242b9f49a0b2a13.png', 'png file' )
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -287,7 +287,7 @@ class TestDownloaders( unittest.TestCase ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         info = ( data, tags )
@@ -299,10 +299,10 @@ class TestDownloaders( unittest.TestCase ):
     
     def test_hentai_foundry( self ):
         
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_picture_gallery.html' ) as f: picture_gallery = f.read()
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_scrap_gallery.html' ) as f: scrap_gallery = f.read()
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_picture_page.html' ) as f: picture_page = f.read()
-        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_scrap_page.html' ) as f: scrap_page = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'hf_picture_gallery.html' ) ) as f: picture_gallery = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'hf_scrap_gallery.html' ) ) as f: scrap_gallery = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'hf_picture_page.html' ) ) as f: picture_page = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'testing', 'hf_scrap_page.html' ) ) as f: scrap_page = f.read()
         
         # what about page/1 or whatever?
         
@@ -345,7 +345,7 @@ class TestDownloaders( unittest.TestCase ):
         
         # ask for specific url
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -355,7 +355,7 @@ class TestDownloaders( unittest.TestCase ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         info = ( data, tags )
@@ -364,7 +364,7 @@ class TestDownloaders( unittest.TestCase ):
         
         self.assertEqual( info, expected_info )
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -374,7 +374,7 @@ class TestDownloaders( unittest.TestCase ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         info = ( data, tags )

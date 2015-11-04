@@ -23,7 +23,7 @@ class HydrusDB( object ):
         self._local_shutdown = False
         self._loop_finished = False
         
-        self._db_path = HC.DB_DIR + os.path.sep + self.DB_NAME + '.db'
+        self._db_path = os.path.join( HC.DB_DIR, self.DB_NAME + '.db' )
         
         self._jobs = Queue.PriorityQueue()
         self._pubsubs = []
@@ -44,7 +44,7 @@ class HydrusDB( object ):
         
         run_analyze_after = version < HC.SOFTWARE_VERSION
         
-        if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + HydrusData.ToString( version ) + ' is too old for this version ' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + HydrusData.ToString( version + 45 ) + ' or earlier first.' )
+        if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + str( version ) + ' is too old for this version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
         
         while version < HC.SOFTWARE_VERSION:
             
@@ -53,7 +53,7 @@ class HydrusDB( object ):
             try: self._c.execute( 'BEGIN IMMEDIATE' )
             except Exception as e:
                 
-                raise HydrusExceptions.DBAccessException( HydrusData.ToString( e ) )
+                raise HydrusExceptions.DBAccessException( HydrusData.ToUnicode( e ) )
                 
             
             try:
@@ -66,7 +66,7 @@ class HydrusDB( object ):
                 
                 self._c.execute( 'ROLLBACK' )
                 
-                raise Exception( 'Updating the ' + self.DB_NAME + ' db to version ' + HydrusData.ToString( version + 1 ) + ' caused this error:' + os.linesep + traceback.format_exc() )
+                raise Exception( 'Updating the ' + self.DB_NAME + ' db to version ' + str( version + 1 ) + ' caused this error:' + os.linesep + traceback.format_exc() )
                 
             
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
@@ -246,7 +246,7 @@ class HydrusDB( object ):
         
         error_count = 0
         
-        while not ( ( self._local_shutdown or HydrusGlobals.model_shutdown ) and self._jobs.empty() ):
+        while not ( ( self._local_shutdown or self._controller.ModelIsShutdown() ) and self._jobs.empty() ):
             
             try:
                 
@@ -312,7 +312,10 @@ class HydrusDB( object ):
         
         job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
-        if HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
+        if self._controller.ModelIsShutdown():
+            
+            raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
+            
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
@@ -328,7 +331,10 @@ class HydrusDB( object ):
         
         job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
-        if HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
+        if self._controller.ModelIsShutdown():
+            
+            raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
+            
         
         self._jobs.put( ( priority, job ) )
         

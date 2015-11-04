@@ -57,7 +57,7 @@ class Controller( HydrusController.HydrusController ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = dlg.GetPath()
+                path = HydrusData.ToUnicode( dlg.GetPath() )
                 
                 text = 'Are you sure "' + path + '" is the correct directory?'
                 text += os.linesep * 2
@@ -104,7 +104,10 @@ class Controller( HydrusController.HydrusController ):
         
         while not job_key.IsDone():
             
-            if HydrusGlobals.model_shutdown: return
+            if self._model_shutdown:
+                
+                return
+                
             
             time.sleep( 0.05 )
             
@@ -342,7 +345,7 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            self._splash = ClientGUI.FrameSplash()
+            self._splash = ClientGUI.FrameSplash( self )
             
         except Exception as e:
             
@@ -468,7 +471,7 @@ class Controller( HydrusController.HydrusController ):
         
         def wx_code_gui():
             
-            self._gui = ClientGUI.FrameGUI()
+            self._gui = ClientGUI.FrameGUI( self )
             
             # this is because of some bug in wx C++ that doesn't add these by default
             wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
@@ -500,7 +503,7 @@ class Controller( HydrusController.HydrusController ):
         self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 ) )
         
         if HydrusGlobals.is_first_start: wx.CallAfter( self._gui.DoFirstStart )
-        if HydrusGlobals.is_db_updated: wx.CallLater( 1, HydrusData.ShowText, 'The client has updated to version ' + HydrusData.ToString( HC.SOFTWARE_VERSION ) + '!' )
+        if HydrusGlobals.is_db_updated: wx.CallLater( 1, HydrusData.ShowText, 'The client has updated to version ' + str( HC.SOFTWARE_VERSION ) + '!' )
         
     
     def MaintainDB( self ):
@@ -602,7 +605,7 @@ class Controller( HydrusController.HydrusController ):
                         connection = HydrusNetworking.GetLocalConnection( port )
                         connection.close()
                         
-                        text = 'The client\'s booru server could not start because something was already bound to port ' + HydrusData.ToString( port ) + '.'
+                        text = 'The client\'s booru server could not start because something was already bound to port ' + str( port ) + '.'
                         text += os.linesep * 2
                         text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
                         text += os.linesep * 2
@@ -621,9 +624,9 @@ class Controller( HydrusController.HydrusController ):
                             
                         except Exception as e:
                             
-                            text = 'Tried to bind port ' + HydrusData.ToString( port ) + ' for the local booru, but it failed:'
+                            text = 'Tried to bind port ' + str( port ) + ' for the local booru, but it failed:'
                             text += os.linesep * 2
-                            text += HydrusData.ToString( e )
+                            text += HydrusData.ToUnicode( e )
                             
                             wx.CallLater( 1, HydrusData.ShowText, text )
                             
@@ -662,7 +665,7 @@ class Controller( HydrusController.HydrusController ):
                         connection = HydrusNetworking.GetLocalConnection( port )
                         connection.close()
                         
-                        text = 'The client\'s local server could not start because something was already bound to port ' + HydrusData.ToString( port ) + '.'
+                        text = 'The client\'s local server could not start because something was already bound to port ' + str( port ) + '.'
                         text += os.linesep * 2
                         text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
                         text += os.linesep * 2
@@ -681,9 +684,9 @@ class Controller( HydrusController.HydrusController ):
                             
                         except Exception as e:
                             
-                            text = 'Tried to bind port ' + HydrusData.ToString( port ) + ' for the local server, but it failed:'
+                            text = 'Tried to bind port ' + str( port ) + ' for the local server, but it failed:'
                             text += os.linesep * 2
-                            text += HydrusData.ToString( e )
+                            text += HydrusData.ToUnicode( e )
                             
                             wx.CallLater( 1, HydrusData.ShowText, text )
                             
@@ -713,7 +716,7 @@ class Controller( HydrusController.HydrusController ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = dlg.GetPath()
+                path = HydrusData.ToUnicode( dlg.GetPath() )
                 
                 text = 'Are you sure you want to restore a backup from "' + path + '"?'
                 text += os.linesep * 2
@@ -758,7 +761,7 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            self._splash = ClientGUI.FrameSplash()
+            self._splash = ClientGUI.FrameSplash( self )
             
         except:
             

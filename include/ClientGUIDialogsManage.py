@@ -18,9 +18,9 @@ import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusFileHandling
 import HydrusGlobals
 import HydrusNATPunch
+import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
 import itertools
@@ -51,7 +51,7 @@ def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
     m = multipart.Multipart()
     
-    for ( name, value ) in fields.items(): m.field( name, HydrusData.ToBytes( value ) )
+    for ( name, value ) in fields.items(): m.field( name, HydrusData.ToByteString( value ) )
     
     return m.get()
     
@@ -488,7 +488,9 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( booru ) )
+                    path = HydrusData.ToUnicode( dlg.GetPath() )
+                    
+                    with open( path, 'wb' ) as f: f.write( yaml.safe_dump( booru ) )
                     
                 
             
@@ -976,7 +978,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentContactIsValid()
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
             
             return
             
@@ -1029,7 +1031,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentContactIsValid()
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
             
             return
             
@@ -1079,7 +1081,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentContactIsValid()
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
             
             event.Veto()
             
@@ -1101,7 +1103,9 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( contact ) )
+                        path = HydrusData.ToUnicode( dlg.GetPath() )
+                        
+                        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( contact ) )
                         
                     
                 
@@ -1111,7 +1115,9 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( contact ) )
+                        path = HydrusData.ToUnicode( dlg.GetPath() )
+                        
+                        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( contact ) )
                         
                     
                 
@@ -1123,7 +1129,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentContactIsValid()
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
             
             return
             
@@ -1162,7 +1168,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentContactIsValid()
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
             
             return
             
@@ -1198,7 +1204,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                                 
                             else:
                                 
-                                while self._contacts.NameExists( name ) or self._contacts.NameExists( ' identities - ' + name ) or name == 'Anonymous': name = name + HydrusData.ToString( random.randint( 0, 9 ) )
+                                while self._contacts.NameExists( name ) or self._contacts.NameExists( ' identities - ' + name ) or name == 'Anonymous': name = name + str( random.randint( 0, 9 ) )
                                 
                                 ( public_key, old_name, host, port ) = contact.GetInfo()
                                 
@@ -1265,7 +1271,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                 
                 self._name.SetValue( name )
                 
-                contact_address = host + ':' + HydrusData.ToString( port )
+                contact_address = host + ':' + str( port )
                 
                 if contact_key is not None: contact_address = contact_key.encode( 'hex' ) + '@' + contact_address
                 
@@ -1375,7 +1381,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             self._name.SetValue( name )
             
-            contact_address = host + ':' + HydrusData.ToString( port )
+            contact_address = host + ':' + str( port )
             
             if contact_key is not None: contact_address = contact_key.encode( 'hex' ) + '@' + contact_address
             
@@ -1466,8 +1472,8 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             existing_path = export_folder.GetName()
             
-            test_path = path + os.path.sep
-            test_existing_path = existing_path + os.path.sep
+            test_path = os.path.join( path, '' )
+            test_existing_path = os.path.join( existing_path, '' )
             
             if test_path == test_existing_path:
                 
@@ -1532,7 +1538,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         pretty_file_search_context = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in file_search_context.GetPredicates() )
         
-        pretty_period = HydrusData.ToString( period / 60 ) + ' minutes'
+        pretty_period = str( period / 60 ) + ' minutes'
         
         pretty_phrase = phrase
         
@@ -1547,7 +1553,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = dlg.GetPath()
+                path = HydrusData.ToUnicode( dlg.GetPath() )
                 
                 self._AddFolder( path )
                 
@@ -1748,7 +1754,7 @@ If you select synchronise, be careful!'''
     
     def GetInfo( self ):
         
-        path = self._path.GetPath()
+        path = HydrusData.ToUnicode( self._path.GetPath() )
         
         export_type = self._type.GetChoice()
         
@@ -1886,7 +1892,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( dict ) )
+                    path = HydrusData.ToUnicode( dlg.GetPath() )
+                    
+                    with open( path, 'wb' ) as f: f.write( yaml.safe_dump( dict ) )
                     
                 
             
@@ -2062,7 +2070,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                         
                     except Exception as e:
                         
-                        wx.MessageBox( HydrusData.ToString( e ) )
+                        wx.MessageBox( HydrusData.ToUnicode( e ) )
                         
                         self.EventAdd( event )
                         
@@ -2082,7 +2090,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( imageboard ) )
+                        path = HydrusData.ToUnicode( dlg.GetPath() )
+                        
+                        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( imageboard ) )
                         
                     
                 
@@ -2217,7 +2227,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     for ( name, field_type, default, editable ) in form_fields:
                         
-                        self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HydrusData.ToString( default ), HydrusData.ToString( editable ) ), ( name, field_type, default, editable ) )
+                        self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HydrusData.ToUnicode( default ), HydrusData.ToUnicode( editable ) ), ( name, field_type, default, editable ) )
                         
                     
                     #
@@ -2356,7 +2366,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                             return
                             
                         
-                        self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HydrusData.ToString( default ), HydrusData.ToString( editable ) ), ( name, field_type, default, editable ) )
+                        self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HydrusData.ToUnicode( default ), HydrusData.ToUnicode( editable ) ), ( name, field_type, default, editable ) )
                         
                     
                 
@@ -2407,7 +2417,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                                 if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]: raise Exception( 'You already have a form field called ' + name + '; delete or edit that one first' )
                                 
                             
-                            self._form_fields.UpdateRow( index, ( name, CC.field_string_lookup[ field_type ], HydrusData.ToString( default ), HydrusData.ToString( editable ) ), ( name, field_type, default, editable ) )
+                            self._form_fields.UpdateRow( index, ( name, CC.field_string_lookup[ field_type ], HydrusData.ToUnicode( default ), HydrusData.ToUnicode( editable ) ), ( name, field_type, default, editable ) )
                             
                         
                     
@@ -2457,7 +2467,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 for ( name, field_type, default, editable ) in form_fields:
                     
-                    self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HydrusData.ToString( default ), HydrusData.ToString( editable ) ), ( name, field_type, default, editable ) )
+                    self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HydrusData.ToUnicode( default ), HydrusData.ToUnicode( editable ) ), ( name, field_type, default, editable ) )
                     
                 
                 if CC.RESTRICTION_MIN_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MIN_RESOLUTION ]
@@ -2588,7 +2598,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def _GetPrettyVariables( self, check_period ):
         
-        pretty_check_period = HydrusData.ToString( check_period / 60 ) + ' minutes'
+        pretty_check_period = str( check_period / 60 ) + ' minutes'
         
         return pretty_check_period
         
@@ -2981,7 +2991,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
     def GetInfo( self ):
         
         name = self._name.GetValue()
-        path = self._path.GetPath()
+        path = HydrusData.ToUnicode( self._path.GetPath() )
         mimes = self._mimes.GetInfo()
         import_file_options = self._import_file_options.GetOptions()
         import_tag_options = self._import_tag_options.GetOptions()
@@ -2992,25 +3002,25 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         actions[ CC.STATUS_SUCCESSFUL ] = self._action_successful.GetChoice()
         if actions[ CC.STATUS_SUCCESSFUL ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_SUCCESSFUL ] = self._location_successful.GetPath()
+            action_locations[ CC.STATUS_SUCCESSFUL ] = HydrusData.ToUnicode( self._location_successful.GetPath() )
             
         
         actions[ CC.STATUS_REDUNDANT ] = self._action_redundant.GetChoice()
         if actions[ CC.STATUS_REDUNDANT ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_REDUNDANT ] = self._location_redundant.GetPath()
+            action_locations[ CC.STATUS_REDUNDANT ] = HydrusData.ToUnicode( self._location_redundant.GetPath() )
             
         
         actions[ CC.STATUS_DELETED ] = self._action_deleted.GetChoice()
         if actions[ CC.STATUS_DELETED] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_DELETED ] = self._location_deleted.GetPath()
+            action_locations[ CC.STATUS_DELETED ] = HydrusData.ToUnicode( self._location_deleted.GetPath() )
             
         
         actions[ CC.STATUS_FAILED ] = self._action_failed.GetChoice()
         if actions[ CC.STATUS_FAILED ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_FAILED ] = self._location_failed.GetPath()
+            action_locations[ CC.STATUS_FAILED ] = HydrusData.ToUnicode( self._location_failed.GetPath() )
             
         
         period = self._period.GetValue() * 60
@@ -3450,8 +3460,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._idle_panel = ClientGUICommon.StaticBox( self, 'idle' )
-            self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance' )
+            self._idle_panel = ClientGUICommon.StaticBox( self, 'when to run big jobs' )
+            self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
             self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
             
             self._idle_period = wx.SpinCtrl( self._idle_panel, min = 0, max = 1000 )
@@ -3490,10 +3500,10 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of general client inactivity until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of general client inactivity until client can be considered idle: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_period, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of unmoving mouse until client is considered idle (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of unmoving mouse until client can be considered idle: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_mouse_period, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Do not start a job if any CPU core has more than this percent usage: ' ), CC.FLAGS_MIXED )
@@ -3506,6 +3516,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( self._idle_shutdown_max_minutes, CC.FLAGS_MIXED )
             
             text = 'CPU-heavy jobs like maintenance routines and repository synchronisation processing will only start by themselves when you are not using the client.'
+            text += os.linesep * 2
+            text += 'If you set both client inactivy and unmoving mouse to 0, the client will never consider itself idle and you should set up shutdown processing.'
             
             st = wx.StaticText( self._idle_panel, label = text )
             
@@ -3838,7 +3850,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'export_path' ] = HydrusFileHandling.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
+            HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( HydrusData.ToUnicode( self._export_location.GetPath() ) )
             
             HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.GetValue()
             HC.options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
@@ -3881,6 +3893,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._tag_dialog_size = wx.CheckBox( self )
             self._tag_dialog_position = wx.CheckBox( self )
             self._rating_dialog_position = wx.CheckBox( self )
+            self._hide_preview = wx.CheckBox( self )
             
             #
             
@@ -3932,6 +3945,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._rating_dialog_position.SetValue( remember )
             
+            self._hide_preview.SetValue( HC.options[ 'hide_preview' ] )
+            
             #
             
             gridbox = wx.FlexGridSizer( 0, 2 )
@@ -3973,6 +3988,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddF( wx.StaticText( self, label = 'Remember manage ratings dialog position: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._rating_dialog_position, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Hide the preview window: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._hide_preview, CC.FLAGS_MIXED )
             
             self.SetSizer( gridbox )
             
@@ -4027,6 +4045,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'rating_dialog_position' ] = ( remember, None )
                 
+            
+            HC.options[ 'hide_preview' ] = self._hide_preview.GetValue()
             
         
     
@@ -5170,7 +5190,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             for ( service_key, service_type, options ) in self._services_info:
                 
-                name = HC.service_string_lookup[ service_type ] + '@' + HydrusData.ToString( options[ 'port' ] )
+                name = HC.service_string_lookup[ service_type ] + '@' + str( options[ 'port' ] )
                 
                 page = self._Panel( self._services_listbook, service_key, service_type, options )
                 
@@ -5233,7 +5253,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             name = self._services_listbook.GetCurrentName()
             
-            new_name = HC.service_string_lookup[ service_type ] + '@' + HydrusData.ToString( options[ 'port' ] )
+            new_name = HC.service_string_lookup[ service_type ] + '@' + str( options[ 'port' ] )
             
             if name != new_name: self._services_listbook.RenamePage( name, new_name )
             
@@ -5263,7 +5283,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         page = self._Panel( self._services_listbook, service_key, service_type, options )
         
-        name = HC.service_string_lookup[ service_type ] + '@' + HydrusData.ToString( port )
+        name = HC.service_string_lookup[ service_type ] + '@' + str( port )
         
         self._services_listbook.AddPage( name, page, select = True )
         
@@ -5273,7 +5293,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
             
             return
             
@@ -5333,7 +5353,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
             
             event.Veto()
             
@@ -5749,7 +5769,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_key, service_type, name, info ) ) )
+                            path = HydrusData.ToUnicode( dlg.GetPath() )
+                            
+                            with open( path, 'wb' ) as f: f.write( yaml.safe_dump( ( service_key, service_type, name, info ) ) )
                             
                         
                     
@@ -5759,7 +5781,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_key, service_type, name, info ) ) )
+                            path = HydrusData.ToUnicode( dlg.GetPath() )
+                            
+                            with open( path, 'wb' ) as f: f.write( yaml.safe_dump( ( service_key, service_type, name, info ) ) )
                             
                         
                     
@@ -5886,7 +5910,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToString( e ) )
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
             
             return
             
@@ -6662,7 +6686,9 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( dump )
+                        path = HydrusData.ToUnicode( dlg.GetPath() )
+                        
+                        with open( path, 'wb' ) as f: f.write( dump )
                         
                     
                 
@@ -6672,7 +6698,9 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( dump )
+                        path = HydrusData.ToUnicode( dlg.GetPath() )
+                        
+                        with open( path, 'wb' ) as f: f.write( dump )
                         
                     
                 
@@ -6860,7 +6888,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             seed_cache = self._original_subscription.GetSeedCache()
             
-            seed_cache_text = HydrusData.ToString( seed_cache.GetSeedCount() ) + ' urls in cache'
+            seed_cache_text = str( seed_cache.GetSeedCount() ) + ' urls in cache'
             
             self._info_panel.AddF( wx.StaticText( self._info_panel, label = seed_cache_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             self._info_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )

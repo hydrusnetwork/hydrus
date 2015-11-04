@@ -121,7 +121,7 @@ class DAEMONQueue( DAEMON ):
             
             try:
                 
-                self._callable( items )
+                self._callable( self._controller, items )
                 
             except HydrusExceptions.ShutdownException:
                 
@@ -172,7 +172,7 @@ class DAEMONWorker( DAEMON ):
             
             try:
                 
-                self._callable()
+                self._callable( self._controller )
                 
             except HydrusExceptions.ShutdownException:
                 
@@ -219,7 +219,7 @@ class DAEMONCallToThread( DAEMON ):
             
             while self._queue.empty():
                 
-                if HydrusGlobals.model_shutdown: return
+                if self._controller.ModelIsShutdown(): return
                 
                 self._event.wait( 1200 )
                 
@@ -379,7 +379,7 @@ class JobKey( object ):
             if 'popup_db_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_db_traceback' ] )
             
         
-        stuff_to_print = [ HydrusData.ToString( s ) for s in stuff_to_print ]
+        stuff_to_print = [ HydrusData.ToUnicode( s ) for s in stuff_to_print ]
         
         try:
             

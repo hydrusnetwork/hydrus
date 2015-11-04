@@ -10,6 +10,7 @@ import ClientGUICanvas
 import ClientMedia
 import collections
 import HydrusExceptions
+import HydrusPaths
 import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
@@ -23,7 +24,6 @@ import traceback
 import wx
 import yaml
 import HydrusData
-import HydrusFileHandling
 import HydrusGlobals
 
 # Option Enums
@@ -330,7 +330,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 path = ClientFiles.GetFilePath( hash, mime )
                 
-                HydrusFileHandling.LaunchFile( path )
+                HydrusPaths.LaunchFile( path )
                 
                 return
                 
@@ -589,7 +589,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             path = ClientFiles.GetFilePath( hash, mime )
             
-            HydrusFileHandling.LaunchFile( path )
+            self._SetFocussedMedia( None )
+            
+            HydrusPaths.LaunchFile( path )
             
         
     
@@ -998,7 +1000,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._num_columns = 1
         
         self._drag_init_coordinates = None
-        self._client_bmp = wx.EmptyBitmap( 0, 0 )
+        self._client_bmp = wx.EmptyBitmap( 20, 20, 24 )
         self._clean_canvas_pages = {}
         self._dirty_canvas_pages = []
         self._num_rows_per_canvas_page = 1
@@ -1060,13 +1062,38 @@ class MediaPanelThumbnails( MediaPanel ):
         return page_indices
         
     
+    def _CreateNewDirtyPage( self ):
+        
+        ( client_width, client_height ) = self.GetClientSize()
+        
+        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
+        
+        self._dirty_canvas_pages.append( wx.EmptyBitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_width, 24 ) )
+        
+    
     def _DirtyAllPages( self ):
         
-        for ( index, bmp ) in self._clean_canvas_pages.items(): self._dirty_canvas_pages.append( bmp )
+        clean_indices = self._clean_canvas_pages.keys()
         
-        self._clean_canvas_pages = {}
+        for clean_index in clean_indices:
+            
+            self._DirtyPage( clean_index )
+            
         
         self.Refresh()
+        
+    
+    def _DirtyPage( self, clean_index ):
+
+        bmp = self._clean_canvas_pages[ clean_index ]
+        
+        del self._clean_canvas_pages[ clean_index ]
+        
+        thumbnails = [ thumbnail for ( thumbnail_index, thumbnail ) in self._GetThumbnailsFromPageIndex( clean_index ) ]
+        
+        HydrusGlobals.client_controller.GetCache( 'thumbnail' ).CancelWaterfall( self._page_key, thumbnails )
+        
+        self._dirty_canvas_pages.append( bmp )
         
     
     def _DrawCanvasPage( self, page_index, bmp ):
@@ -1083,43 +1110,37 @@ class MediaPanelThumbnails( MediaPanel ):
         
         #
         
-        num_thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
+        page_thumbnails = self._GetThumbnailsFromPageIndex( page_index )
         
-        start_index = num_thumbnails_per_page * page_index
+        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
-        if start_index <= len( self._sorted_media ):
+        thumbnails_to_render_later = []
+        
+        for ( thumbnail_index, thumbnail ) in page_thumbnails:
             
-            end_index = min( len( self._sorted_media ), start_index + num_thumbnails_per_page )
+            hash = thumbnail.GetDisplayMedia().GetHash()
             
-            ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
+            self._StopFading( hash )
             
-            thumbnails_to_render_later = []
-            
-            for thumbnail_index in range( start_index, end_index ):
+            if thumbnail.IsLoaded():
                 
-                thumbnail = self._sorted_media[ thumbnail_index ]
+                thumbnail_col = thumbnail_index % self._num_columns
                 
-                hash = thumbnail.GetDisplayMedia().GetHash()
+                thumbnail_row = thumbnail_index / self._num_columns
                 
-                self._StopFading( hash )
+                x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
                 
-                if thumbnail.IsLoaded():
-                    
-                    thumbnail_col = thumbnail_index % self._num_columns
-                    
-                    thumbnail_row = thumbnail_index / self._num_columns
-                    
-                    x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
-                    
-                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
-                    
-                    dc.DrawBitmap( thumbnail.GetBmp(), x, y )
-                    
-                else: thumbnails_to_render_later.append( thumbnail )
+                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                
+                dc.DrawBitmap( thumbnail.GetBmp(), x, y )
+                
+            else:
+                
+                thumbnails_to_render_later.append( thumbnail )
                 
             
-            HydrusGlobals.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
-            
+        
+        HydrusGlobals.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
         
     
     def _DrawThumbnail( self, thumbnail_index ):
@@ -1272,6 +1293,26 @@ class MediaPanelThumbnails( MediaPanel ):
         return self._sorted_media[ thumbnail_index ]
         
     
+    def _GetThumbnailsFromPageIndex( self, page_index ):
+        
+        num_thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
+        
+        start_index = num_thumbnails_per_page * page_index
+        
+        if start_index <= len( self._sorted_media ):
+            
+            end_index = min( len( self._sorted_media ), start_index + num_thumbnails_per_page )
+            
+            thumbnails = [ ( index, self._sorted_media[ index ] ) for index in range( start_index, end_index ) ]
+            
+        else:
+            
+            thumbnails = []
+            
+        
+        return thumbnails
+        
+    
     def _GetYStart( self ):
         
         ( my_virtual_width, my_virtual_height ) = self.GetVirtualSize()
@@ -1375,14 +1416,19 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._client_bmp = wx.EmptyBitmap( client_width, client_height, 24 )
             
-            for ( index, bmp ) in self._clean_canvas_pages.items(): wx.CallAfter( bmp.Destroy )
+            clean_indices = self._clean_canvas_pages.keys()
             
-            for bmp in self._dirty_canvas_pages: wx.CallAfter( bmp.Destroy )
+            for clean_index in clean_indices:
             
-            self._clean_canvas_pages = {}
+                self._DirtyPage( clean_index )
+                
+            
+            for bmp in self._dirty_canvas_pages:
+                
+                wx.CallAfter( bmp.Destroy )
+                
+            
             self._dirty_canvas_pages = []
-            
-            for i in range( 5 ): self._dirty_canvas_pages.append( wx.EmptyBitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_width, 24 ) )
             
         
     
@@ -1693,15 +1739,21 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if page_index not in self._clean_canvas_pages:
                 
-                if len( self._dirty_canvas_pages ) > 0: bmp = self._dirty_canvas_pages.pop( 0 )
-                else:
+                if len( self._dirty_canvas_pages ) == 0:
                     
-                    index_to_steal = potential_clean_indices_to_steal.pop()
+                    if len( potential_clean_indices_to_steal ) > 0:
+                        
+                        index_to_steal = potential_clean_indices_to_steal.pop()
+                        
+                        self._DirtyPage( index_to_steal )
+                        
+                    else:
+                        
+                        self._CreateNewDirtyPage()
+                        
                     
-                    bmp = self._clean_canvas_pages[ index_to_steal ]
-                    
-                    del self._clean_canvas_pages[ index_to_steal ]
-                    
+                
+                bmp = self._dirty_canvas_pages.pop( 0 )
                 
                 self._DrawCanvasPage( page_index, bmp )
                 
@@ -2496,13 +2548,13 @@ class Thumbnail( Selectable ):
                 
                 ( volume, ) = volumes
                 
-                collections_string = 'v' + HydrusData.ToString( volume )
+                collections_string = 'v' + str( volume )
                 
             else:
                 
                 volumes_sorted = HydrusTags.SortTags( volumes )
                 
-                collections_string_append = 'v' + HydrusData.ToString( volumes_sorted[0] ) + '-' + HydrusData.ToString( volumes_sorted[-1] )
+                collections_string_append = 'v' + str( volumes_sorted[0] ) + '-' + str( volumes_sorted[-1] )
                 
             
         
@@ -2512,13 +2564,13 @@ class Thumbnail( Selectable ):
                 
                 ( chapter, ) = chapters
                 
-                collections_string_append = 'c' + HydrusData.ToString( chapter )
+                collections_string_append = 'c' + str( chapter )
                 
             else:
                 
                 chapters_sorted = HydrusTags.SortTags( chapters )
                 
-                collections_string_append = 'c' + HydrusData.ToString( chapters_sorted[0] ) + '-' + HydrusData.ToString( chapters_sorted[-1] )
+                collections_string_append = 'c' + str( chapters_sorted[0] ) + '-' + str( chapters_sorted[-1] )
                 
             
             if len( collections_string ) > 0: collections_string += '-' + collections_string_append
@@ -2531,13 +2583,13 @@ class Thumbnail( Selectable ):
                 
                 ( page, ) = pages
                 
-                collections_string_append = 'p' + HydrusData.ToString( page )
+                collections_string_append = 'p' + str( page )
                 
             else:
                 
                 pages_sorted = HydrusTags.SortTags( pages )
                 
-                collections_string_append = 'p' + HydrusData.ToString( pages_sorted[0] ) + '-' + HydrusData.ToString( pages_sorted[-1] )
+                collections_string_append = 'p' + str( pages_sorted[0] ) + '-' + str( pages_sorted[-1] )
                 
             
             if len( collections_string ) > 0: collections_string += '-' + collections_string_append
@@ -2666,7 +2718,7 @@ class Thumbnail( Selectable ):
             
             dc.DrawBitmap( CC.GlobalBMPs.collection, 1, height - 17 )
             
-            num_files_str = HydrusData.ToString( len( self._hashes ) )
+            num_files_str = str( len( self._hashes ) )
             
             dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
             

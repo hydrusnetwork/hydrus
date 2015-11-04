@@ -156,6 +156,11 @@ class Controller( object ):
         return write
         
     
+    def ModelIsShutdown( self ):
+        
+        return HydrusGlobals.model_shutdown
+        
+    
     def Read( self, name, *args, **kwargs ): return self._reads[ name ]
     
     def ResetIdleTimer( self ): pass
@@ -192,6 +197,11 @@ class Controller( object ):
     def SetRead( self, name, value ): self._reads[ name ] = value
     
     def SetWebCookies( self, name, value ): self._cookies[ name ] = value
+    
+    def ViewIsShutdown( self ):
+        
+        return HydrusGlobals.view_shutdown
+        
     
     def Write( self, name, *args, **kwargs ):
         

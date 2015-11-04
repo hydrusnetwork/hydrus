@@ -46,6 +46,7 @@ def GetClientDefaultOptions():
     options[ 'confirm_archive' ] = True
     options[ 'delete_to_recycle_bin' ] = True
     options[ 'animation_start_position' ] = 0.0
+    options[ 'hide_preview' ] = False
     
     regex_favourites = []
     

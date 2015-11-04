@@ -2,8 +2,7 @@ import HydrusConstants as HC
 import HydrusAudioHandling
 import ClientDownloading
 import HydrusExceptions
-import HydrusFileHandling
-import HydrusImageHandling
+import HydrusPaths
 import HydrusSerialisable
 import HydrusThreading
 import ClientConstants as CC
@@ -152,7 +151,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     for ( name, field_type, value ) in fields:
         
-        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ): m.field( name, HydrusData.ToBytes( value ) )
+        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ): m.field( name, HydrusData.ToByteString( value ) )
         elif field_type == CC.FIELD_CHECKBOX:
             
             if value:
@@ -185,7 +184,7 @@ class CaptchaControl( wx.Panel ):
         
         self._captcha_challenge = None
         self._captcha_runs_out = 0
-        self._bitmap = wx.EmptyBitmap( 0, 0, 24 )
+        self._bitmap = wx.EmptyBitmap( 20, 20, 24 )
         
         self._timer = wx.Timer( self, ID_TIMER_CAPTCHA )
         self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_CAPTCHA )
@@ -326,7 +325,7 @@ class CaptchaControl( wx.Panel ):
         
         self._captcha_challenge = None
         self._captcha_runs_out = 0
-        self._bitmap = wx.EmptyBitmap( 0, 0, 24 )
+        self._bitmap = wx.EmptyBitmap( 20, 20, 24 )
         
         self._DrawMain()
         self._DrawEntry()
@@ -339,7 +338,7 @@ class CaptchaControl( wx.Panel ):
         
         self._captcha_challenge = ''
         self._captcha_runs_out = 0
-        self._bitmap = wx.EmptyBitmap( 0, 0, 24 )
+        self._bitmap = wx.EmptyBitmap( 20, 20, 24 )
         
         self._DrawMain()
         self._DrawEntry()
@@ -383,7 +382,7 @@ class CaptchaControl( wx.Panel ):
         
         jpeg = HydrusGlobals.client_controller.DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
         
-        ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -393,7 +392,7 @@ class CaptchaControl( wx.Panel ):
             
         finally:
             
-            HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
             
         
         self._captcha_runs_out = HydrusData.GetNow() + 5 * 60 - 15
@@ -830,7 +829,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
         except Exception as e:
             
-            ( status, phrase ) = ( 'big error', HydrusData.ToString( e ) )
+            ( status, phrase ) = ( 'big error', HydrusData.ToUnicode( e ) )
             
         
         wx.CallAfter( self.CALLBACKDoneDump, hash, post_field_info, status, phrase )
@@ -865,7 +864,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             total_size = sum( [ m.GetSize() for m in self._hashes_to_media.values() ] )
             
-            initial = 'Hydrus Network Client is starting a dump of ' + HydrusData.ToString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) + ':' + os.linesep * 2
+            initial = 'Hydrus Network Client is starting a dump of ' + str( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) + ':' + os.linesep * 2
             
         else: initial = ''
         
@@ -1096,7 +1095,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if self._next_dump_index == len( self._sorted_media_hashes ):
             
-            self._progress_info.SetLabel( 'done - ' + HydrusData.ToString( self._num_dumped ) + ' dumped' )
+            self._progress_info.SetLabel( 'done - ' + str( self._num_dumped ) + ' dumped' )
             
             self._start_button.Disable()
             
@@ -1365,17 +1364,17 @@ class ManagementPanelDumper( ManagementPanel ):
                     
                 except Exception as e:
                     
-                    ( status, phrase ) = ( 'big error', HydrusData.ToString( e ) )
+                    ( status, phrase ) = ( 'big error', HydrusData.ToUnicode( e ) )
                     
                     wx.CallAfter( self.CALLBACKDoneDump, hash, post_field_info, status, phrase )
                     
                 
-            else: self._progress_info.SetLabel( 'dumping next file in ' + HydrusData.ToString( time_left ) + ' seconds' )
+            else: self._progress_info.SetLabel( 'dumping next file in ' + str( time_left ) + ' seconds' )
             
         else:
             
             if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
-            else: self._progress_info.SetLabel( 'paused after ' + HydrusData.ToString( self._num_dumped ) + ' files dumped' )
+            else: self._progress_info.SetLabel( 'paused after ' + str( self._num_dumped ) + ' files dumped' )
             
         
     

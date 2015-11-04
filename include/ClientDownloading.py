@@ -4,6 +4,7 @@ import collections
 import httplib
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusPaths
 import HydrusSerialisable
 import HydrusThreading
 import json
@@ -19,7 +20,6 @@ import urlparse
 import wx
 import HydrusTags
 import HydrusData
-import HydrusFileHandling
 import ClientConstants as CC
 import HydrusGlobals
 
@@ -185,7 +185,7 @@ def GetYoutubeFormats( youtube_url ):
     try: p = pafy.Pafy( youtube_url )
     except Exception as e:
         
-        raise Exception( 'Could not fetch video info from youtube!' + os.linesep + HydrusData.ToString( e ) )
+        raise Exception( 'Could not fetch video info from youtube!' + os.linesep + HydrusData.ToUnicode( e ) )
         
     
     info = { ( s.extension, s.resolution ) : ( s.url, s.title ) for s in p.streams if s.extension in ( 'flv', 'mp4' ) }
@@ -205,7 +205,7 @@ def THREADDownloadURL( job_key, url, url_string ):
         job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
         
     
-    ( os_file_handle, temp_path ) = HydrusFileHandling.GetTempPath()
+    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
     
     try:
         
@@ -218,7 +218,7 @@ def THREADDownloadURL( job_key, url, url_string ):
         
     finally:
         
-        HydrusFileHandling.CleanUpTempPath( os_file_handle, temp_path )
+        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
         
     
     if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
@@ -276,7 +276,7 @@ def Parse4chanPostScreen( html ):
                 return ( 'error', text )
                 
             
-            problem = HydrusData.ToString( problem_tag )
+            problem = HydrusData.ToUnicode( problem_tag )
             
             if 'CAPTCHA' in problem: return ( 'captcha', None )
             elif 'seconds' in problem: return ( 'too quick', None )
@@ -506,7 +506,9 @@ class GalleryBooru( Gallery ):
             tags = tags_to_use
             
         
-        return self._search_url.replace( '%tags%', self._search_separator.join( [ urllib.quote( tag.encode( 'utf-8' ), '' ) for tag in tags ] ) ).replace( '%index%', HydrusData.ToString( url_index ) )
+        tags_replace = self._search_separator.join( [ urllib.quote( HydrusData.ToByteString( tag ), '' ) for tag in tags ] )
+        
+        return self._search_url.replace( '%tags%', tags_replace ).replace( '%index%', str( url_index ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -655,7 +657,7 @@ class GalleryBooru( Gallery ):
             
         except Exception as e:
             
-            raise HydrusExceptions.NotFoundException( 'Could not parse a download link for ' + url_base + '!' + os.linesep + HydrusData.ToString( e ) )
+            raise HydrusExceptions.NotFoundException( 'Could not parse a download link for ' + url_base + '!' + os.linesep + HydrusData.ToUnicode( e ) )
             
         
         if image_url is None:
@@ -736,7 +738,7 @@ class GalleryDeviantArt( Gallery ):
         
         artist = query
         
-        return 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset=' + HydrusData.ToString( page_index * 24 )
+        return 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset=' + str( page_index * 24 )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -861,7 +863,7 @@ class GalleryGiphy( Gallery ):
         
         tag = query
         
-        return 'http://giphy.com/api/gifs?tag=' + urllib.quote( tag.encode( 'utf-8' ).replace( ' ', '+' ), '' ) + '&page=' + HydrusData.ToString( page_index + 1 )
+        return 'http://giphy.com/api/gifs?tag=' + urllib.quote( HydrusData.ToByteString( tag ).replace( ' ', '+' ), '' ) + '&page=' + str( page_index + 1 )
         
     
     def _ParseGalleryPage( self, data, url_base ):
@@ -900,7 +902,7 @@ class GalleryGiphy( Gallery ):
             
         else:
             
-            url = 'http://giphy.com/api/gifs/' + HydrusData.ToString( id )
+            url = 'http://giphy.com/api/gifs/' + str( id )
             
             try:
                 
@@ -1011,7 +1013,7 @@ class GalleryHentaiFoundry( Gallery ):
             
         except Exception as e:
             
-            raise Exception( 'Could not parse image url!' + os.linesep + HydrusData.ToString( e ) )
+            raise Exception( 'Could not parse image url!' + os.linesep + HydrusData.ToUnicode( e ) )
             
         
         soup = bs4.BeautifulSoup( html )
@@ -1022,7 +1024,7 @@ class GalleryHentaiFoundry( Gallery ):
             
             title = soup.find( 'title' )
             
-            ( data, nothing ) = HydrusData.ToString( title.string ).split( ' - Hentai Foundry' )
+            ( data, nothing ) = title.string.split( ' - Hentai Foundry' )
             
             data_reversed = data[::-1] # want to do it right-side first, because title might have ' by ' in it
             
@@ -1075,7 +1077,7 @@ class GalleryHentaiFoundryArtistPictures( GalleryHentaiFoundry ):
         
         gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist
         
-        return gallery_url + '/page/' + HydrusData.ToString( page_index + 1 )
+        return gallery_url + '/page/' + str( page_index + 1 )
         
     
 class GalleryHentaiFoundryArtistScraps( GalleryHentaiFoundry ):
@@ -1086,7 +1088,7 @@ class GalleryHentaiFoundryArtistScraps( GalleryHentaiFoundry ):
         
         gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist + '/scraps'
         
-        return gallery_url + '/page/' + HydrusData.ToString( page_index + 1 )
+        return gallery_url + '/page/' + str( page_index + 1 )
         
     
 class GalleryHentaiFoundryTags( GalleryHentaiFoundry ):
@@ -1095,7 +1097,7 @@ class GalleryHentaiFoundryTags( GalleryHentaiFoundry ):
         
         tags = query.split( ' ' )
         
-        return 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page=' + HydrusData.ToString( page_index + 1 )
+        return 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page=' + str( page_index + 1 )
         # scraps = 0 hide
         # -1 means show both
         # 1 means scraps only. wetf
@@ -1377,9 +1379,9 @@ class GalleryPixivArtistID( GalleryPixiv ):
         
         artist_id = query
         
-        gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + HydrusData.ToString( artist_id )
+        gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + str( artist_id )
         
-        return gallery_url + '&p=' + HydrusData.ToString( page_index + 1 )
+        return gallery_url + '&p=' + str( page_index + 1 )
         
     
 class GalleryPixivTag( GalleryPixiv ):
@@ -1388,9 +1390,9 @@ class GalleryPixivTag( GalleryPixiv ):
         
         tag = query
         
-        gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( tag.encode( 'utf-8' ), '' ) + '&s_mode=s_tag_full&order=date_d'
+        gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( HydrusData.ToByteString( tag ), '' ) + '&s_mode=s_tag_full&order=date_d'
         
-        return gallery_url + '&p=' + HydrusData.ToString( page_index + 1 )
+        return gallery_url + '&p=' + str( page_index + 1 )
         
     
 class GalleryTumblr( Gallery ):
@@ -1399,7 +1401,7 @@ class GalleryTumblr( Gallery ):
         
         username = query
         
-        return 'http://' + username + '.tumblr.com/api/read/json?start=' + HydrusData.ToString( page_index * 50 ) + '&num=50'
+        return 'http://' + username + '.tumblr.com/api/read/json?start=' + str( page_index * 50 ) + '&num=50'
         
     
     def _ParseGalleryPage( self, data, url_base ):

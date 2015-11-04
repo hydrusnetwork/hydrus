@@ -15,27 +15,34 @@ def GetExpectedPath( file_type, hash ):
     
     first_two_chars = hash_encoded[:2]
     
-    path = directory + os.path.sep + first_two_chars + os.path.sep + hash_encoded
+    path = os.path.join( directory, first_two_chars, hash_encoded )
     
     return path
     
 def GetExpectedContentUpdatePackagePath( service_key, begin, subindex ):
     
-    path = HC.SERVER_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( int( begin ) ) + '_' + str( subindex )
+    path = os.path.join( GetExpectedUpdateDir( service_key ), str( int( begin ) ) + '_' + str( subindex ) )
     
     return path
     
 def GetExpectedServiceUpdatePackagePath( service_key, begin ):
     
-    path = HC.SERVER_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( int( begin ) ) + '_metadata'
+    path = os.path.join( GetExpectedUpdateDir( service_key ), str( int( begin ) ) + '_metadata' )
     
     return path
+    
+def GetExpectedUpdateDir( service_key ):
+    
+    return os.path.join( HC.SERVER_UPDATES_DIR, service_key.encode( 'hex' ) )
     
 def GetPath( file_type, hash ):
     
     path = GetExpectedPath( file_type, hash )
     
-    if not os.path.exists( path ): raise HydrusExceptions.NotFoundException( file_type + ' not found!' )
+    if not os.path.exists( path ):
+        
+        raise HydrusExceptions.NotFoundException( file_type + ' not found!' )
+        
     
     return path
     
@@ -43,7 +50,10 @@ def GetContentUpdatePackagePath( service_key, begin, subindex ):
     
     path = GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
     
-    if not os.path.exists( path ): raise HydrusExceptions.NotFoundException( 'Update not found!' )
+    if not os.path.exists( path ):
+        
+        raise HydrusExceptions.NotFoundException( 'Update not found!' )
+        
     
     return path
     
@@ -51,26 +61,12 @@ def GetServiceUpdatePackagePath( service_key, begin ):
     
     path = GetExpectedServiceUpdatePackagePath( service_key, begin )
     
-    if not os.path.exists( path ): raise HydrusExceptions.NotFoundException( 'Update not found!' )
+    if not os.path.exists( path ):
+        
+        raise HydrusExceptions.NotFoundException( 'Update not found!' )
+        
     
     return path
-    
-def GetUpdatePackagePaths( service_key, begin ):
-    
-    paths = []
-    prefix = service_key.encode( 'hex' ) + '_' + str( int( begin ) )
-    
-    for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
-        
-        if filename.startswith( prefix ):
-            
-            path = HC.SERVER_UPDATES_DIR + os.path.sep + filename
-            
-            paths.append( path )
-            
-        
-    
-    return paths
     
 def IterateAllPaths( file_type ):
     
@@ -82,10 +78,13 @@ def IterateAllPaths( file_type ):
     
     for ( one, two ) in itertools.product( hex_chars, hex_chars ):
         
-        dir = directory + os.path.sep + one + two
+        dir = os.path.join( directory, one + two )
         
         next_paths = os.listdir( dir )
         
-        for path in next_paths: yield dir + os.path.sep + path
+        for path in next_paths:
+            
+            yield os.path.join( dir, path )
+            
         
     

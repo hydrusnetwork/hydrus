@@ -1034,13 +1034,13 @@ class MediaSingleton( Media ):
                 
                 ( volume, ) = volumes
                 
-                title_string_append = 'volume ' + HydrusData.ToString( volume )
+                title_string_append = 'volume ' + str( volume )
                 
             else:
                 
                 volumes_sorted = HydrusTags.SortTags( volumes )
                 
-                title_string_append = 'volumes ' + HydrusData.ToString( volumes_sorted[0] ) + '-' + HydrusData.ToString( volumes_sorted[-1] )
+                title_string_append = 'volumes ' + str( volumes_sorted[0] ) + '-' + str( volumes_sorted[-1] )
                 
             
             if len( title_string ) > 0: title_string += ' - ' + title_string_append
@@ -1053,13 +1053,13 @@ class MediaSingleton( Media ):
                 
                 ( chapter, ) = chapters
                 
-                title_string_append = 'chapter ' + HydrusData.ToString( chapter )
+                title_string_append = 'chapter ' + str( chapter )
                 
             else:
                 
                 chapters_sorted = HydrusTags.SortTags( chapters )
                 
-                title_string_append = 'chapters ' + HydrusData.ToString( chapters_sorted[0] ) + '-' + HydrusData.ToString( chapters_sorted[-1] )
+                title_string_append = 'chapters ' + str( chapters_sorted[0] ) + '-' + str( chapters_sorted[-1] )
                 
             
             if len( title_string ) > 0: title_string += ' - ' + title_string_append
@@ -1072,13 +1072,13 @@ class MediaSingleton( Media ):
                 
                 ( page, ) = pages
                 
-                title_string_append = 'page ' + HydrusData.ToString( page )
+                title_string_append = 'page ' + str( page )
                 
             else:
                 
                 pages_sorted = HydrusTags.SortTags( pages )
                 
-                title_string_append = 'pages ' + HydrusData.ToString( pages_sorted[0] ) + '-' + HydrusData.ToString( pages_sorted[-1] )
+                title_string_append = 'pages ' + str( pages_sorted[0] ) + '-' + str( pages_sorted[-1] )
                 
             
             if len( title_string ) > 0: title_string += ' - ' + title_string_append
@@ -1098,9 +1098,9 @@ class MediaSingleton( Media ):
     
     def IsCollection( self ): return False
     
-    def IsImage( self ): return HydrusFileHandling.IsImage( self._media_result.GetMime() )
+    def IsImage( self ): return self._media_result.GetMime() in HC.IMAGES
     
-    def IsNoisy( self ): return self.GetMime() in HC.NOISY_MIMES
+    def IsNoisy( self ): return self._media_result.GetMime() in HC.NOISY_MIMES
     
     def IsSizeDefinite( self ): return self._media_result.GetSize() is not None
 

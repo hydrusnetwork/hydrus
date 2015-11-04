@@ -129,7 +129,7 @@ class Message( HydrusData.HydrusYAMLBase ):
         if type( self._body ) == unicode: body_text = self._body.encode( 'utf-8' )
         else: body_text = self._body
         
-        message += ''.join( [ yaml.safe_dump( public_key ) for public_key in contact_to_public_keys ] ) + subject_text + body_text + ''.join( self._files ) + HydrusData.ToString( self._conversation_key ) + HydrusData.ToString( self._timestamp )
+        message += ''.join( [ yaml.safe_dump( public_key ) for public_key in contact_to_public_keys ] ) + subject_text + body_text + ''.join( self._files ) + HydrusData.ToUnicode( self._conversation_key ) + HydrusData.ToUnicode( self._timestamp )
         
         hash_object = Crypto.Hash.SHA256.new( message )
         
