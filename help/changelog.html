@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 180</h3></li>
+				<ul>
+					<li>middle click on any taglist now does 'open a new search page for selection'</li>
+					<li>moved mouse idle checking code to the wx thread, which seems to have fixed a serious X11 crash</li>
+					<li>memory gunk should now be painted over when transparent animations are resized on linux</li>
+					<li>fixed some page up/down index calculation on the autocomplete dropdown</li>
+					<li>system predicates will remove themselves from the active predicate list silently again</li>
+					<li>system predicates will work again in queries that include tags!</li>
+					<li>greatly improved my string/unicode conversion code</li>
+					<li>dropped many inefficient unicode conversions from db code</li>
+					<li>improved the sql-grammar of some specifically efficient db code</li>
+					<li>removed incorrect unicode conversions from url/network request code</li>
+					<li>removed unicode conversion code from network response code</li>
+					<li>all directory iteration should now occur in unicode</li>
+					<li>all inputted paths should now be converted to unicode</li>
+					<li>replaced every single ugly raw path concatenation with a better method</li>
+					<li>improved some bitmap placeholder initialisation that was causing Linux terminal spam</li>
+					<li>added an option to always hide the preview window to options->gui</li>
+					<li>the preview window will not accept setmedia calls if it is hidden</li>
+					<li>if the preview window is actively hidden due to an unsplitting event, it will null its current media</li>
+					<li>fixed a shutdown calculation that was under-remembering the height of the preview window by four pixels every time</li>
+					<li>improved thumbnail waterfall code--it should be a little faster. less subject to lag when taxed, and waterfall with more genuine randomness</li>
+					<li>improved some thumbnail page drawing and clean/dirty conversion code</li>
+					<li>when pages are dirtied, any to-be-waterfalled thumbnails are cancelled, making superfast scrolling less crashtastic</li>
+					<li>new dirty thumbnail pages are now generated as needed, rather than precached</li>
+					<li>subscriptions will now correctly do a polite wait after fetching tags for redundant files</li>
+					<li>splash screen will now explicitly raise itself to the front on init</li>
+					<li>the export tag txts function of the export dialog now exports the tag txt to [filename].jpg.txt, rather than [filename].txt</li>
+					<li>the server now stores its updates in service specific subdirectories, like the client</li>
+					<li>some importers will better report when they are waiting politely</li>
+					<li>OS X (and anything else with OpenCV 3.0.0) now uses OpenCV to render gifs by default, falling back to PIL on error (like only Windows used to)</li>
+					<li>'open externally' from thumbnails now defocusses the preview window</li>
+					<li>refactored away a bunch of bad global controller references</li>
+					<li>added some shutdownexceptions</li>
+					<li>silenced shutdownexception terminal spam</li>
+					<li>reworded the 'maintenace and processing' options panel a little to explain things better</li>
+					<li>improved how the base_dir is figured out on program boot</li>
+					<li>improved serverside 'should I clean dirty updates?' check code</li>
+					<li>deleted some old code</li>
+					<li>split path-specific functions off from HydrusFileHandling to HydrusPaths and de-looped my import tree appropriately</li>
+					<li>general refactoring</li>
+				</ul>
 				<li><h3>version 179</h3></li>
 				<ul>
 					<li>all tag listboxes support multiple selection</li>
