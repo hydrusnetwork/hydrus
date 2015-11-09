@@ -167,7 +167,7 @@ def ConvertIntToPixels( i ):
     elif i == 1000000: return 'megapixels'
     else: return 'megapixels'
     
-def ConvertIntToPrettyString( num ): return locale.format( "%d", num, grouping = True )
+def ConvertIntToPrettyString( num ): return locale.format( "%d", num, grouping = True ).decode(locale.getlocale()[1])
 
 def ConvertIntToUnit( unit ):
     
