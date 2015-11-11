@@ -187,14 +187,22 @@ def DeletePath( path ):
         HydrusData.DeletePath( path )
         
     
-def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
+def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, collapse_siblings = False ):
+    
+    siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
     
     tags_managers = []
     
     for media in pool:
         
-        if media.IsCollection(): tags_managers.extend( media.GetSingletonsTagsManagers() )
-        else: tags_managers.append( media.GetTagsManager() )
+        if media.IsCollection():
+            
+            tags_managers.extend( media.GetSingletonsTagsManagers() )
+            
+        else:
+            
+            tags_managers.append( media.GetTagsManager() )
+            
         
     
     current_tags_to_count = collections.Counter()
@@ -205,6 +213,11 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY ):
     for tags_manager in tags_managers:
         
         statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key )
+        
+        if collapse_siblings:
+            
+            statuses_to_tags = siblings_manager.CollapseStatusesToTags( statuses_to_tags )
+            
         
         current_tags_to_count.update( statuses_to_tags[ HC.CURRENT ] )
         deleted_tags_to_count.update( statuses_to_tags[ HC.DELETED ] )
@@ -378,14 +391,25 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 else:
                     
                     default_booru_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU )
-                    
+                    default_hentai_foundry_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY )
+                    default_pixiv_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV )
                     default_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
                     
                     guidance_import_tag_options = None
                     
-                    if gallery_identifier.GetSiteType() == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_import_tag_options:
+                    site_type = gallery_identifier.GetSiteType()
+                    
+                    if site_type == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_import_tag_options:
                         
                         guidance_import_tag_options = default_import_tag_options[ default_booru_gallery_identifier ]
+                        
+                    elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) and default_hentai_foundry_gallery_identifier in default_import_tag_options:
+                        
+                        guidance_import_tag_options = default_import_tag_options[ default_hentai_foundry_gallery_identifier ]
+                        
+                    elif site_type in ( HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ) and default_pixiv_gallery_identifier in default_import_tag_options:
+                        
+                        guidance_import_tag_options = default_import_tag_options[ default_pixiv_gallery_identifier ]
                         
                     elif default_gallery_identifier in default_import_tag_options:
                         
@@ -406,6 +430,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                             if 'all namespaces' in guidance_namespaces:
                                 
                                 service_keys_to_namespaces[ service_key ] = namespaces
+                                
+                            else:
+                                
+                                service_keys_to_namespaces[ service_key ] = [ namespace for namespace in namespaces if namespace in guidance_namespaces ]
                                 
                             
                         

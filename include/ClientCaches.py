@@ -505,11 +505,13 @@ class ThumbnailCache( object ):
     
     def GetThumbnail( self, media ):
         
-        mime = media.GetDisplayMedia().GetMime()
+        display_media = media.GetDisplayMedia()
+        
+        mime = display_media.GetMime()
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            hash = media.GetDisplayMedia().GetHash()
+            hash = display_media.GetHash()
             
             if not self._data_cache.HasData( hash ):
                 
@@ -538,6 +540,24 @@ class ThumbnailCache( object ):
         elif mime == HC.APPLICATION_FLASH: return self._special_thumbs[ 'flash' ]
         elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
         else: return self._special_thumbs[ 'hydrus' ]
+        
+    
+    def HasThumbnailCached( self, media ):
+        
+        display_media = media.GetDisplayMedia()
+        
+        mime = display_media.GetMime()
+        
+        if mime in HC.MIMES_WITH_THUMBNAILS:
+            
+            hash = display_media.GetHash()
+            
+            return self._data_cache.HasData( hash )
+            
+        else:
+            
+            return True
+            
         
     
     def Waterfall( self, page_key, medias ):
@@ -590,9 +610,9 @@ class ThumbnailCache( object ):
             
             try:
                 
-                thumbnail = self.GetThumbnail( media )
+                thumbnail = self.GetThumbnail( media ) # to load it
                 
-                HydrusGlobals.client_controller.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
+                HydrusGlobals.client_controller.pub( 'waterfall_thumbnail', page_key, media )
                 
                 if HydrusData.GetNowPrecise() - last_paused > 0.005:
                     
@@ -670,7 +690,10 @@ def CollapseTagSiblingChains( processed_siblings ):
     
     reverse_lookup = collections.defaultdict( list )
     
-    for ( old_tag, new_tag ) in siblings.items(): reverse_lookup[ new_tag ].append( old_tag )
+    for ( old_tag, new_tag ) in siblings.items():
+        
+        reverse_lookup[ new_tag ].append( old_tag )
+        
     
     return ( siblings, reverse_lookup )
     
@@ -839,6 +862,8 @@ class TagParentsManager( object ):
     
     def __init__( self ):
         
+        self._service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
+        
         self._RefreshParents()
         
         self._lock = threading.Lock()
@@ -899,9 +924,6 @@ class TagParentsManager( object ):
     
     def ExpandPredicates( self, service_key, predicates ):
         
-        # for now -- we will make an option, later
-        service_key = CC.COMBINED_TAG_SERVICE_KEY
-        
         results = []
         
         with self._lock:
@@ -933,12 +955,12 @@ class TagParentsManager( object ):
         
         with self._lock:
             
-            # for now -- we will make an option, later
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
             tags_results = set( tags )
             
-            for tag in tags: tags_results.update( self._service_keys_to_children_to_parents[ service_key ][ tag ] )
+            for tag in tags:
+                
+                tags_results.update( self._service_keys_to_children_to_parents[ service_key ][ tag ] )
+                
             
             return tags_results
             
@@ -948,16 +970,16 @@ class TagParentsManager( object ):
         
         with self._lock:
             
-            # for now -- we will make an option, later
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
             return self._service_keys_to_children_to_parents[ service_key ][ tag ]
             
         
     
     def RefreshParents( self ):
         
-        with self._lock: self._RefreshParents()
+        with self._lock:
+            
+            self._RefreshParents()
+            
         
     
 class TagSiblingsManager( object ):
@@ -969,6 +991,11 @@ class TagSiblingsManager( object ):
         self._lock = threading.Lock()
         
         HydrusGlobals.client_controller.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
+        
+    
+    def _CollapseTags( self, tags ):
+        
+        return { self._siblings[ tag ] if tag in self._siblings else tag for tag in tags }
         
     
     def _RefreshSiblings( self ):
@@ -1132,9 +1159,27 @@ class TagSiblingsManager( object ):
             
         
     
+    def CollapseStatusesToTags( self, statuses_to_tags ):
+        
+        with self._lock:
+            
+            statuses = statuses_to_tags.keys()
+            
+            for status in statuses:
+                
+                statuses_to_tags[ status ] = self._CollapseTags( statuses_to_tags[ status ] )
+                
+            
+            return statuses_to_tags
+            
+        
+    
     def CollapseTags( self, tags ):
         
-        with self._lock: return { self._siblings[ tag ] if tag in self._siblings else tag for tag in tags }
+        with self._lock:
+            
+            return self._CollapseTags( tags )
+            
         
     
     def CollapseTagsToCount( self, tags_to_count ):

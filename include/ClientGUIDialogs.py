@@ -261,6 +261,11 @@ class Dialog( wx.Dialog ):
     
     def SetInitialSize( self, ( width, height ) ):
         
+        ( display_width, display_height ) = wx.GetDisplaySize()
+        
+        width = min( display_width, width )
+        height = min( display_height, height )
+        
         wx.Dialog.SetInitialSize( self, ( width, height ) )
         
         min_width = min( 240, width )
@@ -4302,7 +4307,7 @@ class DialogSetupExport( Dialog ):
         
         self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
         
-        t = ClientGUICommon.ListBoxTagsSelection( self._tags_box, collapse_siblings = True )
+        t = ClientGUICommon.ListBoxTagsSelection( self._tags_box, include_counts = True, collapse_siblings = True )
         
         self._tags_box.SetTagsBox( t )
         

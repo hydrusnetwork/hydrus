@@ -163,6 +163,8 @@ class HydrusDB( object ):
         
         self._c = self._db.cursor()
         
+        self._c.execute( 'DROP TABLE IF EXISTS ratings_aggregates;' )
+        
         self._c.execute( 'PRAGMA cache_size = 10000;' )
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         self._c.execute( 'PRAGMA synchronous = 1;' )

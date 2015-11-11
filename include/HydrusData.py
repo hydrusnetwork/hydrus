@@ -167,8 +167,10 @@ def ConvertIntToPixels( i ):
     elif i == 1000000: return 'megapixels'
     else: return 'megapixels'
     
-def ConvertIntToPrettyString( num ): return locale.format( "%d", num, grouping = True )
-
+def ConvertIntToPrettyString( num ):
+    
+    return locale.format( u'%d', num, grouping = True )
+    
 def ConvertIntToUnit( unit ):
     
     if unit == 1: return 'B'
@@ -1618,19 +1620,22 @@ class JobDatabase( object ):
             elif HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
             
         
-        if isinstance( self._result, HydrusExceptions.DBException ):
+        if isinstance( self._result, Exception ):
             
-            ( text, gumpf, db_traceback ) = self._result.args
-            
-            trace_list = traceback.format_stack()
-            
-            caller_traceback = 'Stack Trace (most recent call last):' + os.linesep * 2 + os.linesep.join( trace_list )
-            
-            raise HydrusExceptions.DBException( text, caller_traceback, db_traceback )
-            
-        elif isinstance( self._result, Exception ):
-            
-            raise self._result
+            if isinstance( self._result, HydrusExceptions.DBException ):
+                
+                ( text, gumpf, db_traceback ) = self._result.args
+                
+                trace_list = traceback.format_stack()
+                
+                caller_traceback = 'Stack Trace (most recent call last):' + os.linesep * 2 + os.linesep.join( trace_list )
+                
+                raise HydrusExceptions.DBException( text, caller_traceback, db_traceback )
+                
+            else:
+                
+                raise self._result
+                
             
         else: return self._result
         

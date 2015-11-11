@@ -9005,7 +9005,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def EventCopyTags( self, event ):
         
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, self._tag_service_key )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, tag_service_key = self._tag_service_key, collapse_siblings = False )
             
             tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
             

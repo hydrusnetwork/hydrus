@@ -1171,7 +1171,10 @@ class CanvasWithDetails( Canvas ):
         
         ratings_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.RATINGS_SERVICES ) )
         
-        if len( ratings_services ) > 0: self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameRatings( self, self._canvas_key )
+        if len( ratings_services ) > 0:
+            
+            self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameRatings( self, self._canvas_key )
+            
         
     
     def _DrawBackgroundDetails( self, dc ):
@@ -1190,10 +1193,26 @@ class CanvasWithDetails( Canvas ):
             
             current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
             pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
+            petitioned = siblings_manager.CollapseTags( tags_manager.GetPetitioned() )
             
-            tags_i_want_to_display = list( current.union( pending ) )
+            tags_i_want_to_display = set()
             
-            tags_i_want_to_display.sort()
+            tags_i_want_to_display.update( current )
+            tags_i_want_to_display.update( pending )
+            tags_i_want_to_display.update( petitioned )
+            
+            tags_i_want_to_display = list( tags_i_want_to_display )
+            
+            if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC:
+                
+                reverse = True
+                
+            else:
+                
+                reverse = False
+                
+            
+            tags_i_want_to_display.sort( reverse = reverse )
             
             current_y = 3
             
@@ -1201,8 +1220,17 @@ class CanvasWithDetails( Canvas ):
             
             for tag in tags_i_want_to_display:
                 
-                if tag in current: display_string = tag
-                elif tag in pending: display_string = '(+) ' + tag
+                display_string = tag
+                
+                if tag in pending:
+                    
+                    display_string += ' (+)'
+                    
+                
+                if tag in petitioned:
+                    
+                    display_string += ' (-)'
+                    
                 
                 if ':' in tag:
                     
@@ -1211,7 +1239,10 @@ class CanvasWithDetails( Canvas ):
                     if namespace in namespace_colours: ( r, g, b ) = namespace_colours[ namespace ]
                     else: ( r, g, b ) = namespace_colours[ None ]
                     
-                else: ( r, g, b ) = namespace_colours[ '' ]
+                else:
+                    
+                    ( r, g, b ) = namespace_colours[ '' ]
+                    
                 
                 dc.SetTextForeground( wx.Colour( r, g, b ) )
                 
@@ -1340,6 +1371,13 @@ class CanvasWithDetails( Canvas ):
                 dc.DrawText( index_string, client_width - x - 3, client_height - y - 3 )
                 
             
+        
+    
+    def _GetInfoString( self ):
+        
+        info_string = self._current_media.GetPrettyInfo() + ' | ' + ClientData.ConvertZoomToPercentage( self._current_zoom ) + ' | ' + self._current_media.GetPrettyAge()
+        
+        return info_string
         
     
 class CanvasPanel( Canvas, wx.Window ):
@@ -1566,13 +1604,6 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         if self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
         else: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
-        
-    
-    def _GetInfoString( self ):
-        
-        info_string = self._current_media.GetPrettyInfo() + ' | ' + ClientData.ConvertZoomToPercentage( self._current_zoom ) + ' | ' + self._current_media.GetPrettyAge()
-        
-        return info_string
         
     
     def _GetIndexString( self ):
@@ -3315,7 +3346,7 @@ class StaticImage( wx.Window ):
         
         dc.Clear()
         
-        if self._image_container.IsRendered():
+        if self._image_container is not None and self._image_container.IsRendered():
             
             hydrus_bitmap = self._image_container.GetHydrusBitmap()
             
@@ -3333,7 +3364,10 @@ class StaticImage( wx.Window ):
                 
                 wx.CallAfter( image.Destroy )
                 
-            else: wx_bitmap = hydrus_bitmap.GetWxBitmap()
+            else:
+                
+                wx_bitmap = hydrus_bitmap.GetWxBitmap()
+                
             
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
@@ -3384,7 +3418,10 @@ class StaticImage( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._image_container is None: self._image_container = self._image_cache.GetImage( self._media, ( my_width, my_height ) )
+                if self._image_container is None:
+                    
+                    self._image_container = self._image_cache.GetImage( self._media, ( my_width, my_height ) )
+                    
                 else:
                     
                     ( image_width, image_height ) = self._image_container.GetSize()
@@ -3403,14 +3440,17 @@ class StaticImage( wx.Window ):
                 
                 self._SetDirty()
                 
-                if not self._image_container.IsRendered(): self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
+                if not self._image_container.IsRendered():
+                    
+                    self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
+                    
                 
             
         
     
     def TIMEREventRenderWait( self, event ):
         
-        if self._image_container.IsRendered():
+        if self._image_container is not None and self._image_container.IsRendered():
             
             self._SetDirty()
             

@@ -1599,6 +1599,11 @@ class Frame( wx.Frame ):
     
     def SetInitialSize( self, ( width, height ) ):
         
+        ( display_width, display_height ) = wx.GetDisplaySize()
+        
+        width = min( display_width, width )
+        height = min( display_height, height )
+        
         wx.Frame.SetInitialSize( self, ( width, height ) )
         
         min_width = min( 240, width )
@@ -2341,6 +2346,9 @@ class ListBox( wx.ScrolledWindow ):
     
     def EventKeyDown( self, event ):
         
+        shift = event.ShiftDown()
+        ctrl = event.CmdDown() or event.ControlDown()
+        
         key_code = event.GetKeyCode()
         
         if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
@@ -2349,46 +2357,55 @@ class ListBox( wx.ScrolledWindow ):
             
         else:
             
-            hit_index = None
-            
-            if key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ):
+            if ctrl and key_code in ( ord( 'A' ), ord( 'a' ) ):
                 
-                hit_index = 0
-                
-            elif key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
-                
-                hit_index = len( self._ordered_strings ) - 1
-                
-            elif self._last_hit_index is not None:
-                
-                if key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                for i in range( len( self._ordered_strings ) ):
                     
-                    hit_index = self._last_hit_index - 1
+                    self._Select( i )
                     
-                elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                    self._SetDirty()
                     
-                    hit_index = self._last_hit_index + 1
-                    
-                elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
-                    
-                    hit_index = max( 0, self._last_hit_index - self._num_rows_per_page )
-                    
-                elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
-                    
-                    hit_index = min( len( self._ordered_strings ) - 1, self._last_hit_index + self._num_rows_per_page )
-                    
-                
-            
-            if hit_index is None:
-                
-                event.Skip()
                 
             else:
                 
-                shift = event.ShiftDown()
-                ctrl = event.CmdDown() or event.ControlDown()
+                hit_index = None
                 
-                self._Hit( shift, ctrl, hit_index )
+                if key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ):
+                    
+                    hit_index = 0
+                    
+                elif key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
+                    
+                    hit_index = len( self._ordered_strings ) - 1
+                    
+                elif self._last_hit_index is not None:
+                    
+                    if key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                        
+                        hit_index = self._last_hit_index - 1
+                        
+                    elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                        
+                        hit_index = self._last_hit_index + 1
+                        
+                    elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                        
+                        hit_index = max( 0, self._last_hit_index - self._num_rows_per_page )
+                        
+                    elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                        
+                        hit_index = min( len( self._ordered_strings ) - 1, self._last_hit_index + self._num_rows_per_page )
+                        
+                    
+                
+                if hit_index is None:
+                    
+                    event.Skip()
+                    
+                else:
+                    
+                    self._Hit( shift, ctrl, hit_index )
+                    
                 
             
         
@@ -3359,16 +3376,22 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     has_counts = True
     
-    def __init__( self, parent, collapse_siblings = False ):
+    def __init__( self, parent, include_counts = True, collapse_siblings = False ):
         
         ListBoxTags.__init__( self, parent, min_height = 200 )
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
+        if not include_counts and self._sort not in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_DESC ):
+            
+            self._sort = CC.SORT_BY_LEXICOGRAPHIC_ASC
+            
+        
         self._last_media = set()
         
         self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
         
+        self._include_counts = include_counts
         self._collapse_siblings = collapse_siblings
         
         self._current_tags_to_count = collections.Counter()
@@ -3412,16 +3435,28 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             tag_string = tag
             
-            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HydrusData.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
-            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HydrusData.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
-            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HydrusData.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
-            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HydrusData.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
+            if self._include_counts:
+                
+                if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HydrusData.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
+                if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HydrusData.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
+                if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HydrusData.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+                if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HydrusData.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
+                
+            else:
+                
+                if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+)'
+                if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-)'
+                if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X)'
+                
             
             if not self._collapse_siblings:
                 
                 sibling = siblings_manager.GetSibling( tag )
                 
-                if sibling is not None: tag_string += ' (will display as ' + sibling + ')'
+                if sibling is not None:
+                    
+                    tag_string += ' (will display as ' + sibling + ')'
+                    
                 
             
             self._ordered_strings.append( tag_string )
@@ -3465,26 +3500,6 @@ class ListBoxTagsSelection( ListBoxTags ):
         self._SortTags()
         
     
-    def SetTags( self, current_tags_to_count = collections.Counter(), deleted_tags_to_count = collections.Counter(), pending_tags_to_count = collections.Counter(), petitioned_tags_to_count = collections.Counter() ):
-        
-        if self._collapse_siblings:
-            
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-            
-            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-            deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
-            pending_tags_to_count = siblings_manager.CollapseTagsToCount( pending_tags_to_count )
-            petitioned_tags_to_count = siblings_manager.CollapseTagsToCount( petitioned_tags_to_count )
-            
-        
-        self._current_tags_to_count = current_tags_to_count
-        self._deleted_tags_to_count = deleted_tags_to_count
-        self._pending_tags_to_count = pending_tags_to_count
-        self._petitioned_tags_to_count = petitioned_tags_to_count
-        
-        self._RecalcStrings()
-        
-    
     def SetShow( self, show_type, value ):
         
         if show_type == 'current': self._show_current = value
@@ -3501,41 +3516,26 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         if force_reload:
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( media, self._tag_service_key )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( media, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
             
-            self.SetTags( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
+            self._current_tags_to_count = current_tags_to_count
+            self._deleted_tags_to_count = deleted_tags_to_count
+            self._pending_tags_to_count = pending_tags_to_count
+            self._petitioned_tags_to_count = petitioned_tags_to_count
             
         else:
             
             removees = self._last_media.difference( media )
             adds = media.difference( self._last_media )
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( removees, self._tag_service_key )
-            
-            if self._collapse_siblings:
-                
-                siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-                
-                current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-                deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
-                pending_tags_to_count = siblings_manager.CollapseTagsToCount( pending_tags_to_count )
-                petitioned_tags_to_count = siblings_manager.CollapseTagsToCount( petitioned_tags_to_count )
-                
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( removees, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
             
             self._current_tags_to_count.subtract( current_tags_to_count )
             self._deleted_tags_to_count.subtract( deleted_tags_to_count )
             self._pending_tags_to_count.subtract( pending_tags_to_count )
             self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( adds, self._tag_service_key )
-            
-            if self._collapse_siblings:
-                
-                current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-                deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
-                pending_tags_to_count = siblings_manager.CollapseTagsToCount( pending_tags_to_count )
-                petitioned_tags_to_count = siblings_manager.CollapseTagsToCount( petitioned_tags_to_count )
-                
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( adds, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
             
             self._current_tags_to_count.update( current_tags_to_count )
             self._deleted_tags_to_count.update( deleted_tags_to_count )
@@ -3552,8 +3552,8 @@ class ListBoxTagsSelection( ListBoxTags ):
                     
                 
             
-            self._RecalcStrings()
-            
+        
+        self._RecalcStrings()
         
         self._last_media = media
         
@@ -3562,7 +3562,7 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
     
     def __init__( self, parent, canvas_key ):
         
-        ListBoxTagsSelection.__init__( self, parent, collapse_siblings = True )
+        ListBoxTagsSelection.__init__( self, parent, include_counts = False, collapse_siblings = True )
         
         self._canvas_key = canvas_key
         
@@ -3576,7 +3576,7 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
     def __init__( self, parent, page_key ):
         
-        ListBoxTagsSelection.__init__( self, parent, collapse_siblings = True )
+        ListBoxTagsSelection.__init__( self, parent, include_counts = True, collapse_siblings = True )
         
         self._page_key = page_key
         
@@ -3608,7 +3608,7 @@ class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
     
     def __init__( self, parent, callable ):
         
-        ListBoxTagsSelection.__init__( self, parent, collapse_siblings = False )
+        ListBoxTagsSelection.__init__( self, parent, include_counts = True, collapse_siblings = False )
         
         self._callable = callable
         
@@ -5304,8 +5304,6 @@ class SeedCacheControl( SaneListCtrl ):
         
         notes = []
         
-        seeds_to_reset = set()
-        
         for ( seed, status, added_timestamp, last_modified_timestamp, note ) in self.GetSelectedClientData():
             
             if note != '':
@@ -5324,13 +5322,27 @@ class SeedCacheControl( SaneListCtrl ):
             
         
     
-    def _SetSelectedUnknown( self ):
+    def _CopySelectedSeeds( self ):
+        
+        seeds = [ seed for  ( seed, status, added_timestamp, last_modified_timestamp, note ) in self.GetSelectedClientData() ]
+        
+        if len( seeds ) > 0:
+            
+            separator = os.linesep * 2
+            
+            text = separator.join( seeds )
+            
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
+    def _SetSelected( self, status_to_set ):
         
         seeds_to_reset = set()
         
         for ( seed, status, added_timestamp, last_modified_timestamp, note ) in self.GetSelectedClientData():
             
-            if status != CC.STATUS_UNKNOWN:
+            if status != status_to_set:
                 
                 seeds_to_reset.add( seed )
                 
@@ -5338,7 +5350,7 @@ class SeedCacheControl( SaneListCtrl ):
         
         for seed in seeds_to_reset:
             
-            self._seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
+            self._seed_cache.UpdateSeedStatus( seed, status_to_set )
             
         
     
@@ -5351,7 +5363,9 @@ class SeedCacheControl( SaneListCtrl ):
             ( command, data ) = action
             
             if command == 'copy_seed_notes': self._CopySelectedNotes()
-            elif command == 'set_seed_unknown': self._SetSelectedUnknown()
+            elif command == 'copy_seeds': self._CopySelectedSeeds()
+            elif command == 'set_seed_unknown': self._SetSelected( CC.STATUS_UNKNOWN )
+            elif command == 'set_seed_skipped': self._SetSelected( CC.STATUS_SKIPPED )
             else: event.Skip()
             
         
@@ -5360,7 +5374,12 @@ class SeedCacheControl( SaneListCtrl ):
         
         menu = wx.Menu()
         
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_seeds' ), 'copy sources' )
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_seed_notes' ), 'copy notes' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_skipped' ), 'skip' )
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_unknown' ), 'try again' )
         
         self.PopupMenu( menu )
@@ -5530,7 +5549,10 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         self.AddF( self._tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
-    def SetTagsByMedia( self, media, force_reload = False ): self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
+    def SetTagsByMedia( self, media, force_reload = False ):
+        
+        self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
+        
     
 class RadioBox( StaticBox ):
     

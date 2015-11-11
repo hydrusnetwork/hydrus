@@ -22,6 +22,7 @@ try:
     from twisted.internet import reactor
     from include import HydrusExceptions
     from include import HydrusGlobals
+    from include import HydrusLogger
     import traceback
     
     HydrusGlobals.instance = HC.HYDRUS_SERVER
@@ -41,46 +42,9 @@ try:
         
     else:
         
-        error_occured = False
-        
-        initial_sys_stdout = sys.stdout
-        initial_sys_stderr = sys.stderr
-        
-        with open( os.path.join( HC.LOGS_DIR, 'server.log' ), 'a' ) as f:
+        with HydrusLogger.HydrusLogger( 'server.log' ):
             
-            class logger( object ):
-                
-                def __init__( self ):
-                    
-                    pass
-                    
-                
-                def flush( self ):
-                    
-                    initial_sys_stdout.flush()
-                    f.flush()
-                    
-                
-                def write( self, value ):
-                    
-                    if value in ( os.linesep, '\n' ):
-                        
-                        prefix = ''
-                        
-                    else:
-                        
-                        prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ', time.localtime() )
-                        
-                    
-                    initial_sys_stdout.write( prefix + value )
-                    f.write( prefix + value )
-                    
-                
-            
-            l = logger()
-            
-            sys.stdout = l
-            sys.stderr = l
+            error_occured = False
             
             try:
                 
@@ -127,9 +91,6 @@ try:
                 reactor.callFromThread( reactor.stop )
                 
             
-        
-        sys.stdout = initial_sys_stdout
-        sys.stderr = initial_sys_stderr
         
     
 except HydrusExceptions.PermissionException as e:
