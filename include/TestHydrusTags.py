@@ -164,7 +164,7 @@ class TestTagsManager( unittest.TestCase ):
         self.assertEqual( self._tags_manager.GetDeleted( self._second_key ), { 'current' } )
         self.assertEqual( self._tags_manager.GetDeleted( self._third_key ), { 'pending' } )
         
-        self.assertEqual( self._tags_manager.GetDeleted(), set() ) # combined tag service does not track deleted
+        self.assertEqual( self._tags_manager.GetDeleted(), { 'deleted', 'current', 'pending' } )
         
     
     def test_get_namespace_slice( self ):
@@ -214,7 +214,7 @@ class TestTagsManager( unittest.TestCase ):
         self.assertEqual( self._tags_manager.GetPetitioned( self._second_key ), { 'petitioned' } )
         self.assertEqual( self._tags_manager.GetPetitioned( self._third_key ), set() )
         
-        self.assertEqual( self._tags_manager.GetPetitioned(), set() ) # combined tag service does not track petitioned
+        self.assertEqual( self._tags_manager.GetPetitioned(), { 'petitioned' } )
         
     
     def test_get_service_keys_to_statuses_to_tags( self ):

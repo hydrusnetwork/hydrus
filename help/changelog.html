@@ -8,6 +8,44 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 181</h3></li>
+				<ul>
+					<li>fixed a potential bug in the server's db, very important you update this week if running on Windows</li>
+					<li>improved some thumbnail page calculation logic</li>
+					<li>improved some thumbnail page drawing logic</li>
+					<li>fixed broken vertical resize thumbnail grid issue</li>
+					<li>fixed some broken 'thumbnails have changed dimensions' event layout recalculation</li>
+					<li>fixed an idiotic typo bug that was making cached thumbnail page bmps taller or shorter than needed</li>
+					<li>thumbnail fading and other general thumbnail redraws should be a decent bit faster now</li>
+					<li>thumbnails have handed off all bmp storage responsibility to the thumbnail cache, which should mean greatly reduced memory use when browsing very large results</li>
+					<li>thumbnails will now only quick-draw if they have been seen before on the same page, which should reduced some page-refresh waterfall jankiness</li>
+					<li>thumbnail media panel double buffering seems to be working better</li>
+					<li>improved some general thumbnail drawing code</li>
+					<li>the media viewer background taglist will now show petitioned tags</li>
+					<li>the media viewer hover taglist should now look exactly like the background taglist (sorted lexicographically, no more counts, and now shows petitioned)</li>
+					<li>the 'selection tags' taglist will now show petitioned tags for 'all known tags' queries</li>
+					<li>the 'selection tags' taglist and the media viewer background and hover taglists will now count collapsed sibling tags correctly</li>
+					<li>all taglists now support ctrl+a to select all</li>
+					<li>improved some generic taglist value-setting code</li>
+					<li>parents should now only expand for their specific tag services</li>
+					<li>siblings, parents, and the pending count should now be correctly recalculated upon repository update processing</li>
+					<li>added 'copy sources' to the import status window's right-click menu so you can copy bad urls or whatever to the clipboard</li>
+					<li>added 'skip' to the import status window's right-click menu so you can skip urls you don't want</li>
+					<li>added default booru for rule34hentai.net</li>
+					<li>under certain circumstances, services with duplicate names could be created--any services like this will be renamed on update, and the loophole where this could happen is now closed</li>
+					<li>improved a locale number formatting call to ask for unicode</li>
+					<li>improved newgrounds parsing--mp4/wmv files should now work</li>
+					<li>the server logger has been formalised into a proper class</li>
+					<li>fixed some bad static image initialisation in the canvas code that was causing error spam</li>
+					<li>fixed default import tag options for hentai foundry and pixiv</li>
+					<li>copy->(bmp|path|local url) will now only appear as an option if the currently focussed media is local</li>
+					<li>fixed some gallery identifier print code</li>
+					<li>frames and dialogs will now clip their initial size to the current monitor's resolution--better scrollbar support for cramped windows will follow</li>
+					<li>updated ffmpeg static builds</li>
+					<li>updated sqlite command line exes</li>
+					<li>put off sqlite windows dll update because of critical server db bug</li>
+					<li>misc code cleanup and redaction</li>
+				</ul>
 				<li><h3>version 180</h3></li>
 				<ul>
 					<li>middle click on any taglist now does 'open a new search page for selection'</li>

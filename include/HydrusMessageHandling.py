@@ -13,7 +13,7 @@ import zlib
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientCreator
 import HydrusData
-
+'''
 def PackageStatusForDelivery( status, public_key_text ):
     
     public_key = HydrusEncryption.TextToKey( public_key_text )
@@ -394,4 +394,4 @@ class IMMessageText( IMMessage ):
         
     
     def ToTuple( self ): return ( self._type, self._text )
-    
+    '''

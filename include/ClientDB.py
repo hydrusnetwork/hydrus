@@ -1127,6 +1127,15 @@ class DB( HydrusDB.HydrusDB ):
             info[ 'paused' ] = False
             
         
+        result = self._c.execute( 'SELECT 1 FROM services WHERE name = ?;', ( name, ) ).fetchone()
+        
+        while result is not None:
+            
+            name += str( random.randint( 0, 9 ) )
+            
+            result = self._c.execute( 'SELECT 1 FROM services WHERE name = ?;', ( name, ) ).fetchone()
+            
+        
         self._c.execute( 'INSERT INTO services ( service_key, service_type, name, info ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, name, info ) )
         
     
@@ -4726,16 +4735,16 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if continue_pubsub:
+        if notify_new_downloads: self.pub_after_commit( 'notify_new_downloads' )
+        if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
+        if notify_new_siblings:
             
-            if notify_new_downloads: self.pub_after_commit( 'notify_new_downloads' )
-            if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
-            if notify_new_parents: self.pub_after_commit( 'notify_new_parents' )
-            if notify_new_siblings:
-                
-                self.pub_after_commit( 'notify_new_siblings' )
-                self.pub_after_commit( 'notify_new_parents' )
-                
+            self.pub_after_commit( 'notify_new_siblings' )
+            self.pub_after_commit( 'notify_new_parents' )
+            
+        elif notify_new_parents: self.pub_after_commit( 'notify_new_parents' )
+        
+        if continue_pubsub:
             
             self.pub_content_updates_after_commit( service_keys_to_content_updates )
             
@@ -6076,6 +6085,32 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DROP INDEX mappings_status_index;' )
             self._c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
+            
+        
+        if version == 180:
+            
+            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'rule34hentai', ClientDefaults.GetDefaultBoorus()[ 'rule34hentai' ] ) )
+            
+            #
+            
+            names_seen = set()
+            
+            info = self._c.execute( 'SELECT service_id, name FROM services;', ).fetchall()
+            
+            for ( service_id, name ) in info:
+                
+                if name in names_seen:
+                    
+                    while name in names_seen:
+                        
+                        name += str( random.randint( 0, 9 ) )
+                        
+                    
+                    self._c.execute( 'UPDATE services SET name = ? WHERE service_id = ?;', ( name, service_id ) )
+                    
+                
+                names_seen.add( name )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
