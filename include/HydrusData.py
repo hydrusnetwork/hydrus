@@ -169,7 +169,7 @@ def ConvertIntToPixels( i ):
     
 def ConvertIntToPrettyString( num ):
     
-    return locale.format( u'%d', num, grouping = True )
+    return locale.format( '%d', num, grouping = True ).decode(locale.getlocale()[1])
     
 def ConvertIntToUnit( unit ):
     
