@@ -649,7 +649,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     def SetSearchFocus( self, page_key ): pass
     
     def TestAbleToClose( self ): pass
-    
+    '''
 class ManagementPanelDumper( ManagementPanel ):
     
     def __init__( self, parent, page, management_controller ):
@@ -1379,7 +1379,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_DUMPER ] = ManagementPanelDumper
-
+'''
 class ManagementPanelGalleryImport( ManagementPanel ):
     
     def __init__( self, parent, page, management_controller ):

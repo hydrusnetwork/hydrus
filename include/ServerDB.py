@@ -24,7 +24,7 @@ import yaml
 import HydrusData
 import HydrusTags
 import HydrusGlobals
-
+'''
 class MessageDB( object ):
     
     def _AddMessage( self, contact_key, message ):
@@ -96,7 +96,7 @@ class MessageDB( object ):
         
         return public_key
         
-    
+    '''
 class DB( HydrusDB.HydrusDB ):
     
     DB_NAME = 'server'
@@ -2475,49 +2475,7 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusGlobals.is_db_updated = True
         
-    '''
-    def _UpdateRatings( self, service_id, account_id, ratings ):
-        
-        hashes = [ rating[0] for rating in ratings ]
-        
-        hashes_to_hash_ids = self._GetHashesToHashIds( hashes )
-        
-        valued_ratings = [ ( hash, rating ) for ( hash, rating ) in ratings if rating is not None ]
-        null_ratings = [ hash for ( hash, rating ) in ratings if rating is None ]
-        
-        self._c.executemany( 'REPLACE INTO ratings ( service_id, account_id, hash_id, rating ) VALUES ( ?, ?, ?, ? );', [ ( service_id, account_id, hashes_to_hash_ids[ hash ], rating ) for ( hash, rating ) in valued_ratings ] )
-        self._c.executemany( 'DELETE FROM ratings WHERE service_id = ? AND account_id = ? AND hash_id = ?;', [ ( service_id, account_id, hashes_to_hash_ids[ hash ] ) for hash in null_ratings ] )
-        
-        hash_ids = set( hashes_to_hash_ids.values() )
-        
-        aggregates = self._c.execute( 'SELECT hash_id, SUM( rating ), COUNT( * ) FROM ratings WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' GROUP BY hash_id;' )
-        
-        missed_aggregate_hash_ids = hash_ids.difference( aggregate[0] for aggregate in aggregates )
-        
-        aggregates.extend( [ ( hash_id, 0.0, 0 ) for hash_id in missed_aggregate_hash_ids ] )        
-        
-        hash_ids_to_new_timestamps = { hash_id : new_timestamp for ( hash_id, new_timestamp ) in self._c.execute( 'SELECT hash_id, new_timestamp FROM aggregate_ratings WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) }
-        
-        now = HydrusData.GetNow()
-        
-        for ( hash_id, total_score, count ) in aggregates:
-            
-            score = float( total_score ) / float( count )
-            
-            if hash_id not in hash_ids_to_new_timestamps or hash_ids_to_new_timestamps[ hash_id ] == 0:
-                
-                new_timestamp = now + ( count * HC.UPDATE_DURATION / 10 )
-                
-            else:
-                
-                new_timestamp = max( now, hash_ids_to_new_timestamps[ hash_id ] - HC.UPDATE_DURATION )
-                
-            
-            if hash_id not in hash_ids_to_new_timestamps: self._c.execute( 'INSERT INTO aggregate_ratings ( service_id, hash_id, score, count, new_timestamp, current_timestamp ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, hash_id, score, new_timestamp, 0 ) )
-            elif new_timestamp != hash_ids_to_new_timestamps[ hash_id ]: self._c.execute( 'UPDATE aggregate_ratings SET new_timestamp = ? WHERE service_id = ? AND hash_id = ?;', ( new_timestamp, service_id, hash_id ) )
-            
-        
-    '''
+    
     def _VerifyAccessKey( self, service_key, access_key ):
         
         service_id = self._GetServiceId( service_key )

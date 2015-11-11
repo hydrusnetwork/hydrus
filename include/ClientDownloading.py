@@ -114,6 +114,10 @@ def GetGallery( gallery_identifier ):
         
         return GalleryNewgroundsMovies()
         
+    elif site_type == HC.SITE_TYPE_PIXIV:
+        
+        return GalleryPixiv()
+        
     elif site_type == HC.SITE_TYPE_PIXIV_ARTIST_ID:
         
         return GalleryPixivArtistID()
@@ -332,7 +336,7 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
         
         if self._site_type == HC.SITE_TYPE_BOORU:
             
-            text += ': ' + self._additional_info
+            text += ': ' + HydrusData.ToUnicode( self._additional_info )
             
         
         return text
@@ -1199,21 +1203,13 @@ class GalleryNewgrounds( Gallery ):
         
         #
         
-        try:
-            
-            components = html.split( '"http://uploads.ungrounded.net/' )
-            
-            # there is sometimes another bit of api flash earlier on that we don't want
-            # it is called http://uploads.ungrounded.net/apiassets/sandbox.swf
-            
-            if len( components ) == 2: flash_url = components[1]
-            else: flash_url = components[2]
-            
-            flash_url = flash_url.split( '"', 1 )[0]
-            
-            flash_url = 'http://uploads.ungrounded.net/' + flash_url
-            
-        except: raise Exception( 'Could not find the swf file! It was probably an mp4!' )
+        flash_url = html.split( '"http:\/\/uploads.ungrounded.net\/', 1 )[1]
+        
+        flash_url = flash_url.split( '"', 1 )[0]
+        
+        flash_url = flash_url.replace( "\/", '/' )
+        
+        flash_url = 'http://uploads.ungrounded.net/' + flash_url
         
         return ( flash_url, tags )
         

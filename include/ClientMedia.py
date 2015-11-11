@@ -1391,6 +1391,8 @@ class TagsManager( TagsManagerSimple ):
             
             combined_statuses_to_tags[ HC.CURRENT ].update( statuses_to_tags[ HC.CURRENT ] )
             combined_statuses_to_tags[ HC.PENDING ].update( statuses_to_tags[ HC.PENDING ] )
+            combined_statuses_to_tags[ HC.PETITIONED ].update( statuses_to_tags[ HC.PETITIONED ] )
+            combined_statuses_to_tags[ HC.DELETED ].update( statuses_to_tags[ HC.DELETED ] )
             
         
         self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags

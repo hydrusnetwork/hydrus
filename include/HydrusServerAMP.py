@@ -22,7 +22,7 @@ from twisted.internet.threads import deferToThread
 from twisted.protocols import amp
 import HydrusData
 import HydrusGlobals
-
+'''
 class HydrusAMPCommand( amp.Command ):
     errors = {}
     errors[ HydrusExceptions.ForbiddenException ] = 'FORBIDDEN'
@@ -253,4 +253,4 @@ class MessagingServiceProtocol( HydrusAMP ):
         
         if self._identifier is not None: self.factory.RemoveConnection( self._identifier, self._name )
         
-    
+    '''

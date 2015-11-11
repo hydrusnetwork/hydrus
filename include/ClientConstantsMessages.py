@@ -16,7 +16,7 @@ import wx
 import zlib
 import HydrusData
 import HydrusGlobals
-
+'''
 class Conversation( object ):
     
     def __init__( self, identity, conversation_key, subject, messages, drafts, search_context ):
@@ -502,4 +502,4 @@ class MessageSystemPredicates( object ):
         
         return True
         
-    
+    '''
