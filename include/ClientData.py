@@ -2341,7 +2341,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             job_key.SetVariable( 'popup_text_1', updates_text + ', and ' + content_text )
             
-            print( job_key.ToString() )
+            print( job_key.ToString().encode( 'utf-8' ) )
             
             time.sleep( 3 )
             
