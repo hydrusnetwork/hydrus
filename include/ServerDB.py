@@ -167,7 +167,10 @@ class DB( HydrusDB.HydrusDB ):
                 
                 thumbnail = file_dict[ 'thumbnail' ]
                 
-                with open( thumbnail_dest_path, 'wb' ) as f: f.write( thumbnail )
+                with open( thumbnail_dest_path, 'wb' ) as f:
+                    
+                    f.write( thumbnail )
+                    
                 
             
             if self._c.execute( 'SELECT 1 FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone() is None:
@@ -528,14 +531,14 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CreateDB( self ):
         
-        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_UPDATES_DIR, HC.SERVER_MESSAGES_DIR )
+        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_UPDATES_DIR )
         
         for dir in dirs:
             
             if not os.path.exists( dir ): os.mkdir( dir )
             
         
-        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_MESSAGES_DIR )
+        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR )
         
         hex_chars = '0123456789abcdef'
         
@@ -888,7 +891,10 @@ class DB( HydrusDB.HydrusDB ):
                     
                     network_string = content_update_package.DumpToNetworkString()
                     
-                    with open( path, 'wb' ) as f: f.write( network_string )
+                    with open( path, 'wb' ) as f:
+                        
+                        f.write( network_string )
+                        
                     
                     subindex += 1
                     weight = 0
@@ -906,7 +912,10 @@ class DB( HydrusDB.HydrusDB ):
             
             network_string = content_update_package.DumpToNetworkString()
             
-            with open( path, 'wb' ) as f: f.write( network_string )
+            with open( path, 'wb' ) as f:
+                
+                f.write( network_string )
+                
             
             subindex += 1
             
@@ -926,7 +935,10 @@ class DB( HydrusDB.HydrusDB ):
         
         network_string = service_update_package.DumpToNetworkString()
         
-        with open( path, 'wb' ) as f: f.write( network_string )
+        with open( path, 'wb' ) as f:
+            
+            f.write( network_string )
+            
         
     
     def _GetAccessKey( self, registration_key ):
@@ -955,8 +967,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetAccountFileInfo( self, service_id, account_id ):
         
-        ( num_deleted_files, ) = self._c.execute( 'SELECT COUNT( * ) FROM file_petitions WHERE service_id = ? AND account_id = ? AND status = ?;', ( service_id, account_id, HC.DELETED ) ).fetchone()
-        
         ( num_files, num_files_bytes ) = self._c.execute( 'SELECT COUNT( * ), SUM( size ) FROM file_map, files_info USING ( hash_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
         
         if num_files_bytes is None: num_files_bytes = 0
@@ -970,7 +980,6 @@ class DB( HydrusDB.HydrusDB ):
         
         account_info = {}
         
-        account_info[ 'num_deleted_files' ] = num_deleted_files
         account_info[ 'num_files' ] = num_files
         account_info[ 'num_files_bytes' ] = num_files_bytes
         account_info[ 'petition_score' ] = petition_score
@@ -1112,8 +1121,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetAccountMappingInfo( self, service_id, account_id ):
         
-        num_deleted_mappings = len( self._c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND status = ? LIMIT 5000;', ( service_id, account_id, HC.DELETED ) ).fetchall() )
-        
         num_mappings = len( self._c.execute( 'SELECT 1 FROM mappings WHERE service_id = ? AND account_id = ? LIMIT 5000;', ( service_id, account_id ) ).fetchall() )
         
         result = self._c.execute( 'SELECT score FROM account_scores WHERE service_id = ? AND account_id = ? AND score_type = ?;', ( service_id, account_id, HC.SCORE_PETITION ) ).fetchone()
@@ -1126,7 +1133,6 @@ class DB( HydrusDB.HydrusDB ):
         
         account_info = {}
         
-        account_info[ 'num_deleted_mappings' ] = num_deleted_mappings
         account_info[ 'num_mappings' ] = num_mappings
         account_info[ 'petition_score' ] = petition_score
         account_info[ 'num_petitions' ] = num_petitions
@@ -1739,8 +1745,10 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'COMMIT' )
         
+        HydrusData.Print( 'backing up: vacuum' )
         self._c.execute( 'VACUUM' )
         
+        HydrusData.Print( 'backing up: analyze' )
         self._c.execute( 'ANALYZE' )
         
         self._c.close()
@@ -1750,17 +1758,26 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'BEGIN IMMEDIATE' )
         
-        shutil.copy( self._db_path, self._db_path + '.backup' )
+        backup_path = os.path.join( HC.DB_DIR, 'server_backup' )
         
-        HydrusData.RecyclePath( HC.SERVER_FILES_DIR + '_backup' )
-        HydrusData.RecyclePath( HC.SERVER_THUMBNAILS_DIR + '_backup' )
-        HydrusData.RecyclePath( HC.SERVER_MESSAGES_DIR + '_backup' )
-        HydrusData.RecyclePath( HC.SERVER_UPDATES_DIR + '_backup' )
+        HydrusData.Print( 'backing up: deleting old backup' )
+        HydrusData.RecyclePath( backup_path )
         
-        shutil.copytree( HC.SERVER_FILES_DIR, HC.SERVER_FILES_DIR + '_backup' )
-        shutil.copytree( HC.SERVER_THUMBNAILS_DIR, HC.SERVER_THUMBNAILS_DIR + '_backup' )
-        shutil.copytree( HC.SERVER_MESSAGES_DIR, HC.SERVER_MESSAGES_DIR + '_backup' )
-        shutil.copytree( HC.SERVER_UPDATES_DIR, HC.SERVER_UPDATES_DIR + '_backup' )
+        os.mkdir( backup_path )
+        
+        HydrusData.Print( 'backing up: copying db file' )
+        shutil.copy( self._db_path, os.path.join( backup_path, self.DB_NAME + '.db' ) )
+        
+        HydrusData.Print( 'backing up: copying files' )
+        shutil.copytree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
+        
+        HydrusData.Print( 'backing up: copying thumbnails' )
+        shutil.copytree( HC.SERVER_THUMBNAILS_DIR, os.path.join( backup_path, 'server_thumbnails' ) )
+        
+        HydrusData.Print( 'backing up: copying updates' )
+        shutil.copytree( HC.SERVER_UPDATES_DIR, os.path.join( backup_path, 'server_updates' ) )
+        
+        HydrusData.Print( 'backing up: done!' )
         
     
     def _ManageDBError( self, job, e ):
@@ -2300,7 +2317,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 with open( os.path.join( HC.BASE_DIR, 'update to v132 new access keys.txt' ), 'wb' ) as f:
                     
-                    f.write( account_log_text )
+                    f.write( HydrusData.ToByteString( account_log_text ) )
                     
                 
             
@@ -2330,7 +2347,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 132:
             
-            dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_MESSAGES_DIR )
+            dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR )
             
             hex_chars = '0123456789abcdef'
             
@@ -2442,7 +2459,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 179:
             
-            print( 'moving updates about' )
+            HydrusData.Print( 'moving updates about' )
             
             for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
                 
@@ -2469,7 +2486,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        print( 'The server has updated to version ' + str( version + 1 ) )
+        HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         

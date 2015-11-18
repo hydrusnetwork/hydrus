@@ -451,7 +451,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 if HydrusGlobals.special_debug_mode:
                     for previous_filename in previous_filenames:
                         
-                        print( previous_filename )
+                        HydrusData.Print( previous_filename )
                         
                     
                 
@@ -506,7 +506,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     for deletee_filename in deletee_filenames:
                         
                         deletee_path = os.path.join( folder_path, deletee_filename )
-                        if HydrusGlobals.special_debug_mode: print( deletee_path )
+                        if HydrusGlobals.special_debug_mode: HydrusData.Print( deletee_path )
                         ClientData.DeletePath( deletee_path )
                         
                     

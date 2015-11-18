@@ -189,13 +189,12 @@ def GetMime( path ):
             
             if mime == HC.UNDETERMINED_WM:
                 
-                try:
-                    
-                    ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetCVVideoProperties( path )
+                if HydrusVideoHandling.HasVideoStream( path ):
                     
                     return HC.VIDEO_WMV
                     
-                except: pass # we'll catch wma later
+                
+                # we'll catch and verify wma later
                 
             else: return mime
             

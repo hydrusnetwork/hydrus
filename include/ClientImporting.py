@@ -236,7 +236,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             error_text = traceback.format_exc()
             
-            print( error_text )
+            HydrusData.Print( error_text )
             
             status = CC.STATUS_FAILED
             
@@ -710,7 +710,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         except Exception as e:
             
             error_text = traceback.format_exc()
-            print( error_text )
+            HydrusData.Print( error_text )
             
             status = CC.STATUS_FAILED
             
@@ -1051,8 +1051,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         error_text = traceback.format_exc()
                         
-                        print( 'A file failed to import from import folder ' + self._name + ':' )
-                        print( error_text )
+                        HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' )
+                        HydrusData.Print( error_text )
                         
                         self._path_cache.UpdateSeedStatus( path, CC.STATUS_FAILED, note = error_text )
                         
@@ -1244,7 +1244,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         except Exception:
             
             error_text = traceback.format_exc()
-            print( error_text )
+            HydrusData.Print( error_text )
             
             status = CC.STATUS_FAILED
             
@@ -2025,7 +2025,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             except Exception as e:
                 
                 error_text = traceback.format_exc()
-                print( error_text )
+                HydrusData.Print( error_text )
                 
                 status = CC.STATUS_FAILED
                 
@@ -2447,7 +2447,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         except Exception as e:
             
             error_text = traceback.format_exc()
-            print( error_text )
+            HydrusData.Print( error_text )
             
             status = CC.STATUS_FAILED
             

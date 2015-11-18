@@ -358,7 +358,10 @@ class HydrusResourceCommand( Resource ):
         
         self._recordDataUsage( request )
         
-        if do_finish: request.finish()
+        if do_finish:
+            
+            request.finish()
+            
         
     
     def _callbackDoGETJob( self, request ):
@@ -440,7 +443,7 @@ class HydrusResourceCommand( Resource ):
         try: self._CleanUpTempFile( request )
         except: pass
         
-        try: print( failure.getTraceback() )
+        try: HydrusData.DebugPrint( failure.getTraceback() )
         except: pass
         
         try: request.write( failure.getTraceback() )
@@ -482,7 +485,7 @@ class HydrusResourceCommand( Resource ):
         elif failure.type == HydrusExceptions.SessionException: response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
         else:
             
-            print( failure.getTraceback() )
+            HydrusData.DebugPrint( failure.getTraceback() )
             
             response_context = ResponseContext( 500, mime = default_mime, body = default_encoding( 'The repository encountered an error it could not handle! Here is a dump of what happened, which will also be written to your client.log file. If it persists, please forward it to hydrus.admin@gmail.com:' + os.linesep * 2 + failure.getTraceback() ) )
             

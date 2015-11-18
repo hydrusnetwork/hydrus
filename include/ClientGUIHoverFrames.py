@@ -76,66 +76,79 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def TIMEREventCheckIfShouldShow( self, event ):
         
-        if self._current_media is None:
+        try:
             
-            self.Hide()
-            
-        else:
-            
-            ( mouse_x, mouse_y ) = wx.GetMousePosition()
-            
-            ( my_width, my_height ) = self.GetSize()
-            
-            ( should_resize, ( my_ideal_width, my_ideal_height ), ( my_ideal_x, my_ideal_y ) ) = self._GetIdealSizeAndPosition()
-            
-            if my_ideal_width == -1: my_ideal_width = my_width
-            if my_ideal_height == -1: my_ideal_height = my_height
-            
-            in_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
-            in_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
-            
-            no_dialogs_open = True
-            
-            tlps = wx.GetTopLevelWindows()
-            
-            for tlp in tlps:
+            if self._current_media is None:
                 
-                if isinstance( tlp, wx.Dialog ): no_dialogs_open = False
+                self.Hide()
+                
+            else:
+                
+                ( mouse_x, mouse_y ) = wx.GetMousePosition()
+                
+                ( my_width, my_height ) = self.GetSize()
+                
+                ( should_resize, ( my_ideal_width, my_ideal_height ), ( my_ideal_x, my_ideal_y ) ) = self._GetIdealSizeAndPosition()
+                
+                if my_ideal_width == -1: my_ideal_width = my_width
+                if my_ideal_height == -1: my_ideal_height = my_height
+                
+                in_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
+                in_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
+                
+                no_dialogs_open = True
+                
+                tlps = wx.GetTopLevelWindows()
+                
+                for tlp in tlps:
+                    
+                    if isinstance( tlp, wx.Dialog ): no_dialogs_open = False
+                    
+                
+                mime = self._current_media.GetMime()
+                
+                in_position = in_x and in_y
+                
+                mouse_is_over_interactable_media = mime == HC.APPLICATION_FLASH and self.GetParent().MouseIsOverMedia()
+                
+                mouse_is_near_animation_bar = self.GetParent().MouseIsNearAnimationBar()
+                
+                mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
+                
+                current_focus = wx.Window.FindFocus()
+                
+                tlp = wx.GetTopLevelParent( current_focus )
+                
+                my_parent_in_focus_tree = False
+                
+                while tlp is not None:
+                    
+                    if tlp == self.GetParent(): my_parent_in_focus_tree = True
+                    
+                    tlp = tlp.GetParent()
+                    
+                
+                ready_to_show = in_position and not mouse_is_over_something_important and no_dialogs_open and my_parent_in_focus_tree
+                ready_to_hide = not in_position or not no_dialogs_open or not my_parent_in_focus_tree
+                
+                if ready_to_show:
+                    
+                    self._SizeAndPosition()
+                    
+                    self.Show()
+                    
+                elif ready_to_hide: self.Hide()
                 
             
-            mime = self._current_media.GetMime()
+        except wx.PyDeadObjectError:
             
-            in_position = in_x and in_y
+            self._timer_check_show.Stop()
             
-            mouse_is_over_interactable_media = mime == HC.APPLICATION_FLASH and self.GetParent().MouseIsOverMedia()
+        except:
             
-            mouse_is_near_animation_bar = self.GetParent().MouseIsNearAnimationBar()
+            self._timer_check_show.Stop()
             
-            mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
-            
-            current_focus = wx.Window.FindFocus()
-            
-            tlp = wx.GetTopLevelParent( current_focus )
-            
-            my_parent_in_focus_tree = False
-            
-            while tlp is not None:
-                
-                if tlp == self.GetParent(): my_parent_in_focus_tree = True
-                
-                tlp = tlp.GetParent()
-                
-            
-            ready_to_show = in_position and not mouse_is_over_something_important and no_dialogs_open and my_parent_in_focus_tree
-            ready_to_hide = not in_position or not no_dialogs_open or not my_parent_in_focus_tree
-            
-            if ready_to_show:
-                
-                self._SizeAndPosition()
-                
-                self.Show()
-                
-            elif ready_to_hide: self.Hide()
+            raise
             
         
 
@@ -613,9 +626,12 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
-                    do_redraw = True
-                    
-                    break
+                    if True in ( content_update.IsInboxRelated() for content_update in content_updates ):
+                        
+                        do_redraw = True
+                        
+                        break
+                        
                     
                 
             

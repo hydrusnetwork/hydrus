@@ -275,9 +275,9 @@ def DAEMONSynchroniseAccounts( controller ):
                 
             except Exception as e:
                 
-                print( 'Failed to refresh account for ' + service.GetName() + ':' )
+                HydrusData.Print( 'Failed to refresh account for ' + service.GetName() + ':' )
                 
-                print( traceback.format_exc() )
+                HydrusData.Print( traceback.format_exc() )
                 
             
         

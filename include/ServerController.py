@@ -85,7 +85,7 @@ def GetStartingAction():
             
         else:
             
-            print( 'The server is already running. Would you like to [s]top it, or [r]estart it?' )
+            HydrusData.Print( 'The server is already running. Would you like to [s]top it, or [r]estart it?' )
             
             answer = raw_input()
             
@@ -146,7 +146,7 @@ def ShutdownSiblingInstance():
             
             port_found = True
             
-            print( 'Sending shut down instruction...' )
+            HydrusData.Print( 'Sending shut down instruction...' )
             
             connection.request( 'POST', '/shutdown' )
             
@@ -186,7 +186,7 @@ def ShutdownSiblingInstance():
         raise HydrusExceptions.PermissionException( 'The existing server did not have an administration service!' )
         
     
-    print( 'The existing server is shut down!' )
+    HydrusData.Print( 'The existing server is shut down!' )
     
 class Controller( HydrusController.HydrusController ):
     
@@ -247,7 +247,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 except Exception as e:
                     
-                    print( traceback.format_exc() )
+                    HydrusData.Print( traceback.format_exc() )
                     
                 
             
@@ -293,18 +293,16 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
-        print( 'Shutting down daemons and services...' )
+        HydrusData.Print( 'Shutting down daemons and services...' )
         
         self.ShutdownView()
         
-        print( 'Shutting down db...' )
+        HydrusData.Print( 'Shutting down db...' )
         
         self.ShutdownModel()
         
     
     def InitModel( self ):
-        
-        print( 'Initialising db...' )
         
         HydrusController.HydrusController.InitModel( self )
         
@@ -317,8 +315,6 @@ class Controller( HydrusController.HydrusController ):
         
     
     def InitView( self ):
-        
-        print( 'Initialising daemons and services...' )
         
         HydrusController.HydrusController.InitView( self )
         
@@ -345,15 +341,19 @@ class Controller( HydrusController.HydrusController ):
         self.CallToThread( self.ProcessPubSub )
         
     
-    def Run( self,):
+    def Run( self ):
         
         HydrusData.RecordRunningStart( 'server' )
         
+        HydrusData.Print( 'Initialising db...' )
+        
         self.InitModel()
+        
+        HydrusData.Print( 'Initialising daemons and services...' )
         
         self.InitView()
         
-        print( 'Server is running. Press Ctrl+C to quit.' )
+        HydrusData.Print( 'Server is running. Press Ctrl+C to quit.' )
         
         interrupt_received = False
         
@@ -369,7 +369,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     interrupt_received = True
                     
-                    print( 'Received a keyboard interrupt...' )
+                    HydrusData.Print( 'Received a keyboard interrupt...' )
                     
                     def do_it():
                         
@@ -381,7 +381,7 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        print( 'Shutting down controller...' )
+        HydrusData.Print( 'Shutting down controller...' )
         
     
     def ShutdownView( self ):
@@ -395,7 +395,7 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownFromServer( self ):
         
-        print( 'Received a server shut down request...' )
+        HydrusData.Print( 'Received a server shut down request...' )
         
         def do_it():
             

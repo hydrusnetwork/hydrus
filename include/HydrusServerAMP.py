@@ -61,7 +61,7 @@ class HydrusAMP( amp.AMP ):
     
     def _errbackHandleError( self, failure ):
         
-        print( failure.getTraceback() )
+        HydrusData.Print( failure.getTraceback() )
         
         normal_errors = []
         

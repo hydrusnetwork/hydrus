@@ -174,7 +174,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     return m.get()
     
-class CaptchaControl( wx.Panel ):
+'''class CaptchaControl( wx.Panel ):
     
     def __init__( self, parent, captcha_type, default ):
         
@@ -242,9 +242,7 @@ class CaptchaControl( wx.Panel ):
         else: self._captcha_entry.SetValue( entry )
         
     
-    def _DrawMain( self ):
-        
-        dc = self._captcha_panel.GetDC()
+    def _DrawMain( self, dc ):
         
         if self._captcha_challenge is None:
             
@@ -409,11 +407,31 @@ class CaptchaControl( wx.Panel ):
     
     def TIMEREvent( self, event ):
         
-        if HydrusData.TimeHasPassed( self._captcha_runs_out ): self.Enable()
-        else: self._DrawMain()
+        try:
+            
+            if HydrusData.TimeHasPassed( self._captcha_runs_out ):
+                
+                self.Enable()
+                
+            else:
+                
+                self._DrawMain()
+                
+            
+        except wx.PyDeadObjectError:
+            
+            self._timer.Stop()
+            
+        except:
+            
+            self._timer.Stop()
+            
+            raise
+            
         
-    
-class Comment( wx.Panel ):
+    '''
+
+'''class Comment( wx.Panel ):
     
     def __init__( self, parent ):
         
@@ -476,7 +494,7 @@ class Comment( wx.Panel ):
         
         event.Skip()
         
-    
+    '''
 class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER

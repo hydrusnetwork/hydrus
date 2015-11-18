@@ -169,7 +169,21 @@ def ConvertIntToPixels( i ):
     
 def ConvertIntToPrettyString( num ):
     
-    return locale.format( u'%d', num, grouping = True )
+    # don't feed this a unicode string u'%d'--locale can't handle it
+    text = locale.format( '%d', num, grouping = True )
+    
+    try:
+        
+        text = text.decode( locale.getpreferredencoding() )
+        
+        text = ToUnicode( text )
+        
+    except:
+        
+        text = ToUnicode( text )
+        
+    
+    return text
     
 def ConvertIntToUnit( unit ):
     
@@ -252,6 +266,31 @@ def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
     result = { s for s in pretty_strings if s != 'no namespace' }
     
     if 'no namespace' in pretty_strings: result.add( '' )
+    
+    return result
+    
+def ConvertTimeDeltaToPrettyString( seconds ):
+    
+    if seconds > 1:
+        
+        result = '%.1f' % seconds + ' seconds'
+        
+    elif seconds > 0.1:
+        
+        result = '%d' % ( seconds * 1000 ) + ' milliseconds'
+        
+    elif seconds > 0.01:
+        
+        result = '%.1f' % ( seconds * 1000 ) + ' milliseconds'
+        
+    elif seconds > 0.001:
+        
+        result = '%.2f' % ( seconds * 1000 ) + ' milliseconds'
+        
+    else:
+        
+        result = '%d' % ( seconds * 1000000 ) + ' microseconds'
+        
     
     return result
     
@@ -526,20 +565,23 @@ def ConvertValueRangeToPrettyString( value, range ):
     
 def DebugPrint( debug_info ):
     
-    print( debug_info )
+    Print( debug_info )
     
     sys.stdout.flush()
     sys.stderr.flush()
     
 def DeletePath( path ):
     
-    if os.path.isdir( path ):
+    if os.path.exists( path ):
         
-        shutil.rmtree( path )
-        
-    else:
-        
-        os.remove( path )
+        if os.path.isdir( path ):
+            
+            shutil.rmtree( path )
+            
+        else:
+            
+            os.remove( path )
+            
         
     
 def DeserialisePrettyTags( text ):
@@ -732,6 +774,10 @@ def MergeKeyToListDicts( key_to_list_dicts ):
     
     return result
     
+def Print( text ):
+    
+    print( ToByteString( text ) )
+    
 def RecordRunningStart( instance ):
     
     path = os.path.join( HC.BASE_DIR, instance + '_running' )
@@ -753,7 +799,7 @@ def RecordRunningStart( instance ):
     
     with open( path, 'wb' ) as f:
         
-        f.write( record_string )
+        f.write( ToByteString( record_string ) )
         
     
 def RecyclePath( path ):
@@ -772,7 +818,7 @@ def RecyclePath( path ):
                 
             except:
                 
-                print( 'Trying to prepare a file for recycling created this error:' )
+                Print( 'Trying to prepare a file for recycling created this error:' )
                 traceback.print_exc()
                 
                 return
@@ -780,18 +826,21 @@ def RecyclePath( path ):
             
         
     
-    try:
+    if os.path.exists( path ):
         
-        send2trash.send2trash( path )
-        
-    except:
-        
-        print( 'Trying to recycle a file created this error:' )
-        traceback.print_exc()
-        
-        print( 'It has been fully deleted instead.' )
-        
-        DeletePath( original_path )
+        try:
+            
+            send2trash.send2trash( path )
+            
+        except:
+            
+            Print( 'Trying to recycle a file created this error:' )
+            traceback.print_exc()
+            
+            Print( 'It has been fully deleted instead.' )
+            
+            DeletePath( original_path )
+            
         
     
 def ShowExceptionDefault( e ):
@@ -811,24 +860,16 @@ def ShowExceptionDefault( e ):
     
     message = ToUnicode( etype.__name__ ) + ': ' + ToUnicode( value ) + os.linesep + ToUnicode( trace )
     
-    print( '' )
-    print( 'The following exception occured at ' + ConvertTimestampToPrettyTime( GetNow() ) + ':' )
+    Print( '' )
+    Print( 'Exception:' )
     
-    try: print( message )
-    except: print( repr( message ) )
-    
-    sys.stdout.flush()
-    sys.stderr.flush()
+    DebugPrint( message )
     
     time.sleep( 1 )
     
 ShowException = ShowExceptionDefault
 
-def ShowTextDefault( text ):
-    
-    print( text )
-    
-ShowText = ShowTextDefault
+ShowText = Print
 
 def SplayListForDB( xs ): return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
 
@@ -902,7 +943,7 @@ def ToUnicode( text_producing_object ):
                 
             except:
                 
-                pass
+                text = repr( text ).decode( 'utf-8' )
                 
             
             
@@ -1538,7 +1579,15 @@ class ContentUpdate( object ):
         return hashes
         
     
-    def ToTuple( self ): return ( self._data_type, self._action, self._row )
+    def IsInboxRelated( self ):
+        
+        return self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_INBOX )
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._data_type, self._action, self._row )
+        
     
 class EditLogAction( object ):
     

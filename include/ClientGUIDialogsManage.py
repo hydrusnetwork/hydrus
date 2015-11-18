@@ -2716,7 +2716,9 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         ( name, path, mimes, import_file_options, import_tag_options, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
         
-        self._folder_box = ClientGUICommon.StaticBox( self, 'folder options' )
+        self._panel = wx.ScrolledWindow( self )
+        
+        self._folder_box = ClientGUICommon.StaticBox( self._panel, 'folder options' )
         
         self._name = wx.TextCtrl( self._folder_box )
         
@@ -2734,7 +2736,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         #
         
-        self._file_box = ClientGUICommon.StaticBox( self, 'file options' )
+        self._file_box = ClientGUICommon.StaticBox( self._panel, 'file options' )
         
         self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( self._file_box, HC.ALLOWED_MIMES )
         
@@ -2882,13 +2884,24 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         vbox.AddF( self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._panel.SetSizer( vbox )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
         ( x, y ) = self.GetEffectiveMinSize()
         
-        x = max( 720, x )
+        ( max_x, max_y ) = wx.GetDisplaySize()
+        
+        x = min( x + 25, max_x )
+        y = min( y + 25, max_y )
+        
+        self._panel.SetScrollRate( 20, 20 )
         
         self.SetInitialSize( ( x, y ) )
         
@@ -3057,6 +3070,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         self._listbook.AddPage( 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'shortcuts', self._ShortcutsPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook ) )
+        self._listbook.AddPage( 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'Save' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -3879,17 +3893,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._gui_capitalisation = wx.CheckBox( self )
             
-            self._gui_show_all_tags_in_autocomplete = wx.CheckBox( self )
-            
-            self._default_tag_sort = wx.Choice( self )
-            
-            self._default_tag_sort.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
-            self._default_tag_sort.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
-            self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
-            self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
-            
-            self._default_tag_repository = ClientGUICommon.BetterChoice( self )
-            
             self._tag_dialog_size = wx.CheckBox( self )
             self._tag_dialog_position = wx.CheckBox( self )
             self._rating_dialog_position = wx.CheckBox( self )
@@ -3917,21 +3920,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
             
             self._gui_capitalisation.SetValue( HC.options[ 'gui_capitalisation' ] )
-            
-            self._gui_show_all_tags_in_autocomplete.SetValue( HC.options[ 'show_all_tags_in_autocomplete' ] )
-            
-            if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
-            
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
-            
-            for service in services: self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
-            
-            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-            
-            self._default_tag_repository.SelectClientData( default_tag_repository_key )
             
             ( remember, size ) = HC.options[ 'tag_dialog_size' ]
             
@@ -3968,17 +3956,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'Always embed autocomplete dropdown results window:' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._always_embed_autocompletes, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default tag service in manage tag dialogs:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default_tag_repository, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Default tag sort:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default_tag_sort, CC.FLAGS_MIXED )
-            
             gridbox.AddF( wx.StaticText( self, label = 'Capitalise gui: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._gui_capitalisation, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'By default, search non-local tags in write-autocomplete: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_show_all_tags_in_autocomplete, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self, label = 'Remember manage tags dialog size: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._tag_dialog_size, CC.FLAGS_MIXED )
@@ -4003,9 +3982,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
             HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
             HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
-            HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
-            HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
-            HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
             
             ( remember, size ) = HC.options[ 'tag_dialog_size' ]
             
@@ -4597,6 +4573,78 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             short_wait = self._autocomplete_short_wait.GetValue()
             
             HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
+            
+        
+    
+    class _TagsPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._default_tag_sort = wx.Choice( self )
+            
+            self._default_tag_sort.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
+            self._default_tag_sort.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
+            self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
+            self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
+            
+            self._default_tag_repository = ClientGUICommon.BetterChoice( self )
+            
+            self._show_all_tags_in_autocomplete = wx.CheckBox( self )
+            
+            self._apply_all_parents_to_all_services = wx.CheckBox( self )
+            
+            #
+            
+            if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
+            
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            
+            for service in services: self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
+            
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+            
+            self._default_tag_repository.SelectClientData( default_tag_repository_key )
+            
+            self._show_all_tags_in_autocomplete.SetValue( HC.options[ 'show_all_tags_in_autocomplete' ] )
+            
+            self._apply_all_parents_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Default tag service in manage tag dialogs:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._default_tag_repository, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Default tag sort:' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._default_tag_sort, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'By default, search non-local tags in write-autocomplete: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._show_all_tags_in_autocomplete, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Apply all parents to all services: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._apply_all_parents_to_all_services, CC.FLAGS_MIXED )
+            
+            self.SetSizer( gridbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
+            HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
+            HC.options[ 'show_all_tags_in_autocomplete' ] = self._show_all_tags_in_autocomplete.GetValue()
+            
+            self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.GetValue() )
             
         
     
@@ -8858,126 +8906,208 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self.SetSizer( vbox )
             
         
-        def _AddTag( self, tag, only_add = False, only_remove = False, reason = None ):
+        def _AddTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
+            
+            if not self._i_am_local_tag_service and self._account.HasPermission( HC.RESOLVE_PETITIONS ):
+                
+                forced_reason = 'admin'
+                
             
             tag_managers = [ m.GetTagsManager() for m in self._media ]
             
             num_files = len( self._media )
             
-            num_current = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
+            sets_of_choices = []
             
-            choices = []
+            potential_num_reasons_needed = 0
             
-            sibling_tag = HydrusGlobals.client_controller.GetManager( 'tag_siblings' ).GetSibling( tag )
-            
-            if sibling_tag is not None:
+            for tag in tags:
                 
-                num_sibling_current = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
+                num_current = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
                 
-            
-            if self._i_am_local_tag_service:
+                choices = []
                 
-                if not only_remove:
+                sibling_tag = HydrusGlobals.client_controller.GetManager( 'tag_siblings' ).GetSibling( tag )
+                
+                if sibling_tag is not None:
                     
-                    if num_current < num_files:
-                        
-                        choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, tag ) ) )
-                        
-                    
-                    if sibling_tag is not None and num_sibling_current < num_files:
-                        
-                        choices.append( ( 'add ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
-                        
+                    num_sibling_current = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
                     
                 
-                if not only_add:
+                if self._i_am_local_tag_service:
                     
-                    if num_current > 0:
+                    if not only_remove:
                         
-                        choices.append( ( 'delete ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current ) + ' files', ( HC.CONTENT_UPDATE_DELETE, tag ) ) )
-                        
-                    
-                
-            else:
-                
-                num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_key ) ] )
-                num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_key ) ] )
-                
-                if not only_remove:
-                    
-                    if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, tag ) ) )
-                    
-                    if sibling_tag is not None:
-                        
-                        num_sibling_pending = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetPending( self._tag_service_key ) ] )
-                        
-                        if num_sibling_current + num_sibling_pending < num_files:
+                        if num_current < num_files:
                             
-                            choices.append( ( 'pend ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_PEND, sibling_tag ) ) )
+                            choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, tag ) ) )
+                            
+                        
+                        if sibling_tag is not None and num_sibling_current < num_files:
+                            
+                            choices.append( ( 'add ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
                             
                         
                     
-                
-                if not only_add:
-                    
-                    if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_PETITION, tag ) ) )
-                    if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PEND, tag ) ) )
-                    
-                
-                if not only_remove:
-                    
-                    if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) ) )
-                    
-                
-            
-            if len( choices ) == 0: return
-            elif len( choices ) > 1:
-                
-                intro = 'What would you like to do?'
-                
-                with ClientGUIDialogs.DialogButtonChoice( self, intro, choices ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK: choice = dlg.GetData()
-                    else: return
-                    
-                
-            else: [ ( text, choice ) ] = choices
-            
-            ( choice_action, choice_tag ) = choice
-            
-            if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-            elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-            elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
-            elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
-            elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
-            elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
-            
-            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
-            
-            if choice_action == HC.CONTENT_UPDATE_PETITION:
-                
-                if reason is None:
-                    
-                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
-                    else:
+                    if not only_add:
                         
-                        message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
+                        if num_current > 0:
+                            
+                            choices.append( ( 'delete ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current ) + ' files', ( HC.CONTENT_UPDATE_DELETE, tag ) ) )
+                            
+                        
+                    
+                else:
+                    
+                    num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_key ) ] )
+                    num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_key ) ] )
+                    
+                    if not only_remove:
+                        
+                        if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, tag ) ) )
+                        
+                        if sibling_tag is not None:
+                            
+                            num_sibling_pending = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetPending( self._tag_service_key ) ] )
+                            
+                            if num_sibling_current + num_sibling_pending < num_files:
+                                
+                                choices.append( ( 'pend ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_PEND, sibling_tag ) ) )
+                                
+                            
+                        
+                    
+                    if not only_add:
+                        
+                        if num_current > num_petitioned and not only_add:
+                            
+                            choices.append( ( 'petition ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_PETITION, tag ) ) )
+                            
+                            potential_num_reasons_needed += 1
+                            
+                        
+                        if num_pending > 0 and not only_add:
+                            
+                            choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PEND, tag ) ) )
+                            
+                        
+                    
+                    if not only_remove:
+                        
+                        if num_petitioned > 0:
+                            
+                            choices.append( ( 'rescind petitioned ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) ) )
+                            
+                        
+                    
+                
+                if len( choices ) == 0:
+                    
+                    continue
+                    
+                
+                sets_of_choices.append( choices )
+                
+            
+            if forced_reason is None and potential_num_reasons_needed > 1:
+                
+                no_user_choices = True not in ( len( choices ) > 1 for choices in sets_of_choices )
+                
+                if no_user_choices:
+                    
+                    message = 'You are about to petition more than one tag.'
+                    
+                else:
+                    
+                    message = 'You might be about to petition more than one tag.'
+                    
+                
+                message += os.linesep * 2
+                message += 'To save you time, would you like to use the same reason for all the petitions?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message ) as yn_dlg:
+                    
+                    if yn_dlg.ShowModal() == wx.ID_YES:
+                        
+                        message = 'Please enter your common petition reason here:'
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, message ) as text_dlg:
+                            
+                            if text_dlg.ShowModal() == wx.ID_OK:
+                                
+                                forced_reason = text_dlg.GetValue()
+                                
+                            
+                        
+                    
+                
+            
+            for choices in sets_of_choices:
+                
+                if len( choices ) == 1:
+                    
+                    [ ( text_gumpf, choice ) ] = choices
+                    
+                else:
+                    
+                    intro = 'What would you like to do?'
+                    
+                    with ClientGUIDialogs.DialogButtonChoice( self, intro, choices ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            choice = dlg.GetData()
+                            
+                        else:
+                            
+                            continue
+                            
+                        
+                    
+                
+                ( choice_action, choice_tag ) = choice
+                
+                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
+                
+                hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
+                
+                if choice_action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    if forced_reason is None:
+                        
+                        message = 'Enter a reason for ' + choice_tag + ' to be removed. A janitor will review your petition.'
                         
                         with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                             
-                            if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
-                            else: return
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                reason = dlg.GetValue()
+                                
+                            else:
+                                
+                                continue
+                                
                             
                         
+                        
+                    else:
+                        
+                        reason = forced_reason
+                        
                     
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes, reason ) )
+                    
+                else: content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes ) )
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes, reason ) )
+                for m in self._media: m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
                 
-            else: content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes ) )
-            
-            for m in self._media: m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
-            
-            self._content_updates.append( content_update )
+                self._content_updates.append( content_update )
+                
             
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
@@ -8991,14 +9121,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if len( tags ) > 0:
                 
-                for tag in tags:
-                    
-                    self._AddTag( tag )
-                    
+                self._AddTags( tags )
                 
-                for parent in parents:
+                if len( parents ) > 0:
                     
-                    self._AddTag( parent, only_add = True )
+                    self._AddTags( parents, only_add = True )
                     
                 
             
@@ -9051,10 +9178,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                     tags = HydrusTags.CleanTags( tags )
                     
-                    for tag in tags:
-                        
-                        self._AddTag( tag, only_add = True )
-                        
+                    self._AddTags( tags, only_add = True )
                     
                 except: wx.MessageBox( 'I could not understand what was in the clipboard' )
                 
@@ -9068,42 +9192,12 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             removable_tags = set()
             
             for tag_manager in tag_managers:
-
+                
                 removable_tags.update( tag_manager.GetCurrent( self._tag_service_key ) )
                 removable_tags.update( tag_manager.GetPending( self._tag_service_key ) )
                 
             
-            reason = None
-            
-            if not self._i_am_local_tag_service:
-                
-                if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
-                    
-                    reason = 'admin'
-                    
-                else:
-                    
-                    message = 'Enter a reason for all these tags to be removed. A janitor will review your petition.'
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            reason = dlg.GetValue()
-                            
-                        else:
-                            
-                            return
-                            
-                        
-                    
-                
-            
-            for tag in removable_tags:
-                
-                self._AddTag( tag, only_remove = True, reason = reason )
-                
-            
+            self._AddTags( removable_tags, only_remove = True )
             
         
         def EventShowDeleted( self, event ):

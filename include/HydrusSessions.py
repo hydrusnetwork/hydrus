@@ -75,60 +75,6 @@ class HydrusMessagingSessionManagerServer( object ):
         return session_key
         
     
-class HydrusSessionManagerClient( object ):
-    
-    def __init__( self ):
-        
-        existing_sessions = HydrusGlobals.controller.Read( 'hydrus_sessions' )
-        
-        self._service_keys_to_sessions = { service_key : ( session_key, expires ) for ( service_key, session_key, expires ) in existing_sessions }
-        
-        self._lock = threading.Lock()
-        
-    
-    def DeleteSessionKey( self, service_key ):
-        
-        with self._lock:
-            
-            HydrusGlobals.controller.Write( 'delete_hydrus_session_key', service_key )
-            
-            if service_key in self._service_keys_to_sessions: del self._service_keys_to_sessions[ service_key ]
-            
-        
-    
-    def GetSessionKey( self, service_key ):
-        
-        now = HydrusData.GetNow()
-        
-        with self._lock:
-            
-            if service_key in self._service_keys_to_sessions:
-                
-                ( session_key, expires ) = self._service_keys_to_sessions[ service_key ]
-                
-                if now + 600 > expires: del self._service_keys_to_sessions[ service_key ]
-                else: return session_key
-                
-            
-            # session key expired or not found
-            
-            service = HydrusGlobals.controller.GetServicesManager().GetService( service_key )
-            
-            ( response_gumpf, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
-            
-            try: session_key = cookies[ 'session_key' ].decode( 'hex' )
-            except: raise Exception( 'Service did not return a session key!' )
-            
-            expires = now + HYDRUS_SESSION_LIFETIME
-            
-            self._service_keys_to_sessions[ service_key ] = ( session_key, expires )
-            
-            HydrusGlobals.controller.Write( 'hydrus_session', service_key, session_key, expires )
-            
-            return session_key
-            
-        
-    
 class HydrusSessionManagerServer( object ):
     
     def __init__( self ):

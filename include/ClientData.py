@@ -57,9 +57,9 @@ def CatchExceptionClient( etype, value, tb ):
             
             if etype == wx.PyDeadObjectError:
                 
-                print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-                print( HydrusData.ToUnicode( value ) )
-                print( trace )
+                HydrusData.Print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
+                HydrusData.Print( HydrusData.ToUnicode( value ) )
+                HydrusData.Print( trace )
                 
                 return
                 
@@ -72,14 +72,9 @@ def CatchExceptionClient( etype, value, tb ):
         
         text = job_key.ToString()
         
-        print( '' )
-        print( 'The following uncaught exception occured at ' + HydrusData.ConvertTimestampToPrettyTime( HydrusData.GetNow() ) + ':' )
+        HydrusData.Print( 'Uncaught exception:' )
         
-        try: print( text )
-        except: print( repr( text ) )
-        
-        sys.stdout.flush()
-        sys.stderr.flush()
+        HydrusData.DebugPrint( text )
         
         HydrusGlobals.client_controller.pub( 'message', job_key )
         
@@ -259,9 +254,9 @@ def ShowExceptionClient( e ):
         
         if etype == wx.PyDeadObjectError:
             
-            print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-            print( HydrusData.ToUnicode( value ) )
-            print( trace )
+            HydrusData.Print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
+            HydrusData.Print( HydrusData.ToUnicode( value ) )
+            HydrusData.Print( trace )
             
             return
             
@@ -276,14 +271,9 @@ def ShowExceptionClient( e ):
     
     text = job_key.ToString()
     
-    print( '' )
-    print( 'The following exception occured at ' + HydrusData.ConvertTimestampToPrettyTime( HydrusData.GetNow() ) + ':' )
+    HydrusData.Print( 'Exception:' )
     
-    try: print( text )
-    except: print( repr( text ) )
-    
-    sys.stdout.flush()
-    sys.stderr.flush()
+    HydrusData.DebugPrint( text )
     
     HydrusGlobals.client_controller.pub( 'message', job_key )
     
@@ -297,8 +287,7 @@ def ShowTextClient( text ):
     
     text = job_key.ToString()
     
-    try: print( text )
-    except: print( repr( text ) )
+    HydrusData.Print( text )
     
     HydrusGlobals.client_controller.pub( 'message', job_key )
     
@@ -358,10 +347,20 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
         
+        self._dictionary[ 'booleans' ] = {}
+        
+        self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
+        self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
+        
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        self._dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+        loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+        
+        for ( key, value ) in loaded_dictionary.items():
+            
+            self._dictionary[ key ] = value
+            
         
     
     def ClearDefaultImportTagOptions( self ):
@@ -369,6 +368,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+            
+        
+    
+    def GetBoolean( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'booleans' ][ name ]
             
         
     
@@ -445,6 +452,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
                 return import_tag_options
                 
+            
+        
+    
+    def SetBoolean( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'booleans' ][ name ] = value
             
         
     
@@ -2341,7 +2356,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             job_key.SetVariable( 'popup_text_1', updates_text + ', and ' + content_text )
             
-            print( job_key.ToString() )
+            HydrusData.Print( job_key.ToString() )
             
             time.sleep( 3 )
             
@@ -2351,7 +2366,7 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             job_key.Cancel()
             
-            print( traceback.format_exc() )
+            HydrusData.Print( traceback.format_exc() )
             
             HydrusData.ShowText( 'Failed to update ' + self._name + ':' )
             

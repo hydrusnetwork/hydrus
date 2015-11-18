@@ -20,7 +20,7 @@ from include import TestDialogs
 from include import TestDB
 from include import TestFunctions
 from include import TestHydrusEncryption
-from include import TestHydrusImageHandling
+from include import TestClientImageHandling
 from include import TestHydrusNATPunch
 from include import TestHydrusServer
 from include import TestHydrusSessions
@@ -89,7 +89,7 @@ class Controller( object ):
         
         self._services_manager = ClientData.ServicesManager()
         
-        self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
+        self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManagerClient()
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager()
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
         self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager()
@@ -179,7 +179,7 @@ class Controller( object ):
         if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
         if run_all or only_run == 'encryption': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusEncryption ) )
         if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
-        if run_all or only_run == 'image': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusImageHandling ) )
+        if run_all or only_run == 'image': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImageHandling ) )
         if run_all or only_run == 'nat': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
         if run_all or only_run == 'server': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
         if run_all or only_run == 'sessions': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )

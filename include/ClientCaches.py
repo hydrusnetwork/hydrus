@@ -7,6 +7,7 @@ import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import HydrusPaths
+import HydrusSessions
 import os
 import random
 import Queue
@@ -525,7 +526,7 @@ class ThumbnailCache( object ):
                     
                 except HydrusExceptions.NotFoundException:
                     
-                    print( 'Could not find the thumbnail for ' + hash.encode( 'hex' ) + '!' )
+                    HydrusData.Print( 'Could not find the thumbnail for ' + hash.encode( 'hex' ) + '!' )
                     
                     return self._special_thumbs[ 'hydrus' ]
                     
@@ -610,7 +611,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                thumbnail = self.GetThumbnail( media ) # to load it
+                self.GetThumbnail( media ) # to load it
                 
                 HydrusGlobals.client_controller.pub( 'waterfall_thumbnail', page_key, media )
                 
@@ -779,6 +780,60 @@ def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
     
     return service_keys_to_simple_children_to_parents
     
+class HydrusSessionManagerClient( object ):
+    
+    def __init__( self ):
+        
+        existing_sessions = HydrusGlobals.client_controller.Read( 'hydrus_sessions' )
+        
+        self._service_keys_to_sessions = { service_key : ( session_key, expires ) for ( service_key, session_key, expires ) in existing_sessions }
+        
+        self._lock = threading.Lock()
+        
+    
+    def DeleteSessionKey( self, service_key ):
+        
+        with self._lock:
+            
+            HydrusGlobals.client_controller.Write( 'delete_hydrus_session_key', service_key )
+            
+            if service_key in self._service_keys_to_sessions: del self._service_keys_to_sessions[ service_key ]
+            
+        
+    
+    def GetSessionKey( self, service_key ):
+        
+        now = HydrusData.GetNow()
+        
+        with self._lock:
+            
+            if service_key in self._service_keys_to_sessions:
+                
+                ( session_key, expires ) = self._service_keys_to_sessions[ service_key ]
+                
+                if now + 600 > expires: del self._service_keys_to_sessions[ service_key ]
+                else: return session_key
+                
+            
+            # session key expired or not found
+            
+            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+            
+            ( response_gumpf, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
+            
+            try: session_key = cookies[ 'session_key' ].decode( 'hex' )
+            except: raise Exception( 'Service did not return a session key!' )
+            
+            expires = now + HydrusSessions.HYDRUS_SESSION_LIFETIME
+            
+            self._service_keys_to_sessions[ service_key ] = ( session_key, expires )
+            
+            HydrusGlobals.client_controller.Write( 'hydrus_session', service_key, session_key, expires )
+            
+            return session_key
+            
+        
+    
 class TagCensorshipManager( object ):
     
     def __init__( self ):
@@ -807,8 +862,14 @@ class TagCensorshipManager( object ):
             
             tag_matches = lambda tag: True in ( HydrusTags.CensorshipMatch( tag, censorship ) for censorship in censorships )
             
-            if blacklist: predicate = lambda tag: not tag_matches( tag )
-            else: predicate = tag_matches
+            if blacklist:
+                
+                predicate = lambda tag: not tag_matches( tag )
+                
+            else:
+                
+                predicate = tag_matches
+                
             
             self._service_keys_to_predicates[ service_key ] = predicate
             
@@ -924,6 +985,13 @@ class TagParentsManager( object ):
     
     def ExpandPredicates( self, service_key, predicates ):
         
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
         results = []
         
         with self._lock:
@@ -953,6 +1021,13 @@ class TagParentsManager( object ):
     
     def ExpandTags( self, service_key, tags ):
         
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
         with self._lock:
             
             tags_results = set( tags )
@@ -967,6 +1042,13 @@ class TagParentsManager( object ):
         
     
     def GetParents( self, service_key, tag ):
+        
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
         
         with self._lock:
             

@@ -269,7 +269,7 @@ class Dialog( wx.Dialog ):
         wx.Dialog.SetInitialSize( self, ( width, height ) )
         
         min_width = min( 240, width )
-        min_height = min( 80, height )
+        min_height = min( 240, height )
         
         self.SetMinSize( ( min_width, min_height ) )
         
@@ -4486,7 +4486,7 @@ class DialogSetupExport( Dialog ):
                     
                     with open( txt_path, 'wb' ) as f:
                         
-                        f.write( os.linesep.join( tags ) )
+                        f.write( HydrusData.ToByteString( os.linesep.join( tags ) ) )
                         
                     
                 

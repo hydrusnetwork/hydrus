@@ -12,6 +12,7 @@ import json
 import HydrusConstants as HC
 import HydrusDB
 import ClientDownloading
+import ClientImageHandling
 import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
@@ -1147,7 +1148,7 @@ class DB( HydrusDB.HydrusDB ):
             
             with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
             
-            phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
+            phash = ClientImageHandling.GeneratePerceptualHash( thumbnail_path )
             
             hash_id = self._GetHashId( hash )
             
@@ -1242,10 +1243,10 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_errors == 0:
                     
-                    print( 'During a db integrity check, these errors were discovered:' )
+                    HydrusData.Print( 'During a db integrity check, these errors were discovered:' )
                     
                 
-                print( text )
+                HydrusData.Print( text )
                 
                 num_errors += 1
                 
@@ -1256,7 +1257,7 @@ class DB( HydrusDB.HydrusDB ):
         job_key.SetVariable( 'popup_title', prefix_string + 'completed' )
         job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
         
-        print( job_key.ToString() )
+        HydrusData.Print( job_key.ToString() )
         
         job_key.Finish()
         
@@ -1353,7 +1354,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix_string + final_text )
         
-        print( job_key.ToString() )
+        HydrusData.Print( job_key.ToString() )
         
         job_key.Finish()
         
@@ -1733,8 +1734,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                 except OSError:
                     
-                    print( 'In trying to delete the orphan ' + path + ', this error was encountered:' )
-                    print( traceback.format_exc() )
+                    HydrusData.Print( 'In trying to delete the orphan ' + path + ', this error was encountered:' )
+                    HydrusData.Print( traceback.format_exc() )
                     
                 
             
@@ -1785,8 +1786,8 @@ class DB( HydrusDB.HydrusDB ):
                 
             except OSError:
                 
-                print( 'In trying to delete the orphan ' + path + ' or ' + resized_path + ', this error was encountered:' )
-                print( traceback.format_exc() )
+                HydrusData.Print( 'In trying to delete the orphan ' + path + ' or ' + resized_path + ', this error was encountered:' )
+                HydrusData.Print( traceback.format_exc() )
                 
             
         
@@ -1796,7 +1797,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.Finish()
         
-        print( job_key.ToString() )
+        HydrusData.Print( job_key.ToString() )
         
         wx.CallLater( 1000 * 3600, job_key.Delete )
         
@@ -1847,8 +1848,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                 except OSError:
                     
-                    print( 'In trying to delete the orphan ' + path + ', this error was encountered:' )
-                    print( traceback.format_exc() )
+                    HydrusData.Print( 'In trying to delete the orphan ' + path + ', this error was encountered:' )
+                    HydrusData.Print( traceback.format_exc() )
                     
                 
             
@@ -1999,7 +2000,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'done!' )
         
-        print( job_key.ToString() )
+        HydrusData.Print( job_key.ToString() )
         
         job_key.Finish()
         
@@ -5101,7 +5102,7 @@ class DB( HydrusDB.HydrusDB ):
         try: self._c.execute( 'INSERT INTO yaml_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_name, data ) )
         except:
             
-            print( ( dump_type, dump_name, data ) )
+            HydrusData.Print( ( dump_type, dump_name, data ) )
             
             raise
             
@@ -6655,7 +6656,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix + 'done!' )
         
-        print( job_key.ToString() )
+        HydrusData.Print( job_key.ToString() )
         
         wx.CallLater( 1000 * 30, job_key.Delete )
         

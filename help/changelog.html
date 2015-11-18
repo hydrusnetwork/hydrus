@@ -8,6 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 182</h3></li>
+				<ul>
+					<li>all printing to the log should now be unicode safe</li>
+					<li>some other, miscellaneous file-write locations should now be unicode safe</li>
+					<li>cleaned up some now-redundant unicode-bytestring conversion error handling</li>
+					<li>the animation scanbar will now draw a little darker while the animation is paused</li>
+					<li>the client now uses the same new log object as the server, so all logged data will be copied to the terminal, and all logged statements will be timestamped</li>
+					<li>the client and server's boot and exit statements are more harmonised</li>
+					<li>server backup is more log-verbose</li>
+					<li>server backup now makes a simple copy to 'server_backup' folder--no more _backup nonsense</li>
+					<li>all serverside requests will now print a line in the form 'PORT METHOD PATH HTTP_CODE in TIME TOOK' to the log</li>
+					<li>page up and down now work (again?) for the thumbnail view. adding shift also works for selecting a page at a time</li>
+					<li>improved some animation painting logic</li>
+					<li>improved some rating control painting logic</li>
+					<li>improved splash screen painting logic</li>
+					<li>improved all other, misc painting logic--many things should flicker less or render just a little quicker</li>
+					<li>ratings hover window will no longer re-layout (causing flicker) on ratings set</li>
+					<li>improved some media canvas painting logic to de-jaggify some zooming</li>
+					<li>in the manage options dialog, tag-related gui options are moved from the gui panel to the new tags panel</li>
+					<li>added 'apply all parents to all services' option to the tags panel</li>
+					<li>the delete key now removes active search predicates and tags in the manage tags dialog</li>
+					<li>fixed webm link parsing for rule34hentai.net</li>
+					<li>if you attempt to petition multiple tags, you will now be presented with a dialog asking you if you want to use the same reason for all the petitions</li>
+					<li>edit import folder dialog now has scrollbars and will resize itself based on your monitor size</li>
+					<li>if the static ffmpeg executable is absent from the bin folder, the client will now attempt to just call 'ffmpeg' in the normal system path</li>
+					<li>fixed some 'None media' data calculation bugs when media viewer closed during very fast slideshow</li>
+					<li>fixed a 'None media' mouse position bug when media viewer closed during very fast slideshow</li>
+					<li>all wx timers will explicitly stop on exceptions (which should reduce some types of error spam)</li>
+					<li>refactored client hydrus network session manager to a better position</li>
+					<li>wrote a better wma/wmv determining test using ffmpeg</li>
+					<li>refactored cv2 (OpenCV) out of the server's import tree</li>
+					<li>fixed some server boot crash error handling</li>
+					<li>cleaned some autocomplete matches-compiling code</li>
+					<li>deletepath and recyclepath will no longer throw an error if the path does not exist</li>
+					<li>server_messages folder is no longer referenced in the code--if you have it, feel free to delete it</li>
+					<li>memory cleans up a little faster after gui page deletion</li>
+				</ul>
 				<li><h3>version 181</h3></li>
 				<ul>
 					<li>fixed a potential bug in the server's db, very important you update this week if running on Windows</li>

@@ -12,6 +12,7 @@ try:
     except: pass
     
     from include import HydrusConstants as HC
+    from include import HydrusData
     
     import os
     import sys
@@ -21,21 +22,16 @@ try:
     import threading
     from twisted.internet import reactor
     from include import HydrusGlobals
+    from include import HydrusLogger
     import traceback
     
     HydrusGlobals.instance = HC.HYDRUS_CLIENT
     
-    initial_sys_stdout = sys.stdout
-    initial_sys_stderr = sys.stderr
-    
-    with open( os.path.join( HC.LOGS_DIR, 'client.log' ), 'a' ) as f:
-        
-        sys.stdout = f
-        sys.stderr = f
+    with HydrusLogger.HydrusLogger( 'client.log' ) as logger:
         
         try:
             
-            print( 'hydrus client started at ' + time.ctime() )
+            HydrusData.Print( 'hydrus client started' )
             
             threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
             
@@ -45,9 +41,9 @@ try:
             
         except:
             
-            print( 'hydrus client failed at ' + time.ctime() )
+            HydrusData.Print( 'hydrus client failed' )
             
-            print( traceback.format_exc() )
+            HydrusData.Print( traceback.format_exc() )
             
         finally:
             
@@ -59,18 +55,15 @@ try:
             
             reactor.callFromThread( reactor.stop )
             
-            print( 'hydrus client shut down at ' + time.ctime() )
+            HydrusData.Print( 'hydrus client shut down' )
             
         
-    
-    sys.stdout = initial_sys_stdout
-    sys.stderr = initial_sys_stderr
     
 except:
     
     import traceback
     
-    print( 'Critical error occured! Details written to crash.log!' )
+    HydrusData.Print( 'Critical error occured! Details written to crash.log!' )
     
     with open( 'crash.log', 'wb' ) as f: f.write( traceback.format_exc() )
     

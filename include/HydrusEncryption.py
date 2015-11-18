@@ -130,7 +130,10 @@ def EncryptAESFile( path, preface = '' ):
     
     aes_key_text = AESKeyToText( aes_key, iv )
     
-    with open( path + '.key', 'wb' ) as f: f.write( aes_key_text )
+    with open( path + '.key', 'wb' ) as f:
+        
+        f.write( aes_key_text )
+        
     
 def EncryptPKCS( public_key, message ):
     

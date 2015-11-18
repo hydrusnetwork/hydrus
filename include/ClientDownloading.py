@@ -254,7 +254,7 @@ def Parse4chanPostScreen( html ):
     if title_tag.string == 'Post successful!': return ( 'success', None )
     elif title_tag.string == '4chan - Banned':
         
-        print( repr( soup ) )
+        HydrusData.Print( soup )
         
         text = 'You are banned from this board! html written to log.'
         
@@ -270,8 +270,7 @@ def Parse4chanPostScreen( html ):
             
             if problem_tag is None:
                 
-                try: print( repr( soup ) )
-                except: pass
+                HydrusData.Print( soup )
                 
                 text = 'Unknown problem; html written to log.'
                 
@@ -598,9 +597,36 @@ class GalleryBooru( Gallery ):
                     
                     if image_string is None: image_string = soup.find( text = re.compile( 'Save this video' ) )
                     
-                    image = image_string.parent
-                    
-                    image_url = image[ 'href' ]
+                    if image_string is None:
+                        
+                        # catchall for rule34hentai.net's webms
+                        
+                        if image_url is None:
+                            
+                            a_tags = soup.find_all( 'a' )
+                            
+                            for a_tag in a_tags:
+                                
+                                href = a_tag[ 'href' ]
+                                
+                                if href is not None:
+                                    
+                                    if href.endswith( '.webm' ):
+                                        
+                                        image_url = href
+                                        
+                                        break
+                                        
+                                    
+                                
+                            
+                        
+                    else:
+                        
+                        image = image_string.parent
+                        
+                        image_url = image[ 'href' ]
+                        
                     
                 else:
                     

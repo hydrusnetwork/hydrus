@@ -63,27 +63,40 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_TIMER_ANIMATED )
         
-        animated_event_timer = wx.Timer( self, ID_TIMER_ANIMATED )
-        animated_event_timer.Start( 1000, wx.TIMER_CONTINUOUS )
+        self._timer_animated = wx.Timer( self, ID_TIMER_ANIMATED )
+        self._timer_animated.Start( 1000, wx.TIMER_CONTINUOUS )
         
     
     def TIMEREventAnimated( self ):
         
-        update = False
-        
-        now = HydrusData.GetNow()
-        
-        difference = abs( now - self._timestamp )
-        
-        if difference < 3600: update = True
-        elif difference < 3600 * 24 and now - self._last_tick > 60: update = True
-        elif now - self._last_tick > 3600: update = True
-        
-        if update:
+        try:
             
-            self.SetLabel( self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
+            update = False
             
-            wx.PostEvent( self.GetEventHandler(), wx.SizeEvent() )
+            now = HydrusData.GetNow()
+            
+            difference = abs( now - self._timestamp )
+            
+            if difference < 3600: update = True
+            elif difference < 3600 * 24 and now - self._last_tick > 60: update = True
+            elif now - self._last_tick > 3600: update = True
+            
+            if update:
+                
+                self.SetLabel( self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
+                
+                wx.PostEvent( self.GetEventHandler(), wx.SizeEvent() )
+                
+            
+        except wx.PyDeadObjectError:
+            
+            self._timer_animated.Stop()
+            
+        except:
+            
+            self._timer_animated.Stop()
+            
+            raise
             
         
     
@@ -472,10 +485,35 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._move_hide_timer.Start( 250, wx.TIMER_ONE_SHOT )
             
-        except wx.PyDeadObjectError: pass
+        except wx.PyDeadObjectError:
+            
+            self._move_hide_timer.Stop()
+            
+        except:
+            
+            self._move_hide_timer.Stop()
+            
+            raise
+            
         
     
-    def TIMEREventLag( self, event ): self._UpdateList()
+    def TIMEREventLag( self, event ):
+        
+        try:
+            
+            self._UpdateList()
+            
+        except wx.PyDeadObjectError:
+            
+            self._lag_timer.Stop()
+            
+        except:
+            
+            self._lag_timer.Stop()
+            
+            raise
+            
+        
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
@@ -1107,67 +1145,63 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             matches = ClientSearch.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = self._expand_parents )
             
-            # do the 'put whatever they typed in at the top, whether it has count or not'
-            # now with sibling support!
-            # and parent support!
-            # this is getting pretty ugly, and I should really move it into the matches processing, I think!
-            
-            top_predicates = []
-            
-            top_predicates.append( entry_predicate )
+            self._PutAtTopOfMatches( matches, entry_predicate )
             
             if sibling_predicate is not None:
                 
-                top_predicates.append( sibling_predicate )
-                
-            
-            for predicate in top_predicates:
-                
-                if self._expand_parents:
-                    
-                    parents = []
-                    
-                    try:
-                        
-                        index = matches.index( predicate )
-                        
-                        predicate = matches[ index ]
-                        
-                        matches.remove( predicate )
-                        
-                        while matches[ index ].GetType() == HC.PREDICATE_TYPE_PARENT:
-                            
-                            parent = matches[ index ]
-                            
-                            matches.remove( parent )
-                            
-                            parents.append( parent )
-                            
-                        
-                    except:
-                        
-                        if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
-                            
-                            tag = predicate.GetValue()
-                            
-                            parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-                            
-                            raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
-                            
-                            parents = [ ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
-                            
-                        
-                    
-                    parents.reverse()
-                    
-                    for parent in parents: matches.insert( 0, parent )
-                    
-                
-                matches.insert( 0, predicate )
+                self._PutAtTopOfMatches( matches, sibling_predicate )
                 
             
         
         return matches
+        
+    
+    def _PutAtTopOfMatches( self, matches, predicate ):
+
+        if self._expand_parents:
+            
+            parents = []
+            
+            try:
+                
+                index = matches.index( predicate )
+                
+                predicate = matches[ index ]
+                
+                matches.remove( predicate )
+                
+                while matches[ index ].GetType() == HC.PREDICATE_TYPE_PARENT:
+                    
+                    parent = matches[ index ]
+                    
+                    matches.remove( parent )
+                    
+                    parents.append( parent )
+                    
+                
+            except:
+                
+                if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
+                    
+                    tag = predicate.GetValue()
+                    
+                    parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                    
+                    raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
+                    
+                    parents = [ ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
+                    
+                
+            
+            parents.reverse()
+            
+            for parent in parents:
+                
+                matches.insert( 0, parent )
+                
+            
+        
+        matches.insert( 0, predicate )
         
     
     def _ShouldTakeResponsibilityForEnter( self ):
@@ -1210,18 +1244,34 @@ class BufferedWindow( wx.Window ):
             
             self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
             
-        else: self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
+        else:
+            
+            self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
+            
+        
+        self._dirty = True
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
     
-    def GetDC( self ): return wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+    def _Draw( self, dc ):
+        
+        raise NotImplementedError()
+        
     
     def EventEraseBackground( self, event ): pass
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    def EventPaint( self, event ):
+        
+        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        
+        if self._dirty:
+            
+            self._Draw( dc )
+            
+        
     
     def EventResize( self, event ):
         
@@ -1229,7 +1279,14 @@ class BufferedWindow( wx.Window ):
         
         ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
         
-        if my_width != current_bmp_width or my_height != current_bmp_height: self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+        if my_width != current_bmp_width or my_height != current_bmp_height:
+            
+            self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+            
+            self._dirty = True
+            
+            self.Refresh()
+            
         
     
 class BufferedWindowIcon( BufferedWindow ):
@@ -1240,7 +1297,8 @@ class BufferedWindowIcon( BufferedWindow ):
         
         self._bmp = bmp
         
-        dc = self.GetDC()
+    
+    def _Draw( self, dc ):
         
         background_colour = self.GetParent().GetBackgroundColour()
         
@@ -1248,7 +1306,9 @@ class BufferedWindowIcon( BufferedWindow ):
         
         dc.Clear()
         
-        dc.DrawBitmap( bmp, 0, 0 )
+        dc.DrawBitmap( self._bmp, 0, 0 )
+        
+        self._dirty = False
         
     
 class BetterChoice( wx.Choice ):
@@ -2042,6 +2102,8 @@ class ListBook( wx.Panel ):
     
 class ListBox( wx.ScrolledWindow ):
     
+    delete_key_activates = False
+    
     def __init__( self, parent, min_height = 250 ):
         
         wx.ScrolledWindow.__init__( self, parent, style = wx.VSCROLL | wx.BORDER_DOUBLE )
@@ -2351,7 +2413,7 @@ class ListBox( wx.ScrolledWindow ):
         
         key_code = event.GetKeyCode()
         
-        if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) or ( self.delete_key_activates and key_code in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ) ):
             
             self._Activate()
             
@@ -3241,6 +3303,7 @@ class ListBoxTagsStrings( ListBoxTags ):
     
 class ListBoxTagsPredicates( ListBoxTags ):
     
+    delete_key_activates = True
     has_counts = False
     
     def __init__( self, parent, page_key, initial_predicates = None ):
@@ -3605,6 +3668,8 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         
     
 class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
+    
+    delete_key_activates = True
     
     def __init__( self, parent, callable ):
         
@@ -4306,9 +4371,9 @@ class PopupMessageManager( wx.Frame ):
             
             text = 'The popup message manager experienced a fatal error and will now stop working! Please restart the client as soon as possible! If this keeps happening, please email the details and your client.log to the hydrus developer.'
             
-            print( text )
+            HydrusData.Print( text )
             
-            print( traceback.format_exc() )
+            HydrusData.Print( traceback.format_exc() )
             
             wx.MessageBox( text )
             
@@ -4328,7 +4393,7 @@ class PopupMessageManager( wx.Frame ):
             
             self._CheckPending()
             
-        except: print( traceback.format_exc() )
+        except: HydrusData.Print( traceback.format_exc() )
         
     
     def CleanBeforeDestroy( self ):
@@ -4376,23 +4441,36 @@ class PopupMessageManager( wx.Frame ):
     
     def TIMEREvent( self, event ):
         
-        if HydrusGlobals.view_shutdown:
+        try:
             
-            self.Destroy()
+            if HydrusGlobals.view_shutdown:
+                
+                self.Destroy()
+                
+                return
+                
             
-            return
+            sizer_items = self._message_vbox.GetChildren()
             
-        
-        sizer_items = self._message_vbox.GetChildren()
-        
-        for sizer_item in sizer_items:
+            for sizer_item in sizer_items:
+                
+                message_window = sizer_item.GetWindow()
+                
+                message_window.Update()
+                
             
-            message_window = sizer_item.GetWindow()
+            self._SizeAndPositionAndShow()
             
-            message_window.Update()
+        except wx.PyDeadObjectError:
             
-        
-        self._SizeAndPositionAndShow()
+            self._timer.Stop()
+            
+        except:
+            
+            self._timer.Stop()
+            
+            raise
+            
         
     
 class RatingLike( wx.Window ):
@@ -4418,12 +4496,10 @@ class RatingLike( wx.Window ):
         self._dirty = True
         
     
-    def _Draw( self ):
+    def _Draw( self, dc ):
         
         raise NotImplementedError()
         
-    
-    def GetDC( self ): return wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
     
     def EventEraseBackground( self, event ): pass
     
@@ -4434,12 +4510,12 @@ class RatingLike( wx.Window ):
     
     def EventPaint( self, event ):
         
+        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        
         if self._dirty:
             
-            self._Draw()
+            self._Draw( dc )
             
-        
-        wx.BufferedPaintDC( self, self._canvas_bmp )
         
     
     def EventRightDown( self, event ):
@@ -4461,9 +4537,7 @@ class RatingLikeDialog( RatingLike ):
         self._rating_state = ClientRatings.NULL
         
     
-    def _Draw( self ):
-        
-        dc = self.GetDC()
+    def _Draw( self, dc ):
         
         dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
         
@@ -4530,9 +4604,7 @@ class RatingLikeCanvas( RatingLike ):
         HydrusGlobals.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
-    def _Draw( self ):
-        
-        dc = self.GetDC()
+    def _Draw( self, dc ):
         
         dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
         
@@ -4608,7 +4680,14 @@ class RatingLikeCanvas( RatingLike ):
             
             self._current_media = media
             
-            self._hashes = self._current_media.GetHashes()
+            if self._current_media is None:
+                
+                self._hashes = set()
+                
+            else:
+                
+                self._hashes = self._current_media.GetHashes()
+                
             
             self._dirty = True
             
@@ -4646,7 +4725,7 @@ class RatingNumerical( wx.Window ):
         self._dirty = True
         
     
-    def _Draw( self ):
+    def _Draw( self, dc ):
         
         raise NotImplementedError()
         
@@ -4688,8 +4767,6 @@ class RatingNumerical( wx.Window ):
         return None
         
     
-    def GetDC( self ): return wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
-    
     def EventEraseBackground( self, event ): pass
     
     def EventLeftDown( self, event ):
@@ -4699,12 +4776,12 @@ class RatingNumerical( wx.Window ):
     
     def EventPaint( self, event ):
         
+        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        
         if self._dirty:
             
-            self._Draw()
+            self._Draw( dc )
             
-        
-        wx.BufferedPaintDC( self, self._canvas_bmp )
         
     
     def EventRightDown( self, event ):
@@ -4727,9 +4804,7 @@ class RatingNumericalDialog( RatingNumerical ):
         self._rating = None
         
     
-    def _Draw( self ):
-        
-        dc = self.GetDC()
+    def _Draw( self, dc ):
         
         dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
         
@@ -4814,9 +4889,7 @@ class RatingNumericalCanvas( RatingNumerical ):
         HydrusGlobals.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
-    def _Draw( self ):
-        
-        dc = self.GetDC()
+    def _Draw( self, dc ):
         
         dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
         
@@ -4893,7 +4966,14 @@ class RatingNumericalCanvas( RatingNumerical ):
             
             self._current_media = media
             
-            self._hashes = self._current_media.GetHashes()
+            if self._current_media is None:
+                
+                self._hashes = set()
+                
+            else:
+                
+                self._hashes = self._current_media.GetHashes()
+                
             
             self._dirty = True
             
@@ -5662,7 +5742,7 @@ class ShowKeys( Frame ):
                 
                 path = HydrusData.ToUnicode( dlg.GetPath() )
                 
-                with open( path, 'wb' ) as f: f.write( self._text )
+                with open( path, 'wb' ) as f: f.write( HydrusData.ToByteString( self._text ) )
                 
             
         

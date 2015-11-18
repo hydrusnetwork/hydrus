@@ -1,4 +1,6 @@
 import ClientFiles
+import ClientImageHandling
+import ClientVideoHandling
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -7,7 +9,6 @@ import HydrusGlobals
 import HydrusThreading
 import HydrusVideoHandling
 import lz4
-import numpy
 import subprocess
 import threading
 import time
@@ -17,7 +18,7 @@ def GenerateHydrusBitmap( path, compressed = True ):
     
     try:
         
-        numpy_image = HydrusImageHandling.GenerateNumpyImage( path )
+        numpy_image = ClientImageHandling.GenerateNumpyImage( path )
         
         return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
         
@@ -101,9 +102,9 @@ class RasterContainerImage( RasterContainer ):
         
         try:
             
-            numpy_image = HydrusImageHandling.GenerateNumpyImage( self._path )
+            numpy_image = ClientImageHandling.GenerateNumpyImage( self._path )
             
-            resized_numpy_image = HydrusImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
+            resized_numpy_image = ClientImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
             
             hydrus_bitmap = GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
             
@@ -182,13 +183,13 @@ class RasterContainerVideo( RasterContainer ):
             
             self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
             
-            self._renderer = HydrusVideoHandling.GIFRenderer( path, num_frames, target_resolution )
+            self._renderer = ClientVideoHandling.GIFRenderer( path, num_frames, target_resolution )
             
         else:
             
             try:
                 
-                self._frame_duration = HydrusVideoHandling.GetVideoFrameDuration( self._path )
+                self._frame_duration = ClientVideoHandling.GetVideoFrameDuration( self._path )
                 
             except HydrusExceptions.CantRenderWithCVException:
                 

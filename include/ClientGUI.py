@@ -12,6 +12,7 @@ import ClientGUIManagement
 import ClientGUIPages
 import ClientDownloading
 import ClientSearch
+import gc
 import HydrusData
 import HydrusExceptions
 import HydrusFileHandling
@@ -253,24 +254,30 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     if HC.PLATFORM_WINDOWS:
                         
-                        my_exe = os.path.join( HC.BASE_DIR, 'client.exe' )
+                        my_frozen_path = os.path.join( HC.BASE_DIR, 'client.exe' )
                         
                     else:
                         
-                        my_exe = os.path.join( HC.BASE_DIR, 'client' )
+                        my_frozen_path = os.path.join( HC.BASE_DIR, 'client' )
                         
                     
-                    if sys.executable == my_exe:
+                    my_executable = sys.executable
+                    
+                    if my_executable == my_frozen_path:
                     
                         if HC.PLATFORM_WINDOWS: subprocess.Popen( [ os.path.join( HC.BASE_DIR, 'server.exe' ) ] )
                         else: subprocess.Popen( [ os.path.join( '.', HC.BASE_DIR, 'server' ) ] )
                         
                     else:
                         
-                        if HC.PLATFORM_WINDOWS or HC.PLATFORM_OSX: python_bin = 'pythonw'
-                        else: python_bin = 'python'
+                        server_executable = my_executable
                         
-                        subprocess.Popen( [ python_bin, os.path.join( HC.BASE_DIR, 'server.py' ) ] )
+                        if 'pythonw' in server_executable:
+                            
+                            server_executable = server_executable.replace( 'pythonw', 'python' )
+                            
+                        
+                        subprocess.Popen( [ server_executable, os.path.join( HC.BASE_DIR, 'server.py' ) ] )
                         
                     
                     time_waited = 0
@@ -582,6 +589,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             wx.CallAfter( page.Destroy )
             
         
+        wx.CallAfter( gc.collect )
+        
     
     def _FetchIP( self, service_key ):
         
@@ -600,7 +609,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 text = 'File Hash: ' + hash.encode( 'hex' ) + os.linesep + 'Uploader\'s IP: ' + ip + os.linesep + 'Upload Time (GMT): ' + time.asctime( time.gmtime( int( timestamp ) ) )
                 
-                print( text )
+                HydrusData.Print( text )
                 
                 wx.MessageBox( text + os.linesep + 'This has been written to the log.' )
                 
@@ -1510,7 +1519,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                     
                                     job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
                                     
-                                    print( job_key.ToString() )
+                                    HydrusData.Print( job_key.ToString() )
                                     
                                     return
                                     
@@ -1544,8 +1553,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                         except:
                             
-                            print( path )
-                            print( traceback.format_exc() )
+                            HydrusData.Print( path )
+                            HydrusData.Print( traceback.format_exc() )
                             
                             num_broken += 1
                             
@@ -1554,7 +1563,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     if num_broken > 0: job_key.SetVariable( 'popup_text_1', prefix + 'done! ' + HydrusData.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
                     else: job_key.SetVariable( 'popup_text_1', prefix + 'done!' )
                     
-                    print( job_key.ToString() )
+                    HydrusData.Print( job_key.ToString() )
                     
                     job_key.Finish()
                     
@@ -1815,7 +1824,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
                             
-                            print( job_key.ToString() )
+                            HydrusData.Print( job_key.ToString() )
                             
                             return
                             
@@ -1891,7 +1900,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
                             
-                            print( job_key.ToString() )
+                            HydrusData.Print( job_key.ToString() )
                             
                             return
                             
@@ -1931,7 +1940,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         job_key.DeleteVariable( 'popup_gauge_1' )
         job_key.SetVariable( 'popup_text_1', prefix + 'upload done!' )
         
-        print( job_key.ToString() )
+        HydrusData.Print( job_key.ToString() )
         
         job_key.Finish()
         
@@ -2026,7 +2035,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'debug_garbage':
                 
-                import gc
                 import collections
                 import types
                 
@@ -2047,7 +2055,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     elif type( o ) == types.BuiltinMethodType: class_count[ o.__name__ ] += 1
                     
                 
-                print( 'gc:' )
+                HydrusData.Print( 'gc:' )
                 
                 for ( k, v ) in count.items():
                     
@@ -2059,7 +2067,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     if v > 100: print ( k, v )
                     
                 
-                print( 'garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+                HydrusData.Print( 'garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
                 
             elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
             elif command == 'delete_gui_session':
@@ -3330,7 +3338,23 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             self._DisplayService()
             
         
-        def TIMEREventUpdates( self, event ): self._updates_text.SetLabel( self._service.GetUpdateStatus() )
+        def TIMEREventUpdates( self, event ):
+            
+            try:
+                
+                self._updates_text.SetLabel( self._service.GetUpdateStatus() )
+                
+            except wx.PyDeadObjectError:
+                
+                self._timer_updates.Stop()
+                
+            except:
+                
+                self._timer_updates.Stop()
+                
+                raise
+                
+            
         
     
     
@@ -3430,9 +3454,7 @@ class FrameSplash( ClientGUICommon.Frame ):
         self.Raise()
         
     
-    def _Redraw( self ):
-        
-        dc = wx.MemoryDC( self._bmp )
+    def _Redraw( self, dc ):
         
         dc.SetBackground( wx.Brush( wx.WHITE ) )
         
@@ -3506,17 +3528,17 @@ class FrameSplash( ClientGUICommon.Frame ):
     
     def EventPaint( self, event ):
         
+        dc = wx.BufferedPaintDC( self, self._bmp )
+        
         if self._dirty:
             
-            self._Redraw()
+            self._Redraw( dc )
             
-        
-        wx.BufferedPaintDC( self, self._bmp )
         
     
     def SetStatusText( self, text ):
         
-        print( text )
+        HydrusData.Print( text )
         
         self._status_text = text
         
@@ -3527,7 +3549,7 @@ class FrameSplash( ClientGUICommon.Frame ):
     
     def SetTitleText( self, text ):
         
-        print( text )
+        HydrusData.Print( text )
         
         self._title_text = text
         

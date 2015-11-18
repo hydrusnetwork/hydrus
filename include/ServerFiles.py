@@ -9,7 +9,6 @@ def GetExpectedPath( file_type, hash ):
     
     if file_type == 'file': directory = HC.SERVER_FILES_DIR
     elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
-    elif file_type == 'message': directory = HC.SERVER_MESSAGES_DIR
     
     hash_encoded = hash.encode( 'hex' )
     
@@ -72,7 +71,6 @@ def IterateAllPaths( file_type ):
     
     if file_type == 'file': directory = HC.SERVER_FILES_DIR
     elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
-    elif file_type == 'message': directory = HC.SERVER_MESSAGES_DIR
     
     hex_chars = '0123456789abcdef'
     

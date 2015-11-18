@@ -22,7 +22,7 @@ def CleanUpTempPath( os_file_handle, temp_path ):
             
         except OSError:
             
-            print( 'Could not close the temporary file ' + temp_path )
+            HydrusData.Print( 'Could not close the temporary file ' + temp_path )
             
             return
             
@@ -42,7 +42,7 @@ def CleanUpTempPath( os_file_handle, temp_path ):
             
         except OSError:
             
-            print( 'Could not delete the temporary file ' + temp_path )
+            HydrusData.Print( 'Could not delete the temporary file ' + temp_path )
             
         
     

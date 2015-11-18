@@ -1648,6 +1648,21 @@ class MediaPanelThumbnails( MediaPanel ):
         # accelerator tables can't handle escape key in windows, gg
         
         if event.GetKeyCode() == wx.WXK_ESCAPE: self._Select( 'none' )
+        if event.GetKeyCode() in ( wx.WXK_PAGEUP, wx.WXK_PAGEDOWN ):
+            
+            if event.GetKeyCode() == wx.WXK_PAGEUP:
+                
+                direction = -1
+                
+            elif event.GetKeyCode() == wx.WXK_PAGEDOWN:
+                
+                direction = 1
+                
+            
+            shift = event.ShiftDown()
+            
+            self._MoveFocussedThumbnail( self._num_rows_per_canvas_page * direction, 0, shift )
+            
         else: event.Skip()
         
     
@@ -2349,7 +2364,7 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_CTRL, wx.WXK_SPACE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'ctrl-space' )  )
         ]
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action not in ( 'previous', 'next' ) 	] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -2398,98 +2413,111 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def TIMEREventAnimation( self, event ):
         
-        started = HydrusData.GetNowPrecise()
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-        
-        all_info = self._thumbnails_being_faded_in.items()
-        
-        random.shuffle( all_info )
-        
-        dcs = {}
-        
-        for ( hash, ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered ) ) in all_info:
+        try:
             
-            num_frames_rendered += 1
+            started = HydrusData.GetNowPrecise()
             
-            page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+            ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
             
-            delete_entry = False
+            all_info = self._thumbnails_being_faded_in.items()
             
-            try: expected_thumbnail = self._sorted_media[ thumbnail_index ]
-            except: expected_thumbnail = None
+            random.shuffle( all_info )
             
-            if expected_thumbnail != thumbnail:
+            dcs = {}
+            
+            for ( hash, ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered ) ) in all_info:
                 
-                delete_entry = True
+                num_frames_rendered += 1
                 
-            elif page_index not in self._clean_canvas_pages:
+                page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
                 
-                delete_entry = True
+                delete_entry = False
                 
-            else:
+                try: expected_thumbnail = self._sorted_media[ thumbnail_index ]
+                except: expected_thumbnail = None
                 
-                if num_frames_rendered >= 9:
+                if expected_thumbnail != thumbnail:
                     
-                    bmp_to_use = original_bmp
+                    delete_entry = True
+                    
+                elif page_index not in self._clean_canvas_pages:
                     
                     delete_entry = True
                     
                 else:
                     
-                    bmp_to_use = alpha_bmp
+                    if num_frames_rendered >= 9:
+                        
+                        bmp_to_use = original_bmp
+                        
+                        delete_entry = True
+                        
+                    else:
+                        
+                        bmp_to_use = alpha_bmp
+                        
+                        self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered )
+                        
                     
-                    self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered )
+                    thumbnail_col = thumbnail_index % self._num_columns
+                    
+                    thumbnail_row = thumbnail_index / self._num_columns
+                    
+                    x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+                    
+                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                    
+                    if page_index not in dcs:
+                        
+                        canvas_bmp = self._clean_canvas_pages[ page_index ]
+                        
+                        dc = wx.MemoryDC( canvas_bmp )
+                        
+                        dcs[ page_index ] = dc
+                        
+                    
+                    dc = dcs[ page_index ]
+                    
+                    dc.DrawBitmap( bmp_to_use, x, y, True )
                     
                 
-                thumbnail_col = thumbnail_index % self._num_columns
-                
-                thumbnail_row = thumbnail_index / self._num_columns
-                
-                x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
-                
-                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
-                
-                if page_index not in dcs:
+                if delete_entry:
                     
-                    canvas_bmp = self._clean_canvas_pages[ page_index ]
+                    del self._thumbnails_being_faded_in[ hash ]
                     
-                    dc = wx.MemoryDC( canvas_bmp )
-                    
-                    dcs[ page_index ] = dc
+                    wx.CallAfter( original_bmp.Destroy )
+                    wx.CallAfter( alpha_bmp.Destroy )
                     
                 
-                dc = dcs[ page_index ]
-                
-                dc.DrawBitmap( bmp_to_use, x, y, True )
-                
-            
-            if delete_entry:
-                
-                del self._thumbnails_being_faded_in[ hash ]
-                
-                wx.CallAfter( original_bmp.Destroy )
-                wx.CallAfter( alpha_bmp.Destroy )
+                if HydrusData.GetNowPrecise() - started > 0.016:
+                    
+                    break
+                    
                 
             
-            if HydrusData.GetNowPrecise() - started > 0.016:
+            if len( self._thumbnails_being_faded_in ) > 0:
                 
-                break
+                finished = HydrusData.GetNowPrecise()
+                
+                time_this_took_in_ms = ( finished - started ) * 1000
+                
+                ms = max( 1, int( round( 16.7 - time_this_took_in_ms ) ) )
+                
+                self._timer_animation.Start( ms, wx.TIMER_ONE_SHOT )
                 
             
-        
-        if len( self._thumbnails_being_faded_in ) > 0:
+            self.Refresh()
             
-            finished = HydrusData.GetNowPrecise()
+        except wx.PyDeadObjectError:
             
-            time_this_took_in_ms = ( finished - started ) * 1000
+            self._timer_animation.Stop()
             
-            ms = max( 1, int( round( 16.7 - time_this_took_in_ms ) ) )
+        except:
             
-            self._timer_animation.Start( ms, wx.TIMER_ONE_SHOT )
+            self._timer_animation.Stop()
             
-        
-        self.Refresh()
+            raise
+            
         
     
     def WaterfallThumbnail( self, page_key, thumbnail ):

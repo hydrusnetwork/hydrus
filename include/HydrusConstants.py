@@ -27,7 +27,6 @@ CLIENT_FILES_DIR = os.path.join( DB_DIR, 'client_files' )
 SERVER_FILES_DIR = os.path.join( DB_DIR, 'server_files' )
 CLIENT_THUMBNAILS_DIR = os.path.join( DB_DIR, 'client_thumbnails' )
 SERVER_THUMBNAILS_DIR = os.path.join( DB_DIR, 'server_thumbnails' )
-SERVER_MESSAGES_DIR = os.path.join( DB_DIR, 'server_messages' )
 CLIENT_UPDATES_DIR = os.path.join( DB_DIR, 'client_updates' )
 SERVER_UPDATES_DIR = os.path.join( DB_DIR, 'server_updates' )
 LOGS_DIR = os.path.join( BASE_DIR, 'logs' )
@@ -52,7 +51,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 181
+SOFTWARE_VERSION = 182
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

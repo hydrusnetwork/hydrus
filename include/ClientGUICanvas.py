@@ -152,9 +152,7 @@ class Animation( wx.Window ):
         wx.CallLater( 500, gc.collect )
         
     
-    def _DrawFrame( self ):
-        
-        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+    def _DrawFrame( self, dc ):
         
         current_frame = self._video_container.GetFrame( self._current_frame_index )
         
@@ -175,7 +173,10 @@ class Animation( wx.Window ):
         
         dc.SetUserScale( 1.0, 1.0 )
         
-        if self._animation_bar is not None: self._animation_bar.GotoFrame( self._current_frame_index )
+        if self._animation_bar is not None:
+            
+            self._animation_bar.GotoFrame( self._current_frame_index )
+            
         
         self._current_frame_drawn = True
         
@@ -200,13 +201,19 @@ class Animation( wx.Window ):
         self._a_frame_has_been_drawn = True
         
     
-    def _DrawWhite( self ):
-        
-        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+    def _DrawWhite( self, dc ):
         
         dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         dc.Clear()
+        
+    
+    def _TellAnimationBarAboutPausedStatus( self ):
+        
+        if self._animation_bar is not None:
+            
+            self._animation_bar.SetPaused( self._paused )
+            
         
     
     def CurrentFrame( self ): return self._current_frame_index
@@ -215,7 +222,16 @@ class Animation( wx.Window ):
     
     def EventPaint( self, event ):
         
-        wx.BufferedPaintDC( self, self._canvas_bmp )
+        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        
+        if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ):
+            
+            self._DrawFrame( dc )
+            
+        elif not self._a_frame_has_been_drawn:
+            
+            self._DrawWhite( dc )
+            
         
     
     def EventPropagateKey( self, event ):
@@ -282,23 +298,13 @@ class Animation( wx.Window ):
                 self._video_container.SetFramePosition( self._current_frame_index )
                 
                 self._current_frame_drawn = False
+                self._a_frame_has_been_drawn = False
                 
                 wx.CallAfter( self._canvas_bmp.Destroy )
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
-                dc = wx.MemoryDC( self._canvas_bmp )
-                
-                dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
-                
-                dc.Clear()
-                
-                del dc
-                
-                self._a_frame_has_been_drawn = False
-                
-                if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
-                else: self._DrawWhite()
+                self.Refresh()
                 
             
         
@@ -314,11 +320,12 @@ class Animation( wx.Window ):
             self._current_frame_drawn_at = 0.0
             self._current_frame_drawn = False
             
-            if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
-            elif not self._a_frame_has_been_drawn: self._DrawWhite()
+            self.Refresh()
             
         
         self._paused = True
+        
+        self._TellAnimationBarAboutPausedStatus()
         
     
     def IsPlaying( self ):
@@ -330,43 +337,70 @@ class Animation( wx.Window ):
         
         self._paused = False
         
+        self._TellAnimationBarAboutPausedStatus()
+        
     
     def Pause( self ):
         
         self._paused = True
+        
+        self._TellAnimationBarAboutPausedStatus()
         
     
     def PausePlay( self ):
         
         self._paused = not self._paused
         
+        self._TellAnimationBarAboutPausedStatus()
+        
     
     def SetAnimationBar( self, animation_bar ):
         
         self._animation_bar = animation_bar
         
-        if self._animation_bar is not None: self._animation_bar.GotoFrame( self._current_frame_index )
+        if self._animation_bar is not None:
+            
+            self._animation_bar.GotoFrame( self._current_frame_index )
+            
+            self._TellAnimationBarAboutPausedStatus()
+            
         
     
     def TIMEREventVideo( self, event ):
         
-        if self.IsShownOnScreen():
+        try:
             
-            if self._current_frame_drawn:
+            if self.IsShownOnScreen():
                 
-                if not self._paused and HydrusData.TimeHasPassedPrecise( self._next_frame_due_at ):
+                if self._current_frame_drawn:
                     
-                    num_frames = self._media.GetNumFrames()
+                    if not self._paused and HydrusData.TimeHasPassedPrecise( self._next_frame_due_at ):
+                        
+                        num_frames = self._media.GetNumFrames()
+                        
+                        self._current_frame_index = ( self._current_frame_index + 1 ) % num_frames
+                        
+                        self._current_frame_drawn = False
+                        
+                        self._video_container.SetFramePosition( self._current_frame_index )
+                        
                     
-                    self._current_frame_index = ( self._current_frame_index + 1 ) % num_frames
+                
+                if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ):
                     
-                    self._current_frame_drawn = False
-                    
-                    self._video_container.SetFramePosition( self._current_frame_index )
+                    self.Refresh()
                     
                 
             
-            if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
+        except wx.PyDeadObjectError:
+            
+            self._timer_video.Stop()
+            
+        except:
+            
+            self._timer_video.Stop()
+            
+            raise
             
         
     
@@ -384,6 +418,7 @@ class AnimationBar( wx.Window ):
         
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
+        self._paused = True
         self._media = media
         self._media_window = media_window
         self._num_frames = self._media.GetNumFrames()
@@ -402,17 +437,28 @@ class AnimationBar( wx.Window ):
         self._timer_update.Start( 100, wx.TIMER_CONTINUOUS )
         
     
-    def _Redraw( self ):
+    def _Redraw( self, dc ):
         
         ( my_width, my_height ) = self._canvas_bmp.GetSize()
         
-        dc = wx.MemoryDC( self._canvas_bmp )
-        
         dc.SetPen( wx.TRANSPARENT_PEN )
         
-        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
+        background_colour = wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE )
         
-        dc.DrawRectangle( 0, 0, my_width, ANIMATED_SCANBAR_HEIGHT )
+        if self._paused:
+            
+            ( r, g, b ) = background_colour.Get()
+            
+            r = int( r * 0.85 )
+            g = int( g * 0.85 )
+            b = int( b * 0.85 )
+            
+            background_colour = wx.Colour( r, g, b )
+            
+        
+        dc.SetBackground( wx.Brush( background_colour ) )
+        
+        dc.Clear()
         
         #
         
@@ -482,12 +528,12 @@ class AnimationBar( wx.Window ):
     
     def EventPaint( self, event ):
         
+        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        
         if self._dirty:
             
-            self._Redraw()
+            self._Redraw( dc )
             
-        
-        wx.BufferedPaintDC( self, self._canvas_bmp )
         
     
     def EventResize( self, event ):
@@ -520,38 +566,60 @@ class AnimationBar( wx.Window ):
         self.Refresh()
         
     
+    def SetPaused( self, paused ):
+        
+        self._paused = paused
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
     def TIMEREventUpdate( self, event ):
         
-        if self.IsShownOnScreen():
+        try:
             
-            if self._media.GetMime() == HC.APPLICATION_FLASH:
+            if self.IsShownOnScreen():
                 
-                try:
+                if self._media.GetMime() == HC.APPLICATION_FLASH:
                     
-                    frame_index = self._media_window.CurrentFrame()
+                    try:
+                        
+                        frame_index = self._media_window.CurrentFrame()
+                        
+                    except AttributeError:
+                        
+                        text = 'The flash window produced an unusual error that probably means it never initialised properly. This is usually because Flash has not been installed for Internet Explorer. '
+                        text += os.linesep * 2
+                        text += 'Please close the client, open Internet Explorer, and install flash from Adobe\'s site and then try again. If that does not work, please tell the hydrus developer.'
+                        
+                        HydrusData.ShowText( text )
+                        
+                        self._timer_update.Stop()
+                        
+                        raise
+                        
                     
-                except AttributeError:
-                    
-                    text = 'The flash window produced an unusual error that probably means it never initialised properly. This is usually because Flash has not been installed for Internet Explorer. '
-                    text += os.linesep * 2
-                    text += 'Please close the client, open Internet Explorer, and install flash from Adobe\'s site and then try again. If that does not work, please tell the hydrus developer.'
-                    
-                    HydrusData.ShowText( text )
-                    
-                    self._timer_update.Stop()
-                    
-                    raise
+                    if frame_index != self._current_frame_index:
+                        
+                        self._current_frame_index = frame_index
+                        
+                        self._dirty = True
+                        
+                        self.Refresh()
+                        
                     
                 
-                if frame_index != self._current_frame_index:
-                    
-                    self._current_frame_index = frame_index
-                    
-                    self._dirty = True
-                    
-                    self.Refresh()
-                    
-                
+            
+        except wx.PyDeadObjectError:
+            
+            self._timer_update.Stop()
+            
+        except:
+            
+            self._timer_update.Stop()
+            
+            raise
             
         
     
@@ -705,9 +773,7 @@ class Canvas( object ):
             
         
     
-    def _DrawBackgroundBitmap( self ):
-        
-        dc = wx.MemoryDC( self._canvas_bmp )
+    def _DrawBackgroundBitmap( self, dc ):
         
         dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
@@ -992,17 +1058,17 @@ class Canvas( object ):
     
     def EventPaint( self, event ):
         
+        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        
         if self._dirty:
             
-            self._DrawBackgroundBitmap()
+            self._DrawBackgroundBitmap( dc )
             
             if self._media_container is not None:
                 
                 self._DrawCurrentMedia()
                 
             
-        
-        wx.BufferedPaintDC( self, self._canvas_bmp )
         
     
     def EventResize( self, event ):
@@ -1043,7 +1109,14 @@ class Canvas( object ):
     
     def MouseIsNearAnimationBar( self ):
         
-        return self._media_container.MouseIsNearAnimationBar()
+        if self._media_container is None:
+            
+            return False
+            
+        else:
+            
+            return self._media_container.MouseIsNearAnimationBar()
+            
         
     
     def MouseIsOverMedia( self ):
@@ -1129,6 +1202,7 @@ class Canvas( object ):
                     
                 
                 HydrusGlobals.client_controller.pub( 'canvas_new_display_media', self._canvas_key, self._current_display_media )
+                
                 HydrusGlobals.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
                 
                 self._SetDirty()
@@ -1608,7 +1682,14 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     
     def _GetIndexString( self ):
         
-        index_string = HydrusData.ConvertValueRangeToPrettyString( self._sorted_media.index( self._current_media ) + 1, len( self._sorted_media ) )
+        if self._current_media is None:
+            
+            index_string = '-/' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) )
+            
+        else:
+            
+            index_string = HydrusData.ConvertValueRangeToPrettyString( self._sorted_media.index( self._current_media ) + 1, len( self._sorted_media ) )
+            
         
         return index_string
         
@@ -1858,10 +1939,32 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
     
     def TIMEREventCursorHide( self, event ):
         
-        if not CC.CAN_HIDE_MOUSE: return
-        
-        if self._menu_open: self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
-        else: self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+        try:
+            
+            if not CC.CAN_HIDE_MOUSE:
+                
+                return
+                
+            
+            if self._menu_open:
+                
+                self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+                
+            else:
+                
+                self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+                
+            
+        except wx.PyDeadObjectError:
+            
+            self._timer_cursor_hide.Stop()
+            
+        except:
+            
+            self._timer_cursor_hide.Stop()
+            
+            raise
+            
         
     
 class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
@@ -2571,7 +2674,23 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         event.Skip()
         
     
-    def TIMEREventSlideshow( self, event ): self._ShowNext()
+    def TIMEREventSlideshow( self, event ):
+        
+        try:
+            
+            self._ShowNext()
+            
+        except wx.PyDeadObjectError:
+            
+            self._timer_slideshow.Stop()
+            
+        except:
+            
+            self._timer_slideshow.Stop()
+            
+            raise
+            
+        
     
 class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable ):
     
@@ -3026,6 +3145,7 @@ class MediaContainer( wx.Window ):
         
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         self.EventResize( None )
         
@@ -3095,6 +3215,8 @@ class MediaContainer( wx.Window ):
         
         self._MakeMediaWindow( do_embed_button = False )
         
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventPropagateMouse( self, event ):
         
@@ -3184,6 +3306,8 @@ class MediaContainer( wx.Window ):
                 
             
         
+        return False
+        
     
     def Pause( self ):
         
@@ -3201,22 +3325,22 @@ class EmbedButton( wx.Window ):
         
         self._dirty = True
         
-        self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
+        ( x, y ) = size
+        
+        self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
     
-    def _Redraw( self ):
+    def _Redraw( self, dc ):
         
         ( x, y ) = self.GetClientSize()
         
-        self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
+        background_brush = wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) )
         
-        dc = wx.MemoryDC( self._canvas_bmp )
-        
-        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
+        dc.SetBackground( background_brush )
         
         dc.Clear() # gcdc doesn't support clear
         
@@ -3232,7 +3356,7 @@ class EmbedButton( wx.Window ):
         
         dc.DrawCircle( center_x, center_y, radius )
         
-        dc.SetBrush( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
+        dc.SetBrush( background_brush )
         
         m = ( 2 ** 0.5 ) / 2 # 45 degree angle
         
@@ -3263,12 +3387,12 @@ class EmbedButton( wx.Window ):
     
     def EventPaint( self, event ):
         
+        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        
         if self._dirty:
             
-            self._Redraw()
+            self._Redraw( dc )
             
-        
-        wx.BufferedPaintDC( self, self._canvas_bmp )
         
     
     def EventResize( self, event ):
@@ -3280,6 +3404,8 @@ class EmbedButton( wx.Window ):
         if my_width != current_bmp_width or my_height != current_bmp_height:
             
             if my_width > 0 and my_height > 0:
+                
+                self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
                 self._dirty = True
                 
@@ -3335,12 +3461,8 @@ class StaticImage( wx.Window ):
         
         self.EventResize( None )
         
-        self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
-        
     
-    def _Redraw( self ):
-        
-        dc = wx.MemoryDC( self._canvas_bmp )
+    def _Redraw( self, dc ):
         
         dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
@@ -3384,16 +3506,19 @@ class StaticImage( wx.Window ):
         self.Refresh()
         
     
-    def EventEraseBackground( self, event ): pass
+    def EventEraseBackground( self, event ):
+        
+        pass
+        
     
     def EventPaint( self, event ):
         
+        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        
         if self._dirty:
             
-            self._Redraw()
+            self._Redraw( dc )
             
-        
-        wx.BufferedPaintDC( self, self._canvas_bmp )
         
     
     def EventPropagateMouse( self, event ):
@@ -3450,11 +3575,24 @@ class StaticImage( wx.Window ):
     
     def TIMEREventRenderWait( self, event ):
         
-        if self._image_container is not None and self._image_container.IsRendered():
+        try:
             
-            self._SetDirty()
+            if self._image_container is not None and self._image_container.IsRendered():
+                
+                self._SetDirty()
+                
+                self._timer_render_wait.Stop()
+                
+            
+        except wx.PyDeadObjectError:
             
             self._timer_render_wait.Stop()
+            
+        except:
+            
+            self._timer_render_wait.Stop()
+            
+            raise
             
         
     

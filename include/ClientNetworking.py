@@ -536,7 +536,10 @@ class HTTPConnection( object ):
         
         self._last_request_time = HydrusData.GetNow()
         
-        if response.status == 200: return ( parsed_response, None, size_of_response, response_headers, cookies )
+        if response.status == 200:
+            
+            return ( parsed_response, None, size_of_response, response_headers, cookies )
+            
         elif response.status in ( 301, 302, 303, 307 ):
             
             location = response.getheader( 'Location' )
@@ -549,9 +552,9 @@ class HTTPConnection( object ):
                 if ' ' in url:
                     
                     # some booru is giving daft redirect responses
-                    print( url )
+                    HydrusData.Print( url )
                     url = urllib.quote( HydrusData.ToByteString( url ), safe = '/?=&' )
-                    print( url )
+                    HydrusData.Print( url )
                     
                 
                 if not url.startswith( self._scheme ):

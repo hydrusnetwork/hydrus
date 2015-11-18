@@ -82,7 +82,7 @@ class HydrusDB( object ):
     
     def _AnalyzeAfterUpdate( self ):
         
-        print( 'Analyzing db after update...' )
+        HydrusData.Print( 'Analyzing db after update...' )
         
         self._c.execute( 'ANALYZE' )
         
@@ -218,7 +218,7 @@ class HydrusDB( object ):
     
     def _ReportStatus( self, text ):
         
-        print( text )
+        HydrusData.Print( text )
         
     
     def _UpdateDB( self, version ):

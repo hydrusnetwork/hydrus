@@ -90,7 +90,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_key.SetVariable( 'error', e )
                 
-                print( 'CallBlockingToWx just caught this error:' )
+                HydrusData.Print( 'CallBlockingToWx just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally: job_key.Finish()
@@ -349,9 +349,9 @@ class Controller( HydrusController.HydrusController ):
             
         except Exception as e:
             
-            print( 'There was an error trying to start the splash screen!' )
+            HydrusData.Print( 'There was an error trying to start the splash screen!' )
             
-            print( traceback.format_exc() )
+            HydrusData.Print( traceback.format_exc() )
             
         
         exit_thread = threading.Thread( target = self.THREADExitEverything, name = 'Application Exit Thread' )
@@ -399,7 +399,7 @@ class Controller( HydrusController.HydrusController ):
     
     def InitModel( self ):
         
-        self.pub( 'splash_set_status_text', 'booting db' )
+        self.pub( 'splash_set_status_text', 'booting db...' )
         
         self._http = ClientNetworking.HTTPConnectionManager()
         
@@ -412,7 +412,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._services_manager = ClientData.ServicesManager()
         
-        self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
+        self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManagerClient()
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager()
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
@@ -467,7 +467,7 @@ class Controller( HydrusController.HydrusController ):
             self.CallBlockingToWx( wx_code_password )
             
         
-        self.pub( 'splash_set_status_text', 'booting gui' )
+        self.pub( 'splash_set_status_text', 'booting gui...' )
         
         def wx_code_gui():
             
@@ -759,20 +759,20 @@ class Controller( HydrusController.HydrusController ):
         
         self._app.SetAssertMode( wx.PYAPP_ASSERT_SUPPRESS )
         
+        HydrusData.Print( 'booting controller...' )
+        
         try:
             
             self._splash = ClientGUI.FrameSplash( self )
             
         except:
             
-            print( 'There was an error trying to start the splash screen!' )
+            HydrusData.Print( 'There was an error trying to start the splash screen!' )
             
-            print( traceback.format_exc() )
+            HydrusData.Print( traceback.format_exc() )
             
             raise
             
-        
-        self.pub( 'splash_set_title_text', 'booting client' )
         
         boot_thread = threading.Thread( target = self.THREADBootEverything, name = 'Application Boot Thread' )
         
@@ -780,17 +780,10 @@ class Controller( HydrusController.HydrusController ):
         
         self._app.MainLoop()
         
-    
-    def ShutdownModel( self ):
-    
-        self.pub( 'splash_set_status_text', 'exiting db' )
-        
-        HydrusController.HydrusController.ShutdownModel( self )
+        HydrusData.Print( 'shutting down controller...' )
         
     
     def ShutdownView( self ):
-        
-        self.pub( 'splash_set_status_text', 'exiting gui' )
         
         self.CallBlockingToWx( self._gui.Shutdown )
         
@@ -951,7 +944,7 @@ class Controller( HydrusController.HydrusController ):
             
         except HydrusExceptions.PermissionException as e:
             
-            print( e )
+            HydrusData.Print( e )
             
         except:
             
@@ -974,11 +967,11 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            self.pub( 'splash_set_title_text', 'exiting client' )
+            self.pub( 'splash_set_title_text', 'shutting down gui...' )
             
             self.ShutdownView()
             
-            self.pub( 'splash_set_title_text', 'exiting client' )
+            self.pub( 'splash_set_title_text', 'shutting down db...' )
             
             self.ShutdownModel()
             
