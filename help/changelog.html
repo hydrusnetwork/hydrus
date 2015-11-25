@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 183</h3></li>
+				<ul>
+					<li>added swf thumbnail support--it works ok for most swfs!</li>
+					<li>thumbs for existing swf files will generate on db update for both client and server</li>
+					<li>the server will also generate thumbnails for video on update, which it seems it was not doing before</li>
+					<li>rewrote some hash comparisons in thumbnail downloading and thumbnail counting code to be a lot faster and memory efficient</li>
+					<li>fixed thumbnail count invalidation after service sync</li>
+					<li>in certain cases, fetching autocomplete tag results from the db will be slightly less laggy</li>
+					<li>if the autocomplete dropdown has cached or otherwise quickly fetchable results, it will refilter for current input as you type, ignoring the normal character delay (i.e. typing through autocomplete is far less laggy now)</li>
+					<li>fixed a couple of autocomplete tag-parsing bugs for tags with more than one colon character</li>
+					<li>fixed some key event selection bugs in the autocomplete taglist when there are no results in the list</li>
+					<li>if there are no results in the autocomplete taglist, the typically caret-moving key events up/down/home/end will move the caret (rather than being uselessly passed on to the empty taglist)</li>
+					<li>all profiling now goes through a single location</li>
+					<li>profiling now also prints extensive information on explicit code callers</li>
+					<li>fixed db profile mode printing display for the new logger</li>
+					<li>added new pubsub_profile_mode (AKA log-killer)</li>
+					<li>all menu popup display and explicit memory cleanup is done through a single location</li>
+					<li>hover windows will now not show whenever a menu is open</li>
+					<li>hover windows will now not hide whenever a menu is open (useful when trying to go 'copy tag' off the hover taglist's menu!)</li>
+					<li>a keyerror bug when force_idle_mode was hit right at program start is fixed</li>
+					<li>unexpected serverside client disconnections are now caught and further request processing is cancelled</li>
+					<li>middle clicking on an 'empty' system predicate in the a/c dropdown now will throw up the dialog to enter a value and then pass that filled in system pred onto the new search page</li>
+					<li>duplicate parents (which can occur with overlapping grandparents) are now collapsed</li>
+					<li>the upload pending popup message cancels properly after 'server busy' events</li>
+					<li>whenever the client's services are iterated at the view-level, it will now be in random order, to stop sync bottlenecks choking other services (and anything else like this that might have been occuring)</li>
+					<li>fixed a bug with double-clicking a tag selection on the the tag censorship taglist</li>
+					<li>fixed the too-fast frame timings on some videos opencv had a problem parsing</li>
+					<li>loading many video types will now be just a little faster</li>
+					<li>remote files will no longer present the right-click menu option to share->copy->file</li>
+					<li>hitting a shortcut for manage ratings from the media viewer canvas will no longer work if you have no ratings services</li>
+					<li>the base scripts (client.pyw, server.py and test.py) now have a shebang line to facilitate non-Windows use</li>
+					<li>laid groundwork for external client_files locations</li>
+					<li>plenty of misc cleaning and refactoring</li>
+				</ul>
 				<li><h3>version 182</h3></li>
 				<ul>
 					<li>all printing to the log should now be unicode safe</li>
