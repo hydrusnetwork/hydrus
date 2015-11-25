@@ -42,35 +42,63 @@ header_and_mime = [
     ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
     ]
 
+def SaveThumbnailToStream( pil_image, dimensions, f ):
+    
+    HydrusImageHandling.EfficientlyThumbnailPILImage( pil_image, dimensions )
+    
+    if pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ):
+        
+        pil_image.save( f, 'PNG', transparency = pil_image.info[ 'transparency' ] )
+        
+    elif pil_image.mode == 'RGBA':
+        
+        pil_image.save( f, 'PNG' )
+        
+    else:
+        
+        pil_image = pil_image.convert( 'RGB' )
+        
+        pil_image.save( f, 'JPEG', quality = 92 )
+        
+    
 def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     mime = GetMime( path )
+    
+    f = cStringIO.StringIO()
     
     if mime in HC.IMAGES:
         
         pil_image = HydrusImageHandling.GeneratePILImage( path )
         
-        HydrusImageHandling.EfficientlyThumbnailPILImage( pil_image, dimensions )
+        SaveThumbnailToStream( pil_image, dimensions, f )
         
-        f = cStringIO.StringIO()
+    elif mime == HC.APPLICATION_FLASH:
         
-        if pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ):
-            
-            pil_image.save( f, 'PNG', transparency = pil_image.info[ 'transparency' ] )
-            
-        elif pil_image.mode == 'RGBA': pil_image.save( f, 'PNG' )
-        else:
-            
-            pil_image = pil_image.convert( 'RGB' )
-            
-            pil_image.save( f, 'JPEG', quality=92 )
-            
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
-        f.seek( 0 )
-        
-        thumbnail = f.read()
-        
-        f.close()
+        try:
+            
+            HydrusFlashHandling.RenderPageToFile( path, temp_path, 1 )
+            
+            pil_image = HydrusImageHandling.GeneratePILImage( temp_path )
+            
+            SaveThumbnailToStream( pil_image, dimensions, f )
+            
+        except:
+            
+            flash_default_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
+            
+            pil_image = HydrusImageHandling.GeneratePILImage( flash_default_path )
+            
+            SaveThumbnailToStream( pil_image, dimensions, f )
+            
+        finally:
+            
+            del pil_image
+            
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            
         
     else:
         
@@ -84,16 +112,14 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
         
         pil_image = HydrusImageHandling.GeneratePILImageFromNumpyImage( numpy_image )
         
-        f = cStringIO.StringIO()
+        SaveThumbnailToStream( pil_image, dimensions, f )
         
-        pil_image.save( f, 'JPEG', quality=92 )
-        
-        f.seek( 0 )
-        
-        thumbnail = f.read()
-        
-        f.close()
-        
+    
+    f.seek( 0 )
+    
+    thumbnail = f.read()
+    
+    f.close()
     
     return thumbnail
     

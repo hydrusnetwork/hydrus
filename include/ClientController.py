@@ -44,6 +44,7 @@ class Controller( HydrusController.HydrusController ):
         HydrusGlobals.client_controller = self
         
         self._last_mouse_position = None
+        self._menu_open = False
         
     
     def _InitDB( self ):
@@ -361,8 +362,15 @@ class Controller( HydrusController.HydrusController ):
     
     def ForceIdle( self ):
         
-        del self._timestamps[ 'last_user_action' ]
-        del self._timestamps[ 'last_mouse_action' ]
+        if 'last_user_action' in self._timestamps:
+            
+            del self._timestamps[ 'last_user_action' ]
+            
+        
+        if 'last_mouse_action' in self._timestamps:
+            
+            del self._timestamps[ 'last_mouse_action' ]
+            
         
         self._last_mouse_position = None
         
@@ -410,15 +418,15 @@ class Controller( HydrusController.HydrusController ):
         
         HC.options = self._options
         
-        self._services_manager = ClientData.ServicesManager()
+        self._services_manager = ClientCaches.ServicesManager( self )
         
-        self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManagerClient()
-        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
-        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager()
-        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
-        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager()
-        self._managers[ 'undo' ] = ClientData.UndoManager()
-        self._managers[ 'web_sessions' ] = ClientCaches.WebSessionManagerClient()
+        self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManager( self )
+        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
+        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
+        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
+        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
+        self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
+        self._managers[ 'web_sessions' ] = ClientCaches.WebSessionManagerClient( self )
         
         if HC.options[ 'proxy' ] is not None:
             
@@ -429,9 +437,9 @@ class Controller( HydrusController.HydrusController ):
         
         def wx_code():
             
-            self._caches[ 'fullscreen' ] = ClientCaches.RenderedImageCache( 'fullscreen' )
-            self._caches[ 'preview' ] = ClientCaches.RenderedImageCache( 'preview' )
-            self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache()
+            self._caches[ 'fullscreen' ] = ClientCaches.RenderedImageCache( self, 'fullscreen' )
+            self._caches[ 'preview' ] = ClientCaches.RenderedImageCache( self, 'preview' )
+            self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
             
             CC.GlobalBMPs.STATICInitialise()
             
@@ -555,6 +563,11 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def MenuIsOpen( self ):
+        
+        return self._menu_open
+        
+    
     def NotifyPubSubs( self ):
         
         wx.CallAfter( self.ProcessPubSub )
@@ -568,6 +581,20 @@ class Controller( HydrusController.HydrusController ):
     def PageHidden( self, page_key ):
         
         return self._gui.PageHidden( page_key )
+        
+    
+    def PopupMenu( self, window, menu ):
+        
+        if menu.GetMenuItemCount() > 0:
+            
+            self._menu_open = True
+            
+            window.PopupMenu( menu )
+            
+            self._menu_open = False
+            
+        
+        wx.CallAfter( menu.Destroy )
         
     
     def PrepStringForDisplay( self, text ):

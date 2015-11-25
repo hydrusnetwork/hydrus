@@ -1,9 +1,11 @@
 import cProfile
+import cStringIO
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals
 import os
+import pstats
 import Queue
 import sqlite3
 import sys
@@ -266,11 +268,7 @@ class HydrusDB( object ):
                         
                         HydrusData.ShowText( 'Profiling ' + job.GetType() + ' ' + job.GetAction() )
                         
-                        profile = cProfile.Profile()
-                        
-                        profile.runctx( 'self._ProcessJob( job )', globals(), locals() )
-                        
-                        profile.print_stats( sort = 'tottime' )
+                        HydrusData.Profile( 'self._ProcessJob( job )', globals(), locals() )
                         
                     else:
                         

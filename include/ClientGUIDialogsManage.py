@@ -3813,7 +3813,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             if HC.options[ 'export_path' ] is not None:
                 
-                abs_path = HydrusData.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
+                abs_path = HydrusPaths.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
                 
                 if abs_path is not None: self._export_location.SetPath( abs_path )
                 
@@ -4805,8 +4805,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         #
         
-        like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-        numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+        numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
         self._panels = []
         

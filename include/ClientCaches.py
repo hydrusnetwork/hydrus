@@ -8,6 +8,7 @@ import HydrusFileHandling
 import HydrusImageHandling
 import HydrusPaths
 import HydrusSessions
+import itertools
 import os
 import random
 import Queue
@@ -24,10 +25,272 @@ import HydrusTags
 import itertools
 import ClientSearch
 
+# important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
+def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
+    
+    def AddParents( simple_children_to_parents, children_to_parents, child, parents ):
+        
+        for parent in parents:
+            
+            if parent not in children_to_parents[ child ]:
+                
+                children_to_parents[ child ].append( parent )
+                
+            
+            if parent in simple_children_to_parents:
+                
+                grandparents = simple_children_to_parents[ parent ]
+                
+                AddParents( simple_children_to_parents, children_to_parents, child, grandparents )
+                
+            
+        
+    
+    service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
+    
+    for ( service_key, simple_children_to_parents ) in service_keys_to_simple_children_to_parents.items():
+        
+        children_to_parents = service_keys_to_children_to_parents[ service_key ]
+        
+        for ( child, parents ) in simple_children_to_parents.items():
+            
+            AddParents( simple_children_to_parents, children_to_parents, child, parents )
+            
+        
+    
+    return service_keys_to_children_to_parents
+    
+def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
+    
+    service_keys_to_simple_children_to_parents = collections.defaultdict( HydrusData.default_dict_set )
+    
+    for ( service_key, pairs ) in service_keys_to_pairs_flat.items():
+        
+        service_keys_to_simple_children_to_parents[ service_key ] = BuildSimpleChildrenToParents( pairs )
+        
+    
+    return service_keys_to_simple_children_to_parents
+    
+def BuildSimpleChildrenToParents( pairs ):
+    
+    simple_children_to_parents = HydrusData.default_dict_set()
+    
+    for ( child, parent ) in pairs:
+        
+        if child == parent: continue
+        
+        if LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ): continue
+        
+        simple_children_to_parents[ child ].add( parent )
+        
+    
+    return simple_children_to_parents
+    
+def CollapseTagSiblingChains( processed_siblings ):
+    
+    # now to collapse chains
+    # A -> B and B -> C goes to A -> C and B -> C
+    
+    siblings = {}
+    
+    for ( old_tag, new_tag ) in processed_siblings.items():
+        
+        # adding A -> B
+        
+        if new_tag in siblings:
+            
+            # B -> F already calculated and added, so add A -> F
+            
+            siblings[ old_tag ] = siblings[ new_tag ]
+            
+        else:
+            
+            while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
+            
+            siblings[ old_tag ] = new_tag
+            
+        
+    
+    reverse_lookup = collections.defaultdict( list )
+    
+    for ( old_tag, new_tag ) in siblings.items():
+        
+        reverse_lookup[ new_tag ].append( old_tag )
+        
+    
+    return ( siblings, reverse_lookup )
+    
+def CombineTagSiblingPairs( service_keys_to_statuses_to_pairs ):
+    
+    # first combine the services
+    # if A map already exists, don't overwrite
+    # if A -> B forms a loop, don't write it
+    
+    processed_siblings = {}
+    current_deleted_pairs = set()
+    
+    for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
+        
+        pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+        
+        for ( old, new ) in pairs:
+            
+            if old == new: continue
+            
+            if old not in processed_siblings:
+                
+                next_new = new
+                
+                we_have_a_loop = False
+                
+                while next_new in processed_siblings:
+                    
+                    next_new = processed_siblings[ next_new ]
+                    
+                    if next_new == old:
+                        
+                        we_have_a_loop = True
+                        
+                        break
+                        
+                    
+                
+                if not we_have_a_loop: processed_siblings[ old ] = new
+                
+            
+        
+    
+    return processed_siblings
+    
+def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
+    
+    potential_loop_paths = { parent }
+    
+    while len( potential_loop_paths.intersection( simple_children_to_parents.keys() ) ) > 0:
+        
+        new_potential_loop_paths = set()
+        
+        for potential_loop_path in potential_loop_paths.intersection( simple_children_to_parents.keys() ):
+            
+            new_potential_loop_paths.update( simple_children_to_parents[ potential_loop_path ] )
+            
+        
+        potential_loop_paths = new_potential_loop_paths
+        
+        if child in potential_loop_paths: return True
+        
+    
+    return False
+    
+class ClientFilesManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        self._lock = threading.Lock()
+        
+        # fetch the current exact mapping from the db
+        
+        self._Reinit()
+        
+    
+    def _Reinit( self ):
+        
+        self._prefixes_to_locations = self._controller.Read( 'client_files_locations' )
+        
+    
+    def _GetRebalanceTuple( self ):
+        
+        paths_to_ideal_weights = self._controller.GetNewOptions().GetClientFilesLocationsToIdealWeights()
+        
+        total_weight = sum( paths_to_ideal_weights.values() )
+        
+        paths_to_normalised_ideal_weights = { path : weight / total_weight for ( path, weight ) in paths_to_ideal_weights.items() }
+        
+        current_paths_to_normalised_weights = {}
+        
+        for ( prefix, path ) in self._prefixes_to_locations.items():
+            
+            current_paths_to_normalised_weights[ path ] += 1.0 / 256
+            
+        
+        #
+        
+        overweight_paths = []
+        underweight_paths = []
+        
+        for ( path, ideal_weight ) in paths_to_normalised_ideal_weights.items():
+            
+            if path in current_paths_to_normalised_weights:
+                
+                current_weight = current_paths_to_normalised_weights[ path ]
+                
+                if current_weight < ideal_weight:
+                    
+                    underweight_paths.append( path )
+                    
+                elif current_weight >= ideal_weight + 1.0 / 256:
+                    
+                    overweight_paths.append( path )
+                    
+                
+            else:
+                
+                underweight_paths.append( path )
+                
+            
+        
+        #
+        
+        if len( underweight_paths ) == 0 or len( overweight_paths ) == 0:
+            
+            return None
+            
+        else:
+            
+            overweight_path = overweight_paths.pop( 0 )
+            underweight_path = underweight_paths.pop( 0 )
+            
+            for ( prefix, path ) in self._prefixes_to_locations.items():
+                
+                if path == overweight_path:
+                    
+                    return ( prefix, overweight_path, underweight_path )
+                    
+                
+            
+        
+    
+    def Rebalance( self, partial = True ):
+        
+        with self._lock:
+            
+            rebalance_tuple = self._GetRebalanceTuple()
+            
+            while rebalance_tuple is not None:
+                
+                ( prefix, overweight_path, underweight_path ) = rebalance_tuple
+                
+                self._controller.Write( 'move_client_files', prefix, overweight_path, underweight_path )
+                
+                self._Reinit()
+                
+                if partial:
+                    
+                    break
+                    
+                
+                rebalance_tuple = self._GetRebalanceTuple()
+                
+            
+        
+    
 class DataCache( object ):
     
-    def __init__( self, cache_size_key ):
+    def __init__( self, controller, cache_size_key ):
         
+        self._controller = controller
         self._cache_size_key = cache_size_key
         
         self._keys_to_data = {}
@@ -68,7 +331,7 @@ class DataCache( object ):
             
             if key not in self._keys_to_data:
                 
-                options = HydrusGlobals.client_controller.GetOptions()
+                options = self._controller.GetOptions()
                 
                 while self._total_estimated_memory_footprint > options[ self._cache_size_key ]:
                     
@@ -138,14 +401,16 @@ class DataCache( object ):
     
 class LocalBooruCache( object ):
     
-    def __init__( self ):
+    def __init__( self, controller ):
+        
+        self._controller = controller
         
         self._lock = threading.Lock()
         
         self._RefreshShares()
         
-        HydrusGlobals.client_controller.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
-        HydrusGlobals.client_controller.sub( self, 'RefreshShares', 'restart_booru' )
+        self._controller.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
+        self._controller.sub( self, 'RefreshShares', 'restart_booru' )
         
     
     def _CheckDataUsage( self ):
@@ -185,13 +450,13 @@ class LocalBooruCache( object ):
         
         if info is None:
             
-            info = HydrusGlobals.client_controller.Read( 'local_booru_share', share_key )
+            info = self._controller.Read( 'local_booru_share', share_key )
             
             hashes = info[ 'hashes' ]
             
             info[ 'hashes_set' ] = set( hashes )
             
-            media_results = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
+            media_results = self._controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
             
             info[ 'media_results' ] = media_results
             
@@ -207,11 +472,11 @@ class LocalBooruCache( object ):
     
     def _RefreshShares( self ):
         
-        self._local_booru_service = HydrusGlobals.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._local_booru_service = self._controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         self._keys_to_infos = {}
         
-        share_keys = HydrusGlobals.client_controller.Read( 'local_booru_share_keys' )
+        share_keys = self._controller.Read( 'local_booru_share_keys' )
         
         for share_key in share_keys: self._keys_to_infos[ share_key ] = None
         
@@ -277,6 +542,62 @@ class LocalBooruCache( object ):
         with self._lock:
             
             self._RefreshShares()
+            
+        
+    
+class HydrusSessionManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        existing_sessions = self._controller.Read( 'hydrus_sessions' )
+        
+        self._service_keys_to_sessions = { service_key : ( session_key, expires ) for ( service_key, session_key, expires ) in existing_sessions }
+        
+        self._lock = threading.Lock()
+        
+    
+    def DeleteSessionKey( self, service_key ):
+        
+        with self._lock:
+            
+            self._controller.Write( 'delete_hydrus_session_key', service_key )
+            
+            if service_key in self._service_keys_to_sessions: del self._service_keys_to_sessions[ service_key ]
+            
+        
+    
+    def GetSessionKey( self, service_key ):
+        
+        now = HydrusData.GetNow()
+        
+        with self._lock:
+            
+            if service_key in self._service_keys_to_sessions:
+                
+                ( session_key, expires ) = self._service_keys_to_sessions[ service_key ]
+                
+                if now + 600 > expires: del self._service_keys_to_sessions[ service_key ]
+                else: return session_key
+                
+            
+            # session key expired or not found
+            
+            service = self._controller.GetServicesManager().GetService( service_key )
+            
+            ( response_gumpf, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
+            
+            try: session_key = cookies[ 'session_key' ].decode( 'hex' )
+            except: raise Exception( 'Service did not return a session key!' )
+            
+            expires = now + HydrusSessions.HYDRUS_SESSION_LIFETIME
+            
+            self._service_keys_to_sessions[ service_key ] = ( session_key, expires )
+            
+            self._controller.Write( 'hydrus_session', service_key, session_key, expires )
+            
+            return session_key
             
         
     
@@ -377,18 +698,19 @@ MENU_EVENT_ID_TO_ACTION_CACHE = MenuEventIdToActionCache()
 
 class RenderedImageCache( object ):
     
-    def __init__( self, cache_type ):
+    def __init__( self, controller, cache_type ):
         
+        self._controller = controller
         self._type = cache_type
         
-        if self._type == 'fullscreen': self._data_cache = DataCache( 'fullscreen_cache_size' )
-        elif self._type == 'preview': self._data_cache = DataCache( 'preview_cache_size' )
+        if self._type == 'fullscreen': self._data_cache = DataCache( self._controller, 'fullscreen_cache_size' )
+        elif self._type == 'preview': self._data_cache = DataCache( self._controller, 'preview_cache_size' )
         
         self._total_estimated_memory_footprint = 0
         
         self._keys_being_rendered = {}
         
-        HydrusGlobals.client_controller.sub( self, 'FinishedRendering', 'finished_rendering' )
+        self._controller.sub( self, 'FinishedRendering', 'finished_rendering' )
         
     
     def Clear( self ): self._data_cache.Clear()
@@ -434,9 +756,10 @@ class RenderedImageCache( object ):
     
 class ThumbnailCache( object ):
     
-    def __init__( self ):
+    def __init__( self, controller ):
         
-        self._data_cache = DataCache( 'thumbnail_cache_size' )
+        self._controller = controller
+        self._data_cache = DataCache( self._controller, 'thumbnail_cache_size' )
         
         self._lock = threading.Lock()
         
@@ -451,7 +774,7 @@ class ThumbnailCache( object ):
         
         threading.Thread( target = self.DAEMONWaterfall, name = 'Waterfall Daemon' ).start()
         
-        HydrusGlobals.client_controller.sub( self, 'Clear', 'thumbnail_resize' )
+        self._controller.sub( self, 'Clear', 'thumbnail_resize' )
         
     
     def _RecalcWaterfallQueueRandom( self ):
@@ -487,7 +810,7 @@ class ThumbnailCache( object ):
                 
                 path = os.path.join( HC.STATIC_DIR, name + '.png' )
                 
-                options = HydrusGlobals.client_controller.GetOptions()
+                options = self._controller.GetOptions()
                 
                 thumbnail = HydrusFileHandling.GenerateThumbnail( path, options[ 'thumbnail_dimensions' ] )
                 
@@ -613,7 +936,7 @@ class ThumbnailCache( object ):
                 
                 self.GetThumbnail( media ) # to load it
                 
-                HydrusGlobals.client_controller.pub( 'waterfall_thumbnail', page_key, media )
+                self._controller.pub( 'waterfall_thumbnail', page_key, media )
                 
                 if HydrusData.GetNowPrecise() - last_paused > 0.005:
                     
@@ -629,218 +952,69 @@ class ThumbnailCache( object ):
             
         
     
-def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
+class ServicesManager( object ):
     
-    potential_loop_paths = { parent }
-    
-    while len( potential_loop_paths.intersection( simple_children_to_parents.keys() ) ) > 0:
+    def __init__( self, controller ):
         
-        new_potential_loop_paths = set()
-        
-        for potential_loop_path in potential_loop_paths.intersection( simple_children_to_parents.keys() ):
-            
-            new_potential_loop_paths.update( simple_children_to_parents[ potential_loop_path ] )
-            
-        
-        potential_loop_paths = new_potential_loop_paths
-        
-        if child in potential_loop_paths: return True
-        
-    
-    return False
-    
-def BuildSimpleChildrenToParents( pairs ):
-    
-    simple_children_to_parents = HydrusData.default_dict_set()
-    
-    for ( child, parent ) in pairs:
-        
-        if child == parent: continue
-        
-        if LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ): continue
-        
-        simple_children_to_parents[ child ].add( parent )
-        
-    
-    return simple_children_to_parents
-    
-def CollapseTagSiblingChains( processed_siblings ):
-    
-    # now to collapse chains
-    # A -> B and B -> C goes to A -> C and B -> C
-    
-    siblings = {}
-    
-    for ( old_tag, new_tag ) in processed_siblings.items():
-        
-        # adding A -> B
-        
-        if new_tag in siblings:
-            
-            # B -> F already calculated and added, so add A -> F
-            
-            siblings[ old_tag ] = siblings[ new_tag ]
-            
-        else:
-            
-            while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
-            
-            siblings[ old_tag ] = new_tag
-            
-        
-    
-    reverse_lookup = collections.defaultdict( list )
-    
-    for ( old_tag, new_tag ) in siblings.items():
-        
-        reverse_lookup[ new_tag ].append( old_tag )
-        
-    
-    return ( siblings, reverse_lookup )
-    
-def CombineTagSiblingPairs( service_keys_to_statuses_to_pairs ):
-    
-    # first combine the services
-    # if A map already exists, don't overwrite
-    # if A -> B forms a loop, don't write it
-    
-    processed_siblings = {}
-    current_deleted_pairs = set()
-    
-    for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
-        
-        pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
-        
-        for ( old, new ) in pairs:
-            
-            if old == new: continue
-            
-            if old not in processed_siblings:
-                
-                next_new = new
-                
-                we_have_a_loop = False
-                
-                while next_new in processed_siblings:
-                    
-                    next_new = processed_siblings[ next_new ]
-                    
-                    if next_new == old:
-                        
-                        we_have_a_loop = True
-                        
-                        break
-                        
-                    
-                
-                if not we_have_a_loop: processed_siblings[ old ] = new
-                
-            
-        
-    
-    return processed_siblings
-    
-# important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
-def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
-    
-    def AddParents( simple_children_to_parents, children_to_parents, child, parents ):
-        
-        for parent in parents:
-            
-            children_to_parents[ child ].append( parent )
-            
-            if parent in simple_children_to_parents:
-                
-                grandparents = simple_children_to_parents[ parent ]
-                
-                AddParents( simple_children_to_parents, children_to_parents, child, grandparents )
-                
-            
-        
-    
-    service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
-    
-    for ( service_key, simple_children_to_parents ) in service_keys_to_simple_children_to_parents.items():
-        
-        children_to_parents = service_keys_to_children_to_parents[ service_key ]
-        
-        for ( child, parents ) in simple_children_to_parents.items(): AddParents( simple_children_to_parents, children_to_parents, child, parents )
-        
-    
-    return service_keys_to_children_to_parents
-    
-def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
-    
-    service_keys_to_simple_children_to_parents = collections.defaultdict( HydrusData.default_dict_set )
-    
-    for ( service_key, pairs ) in service_keys_to_pairs_flat.items():
-        
-        service_keys_to_simple_children_to_parents[ service_key ] = BuildSimpleChildrenToParents( pairs )
-        
-    
-    return service_keys_to_simple_children_to_parents
-    
-class HydrusSessionManagerClient( object ):
-    
-    def __init__( self ):
-        
-        existing_sessions = HydrusGlobals.client_controller.Read( 'hydrus_sessions' )
-        
-        self._service_keys_to_sessions = { service_key : ( session_key, expires ) for ( service_key, session_key, expires ) in existing_sessions }
+        self._controller = controller
         
         self._lock = threading.Lock()
+        self._keys_to_services = {}
+        self._services_sorted = []
+        
+        self.RefreshServices()
+        
+        self._controller.sub( self, 'RefreshServices', 'notify_new_services_data' )
         
     
-    def DeleteSessionKey( self, service_key ):
+    def GetService( self, service_key ):
         
         with self._lock:
             
-            HydrusGlobals.client_controller.Write( 'delete_hydrus_session_key', service_key )
-            
-            if service_key in self._service_keys_to_sessions: del self._service_keys_to_sessions[ service_key ]
+            try: return self._keys_to_services[ service_key ]
+            except KeyError: raise HydrusExceptions.NotFoundException( 'That service was not found!' )
             
         
     
-    def GetSessionKey( self, service_key ):
-        
-        now = HydrusData.GetNow()
+    def GetServices( self, types = HC.ALL_SERVICES, randomised = True ):
         
         with self._lock:
             
-            if service_key in self._service_keys_to_sessions:
+            services = [ service for service in self._services_sorted if service.GetServiceType() in types ]
+            
+            if randomised:
                 
-                ( session_key, expires ) = self._service_keys_to_sessions[ service_key ]
-                
-                if now + 600 > expires: del self._service_keys_to_sessions[ service_key ]
-                else: return session_key
+                random.shuffle( services )
                 
             
-            # session key expired or not found
+            return services
             
-            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        
+    
+    def RefreshServices( self ):
+        
+        with self._lock:
             
-            ( response_gumpf, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
+            services = self._controller.Read( 'services' )
             
-            try: session_key = cookies[ 'session_key' ].decode( 'hex' )
-            except: raise Exception( 'Service did not return a session key!' )
+            self._keys_to_services = { service.GetServiceKey() : service for service in services }
             
-            expires = now + HydrusSessions.HYDRUS_SESSION_LIFETIME
+            compare_function = lambda a, b: cmp( a.GetName(), b.GetName() )
             
-            self._service_keys_to_sessions[ service_key ] = ( session_key, expires )
-            
-            HydrusGlobals.client_controller.Write( 'hydrus_session', service_key, session_key, expires )
-            
-            return session_key
+            self._services_sorted = list( services )
+            self._services_sorted.sort( cmp = compare_function )
             
         
     
 class TagCensorshipManager( object ):
     
-    def __init__( self ):
+    def __init__( self, controller ):
+        
+        self._controller = controller
         
         self.RefreshData()
         
-        HydrusGlobals.client_controller.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
+        self._controller.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
         
     
     def GetInfo( self, service_key ):
@@ -851,7 +1025,7 @@ class TagCensorshipManager( object ):
     
     def RefreshData( self ):
         
-        info = HydrusGlobals.client_controller.Read( 'tag_censorship' )
+        info = self._controller.Read( 'tag_censorship' )
         
         self._service_keys_to_info = {}
         self._service_keys_to_predicates = {}
@@ -921,7 +1095,9 @@ class TagCensorshipManager( object ):
     
 class TagParentsManager( object ):
     
-    def __init__( self ):
+    def __init__( self, controller ):
+        
+        self._controller = controller
         
         self._service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
         
@@ -929,16 +1105,16 @@ class TagParentsManager( object ):
         
         self._lock = threading.Lock()
         
-        HydrusGlobals.client_controller.sub( self, 'RefreshParents', 'notify_new_parents' )
+        self._controller.sub( self, 'RefreshParents', 'notify_new_parents' )
         
     
     def _RefreshParents( self ):
         
-        service_keys_to_statuses_to_pairs = HydrusGlobals.client_controller.Read( 'tag_parents' )
+        service_keys_to_statuses_to_pairs = self._controller.Read( 'tag_parents' )
         
         # first collapse siblings
         
-        sibling_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+        sibling_manager = self._controller.GetManager( 'tag_siblings' )
         
         collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
         
@@ -985,7 +1161,7 @@ class TagParentsManager( object ):
     
     def ExpandPredicates( self, service_key, predicates ):
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = self._controller.GetNewOptions()
         
         if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
@@ -1021,7 +1197,7 @@ class TagParentsManager( object ):
     
     def ExpandTags( self, service_key, tags ):
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = self._controller.GetNewOptions()
         
         if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
@@ -1043,7 +1219,7 @@ class TagParentsManager( object ):
     
     def GetParents( self, service_key, tag ):
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = self._controller.GetNewOptions()
         
         if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
@@ -1066,13 +1242,15 @@ class TagParentsManager( object ):
     
 class TagSiblingsManager( object ):
     
-    def __init__( self ):
+    def __init__( self, controller ):
+        
+        self._controller = controller
         
         self._RefreshSiblings()
         
         self._lock = threading.Lock()
         
-        HydrusGlobals.client_controller.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
+        self._controller.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
         
     
     def _CollapseTags( self, tags ):
@@ -1082,13 +1260,13 @@ class TagSiblingsManager( object ):
     
     def _RefreshSiblings( self ):
         
-        service_keys_to_statuses_to_pairs = HydrusGlobals.client_controller.Read( 'tag_siblings' )
+        service_keys_to_statuses_to_pairs = self._controller.Read( 'tag_siblings' )
         
         processed_siblings = CombineTagSiblingPairs( service_keys_to_statuses_to_pairs )
         
         ( self._siblings, self._reverse_lookup ) = CollapseTagSiblingChains( processed_siblings )
         
-        HydrusGlobals.client_controller.pub( 'new_siblings_gui' )
+        self._controller.pub( 'new_siblings_gui' )
         
     
     def GetAutocompleteSiblings( self, half_complete_tag ):
@@ -1281,11 +1459,237 @@ class TagSiblingsManager( object ):
             
         
     
+class UndoManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        self._commands = []
+        self._inverted_commands = []
+        self._current_index = 0
+        
+        self._lock = threading.Lock()
+        
+        self._controller.sub( self, 'Undo', 'undo' )
+        self._controller.sub( self, 'Redo', 'redo' )
+        
+    
+    def _FilterServiceKeysToContentUpdates( self, service_keys_to_content_updates ):
+        
+        filtered_service_keys_to_content_updates = {}
+        
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            
+            filtered_content_updates = []
+            
+            for content_update in content_updates:
+                
+                ( data_type, action, row ) = content_update.ToTuple()
+                
+                if data_type == HC.CONTENT_TYPE_FILES:
+                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION ): continue
+                elif data_type == HC.CONTENT_TYPE_MAPPINGS:
+                    
+                    if action in ( HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ): continue
+                    
+                else: continue
+                
+                filtered_content_update = HydrusData.ContentUpdate( data_type, action, row )
+                
+                filtered_content_updates.append( filtered_content_update )
+                
+            
+            if len( filtered_content_updates ) > 0:
+                
+                filtered_service_keys_to_content_updates[ service_key ] = filtered_content_updates
+                
+            
+        
+        return filtered_service_keys_to_content_updates
+        
+    
+    def _InvertServiceKeysToContentUpdates( self, service_keys_to_content_updates ):
+        
+        inverted_service_keys_to_content_updates = {}
+        
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            
+            inverted_content_updates = []
+            
+            for content_update in content_updates:
+                
+                ( data_type, action, row ) = content_update.ToTuple()
+                
+                inverted_row = row
+                
+                if data_type == HC.CONTENT_TYPE_FILES:
+                    
+                    if action == HC.CONTENT_UPDATE_ARCHIVE: inverted_action = HC.CONTENT_UPDATE_INBOX
+                    elif action == HC.CONTENT_UPDATE_INBOX: inverted_action = HC.CONTENT_UPDATE_ARCHIVE
+                    elif action == HC.CONTENT_UPDATE_PEND: inverted_action = HC.CONTENT_UPDATE_RESCIND_PEND
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PEND: inverted_action = HC.CONTENT_UPDATE_PEND
+                    elif action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        inverted_action = HC.CONTENT_UPDATE_RESCIND_PETITION
+                        
+                        ( hashes, reason ) = row
+                        
+                        inverted_row = hashes
+                        
+                    
+                elif data_type == HC.CONTENT_TYPE_MAPPINGS:
+                    
+                    if action == HC.CONTENT_UPDATE_ADD: inverted_action = HC.CONTENT_UPDATE_DELETE
+                    elif action == HC.CONTENT_UPDATE_DELETE: inverted_action = HC.CONTENT_UPDATE_ADD
+                    elif action == HC.CONTENT_UPDATE_PEND: inverted_action = HC.CONTENT_UPDATE_RESCIND_PEND
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PEND: inverted_action = HC.CONTENT_UPDATE_PEND
+                    elif action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        inverted_action = HC.CONTENT_UPDATE_RESCIND_PETITION
+                        
+                        ( tag, hashes, reason ) = row
+                        
+                        inverted_row = ( tag, hashes )
+                        
+                    
+                
+                inverted_content_update = HydrusData.ContentUpdate( data_type, inverted_action, inverted_row )
+                
+                inverted_content_updates.append( inverted_content_update )
+                
+            
+            inverted_service_keys_to_content_updates[ service_key ] = inverted_content_updates
+            
+        
+        return inverted_service_keys_to_content_updates
+        
+    
+    def AddCommand( self, action, *args, **kwargs ):
+        
+        with self._lock:
+            
+            inverted_action = action
+            inverted_args = args
+            inverted_kwargs = kwargs
+            
+            if action == 'content_updates':
+                
+                ( service_keys_to_content_updates, ) = args
+                
+                service_keys_to_content_updates = self._FilterServiceKeysToContentUpdates( service_keys_to_content_updates )
+                
+                if len( service_keys_to_content_updates ) == 0: return
+                
+                inverted_service_keys_to_content_updates = self._InvertServiceKeysToContentUpdates( service_keys_to_content_updates )
+                
+                if len( inverted_service_keys_to_content_updates ) == 0: return
+                
+                inverted_args = ( inverted_service_keys_to_content_updates, )
+                
+            else: return
+            
+            self._commands = self._commands[ : self._current_index ]
+            self._inverted_commands = self._inverted_commands[ : self._current_index ]
+            
+            self._commands.append( ( action, args, kwargs ) )
+            
+            self._inverted_commands.append( ( inverted_action, inverted_args, inverted_kwargs ) )
+            
+            self._current_index += 1
+            
+            self._controller.pub( 'notify_new_undo' )
+            
+        
+    
+    def GetUndoRedoStrings( self ):
+        
+        with self._lock:
+            
+            ( undo_string, redo_string ) = ( None, None )
+            
+            if self._current_index > 0:
+                
+                undo_index = self._current_index - 1
+                
+                ( action, args, kwargs ) = self._commands[ undo_index ]
+                
+                if action == 'content_updates':
+                    
+                    ( service_keys_to_content_updates, ) = args
+                    
+                    undo_string = 'undo ' + ClientData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                    
+                
+            
+            if len( self._commands ) > 0 and self._current_index < len( self._commands ):
+                
+                redo_index = self._current_index
+                
+                ( action, args, kwargs ) = self._commands[ redo_index ]
+                
+                if action == 'content_updates':
+                    
+                    ( service_keys_to_content_updates, ) = args
+                    
+                    redo_string = 'redo ' + ClientData.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
+                    
+                
+            
+            return ( undo_string, redo_string )
+            
+        
+    
+    def Undo( self ):
+        
+        action = None
+        
+        with self._lock:
+            
+            if self._current_index > 0:
+                
+                self._current_index -= 1
+                
+                ( action, args, kwargs ) = self._inverted_commands[ self._current_index ]
+                
+        
+        if action is not None:
+            
+            self._controller.WriteSynchronous( action, *args, **kwargs )
+            
+            self._controller.pub( 'notify_new_undo' )
+            
+        
+    
+    def Redo( self ):
+        
+        action = None
+        
+        with self._lock:
+            
+            if len( self._commands ) > 0 and self._current_index < len( self._commands ):
+                
+                ( action, args, kwargs ) = self._commands[ self._current_index ]
+                
+                self._current_index += 1
+                
+            
+        
+        if action is not None:
+            
+            self._controller.WriteSynchronous( action, *args, **kwargs )
+            
+            self._controller.pub( 'notify_new_undo' )
+            
+        
+    
 class WebSessionManagerClient( object ):
     
-    def __init__( self ):
+    def __init__( self, controller ):
         
-        existing_sessions = HydrusGlobals.client_controller.Read( 'web_sessions' )
+        self._controller = controller
+        
+        existing_sessions = self._controller.Read( 'web_sessions' )
         
         self._names_to_sessions = { name : ( cookies, expires ) for ( name, cookies, expires ) in existing_sessions }
         
@@ -1310,13 +1714,13 @@ class WebSessionManagerClient( object ):
             
             if name == 'deviant art':
                 
-                ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.GET, 'http://www.deviantart.com/', return_cookies = True )
+                ( response_gumpf, cookies ) = self._controller.DoHTTP( HC.GET, 'http://www.deviantart.com/', return_cookies = True )
                 
                 expires = now + 30 * 86400
                 
             if name == 'hentai foundry':
                 
-                ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
+                ( response_gumpf, cookies ) = self._controller.DoHTTP( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
                 
                 raw_csrf = cookies[ 'YII_CSRF_TOKEN' ] # 19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
                 
@@ -1334,13 +1738,13 @@ class WebSessionManagerClient( object ):
                 ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
                 request_headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
                 
-                HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
+                self._controller.DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
                 
                 expires = now + 60 * 60
                 
             elif name == 'pixiv':
                 
-                ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
+                ( id, password ) = self._controller.Read( 'pixiv_account' )
                 
                 if id == '' and password == '':
                     
@@ -1359,7 +1763,7 @@ class WebSessionManagerClient( object ):
                 headers = {}
                 headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
                 
-                ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+                ( response_gumpf, cookies ) = self._controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
                 
                 # _ only given to logged in php sessions
                 if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Pixiv login credentials not accepted!' )
@@ -1369,7 +1773,7 @@ class WebSessionManagerClient( object ):
             
             self._names_to_sessions[ name ] = ( cookies, expires )
             
-            HydrusGlobals.client_controller.Write( 'web_session', name, cookies, expires )
+            self._controller.Write( 'web_session', name, cookies, expires )
             
             return cookies
             

@@ -77,7 +77,7 @@ def ParseFileArguments( path ):
     if num_frames is not None: args[ 'num_frames' ] = num_frames
     if num_words is not None: args[ 'num_words' ] = num_words
     
-    if mime in HC.IMAGES:
+    if mime in HC.MIMES_WITH_THUMBNAILS:
         
         try: thumbnail = HydrusFileHandling.GenerateThumbnail( path )
         except: raise HydrusExceptions.ForbiddenException( 'Could not generate thumbnail from that file.' )
@@ -438,6 +438,11 @@ class HydrusResourceCommand( Resource ):
             
         
     
+    def _errbackDisconnected( self, failure, request_deferred ):
+        
+        request_deferred.cancel()
+        
+    
     def _errbackHandleEmergencyError( self, failure, request ):
         
         try: self._CleanUpTempFile( request )
@@ -449,7 +454,8 @@ class HydrusResourceCommand( Resource ):
         try: request.write( failure.getTraceback() )
         except: pass
         
-        request.finish()
+        try: request.finish()
+        except: pass
         
     
     def _errbackHandleProcessingError( self, failure, request ):
@@ -547,6 +553,8 @@ class HydrusResourceCommand( Resource ):
         
         reactor.callLater( 0, d.callback, request )
         
+        request.notifyFinish().addErrback( self._errbackDisconnected, d )
+        
         return NOT_DONE_YET
         
     
@@ -569,6 +577,8 @@ class HydrusResourceCommand( Resource ):
         d.addErrback( self._errbackHandleEmergencyError, request )
         
         reactor.callLater( 0, d.callback, request )
+        
+        request.notifyFinish().addErrback( self._errbackDisconnected, d )
         
         return NOT_DONE_YET
         

@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import locale
 
 try: locale.setlocale( locale.LC_ALL, '' )
@@ -87,17 +89,17 @@ class Controller( object ):
         
         self._managers = {}
         
-        self._services_manager = ClientData.ServicesManager()
+        self._services_manager = ClientCaches.ServicesManager( self )
         
-        self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManagerClient()
-        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager()
-        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager()
-        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager()
-        self._managers[ 'undo' ] = ClientData.UndoManager()
+        self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManager( self )
+        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
+        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
+        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
+        self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
         self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
         self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
         self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
-        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
+        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
         
         self._cookies = {}
         

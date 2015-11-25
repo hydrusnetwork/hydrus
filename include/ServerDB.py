@@ -4,6 +4,7 @@ import httplib
 import HydrusConstants as HC
 import HydrusDB
 import HydrusExceptions
+import HydrusFileHandling
 import HydrusNATPunch
 import HydrusPaths
 import HydrusSerialisable
@@ -731,14 +732,14 @@ class DB( HydrusDB.HydrusDB ):
                 
                 path = ServerFiles.GetPath( 'file', hash )
                 
-                HydrusData.RecyclePath( path )
+                HydrusPaths.RecyclePath( path )
                 
             
             for hash in thumbnails_hashes & deletee_hashes:
                 
                 path = ServerFiles.GetPath( 'thumbnail', hash )
                 
-                HydrusData.RecyclePath( path )
+                HydrusPaths.RecyclePath( path )
                 
             
             self._c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HydrusData.SplayListForDB( deletees ) + ';' )
@@ -1761,7 +1762,7 @@ class DB( HydrusDB.HydrusDB ):
         backup_path = os.path.join( HC.DB_DIR, 'server_backup' )
         
         HydrusData.Print( 'backing up: deleting old backup' )
-        HydrusData.RecyclePath( backup_path )
+        HydrusPaths.RecyclePath( backup_path )
         
         os.mkdir( backup_path )
         
@@ -1938,7 +1939,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if os.path.exists( update_dir ):
                     
-                    HydrusData.DeletePath( update_dir )
+                    HydrusPaths.DeletePath( update_dir )
                     
                 
                 self.pub_after_commit( 'action_service', service_key, 'stop' )
@@ -2387,7 +2388,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
                 
-                HydrusData.RecyclePath( path )
+                HydrusPaths.RecyclePath( path )
                 
             
             for ( service_id, end ) in first_ends:
@@ -2483,6 +2484,39 @@ class DB( HydrusDB.HydrusDB ):
                 dest_path = os.path.join( dest_dir, gumpf )
                 
                 shutil.move( source_path, dest_path )
+                
+            
+        
+        if version == 182:
+            
+            HydrusData.Print( 'generating swf thumbnails' )
+            
+            mimes = { HC.APPLICATION_FLASH }
+            mimes.update( HC.VIDEO )
+            
+            hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( mimes ) + ';' ) }
+            
+            for hash_id in hash_ids:
+                
+                hash = self._GetHash( hash_id )
+                
+                try:
+                    
+                    file_path = ServerFiles.GetPath( 'file', hash )
+                    
+                except HydrusExceptions.NotFoundException:
+                    
+                    continue
+                    
+                
+                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+                
+                thumbnail_path = ServerFiles.GetExpectedPath( 'thumbnail', hash )
+                
+                with open( thumbnail_path, 'wb' ) as f:
+                    
+                    f.write( thumbnail )
+                    
                 
             
         

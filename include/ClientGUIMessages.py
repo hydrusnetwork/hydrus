@@ -268,9 +268,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         menu.AppendSeparator()
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete' ), 'delete' )
         
-        self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
     def GetListCtrl( self ): return self
@@ -641,9 +639,7 @@ class DestinationPanel( wx.Panel ):
         
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'read' ), 'read' )
         
-        self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
     def EventRetryMenu( self, event ):
@@ -652,9 +648,7 @@ class DestinationPanel( wx.Panel ):
         
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'retry' ), 'retry' )
         
-        self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
     def EventUnreadMenu( self, event ):
@@ -663,9 +657,7 @@ class DestinationPanel( wx.Panel ):
         
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'unread' ), 'unread' )
         
-        self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
     def SetStatus( self, status ):

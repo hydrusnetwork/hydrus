@@ -833,10 +833,13 @@ class Canvas( object ):
         
     
     def _ManageRatings( self ):
-        
-        if self._current_media is not None:
+    
+        if len( HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
             
-            with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_display_media, ) ) as dlg: dlg.ShowModal()
+            if self._current_media is not None:
+                
+                with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_display_media, ) ) as dlg: dlg.ShowModal()
+                
             
         
     
@@ -1380,7 +1383,7 @@ class CanvasWithDetails( Canvas ):
             
             services_manager = HydrusGlobals.client_controller.GetServicesManager()
             
-            like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+            like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
             
             like_services.reverse()
             
@@ -1400,7 +1403,7 @@ class CanvasWithDetails( Canvas ):
             if len( like_services ) > 0: current_y += 20
             
             
-            numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+            numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
             
             for numerical_service in numerical_services:
                 
@@ -1580,11 +1583,7 @@ class CanvasPanel( Canvas, wx.Window ):
             
             menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
             
-            self.PopupMenu( menu )
-            
-            self._menu_open = False
-            
-            wx.CallAfter( menu.Destroy )
+            HydrusGlobals.client_controller.PopupMenu( self, menu )
             
             event.Skip()
             
@@ -1629,8 +1628,6 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         ClientMedia.ListeningMediaList.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._page_key = page_key
-        
-        self._menu_open = False
         
         self._just_started = True
         
@@ -1946,7 +1943,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
                 return
                 
             
-            if self._menu_open:
+            if HydrusGlobals.client_controller.MenuIsOpen():
                 
                 self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
                 
@@ -2652,24 +2649,18 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'exit fullscreen' )
         else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
         
-        self._menu_open = True
-        
         if self._timer_slideshow.IsRunning():
             
             self._timer_slideshow.Stop()
             
-            self.PopupMenu( menu )
+            HydrusGlobals.client_controller.PopupMenu( self, menu )
             
             self._timer_slideshow.Start()
             
         else:
             
-            self.PopupMenu( menu )
+            HydrusGlobals.client_controller.PopupMenu( self, menu )
             
-        
-        self._menu_open = False
-        
-        wx.CallAfter( menu.Destroy )
         
         event.Skip()
         
@@ -3063,13 +3054,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'exit fullscreen' )
         else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
         
-        self._menu_open = True
-        
-        self.PopupMenu( menu )
-        
-        self._menu_open = False
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
         event.Skip()
         

@@ -1,4 +1,5 @@
 import HydrusConstants as HC
+import HydrusData
 import Queue
 import threading
 import traceback
@@ -103,7 +104,25 @@ class HydrusPubSub( object ):
         
         for callable in callables:
             
-            callable( *args, **kwargs )
+            if HydrusGlobals.pubsub_profile_mode:
+                
+                text = 'Profiling ' + topic + ': ' + repr( callable )
+                
+                if topic == 'message':
+                    
+                    HydrusData.Print( text )
+                    
+                else:
+                    
+                    HydrusData.ShowText( text )
+                    
+                
+                HydrusData.Profile( 'callable( *args, **kwargs )', globals(), locals() )
+                
+            else:
+                
+                callable( *args, **kwargs )
+                
             
         
     

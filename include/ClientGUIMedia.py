@@ -1879,7 +1879,10 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len( self._sorted_media ) > 0:
                 
-                if menu.GetMenuItemCount() > 0: menu.AppendSeparator()
+                if menu.GetMenuItemCount() > 0:
+                    
+                    menu.AppendSeparator()
+                    
                 
                 select_menu = wx.Menu()
                 
@@ -2201,9 +2204,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 copy_menu = wx.Menu()
                 
-                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_files' ), copy_phrase )
-                
                 if selection_has_local_file_service:
+                    
+                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_files' ), copy_phrase )
                     
                     copy_hash_menu = wx.Menu()
                     
@@ -2309,9 +2312,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        if menu.GetMenuItemCount() > 0: self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
         event.Skip()
         

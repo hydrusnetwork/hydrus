@@ -1,13 +1,15 @@
 import bs4
 import collections
+import cProfile
+import cStringIO
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusGlobals
 import HydrusSerialisable
 import locale
 import os
+import pstats
 import psutil
-import send2trash
 import shutil
 import sqlite3
 import subprocess
@@ -250,16 +252,6 @@ def ConvertPixelsToInt( unit ):
     if unit == 'pixels': return 1
     elif unit == 'kilopixels': return 1000
     elif unit == 'megapixels': return 1000000
-    
-def ConvertPortablePathToAbsPath( portable_path ):
-    
-    if portable_path is None: return None
-    
-    if os.path.isabs( portable_path ): abs_path = portable_path
-    else: abs_path = os.path.normpath( os.path.join( HC.BASE_DIR, portable_path ) )
-    
-    if os.path.exists( abs_path ): return abs_path
-    else: return None
     
 def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
     
@@ -570,20 +562,6 @@ def DebugPrint( debug_info ):
     sys.stdout.flush()
     sys.stderr.flush()
     
-def DeletePath( path ):
-    
-    if os.path.exists( path ):
-        
-        if os.path.isdir( path ):
-            
-            shutil.rmtree( path )
-            
-        else:
-            
-            os.remove( path )
-            
-        
-    
 def DeserialisePrettyTags( text ):
     
     text = text.replace( '\r', '' )
@@ -778,6 +756,42 @@ def Print( text ):
     
     print( ToByteString( text ) )
     
+def Profile( code, g, l ):
+    
+    profile = cProfile.Profile()
+    
+    profile.runctx( code, g, l )
+    
+    output = cStringIO.StringIO()
+    
+    stats = pstats.Stats( profile, stream = output )
+    
+    stats.strip_dirs()
+    
+    stats.sort_stats( 'tottime' )
+    
+    output.seek( 0 )
+    
+    output.write( 'Stats' )
+    output.write( os.linesep )
+    
+    stats.print_stats()
+    
+    output.seek( 0 )
+    
+    Print( output.read() )
+    
+    output.seek( 0 )
+    
+    output.write( 'Callers' )
+    output.write( os.linesep )
+    
+    stats.print_callers()
+    
+    output.seek( 0 )
+    
+    Print( output.read() )
+    
 def RecordRunningStart( instance ):
     
     path = os.path.join( HC.BASE_DIR, instance + '_running' )
@@ -800,47 +814,6 @@ def RecordRunningStart( instance ):
     with open( path, 'wb' ) as f:
         
         f.write( ToByteString( record_string ) )
-        
-    
-def RecyclePath( path ):
-    
-    original_path = path
-    
-    if HC.PLATFORM_LINUX:
-        
-        # send2trash for Linux tries to do some Python3 str() stuff in prepping non-str paths for recycling
-        
-        if not isinstance( path, str ):
-            
-            try:
-                
-                path = path.encode( sys.getfilesystemencoding() )
-                
-            except:
-                
-                Print( 'Trying to prepare a file for recycling created this error:' )
-                traceback.print_exc()
-                
-                return
-                
-            
-        
-    
-    if os.path.exists( path ):
-        
-        try:
-            
-            send2trash.send2trash( path )
-            
-        except:
-            
-            Print( 'Trying to recycle a file created this error:' )
-            traceback.print_exc()
-            
-            Print( 'It has been fully deleted instead.' )
-            
-            DeletePath( original_path )
-            
         
     
 def ShowExceptionDefault( e ):

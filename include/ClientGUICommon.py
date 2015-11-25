@@ -32,6 +32,44 @@ ID_TIMER_DROPDOWN_HIDE = wx.NewId()
 ID_TIMER_AC_LAG = wx.NewId()
 ID_TIMER_POPUP = wx.NewId()
 
+def FlushOutPredicates( parent, predicates ):
+    
+    good_predicates = []
+    
+    for predicate in predicates:
+        
+        predicate = predicate.GetCountlessCopy()
+        
+        ( predicate_type, value, inclusive ) = predicate.GetInfo()
+        
+        if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
+            
+            import ClientGUIDialogs
+            
+            with ClientGUIDialogs.DialogInputFileSystemPredicates( parent, predicate_type ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    good_predicates.extend( dlg.GetPredicates() )
+                    
+                else:
+                    
+                    continue
+                    
+                
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED:
+            
+            good_predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
+            
+        else:
+            
+            good_predicates.append( predicate )
+            
+        
+    
+    return good_predicates
+    
 def IsWXAncestor( child, ancestor ):
     
     parent = child
@@ -108,6 +146,7 @@ class AutoCompleteDropdown( wx.Panel ):
         wx.Panel.__init__( self, parent )
         
         self._last_search_text = ''
+        self._next_updatelist_is_probably_fast = False
         
         tlp = self.GetTopLevelParent()
         
@@ -463,7 +502,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
         
-        if num_chars == 0: self._UpdateList()
+        if num_chars == 0 or self._next_updatelist_is_probably_fast: self._UpdateList()
         elif num_chars < char_limit: self._lag_timer.Start( long_wait, wx.TIMER_ONE_SHOT )
         else: self._lag_timer.Start( short_wait, wx.TIMER_ONE_SHOT )
         
@@ -523,6 +562,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._current_namespace = ''
         self._current_matches = []
+        
+        self._cached_results = []
         
         self._file_service_key = file_service_key
         self._tag_service_key = tag_service_key
@@ -594,9 +635,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_repository', service.GetServiceKey() ), service.GetName() )
         
-        self._file_repo_button.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self._file_repo_button, menu )
         
     
     def EventMenu( self, event ):
@@ -636,9 +675,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_tag_repository', service.GetServiceKey() ), service.GetName() )
         
-        self._tag_repo_button.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self._tag_repo_button, menu )
         
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
@@ -693,41 +730,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._text_ctrl.SetValue( '' )
             
         
-        entry_predicates = []
-        
-        for predicate in predicates:
-            
-            predicate = predicate.GetCountlessCopy()
-            
-            ( predicate_type, value, inclusive ) = predicate.GetInfo()
-            
-            if predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
-                
-                import ClientGUIDialogs
-                
-                with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        entry_predicates.extend( dlg.GetPredicates() )
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-            elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED:
-                
-                entry_predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
-                
-            else:
-                
-                entry_predicates.append( predicate )
-                
-            
-        
-        HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, entry_predicates )
+        HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, predicates )
         
     
     def _BroadcastCurrentText( self ):
@@ -786,6 +789,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _GenerateMatches( self ):
         
+        self._next_updatelist_is_probably_fast = False
+        
         num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
         
         ( inclusive, search_text, entry_predicate ) = self._ParseSearchText()
@@ -808,7 +813,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             if ':' in search_text:
                 
-                ( namespace, half_complete_tag ) = search_text.split( ':' )
+                ( namespace, half_complete_tag ) = search_text.split( ':', 1 )
                 
                 if namespace != self._current_namespace:
                     
@@ -853,6 +858,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                         
+                        predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = True )
+                        
                     else:
                         
                         if must_do_a_search or self._cache_text == '' or not search_text.startswith( self._cache_text ):
@@ -861,8 +868,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                             
+                            self._cached_results = ClientSearch.SortPredicates( self._cached_results, collapse_siblings = False )
+                            
                         
                         predicates = self._cached_results
+                        
+                        self._next_updatelist_is_probably_fast = True
                         
                     
                 else:
@@ -897,8 +908,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
                     
-                
-                predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = True )
+                    predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = True )
+                    
+                    self._next_updatelist_is_probably_fast = True
+                    
                 
                 matches = ClientSearch.FilterPredicates( search_text, predicates )
                 
@@ -1095,6 +1108,8 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _GenerateMatches( self ):
         
+        self._next_updatelist_is_probably_fast = False
+        
         num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
         
         ( search_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
@@ -1112,7 +1127,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if ':' in search_text:
                 
-                ( namespace, other_half ) = search_text.split( ':' )
+                ( namespace, other_half ) = search_text.split( ':', 1 )
                 
                 if other_half != '' and namespace != self._current_namespace:
                     
@@ -1129,6 +1144,8 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 
                 predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
                 
+                predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = False )
+                
             else:
                 
                 if must_do_a_search or self._cache_text == '' or not half_complete_tag.startswith( self._cache_text ):
@@ -1137,11 +1154,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, add_namespaceless = False )
                     
+                    self._cached_results = ClientSearch.SortPredicates( self._cached_results, collapse_siblings = False )
+                    
                 
                 predicates = self._cached_results
                 
-            
-            predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = False )
+                self._next_updatelist_is_probably_fast = True
+                
             
             matches = ClientSearch.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = self._expand_parents )
             
@@ -1598,9 +1617,7 @@ class ExportPatternButton( wx.Button ):
         
         menu.Append( self.ID_TAG, 'a particular tag, if the file has it - (...)' )
         
-        self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
 class FitResistantStaticText( wx.StaticText ):
@@ -2432,31 +2449,34 @@ class ListBox( wx.ScrolledWindow ):
                 
                 hit_index = None
                 
-                if key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ):
+                if len( self._ordered_strings ) > 0:
                     
-                    hit_index = 0
-                    
-                elif key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
-                    
-                    hit_index = len( self._ordered_strings ) - 1
-                    
-                elif self._last_hit_index is not None:
-                    
-                    if key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                    if key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ):
                         
-                        hit_index = self._last_hit_index - 1
+                        hit_index = 0
                         
-                    elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                    elif key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
                         
-                        hit_index = self._last_hit_index + 1
+                        hit_index = len( self._ordered_strings ) - 1
                         
-                    elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                    elif self._last_hit_index is not None:
                         
-                        hit_index = max( 0, self._last_hit_index - self._num_rows_per_page )
-                        
-                    elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
-                        
-                        hit_index = min( len( self._ordered_strings ) - 1, self._last_hit_index + self._num_rows_per_page )
+                        if key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                            
+                            hit_index = self._last_hit_index - 1
+                            
+                        elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                            
+                            hit_index = self._last_hit_index + 1
+                            
+                        elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                            
+                            hit_index = max( 0, self._last_hit_index - self._num_rows_per_page )
+                            
+                        elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                            
+                            hit_index = min( len( self._ordered_strings ) - 1, self._last_hit_index + self._num_rows_per_page )
+                            
                         
                     
                 
@@ -2595,6 +2615,8 @@ class ListBoxTags( ListBox ):
                 predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
                 
             
+        
+        predicates = FlushOutPredicates( self, predicates )
         
         if len( predicates ) > 0:
             
@@ -2779,9 +2801,7 @@ class ListBoxTags( ListBox ):
                     
                 
             
-            self.PopupMenu( menu )
-            
-            wx.CallAfter( menu.Destroy )
+            HydrusGlobals.client_controller.PopupMenu( self, menu )
             
         
         event.Skip()
@@ -2807,11 +2827,13 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
     
     def _Activate( self ):
         
-        callable_terms = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
+        predicates = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
         
-        if len( callable_terms ) > 0:
+        predicates = FlushOutPredicates( self, predicates )
+        
+        if len( predicates ) > 0:
             
-            self._callable( callable_terms )
+            self._callable( predicates )
             
         
     
@@ -2901,19 +2923,22 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
         
         hit_index = None
         
-        if key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
+        if len( self._ordered_strings ) > 0:
             
-            hit_index = len( self._ordered_strings ) - 1
-            
-        elif self._last_hit_index is not None:
-            
-            if key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+            if key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
                 
-                hit_index = self._last_hit_index + 1
+                hit_index = len( self._ordered_strings ) - 1
                 
-            elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+            elif self._last_hit_index is not None:
                 
-                hit_index = min( len( self._ordered_strings ) - 1, self._last_hit_index + self._num_rows_per_page )
+                if key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                    
+                    hit_index = self._last_hit_index + 1
+                    
+                elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                    
+                    hit_index = min( len( self._ordered_strings ) - 1, self._last_hit_index + self._num_rows_per_page )
+                    
                 
             
         
@@ -3015,7 +3040,7 @@ class ListBoxTagsCensorship( ListBoxTags ):
             
             for tag in tags:
                 
-                self._RemoveTag( self._selected_terms )
+                self._RemoveTag( tag )
                 
             
             self._TextsHaveChanged()
@@ -5079,9 +5104,7 @@ class RegexButton( wx.Button ):
         
         menu.AppendMenu( -1, 'favourites', submenu )
         
-        self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
     def EventMenu( self, event ):
@@ -5462,9 +5485,7 @@ class SeedCacheControl( SaneListCtrl ):
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_skipped' ), 'skip' )
         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_unknown' ), 'try again' )
         
-        self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
     def NotifySeedAdded( self, seed ):

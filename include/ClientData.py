@@ -7,6 +7,7 @@ import collections
 import datetime
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
 import threading
@@ -175,11 +176,11 @@ def DeletePath( path ):
     
     if HC.options[ 'delete_to_recycle_bin' ] == True:
         
-        HydrusData.RecyclePath( path )
+        HydrusPaths.RecyclePath( path )
         
     else:
         
-        HydrusData.DeletePath( path )
+        HydrusPaths.DeletePath( path )
         
     
 def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, collapse_siblings = False ):
@@ -352,6 +353,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
         
+        self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( HC.CLIENT_FILES_DIR ), 1.0 ) ]
+        
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
@@ -377,6 +380,20 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             return self._dictionary[ 'booleans' ][ name ]
             
+        
+    
+    def GetClientFilesLocationsToIdealWeights( self ):
+        
+        result = {}
+        
+        for ( portable_path, weight ) in self._dictionary[ 'client_files_locations_ideal_weights' ]:
+            
+            abs_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_path )
+            
+            result[ abs_path ] = weight
+            
+        
+        return result
         
     
     def GetDefaultImportTagOptions( self, gallery_identifier = None ):
@@ -2285,13 +2302,21 @@ class Service( HydrusData.HydrusYAMLBase ):
                 HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'reviewing thumbnails' )
                 job_key.SetVariable( 'popup_text_1', 'reviewing existing thumbnails' )
                 
-                thumbnail_hashes_i_have = ClientFiles.GetAllThumbnailHashes()
-                
                 job_key.SetVariable( 'popup_text_1', 'reviewing service thumbnails' )
                 
                 thumbnail_hashes_i_should_have = HydrusGlobals.client_controller.Read( 'thumbnail_hashes_i_should_have', self._service_key )
                 
-                thumbnail_hashes_i_need = thumbnail_hashes_i_should_have.difference( thumbnail_hashes_i_have )
+                thumbnail_hashes_i_need = set()
+                
+                for hash in thumbnail_hashes_i_should_have:
+                    
+                    path = ClientFiles.GetExpectedThumbnailPath( hash )
+                    
+                    if not os.path.exists( path ):
+                        
+                        thumbnail_hashes_i_need.add( hash )
+                        
+                    
                 
                 if len( thumbnail_hashes_i_need ) > 0:
                     
@@ -2377,48 +2402,6 @@ class Service( HydrusData.HydrusYAMLBase ):
         
     
     def ToTuple( self ): return ( self._service_key, self._service_type, self._name, self._info )
-    
-class ServicesManager( object ):
-    
-    def __init__( self ):
-        
-        self._lock = threading.Lock()
-        self._keys_to_services = {}
-        self._services_sorted = []
-        
-        self.RefreshServices()
-        
-        HydrusGlobals.client_controller.sub( self, 'RefreshServices', 'notify_new_services_data' )
-        
-    
-    def GetService( self, service_key ):
-        
-        with self._lock:
-            
-            try: return self._keys_to_services[ service_key ]
-            except KeyError: raise HydrusExceptions.NotFoundException( 'That service was not found!' )
-            
-        
-    
-    def GetServices( self, types = HC.ALL_SERVICES ):
-        
-        with self._lock: return [ service for service in self._services_sorted if service.GetServiceType() in types ]
-        
-    
-    def RefreshServices( self ):
-        
-        with self._lock:
-            
-            services = HydrusGlobals.client_controller.Read( 'services' )
-            
-            self._keys_to_services = { service.GetServiceKey() : service for service in services }
-            
-            compare_function = lambda a, b: cmp( a.GetName(), b.GetName() )
-            
-            self._services_sorted = list( services )
-            self._services_sorted.sort( cmp = compare_function )
-            
-        
     
 class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
     
@@ -2579,228 +2562,6 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS ] = Shortcuts
 
-class UndoManager( object ):
-    
-    def __init__( self ):
-        
-        self._commands = []
-        self._inverted_commands = []
-        self._current_index = 0
-        
-        self._lock = threading.Lock()
-        
-        HydrusGlobals.client_controller.sub( self, 'Undo', 'undo' )
-        HydrusGlobals.client_controller.sub( self, 'Redo', 'redo' )
-        
-    
-    def _FilterServiceKeysToContentUpdates( self, service_keys_to_content_updates ):
-        
-        filtered_service_keys_to_content_updates = {}
-        
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-            
-            filtered_content_updates = []
-            
-            for content_update in content_updates:
-                
-                ( data_type, action, row ) = content_update.ToTuple()
-                
-                if data_type == HC.CONTENT_TYPE_FILES:
-                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION ): continue
-                elif data_type == HC.CONTENT_TYPE_MAPPINGS:
-                    
-                    if action in ( HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ): continue
-                    
-                else: continue
-                
-                filtered_content_update = HydrusData.ContentUpdate( data_type, action, row )
-                
-                filtered_content_updates.append( filtered_content_update )
-                
-            
-            if len( filtered_content_updates ) > 0:
-                
-                filtered_service_keys_to_content_updates[ service_key ] = filtered_content_updates
-                
-            
-        
-        return filtered_service_keys_to_content_updates
-        
-    
-    def _InvertServiceKeysToContentUpdates( self, service_keys_to_content_updates ):
-        
-        inverted_service_keys_to_content_updates = {}
-        
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-            
-            inverted_content_updates = []
-            
-            for content_update in content_updates:
-                
-                ( data_type, action, row ) = content_update.ToTuple()
-                
-                inverted_row = row
-                
-                if data_type == HC.CONTENT_TYPE_FILES:
-                    
-                    if action == HC.CONTENT_UPDATE_ARCHIVE: inverted_action = HC.CONTENT_UPDATE_INBOX
-                    elif action == HC.CONTENT_UPDATE_INBOX: inverted_action = HC.CONTENT_UPDATE_ARCHIVE
-                    elif action == HC.CONTENT_UPDATE_PEND: inverted_action = HC.CONTENT_UPDATE_RESCIND_PEND
-                    elif action == HC.CONTENT_UPDATE_RESCIND_PEND: inverted_action = HC.CONTENT_UPDATE_PEND
-                    elif action == HC.CONTENT_UPDATE_PETITION:
-                        
-                        inverted_action = HC.CONTENT_UPDATE_RESCIND_PETITION
-                        
-                        ( hashes, reason ) = row
-                        
-                        inverted_row = hashes
-                        
-                    
-                elif data_type == HC.CONTENT_TYPE_MAPPINGS:
-                    
-                    if action == HC.CONTENT_UPDATE_ADD: inverted_action = HC.CONTENT_UPDATE_DELETE
-                    elif action == HC.CONTENT_UPDATE_DELETE: inverted_action = HC.CONTENT_UPDATE_ADD
-                    elif action == HC.CONTENT_UPDATE_PEND: inverted_action = HC.CONTENT_UPDATE_RESCIND_PEND
-                    elif action == HC.CONTENT_UPDATE_RESCIND_PEND: inverted_action = HC.CONTENT_UPDATE_PEND
-                    elif action == HC.CONTENT_UPDATE_PETITION:
-                        
-                        inverted_action = HC.CONTENT_UPDATE_RESCIND_PETITION
-                        
-                        ( tag, hashes, reason ) = row
-                        
-                        inverted_row = ( tag, hashes )
-                        
-                    
-                
-                inverted_content_update = HydrusData.ContentUpdate( data_type, inverted_action, inverted_row )
-                
-                inverted_content_updates.append( inverted_content_update )
-                
-            
-            inverted_service_keys_to_content_updates[ service_key ] = inverted_content_updates
-            
-        
-        return inverted_service_keys_to_content_updates
-        
-    
-    def AddCommand( self, action, *args, **kwargs ):
-        
-        with self._lock:
-            
-            inverted_action = action
-            inverted_args = args
-            inverted_kwargs = kwargs
-            
-            if action == 'content_updates':
-                
-                ( service_keys_to_content_updates, ) = args
-                
-                service_keys_to_content_updates = self._FilterServiceKeysToContentUpdates( service_keys_to_content_updates )
-                
-                if len( service_keys_to_content_updates ) == 0: return
-                
-                inverted_service_keys_to_content_updates = self._InvertServiceKeysToContentUpdates( service_keys_to_content_updates )
-                
-                if len( inverted_service_keys_to_content_updates ) == 0: return
-                
-                inverted_args = ( inverted_service_keys_to_content_updates, )
-                
-            else: return
-            
-            self._commands = self._commands[ : self._current_index ]
-            self._inverted_commands = self._inverted_commands[ : self._current_index ]
-            
-            self._commands.append( ( action, args, kwargs ) )
-            
-            self._inverted_commands.append( ( inverted_action, inverted_args, inverted_kwargs ) )
-            
-            self._current_index += 1
-            
-            HydrusGlobals.client_controller.pub( 'notify_new_undo' )
-            
-        
-    
-    def GetUndoRedoStrings( self ):
-        
-        with self._lock:
-            
-            ( undo_string, redo_string ) = ( None, None )
-            
-            if self._current_index > 0:
-                
-                undo_index = self._current_index - 1
-                
-                ( action, args, kwargs ) = self._commands[ undo_index ]
-                
-                if action == 'content_updates':
-                    
-                    ( service_keys_to_content_updates, ) = args
-                    
-                    undo_string = 'undo ' + ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
-                    
-                
-            
-            if len( self._commands ) > 0 and self._current_index < len( self._commands ):
-                
-                redo_index = self._current_index
-                
-                ( action, args, kwargs ) = self._commands[ redo_index ]
-                
-                if action == 'content_updates':
-                    
-                    ( service_keys_to_content_updates, ) = args
-                    
-                    redo_string = 'redo ' + ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
-                    
-                
-            
-            return ( undo_string, redo_string )
-            
-        
-    
-    def Undo( self ):
-        
-        action = None
-        
-        with self._lock:
-            
-            if self._current_index > 0:
-                
-                self._current_index -= 1
-                
-                ( action, args, kwargs ) = self._inverted_commands[ self._current_index ]
-                
-        
-        if action is not None:
-            
-            HydrusGlobals.client_controller.WriteSynchronous( action, *args, **kwargs )
-            
-            HydrusGlobals.client_controller.pub( 'notify_new_undo' )
-            
-        
-    
-    def Redo( self ):
-        
-        action = None
-        
-        with self._lock:
-            
-            if len( self._commands ) > 0 and self._current_index < len( self._commands ):
-                
-                ( action, args, kwargs ) = self._commands[ self._current_index ]
-                
-                self._current_index += 1
-                
-            
-        
-        if action is not None:
-            
-            HydrusGlobals.client_controller.WriteSynchronous( action, *args, **kwargs )
-            
-            HydrusGlobals.client_controller.pub( 'notify_new_undo' )
-            
-        
-    
 def GetShortcutFromEvent( event ):
     
     modifier = wx.ACCEL_NORMAL

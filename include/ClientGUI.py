@@ -1026,11 +1026,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
             
             db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'db_profile_mode' )
+            pubsub_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pubsub_profile_mode' )
             special_debug_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'special_debug_mode' )
             
             debug = wx.Menu()
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
+            debug.AppendCheckItem( pubsub_profile_mode_id, p( '&PubSub Profile Mode' ) )
+            debug.Check( pubsub_profile_mode_id, HydrusGlobals.pubsub_profile_mode )
             debug.AppendCheckItem( special_debug_mode_id, p( '&Special Debug Mode' ) )
             debug.Check( special_debug_mode_id, HydrusGlobals.special_debug_mode )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle' ), p( 'Force Idle Mode' ) )
@@ -1293,7 +1296,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             initial_media_results = []
             
         
-        page = ClientGUIPages.Page( self._notebook, management_controller, initial_media_results )
+        page = ClientGUIPages.Page( self._notebook, self._controller, management_controller, initial_media_results )
         
         self._notebook.AddPage( page, page_name, select = True )
         
@@ -1860,6 +1863,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
                         
+                        job_key.DeleteVariable( 'popup_gauge_1' )
+                        
+                        job_key.Cancel()
+                        
                         return
                         
                     
@@ -1921,6 +1928,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
                         
+                        job_key.DeleteVariable( 'popup_gauge_1' )
+                        
+                        job_key.Cancel()
+                        
                         return
                         
                     
@@ -1932,12 +1943,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         except Exception as e:
             
+            job_key.SetVariable( 'popup_text_1', service.GetName() + ' error' )
+            
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
             job_key.Cancel()
             
             raise
             
         
-        job_key.DeleteVariable( 'popup_gauge_1' )
         job_key.SetVariable( 'popup_text_1', prefix + 'upload done!' )
         
         HydrusData.Print( job_key.ToString() )
@@ -2139,6 +2153,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
             elif command == 'petitions': self._NewPagePetitions( data )
             elif command == 'post_news': self._PostNews( data )
+            elif command == 'pubsub_profile_mode':
+                
+                HydrusGlobals.pubsub_profile_mode = not HydrusGlobals.pubsub_profile_mode
+                
             elif command == 'redo': self._controller.pub( 'redo' )
             elif command == 'refresh':
                 
@@ -2193,9 +2211,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tab_menu_close_page' ), 'close page' )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tab_menu_rename_page' ), 'rename page' )
             
-            self.PopupMenu( menu )
-            
-            wx.CallAfter( menu.Destroy )
+            self._controller.PopupMenu( self, menu )
             
         
     

@@ -65,7 +65,10 @@ def EfficientlyThumbnailPILImage( pil_image, ( target_x, target_y ) ):
     #    if im_x > 2 * target_x or im_y > 2 * target_y: pil_image.thumbnail( ( 2 * target_x, 2 * target_y ), PILImage.NEAREST )
     #    
     
-    pil_image.thumbnail( ( target_x, target_y ), PILImage.ANTIALIAS )
+    if im_x > target_x or im_y > target_y:
+        
+        pil_image.thumbnail( ( target_x, target_y ), PILImage.ANTIALIAS )
+        
     
 def GeneratePILImage( path ):
     

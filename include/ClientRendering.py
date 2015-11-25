@@ -187,14 +187,7 @@ class RasterContainerVideo( RasterContainer ):
             
         else:
             
-            try:
-                
-                self._frame_duration = ClientVideoHandling.GetVideoFrameDuration( self._path )
-                
-            except HydrusExceptions.CantRenderWithCVException:
-                
-                self._frame_duration = float( duration ) / num_frames
-                
+            self._frame_duration = float( duration ) / num_frames
             
             self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
             

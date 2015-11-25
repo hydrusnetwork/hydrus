@@ -6,6 +6,7 @@ import HydrusData
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusGlobals
+import HydrusPaths
 import HydrusSerialisable
 import itertools
 import os
@@ -109,17 +110,9 @@ def GetAllThumbnailHashes():
     
     thumbnail_hashes = set()
     
-    for path in IterateAllThumbnailPaths():
+    for hash in IterateAllThumbnailHashes():
         
-        ( base, filename ) = os.path.split( path )
-        
-        if not filename.endswith( '_resized' ):
-            
-            try: hash = filename.decode( 'hex' )
-            except TypeError: continue
-            
-            thumbnail_hashes.add( hash )
-            
+        thumbnail_hashes.add( hash )
         
     
     return thumbnail_hashes
@@ -150,7 +143,7 @@ def GetExportPath():
     
     path = os.path.normpath( path ) # converts slashes to backslashes for windows
     
-    path = HydrusData.ConvertPortablePathToAbsPath( path )
+    path = HydrusPaths.ConvertPortablePathToAbsPath( path )
     
     return path
     
@@ -172,9 +165,15 @@ def GetFilePath( hash, mime = None ):
                 
             
         
-    else: path = GetExpectedFilePath( hash, mime )
+    else:
+        
+        path = GetExpectedFilePath( hash, mime )
+        
     
-    if path is None or not os.path.exists( path ): raise HydrusExceptions.NotFoundException( 'File not found!' )
+    if path is None or not os.path.exists( path ):
+        
+        raise HydrusExceptions.NotFoundException( 'File not found!' )
+        
     
     return path
     
@@ -199,7 +198,10 @@ def GetThumbnailPath( hash, full_size = True ):
     
     if not os.path.exists( path ):
         
-        if full_size: raise HydrusExceptions.NotFoundException( 'Thumbnail not found!' )
+        if full_size:
+            
+            raise HydrusExceptions.NotFoundException( 'Thumbnail not found!' )
+            
         else:
             
             full_size_path = GetThumbnailPath( hash, True )
@@ -216,7 +218,10 @@ def GetThumbnailPath( hash, full_size = True ):
                 
                 thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
                 
-                with open( path, 'wb' ) as f: f.write( thumbnail_resized )
+                with open( path, 'wb' ) as f:
+                    
+                    f.write( thumbnail_resized )
+                    
                 
             
         
@@ -269,6 +274,21 @@ def IterateAllFilePaths():
             
         
 
+def IterateAllThumbnailHashes():
+    
+    for path in IterateAllThumbnailPaths():
+        
+        ( base, filename ) = os.path.split( path )
+        
+        if not filename.endswith( '_resized' ):
+            
+            try: hash = filename.decode( 'hex' )
+            except TypeError: continue
+            
+            yield hash
+            
+        
+    
 def IterateAllThumbnailPaths():
     
     hex_chars = '0123456789abcdef'

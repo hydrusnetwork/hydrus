@@ -275,6 +275,7 @@ class VideoRendererFFMPEG( object ):
         else: self.depth = 3
         
         ( x, y ) = self._target_resolution
+        
         bufsize = self.depth * x * y
         
         self.process = None

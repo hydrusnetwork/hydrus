@@ -1155,6 +1155,8 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
             
         
+        self._c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL, ) )
+        
         hashes = { hash for ( hash, thumbnail ) in thumbnails }
         
         self.pub_after_commit( 'new_thumbnails', hashes )
@@ -2186,12 +2188,15 @@ class DB( HydrusDB.HydrusDB ):
             current_counts = collections.defaultdict( zero )
             pending_counts = collections.defaultdict( zero )
             
-            current_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( HC.CURRENT, namespace_id ) ) } )
-            pending_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( HC.PENDING, namespace_id ) ) } )
+            for sub_tag_ids in HydrusData.SplitListIntoChunks( tag_ids, 50 ):
+                
+                current_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HydrusData.SplayListForDB( sub_tag_ids ) + ' GROUP BY tag_id;', ( HC.CURRENT, namespace_id ) ) } )
+                pending_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HydrusData.SplayListForDB( sub_tag_ids ) + ' GROUP BY tag_id;', ( HC.PENDING, namespace_id ) ) } )
+                
             
-            self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( file_service_id, tag_service_id, namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
+            self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', ( ( file_service_id, tag_service_id, namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ) )
             
-            cache_results.extend( [ ( namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
+            cache_results.extend( ( ( namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ) )
             
         
         #
@@ -2846,10 +2851,6 @@ class DB( HydrusDB.HydrusDB ):
         siblings_manager = self._controller.GetManager( 'tag_siblings' )
         
         tags = siblings_manager.GetAllSiblings( tag )
-        
-        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
-        
-        tags = tag_censorship_manager.FilterTags( tag_service_key, tags )
         
         hash_ids = set()
         
@@ -3690,15 +3691,23 @@ class DB( HydrusDB.HydrusDB ):
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = self._c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL:
                         
-                        thumbnails_i_have = ClientFiles.GetAllThumbnailHashes()
-                        
                         hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
                         
                         thumbnails_i_should_have = self._GetHashes( hash_ids )
                         
-                        thumbnails_i_have.intersection_update( thumbnails_i_should_have )
+                        num_local = 0
                         
-                        result = ( len( thumbnails_i_have ), )
+                        for hash in thumbnails_i_should_have:
+                            
+                            path = ClientFiles.GetExpectedThumbnailPath( hash )
+                            
+                            if os.path.exists( path ):
+                                
+                                num_local += 1
+                                
+                            
+                        
+                        result = ( num_local, )
                         
                     elif info_type == HC.SERVICE_INFO_NUM_INBOX: result = self._c.execute( 'SELECT COUNT( * ) FROM file_inbox, files_info USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
@@ -4550,7 +4559,10 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( new_tag )
                                 
-                            except HydrusExceptions.SizeException: continue
+                            except HydrusExceptions.SizeException:
+                                
+                                continue
+                                
                             
                             self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
                             self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
@@ -4570,7 +4582,10 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( new_tag )
                                 
-                            except HydrusExceptions.SizeException: continue
+                            except HydrusExceptions.SizeException:
+                                
+                                continue
+                                
                             
                             reason_id = self._GetReasonId( reason )
                             
@@ -4582,13 +4597,25 @@ class DB( HydrusDB.HydrusDB ):
                             
                         elif action in ( HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
                             
-                            if action == HC.CONTENT_UPDATE_RESCIND_PEND: deletee_status = HC.PENDING
-                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: deletee_status = HC.PETITIONED
+                            if action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                                
+                                deletee_status = HC.PENDING
+                                
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                                
+                                deletee_status = HC.PETITIONED
+                                
                             
                             ( old_tag, new_tag ) = row
                             
-                            try: ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( old_tag )
-                            except HydrusExceptions.SizeException: continue
+                            try:
+                                
+                                ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( old_tag )
+                                
+                            except HydrusExceptions.SizeException:
+                                
+                                continue
+                                
                             
                             self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
                             
@@ -6112,6 +6139,44 @@ class DB( HydrusDB.HydrusDB ):
                 
                 names_seen.add( name )
                 
+            
+        
+        if version == 182:
+            
+            hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime = ?;', ( HC.APPLICATION_FLASH, ) ) }
+            
+            num_done = 0
+            
+            num_to_do = len( hash_ids )
+            
+            for hash_id in hash_ids:
+                
+                num_done += 1
+                
+                if num_done % 10 == 0:
+                    
+                    self._controller.pub( 'splash_set_status_text', 'updating flash thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+                    
+                
+                hash = self._GetHash( hash_id )
+                
+                try:
+                    
+                    file_path = ClientFiles.GetFilePath( hash, HC.APPLICATION_FLASH )
+                    
+                except HydrusExceptions.NotFoundException:
+                    
+                    continue
+                    
+                
+                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+                
+                self._AddThumbnails( [ ( hash, thumbnail ) ] )
+                
+            
+            #
+            
+            self._c.execute( 'DELETE FROM service_info WHERE info_type IN ( ?, ? );', ( HC.SERVICE_INFO_NUM_THUMBNAILS, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
             
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )

@@ -48,7 +48,7 @@ def GetVideoFrameDuration( path ):
     
     fps = cv_video.get( CAP_PROP_FPS )
     
-    if fps == 0: raise HydrusExceptions.CantRenderWithCVException()
+    if fps in ( 0, 1000 ): raise HydrusExceptions.CantRenderWithCVException()
     
     return 1000.0 / fps
     

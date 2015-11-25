@@ -96,13 +96,18 @@ class FullscreenHoverFrame( wx.Frame ):
                 in_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
                 in_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
                 
-                no_dialogs_open = True
+                menu_open = HydrusGlobals.client_controller.MenuIsOpen()
+                
+                dialog_open = False
                 
                 tlps = wx.GetTopLevelWindows()
                 
                 for tlp in tlps:
                     
-                    if isinstance( tlp, wx.Dialog ): no_dialogs_open = False
+                    if isinstance( tlp, wx.Dialog ):
+                        
+                        dialog_open = True
+                        
                     
                 
                 mime = self._current_media.GetMime()
@@ -128,8 +133,8 @@ class FullscreenHoverFrame( wx.Frame ):
                     tlp = tlp.GetParent()
                     
                 
-                ready_to_show = in_position and not mouse_is_over_something_important and no_dialogs_open and my_parent_in_focus_tree
-                ready_to_hide = not in_position or not no_dialogs_open or not my_parent_in_focus_tree
+                ready_to_show = in_position and not mouse_is_over_something_important and my_parent_in_focus_tree and not dialog_open and not menu_open
+                ready_to_hide = not menu_open and ( not in_position or dialog_open or not my_parent_in_focus_tree )
                 
                 if ready_to_show:
                     
@@ -137,7 +142,10 @@ class FullscreenHoverFrame( wx.Frame ):
                     
                     self.Show()
                     
-                elif ready_to_hide: self.Hide()
+                elif ready_to_hide:
+                    
+                    self.Hide()
+                    
                 
             
         except wx.PyDeadObjectError:
@@ -493,7 +501,7 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         
         like_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
         
         for service in like_services:
             
@@ -510,7 +518,7 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
         for service in numerical_services:
             

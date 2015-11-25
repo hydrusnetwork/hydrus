@@ -580,7 +580,7 @@ class TestTagParents( unittest.TestCase ):
         
         HydrusGlobals.test_controller.SetRead( 'tag_parents', tag_parents )
         
-        self._tag_parents_manager = ClientCaches.TagParentsManager()
+        self._tag_parents_manager = ClientCaches.TagParentsManager( HydrusGlobals.client_controller )
         
     
     def test_expand_predicates( self ):
@@ -725,7 +725,7 @@ class TestTagSiblings( unittest.TestCase ):
         
         HydrusGlobals.test_controller.SetRead( 'tag_siblings', tag_siblings )
         
-        self._tag_siblings_manager = ClientCaches.TagSiblingsManager()
+        self._tag_siblings_manager = ClientCaches.TagSiblingsManager( HydrusGlobals.client_controller )
         
     
     def test_autocomplete( self ):
