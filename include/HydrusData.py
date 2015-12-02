@@ -741,6 +741,17 @@ def IsAlreadyRunning( instance ):
     
     return False
     
+def IterateHexPrefixes():
+    
+    hex_chars = '0123456789abcdef'
+    
+    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+        
+        prefix = one + two
+        
+        yield prefix
+        
+    
 def MergeKeyToListDicts( key_to_list_dicts ):
     
     result = collections.defaultdict( list )

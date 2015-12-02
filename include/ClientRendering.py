@@ -71,7 +71,9 @@ class RasterContainer( object ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        self._path = ClientFiles.GetFilePath( hash, mime )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        self._path = client_files_manager.GetFilePath( hash, mime )
         
         ( original_width, original_height ) = self._media.GetResolution()
         
@@ -174,7 +176,9 @@ class RasterContainerVideo( RasterContainer ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        path = ClientFiles.GetFilePath( hash, mime )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetFilePath( hash, mime )
         
         duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()

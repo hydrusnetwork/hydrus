@@ -26,7 +26,7 @@ class FullscreenHoverFrame( wx.Frame ):
         self._canvas_key = canvas_key
         self._current_media = None
         
-        self._last_ideal_size_and_position = None
+        self._last_ideal_position = None
         
         self.SetBackgroundColour( wx.WHITE )
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
@@ -51,19 +51,15 @@ class FullscreenHoverFrame( wx.Frame ):
         
         ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
         
-        if should_resize or ( my_ideal_size, my_ideal_position ) != self._last_ideal_size_and_position:
+        if should_resize:
             
-            self._last_ideal_size_and_position = ( my_ideal_size, my_ideal_position )
+            self.Fit()
             
-            if should_resize:
-                
-                self.Fit()
-                
-                self.SetSize( my_ideal_size )
-                
+            self.SetSize( my_ideal_size )
             
-            self.SetPosition( my_ideal_position )
-            
+        
+        self.SetPosition( my_ideal_position )
+        
         
     
     def SetDisplayMedia( self, canvas_key, media ):

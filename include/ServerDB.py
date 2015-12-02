@@ -541,13 +541,11 @@ class DB( HydrusDB.HydrusDB ):
         
         dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR )
         
-        hex_chars = '0123456789abcdef'
-        
         for dir in dirs:
             
-            for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+            for prefix in HydrusData.IterateHexPrefixes():
                 
-                new_dir = os.path.join( dir, one + two )
+                new_dir = os.path.join( dir, prefix )
                 
                 if not os.path.exists( new_dir ):
                     
@@ -1767,7 +1765,7 @@ class DB( HydrusDB.HydrusDB ):
         os.mkdir( backup_path )
         
         HydrusData.Print( 'backing up: copying db file' )
-        shutil.copy( self._db_path, os.path.join( backup_path, self.DB_NAME + '.db' ) )
+        shutil.copy2( self._db_path, os.path.join( backup_path, self.DB_NAME + '.db' ) )
         
         HydrusData.Print( 'backing up: copying files' )
         shutil.copytree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
@@ -2350,13 +2348,11 @@ class DB( HydrusDB.HydrusDB ):
             
             dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR )
             
-            hex_chars = '0123456789abcdef'
-            
             for dir in dirs:
                 
-                for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                for prefix in HydrusData.IterateHexPrefixes():
                     
-                    new_dir = os.path.join( dir, one + two )
+                    new_dir = os.path.join( dir, prefix )
                     
                     if not os.path.exists( new_dir ):
                         

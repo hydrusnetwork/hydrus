@@ -27,8 +27,6 @@ try:
     from include import HydrusLogger
     import traceback
     
-    HydrusGlobals.instance = HC.HYDRUS_CLIENT
-    
     with HydrusLogger.HydrusLogger( 'client.log' ) as logger:
         
         try:

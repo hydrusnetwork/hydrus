@@ -47,15 +47,6 @@ class TestClientDB( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._old_db_dir = HC.DB_DIR
-        self._old_client_files_dir = HC.CLIENT_FILES_DIR
-        self._old_client_thumbnails_dir = HC.CLIENT_THUMBNAILS_DIR
-        
-        HC.DB_DIR = tempfile.mkdtemp()
-        
-        HC.CLIENT_FILES_DIR = os.path.join( HC.DB_DIR, 'client_files' )
-        HC.CLIENT_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'client_thumbnails' )
-        
         self._db = ClientDB.DB( HydrusGlobals.test_controller )
         
         threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
@@ -67,12 +58,6 @@ class TestClientDB( unittest.TestCase ):
         self._db.Shutdown()
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )
-        
-        shutil.rmtree( HC.DB_DIR )
-        
-        HC.DB_DIR = self._old_db_dir
-        HC.CLIENT_FILES_DIR = self._old_client_files_dir
-        HC.CLIENT_THUMBNAILS_DIR = self._old_client_thumbnails_dir
         
     
     def test_4chan_pass( self ):
@@ -738,16 +723,14 @@ class TestClientDB( unittest.TestCase ):
         self.assertTrue( os.path.exists( HC.CLIENT_FILES_DIR ) )
         
         self.assertTrue( os.path.exists( HC.CLIENT_THUMBNAILS_DIR ) )
-    
-        hex_chars = '0123456789abcdef'
         
-        for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+        for prefix in HydrusData.IterateHexPrefixes():
             
-            dir = os.path.join( HC.CLIENT_FILES_DIR, one + two )
+            dir = os.path.join( HC.CLIENT_FILES_DIR, prefix )
             
             self.assertTrue( os.path.exists( dir ) )
             
-            dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, one + two )
+            dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
             
             self.assertTrue( os.path.exists( dir ) )
             

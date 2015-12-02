@@ -52,20 +52,48 @@ def CleanUpTempPath( os_file_handle, temp_path ):
     
 def ConvertAbsPathToPortablePath( abs_path ):
     
-    if abs_path == '': return None
-    
     try: return os.path.relpath( abs_path, HC.BASE_DIR )
     except: return abs_path
     
 def ConvertPortablePathToAbsPath( portable_path ):
     
-    if portable_path is None: return None
-    
     if os.path.isabs( portable_path ): abs_path = portable_path
     else: abs_path = os.path.normpath( os.path.join( HC.BASE_DIR, portable_path ) )
     
-    if os.path.exists( abs_path ): return abs_path
-    else: return None
+    return abs_path
+    
+def CopyAndMergeTree( source, dest ):
+    
+    if not os.path.exists( dest ):
+        
+        os.mkdir( dest )
+        
+    
+    for ( root, dirnames, filenames ) in os.walk( source ):
+        
+        dest_root = root.replace( source, dest )
+        
+        for dirname in dirnames:
+            
+            source_path = os.path.join( root, dirname )
+            dest_path = os.path.join( dest_root, dirname )
+            
+            if not os.path.exists( dest_path ):
+                
+                os.mkdir( dest_path )
+                
+            
+            shutil.copystat( source_path, dest_path )
+            
+        
+        for filename in filenames:
+            
+            source_path = os.path.join( root, filename )
+            dest_path = os.path.join( dest_root, filename )
+            
+            shutil.copy2( source_path, dest_path )
+            
+        
     
 def CopyFileLikeToFileLike( f_source, f_dest ):
     

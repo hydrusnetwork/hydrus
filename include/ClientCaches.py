@@ -12,6 +12,7 @@ import itertools
 import os
 import random
 import Queue
+import shutil
 import threading
 import time
 import urllib
@@ -190,14 +191,40 @@ class ClientFilesManager( object ):
         
         self._lock = threading.Lock()
         
-        # fetch the current exact mapping from the db
+        self._prefixes_to_locations = {}
         
         self._Reinit()
         
     
-    def _Reinit( self ):
+    def _GetLocation( self, hash ):
         
-        self._prefixes_to_locations = self._controller.Read( 'client_files_locations' )
+        hash_encoded = hash.encode( 'hex' )
+        
+        prefix = hash_encoded[:2]
+        
+        location = self._prefixes_to_locations[ prefix ]
+        
+        return location
+        
+    
+    def _GetRecoverTuple( self ):
+        
+        paths = { path for path in self._prefixes_to_locations.values() }
+        
+        for path in paths:
+            
+            for prefix in HydrusData.IterateHexPrefixes():
+                
+                correct_path = self._prefixes_to_locations[ prefix ]
+                
+                if path != correct_path and os.path.exists( os.path.join( path, prefix ) ):
+                    
+                    return ( prefix, path, correct_path )
+                    
+                
+            
+        
+        return None
         
     
     def _GetRebalanceTuple( self ):
@@ -208,11 +235,19 @@ class ClientFilesManager( object ):
         
         paths_to_normalised_ideal_weights = { path : weight / total_weight for ( path, weight ) in paths_to_ideal_weights.items() }
         
-        current_paths_to_normalised_weights = {}
+        current_paths_to_normalised_weights = collections.defaultdict( lambda: 0 )
         
         for ( prefix, path ) in self._prefixes_to_locations.items():
             
             current_paths_to_normalised_weights[ path ] += 1.0 / 256
+            
+        
+        for path in current_paths_to_normalised_weights.keys():
+            
+            if path not in paths_to_normalised_ideal_weights:
+                
+                paths_to_normalised_ideal_weights[ path ] = 0.0
+                
             
         
         #
@@ -252,12 +287,89 @@ class ClientFilesManager( object ):
             overweight_path = overweight_paths.pop( 0 )
             underweight_path = underweight_paths.pop( 0 )
             
-            for ( prefix, path ) in self._prefixes_to_locations.items():
+            prefixes_and_paths = self._prefixes_to_locations.items()
+            
+            random.shuffle( prefixes_and_paths )
+            
+            for ( prefix, path ) in prefixes_and_paths:
                 
                 if path == overweight_path:
                     
                     return ( prefix, overweight_path, underweight_path )
                     
+                
+            
+        
+    
+    def _IterateAllFilePaths( self ):
+        
+        for ( prefix, location ) in self._prefixes_to_locations.items():
+            
+            dir = os.path.join( location, prefix )
+            
+            next_filenames = os.listdir( dir )
+            
+            for filename in next_filenames:
+                
+                yield os.path.join( dir, filename )
+                
+            
+        
+    
+    def _Reinit( self ):
+        
+        self._prefixes_to_locations = self._controller.Read( 'client_files_locations' )
+        
+    
+    def GetExpectedFilePath( self, hash, mime ):
+        
+        with self._lock:
+            
+            location = self._GetLocation( hash )
+            
+            return ClientFiles.GetExpectedFilePath( location, hash, mime )
+            
+        
+    
+    def GetFilePath( self, hash, mime = None ):
+        
+        with self._lock:
+            
+            location = self._GetLocation( hash )
+            
+            return ClientFiles.GetFilePath( location, hash, mime )
+            
+        
+    
+    def IterateAllFileHashes( self ):
+        
+        with self._lock:
+            
+            for path in self._IterateAllFilePaths():
+                
+                ( base, filename ) = os.path.split( path )
+                
+                result = filename.split( '.', 1 )
+                
+                if len( result ) != 2: continue
+                
+                ( hash_encoded, ext ) = result
+                
+                try: hash = hash_encoded.decode( 'hex' )
+                except TypeError: continue
+                
+                yield hash
+                
+            
+        
+    
+    def IterateAllFilePaths( self ):
+        
+        with self._lock:
+            
+            for path in self._IterateAllFilePaths():
+                
+                yield path
                 
             
         
@@ -272,7 +384,18 @@ class ClientFilesManager( object ):
                 
                 ( prefix, overweight_path, underweight_path ) = rebalance_tuple
                 
-                self._controller.Write( 'move_client_files', prefix, overweight_path, underweight_path )
+                text = 'Moving \'' + prefix + '\' files from ' + overweight_path + ' to ' + underweight_path
+                
+                if partial:
+                    
+                    HydrusData.Print( text )
+                    
+                else:
+                    
+                    HydrusData.ShowText( text )
+                    
+                
+                self._controller.Write( 'relocate_client_files', prefix, overweight_path, underweight_path )
                 
                 self._Reinit()
                 
@@ -283,6 +406,49 @@ class ClientFilesManager( object ):
                 
                 rebalance_tuple = self._GetRebalanceTuple()
                 
+            
+            recover_tuple = self._GetRecoverTuple()
+            
+            while recover_tuple is not None:
+                
+                ( prefix, incorrect_path, correct_path ) = recover_tuple
+                
+                text = 'Recovering \'' + prefix + '\' files from ' + incorrect_path + ' to ' + correct_path
+                
+                if partial:
+                    
+                    HydrusData.Print( text )
+                    
+                else:
+                    
+                    HydrusData.ShowText( text )
+                    
+                
+                full_incorrect_path = os.path.join( incorrect_path, prefix )
+                full_correct_path = os.path.join( correct_path, prefix )
+                
+                HydrusPaths.CopyAndMergeTree( full_incorrect_path, full_correct_path )
+                
+                try: HydrusPaths.RecyclePath( full_incorrect_path )
+                except:
+                    
+                    HydrusData.ShowText( 'After recovering some files, attempting to remove ' + full_incorrect_path + ' failed.' )
+                    
+                    return
+                    
+                
+                if partial:
+                    
+                    break
+                    
+                
+                recover_tuple = self._GetRecoverTuple()
+                
+            
+        
+        if not partial:
+            
+            HydrusData.ShowText( 'All folders balanced!' )
             
         
     
@@ -1392,7 +1558,10 @@ class TagSiblingsManager( object ):
                     new_predicate.AddToCount( HC.CURRENT, current_count )
                     new_predicate.AddToCount( HC.PENDING, pending_count )
                     
-                else: tags_to_include_in_results.add( tag )
+                else:
+                    
+                    tags_to_include_in_results.add( tag )
+                    
                 
             
             results.extend( [ tags_to_predicates[ tag ] for tag in tags_to_include_in_results ] )

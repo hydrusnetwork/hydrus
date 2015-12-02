@@ -292,6 +292,20 @@ def ShowTextClient( text ):
     
     HydrusGlobals.client_controller.pub( 'message', job_key )
     
+def WaitPolitely( page_key = None ):
+    
+    if page_key is not None:
+        
+        HydrusGlobals.client_controller.pub( 'waiting_politely', page_key, True )
+        
+    
+    time.sleep( HC.options[ 'website_download_polite_wait' ] )
+    
+    if page_key is not None:
+        
+        HydrusGlobals.client_controller.pub( 'waiting_politely', page_key, False )
+        
+    
 class Booru( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Booru'
@@ -478,6 +492,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             self._dictionary[ 'booleans' ][ name ] = value
             
+        
+    
+    def SetClientFilesLocationsToIdealWeights( self, locations_to_weights ):
+        
+        portable_locations_and_weights = [ ( HydrusPaths.ConvertAbsPathToPortablePath( location ), float( weight ) ) for ( location, weight ) in locations_to_weights.items() ]
+        
+        self._dictionary[ 'client_files_locations_ideal_weights' ] = portable_locations_and_weights
         
     
     def SetDefaultImportTagOptions( self, gallery_identifier, import_tag_options ):
@@ -2169,6 +2190,11 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                     service_update_package = HydrusSerialisable.CreateFromString( obj_string )
                     
+                    if not isinstance( service_update_package, HydrusData.ServerToClientServiceUpdatePackage ):
+                        
+                        raise Exception()
+                        
+                    
                 except:
                     
                     self._ReportSyncProcessingError( path, 'did not parse' )
@@ -2229,6 +2255,11 @@ class Service( HydrusData.HydrusYAMLBase ):
                     try:
                         
                         content_update_package = HydrusSerialisable.CreateFromString( obj_string )
+                        
+                        if not isinstance( content_update_package, HydrusData.ServerToClientContentUpdatePackage ):
+                            
+                            raise Exception()
+                            
                         
                     except:
                         

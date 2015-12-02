@@ -30,7 +30,9 @@ from include import TestHydrusTags
 import collections
 import os
 import random
+import shutil
 import sys
+import tempfile
 import threading
 import time
 import unittest
@@ -39,8 +41,6 @@ from twisted.internet import reactor
 from include import ClientCaches
 from include import ClientData
 from include import HydrusData
-
-HydrusGlobals.instance = HC.HYDRUS_TEST
 
 only_run = None
 
@@ -53,6 +53,15 @@ class Controller( object ):
         HydrusGlobals.server_controller = self
         HydrusGlobals.test_controller = self
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
+        
+        self._old_db_dir = HC.DB_DIR
+        self._old_client_files_dir = HC.CLIENT_FILES_DIR
+        self._old_client_thumbnails_dir = HC.CLIENT_THUMBNAILS_DIR
+        
+        HC.DB_DIR = tempfile.mkdtemp()
+        
+        HC.CLIENT_FILES_DIR = os.path.join( HC.DB_DIR, 'client_files' )
+        HC.CLIENT_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'client_thumbnails' )
         
         self._new_options = ClientData.ClientOptions()
         
@@ -78,6 +87,10 @@ class Controller( object ):
         services.append( ClientData.Service( CC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, CC.LOCAL_TAG_SERVICE_KEY, {} ) )
         self._reads[ 'services' ] = services
         
+        client_files_locations = { prefix : HC.CLIENT_FILES_DIR for prefix in HydrusData.IterateHexPrefixes() }
+        
+        self._reads[ 'client_files_locations' ] = client_files_locations
+        
         self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
         self._reads[ 'tag_siblings' ] = {}
@@ -90,6 +103,7 @@ class Controller( object ):
         self._managers = {}
         
         self._services_manager = ClientCaches.ServicesManager( self )
+        self._client_files_manager = ClientCaches.ClientFilesManager( self )
         
         self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManager( self )
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
@@ -129,6 +143,11 @@ class Controller( object ):
         
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
+    
+    def GetClientFilesManager( self ):
+        
+        return self._client_files_manager
+        
     
     def GetHTTP( self ): return self._http
     
@@ -200,6 +219,15 @@ class Controller( object ):
     
     def SetWebCookies( self, name, value ): self._cookies[ name ] = value
     
+    def TidyUp( self ):
+        
+        shutil.rmtree( HC.DB_DIR )
+        
+        HC.DB_DIR = self._old_db_dir
+        HC.CLIENT_FILES_DIR = self._old_client_files_dir
+        HC.CLIENT_THUMBNAILS_DIR = self._old_client_thumbnails_dir
+        
+    
     def ViewIsShutdown( self ):
         
         return HydrusGlobals.view_shutdown
@@ -267,6 +295,8 @@ if __name__ == '__main__':
         HydrusGlobals.model_shutdown = True
         
         controller.pubimmediate( 'wake_daemons' )
+        
+        controller.TidyUp()
         
         reactor.callFromThread( reactor.stop )
         

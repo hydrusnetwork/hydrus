@@ -12,6 +12,7 @@ import HydrusSerialisable
 import itertools
 import os
 import ServerFiles
+import ServerServer
 import shutil
 import stat
 import TestConstants
@@ -60,11 +61,11 @@ class TestServer( unittest.TestCase ):
         
         def TWISTEDSetup():
             
-            reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, HydrusServer.HydrusServiceAdmin( self._admin_service.GetServiceKey(), HC.SERVER_ADMIN, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( self._admin_service.GetServiceKey(), HC.SERVER_ADMIN, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, ClientLocalServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, ClientLocalServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, HydrusServer.HydrusServiceRepositoryFile( self._file_service.GetServiceKey(), HC.FILE_REPOSITORY, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, HydrusServer.HydrusServiceRepositoryTag( self._tag_service.GetServiceKey(), HC.TAG_REPOSITORY, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryFile( self._file_service.GetServiceKey(), HC.FILE_REPOSITORY, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryTag( self._tag_service.GetServiceKey(), HC.TAG_REPOSITORY, 'hello' ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -115,7 +116,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        path = ClientFiles.GetExpectedFilePath( self._file_hash, HC.IMAGE_JPEG )
+        path = ClientFiles.GetExpectedFilePath( HC.CLIENT_FILES_DIR, self._file_hash, HC.IMAGE_JPEG )
         
         with open( path, 'wb' ) as f: f.write( 'file' )
         
@@ -237,7 +238,7 @@ class TestServer( unittest.TestCase ):
         share_key = HydrusData.GenerateKey()
         hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
         
-        with open( ClientFiles.GetExpectedFilePath( hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
+        with open( ClientFiles.GetExpectedFilePath( HC.CLIENT_FILES_DIR, hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
         with open( ClientFiles.GetExpectedThumbnailPath( hashes[0], False ), 'wb' ) as f: f.write( 'thumbnail' )
         
         local_booru_manager = HydrusGlobals.test_controller.GetManager( 'local_booru' )

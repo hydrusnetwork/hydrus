@@ -265,31 +265,29 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyIdle( self ):
         
-        # the existence of an idle test permits a True result
-        # any single fail vetoes a True
+        idle_normal = self._options[ 'idle_normal' ]
+        idle_period = self._options[ 'idle_period' ]
+        idle_mouse_period = self._options[ 'idle_mouse_period' ]
         
         possibly_idle = False
         definitely_not_idle = False
         
-        if self._options[ 'idle_period' ] > 0:
+        if idle_normal:
             
-            if HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + self._options[ 'idle_period' ] ):
-                
-                possibly_idle = True
-                
-            else:
+            possibly_idle = True
+            
+        
+        if idle_period is not None:
+            
+            if not HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + idle_period ):
                 
                 definitely_not_idle = True
                 
             
         
-        if self._options[ 'idle_mouse_period' ] > 0:
+        if idle_mouse_period is not None:
             
-            if HydrusData.TimeHasPassed( self._timestamps[ 'last_mouse_action' ] + self._options[ 'idle_mouse_period' ] ):
-                
-                possibly_idle = True
-                
-            else:
+            if not HydrusData.TimeHasPassed( self._timestamps[ 'last_mouse_action' ] + idle_mouse_period ):
                 
                 definitely_not_idle = True
                 
@@ -386,6 +384,11 @@ class Controller( HydrusController.HydrusController ):
         self.pub( 'refresh_status' )
         
     
+    def GetClientFilesManager( self ):
+        
+        return self._client_files_manager
+        
+    
     def GetDB( self ): return self._db
     
     def GetGUI( self ): return self._gui
@@ -419,6 +422,8 @@ class Controller( HydrusController.HydrusController ):
         HC.options = self._options
         
         self._services_manager = ClientCaches.ServicesManager( self )
+        
+        self._client_files_manager = ClientCaches.ClientFilesManager( self )
         
         self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManager( self )
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
@@ -503,6 +508,7 @@ class Controller( HydrusController.HydrusController ):
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ), pre_callable_wait = 0 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 60 ) )
+        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'RebalanceClientFiles', ClientDaemons.DAEMONRebalanceClientFiles, period = 3600 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ), period = 360 ) )
         self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 ) )
@@ -520,9 +526,14 @@ class Controller( HydrusController.HydrusController ):
         
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
         
-        if self._options[ 'maintenance_vacuum_period' ] != 0:
+        maintenance_vacuum_period = self._options[ 'maintenance_vacuum_period' ]
+        
+        if maintenance_vacuum_period is not None and maintenance_vacuum_period > 0:
             
-            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > self._options[ 'maintenance_vacuum_period' ]: self.WriteSynchronous( 'vacuum' )
+            if HydrusData.TimeHasPassed( shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] + maintenance_vacuum_period ):
+                
+                self.WriteSynchronous( 'vacuum' )
+                
             
         
         if self._timestamps[ 'last_service_info_cache_fatten' ] == 0:
@@ -530,7 +541,7 @@ class Controller( HydrusController.HydrusController ):
             self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
             
         
-        if now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
+        if HydrusData.TimeHasPassed( self._timestamps[ 'last_service_info_cache_fatten' ] + ( 60 * 20 ) ):
             
             self.pub( 'splash_set_status_text', 'fattening service info' )
             
@@ -868,23 +879,30 @@ class Controller( HydrusController.HydrusController ):
         
     
     def SystemBusy( self ):
+    
+        max_cpu = self._options[ 'idle_cpu_max' ]
         
-        if HydrusData.TimeHasPassed( self._timestamps[ 'last_cpu_check' ] + 60 ):
+        if max_cpu is None:
             
-            max_cpu = self._options[ 'idle_cpu_max' ]
+            self._system_busy = False
             
-            cpu_times = psutil.cpu_percent( percpu = True )
+        else:
             
-            if True in ( cpu_time > max_cpu for cpu_time in cpu_times ):
+            if HydrusData.TimeHasPassed( self._timestamps[ 'last_cpu_check' ] + 60 ):
                 
-                self._system_busy = True
+                cpu_times = psutil.cpu_percent( percpu = True )
                 
-            else:
+                if True in ( cpu_time > max_cpu for cpu_time in cpu_times ):
+                    
+                    self._system_busy = True
+                    
+                else:
+                    
+                    self._system_busy = False
+                    
                 
-                self._system_busy = False
+                self._timestamps[ 'last_cpu_check' ] = HydrusData.GetNow()
                 
-            
-            self._timestamps[ 'last_cpu_check' ] = HydrusData.GetNow()
             
         
         return self._system_busy
@@ -896,9 +914,11 @@ class Controller( HydrusController.HydrusController ):
         
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
         
-        if self._options[ 'maintenance_vacuum_period' ] != 0:
+        maintenance_vacuum_period = self._options[ 'maintenance_vacuum_period' ]
+        
+        if maintenance_vacuum_period is not None and maintenance_vacuum_period > 0:
             
-            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > self._options[ 'maintenance_vacuum_period' ]:
+            if HydrusData.TimeHasPassed( shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] + maintenance_vacuum_period ):
                 
                 return True
                 

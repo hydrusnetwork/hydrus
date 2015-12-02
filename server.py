@@ -28,8 +28,6 @@ try:
     from include import HydrusLogger
     import traceback
     
-    HydrusGlobals.instance = HC.HYDRUS_SERVER
-    
     action = ServerController.GetStartingAction()
     
     if action == 'help':
@@ -46,8 +44,6 @@ try:
     else:
         
         with HydrusLogger.HydrusLogger( 'server.log' ) as logger:
-            
-            error_occured = False
             
             try:
                 
@@ -69,14 +65,12 @@ try:
                 
             except HydrusExceptions.PermissionException as e:
                 
-                error_occured = True
                 error = str( e )
                 
                 HydrusData.Print( error )
                 
             except:
                 
-                error_occured = True
                 error = traceback.format_exc()
                 
                 HydrusData.Print( 'Hydrus server failed' )

@@ -245,7 +245,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         if do_wait:
             
-            time.sleep( HC.options[ 'website_download_polite_wait' ] )
+            ClientData.WaitPolitely( page_key )
             
         
         with self._lock:
@@ -375,12 +375,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             time.sleep( 5 )
             
         
-        with self._lock:
-            
-            self._SetGalleryStatus( page_key, 'waiting politely' )
-            
-        
-        time.sleep( HC.options[ 'website_download_polite_wait' ] )
+        ClientData.WaitPolitely( page_key )
         
         with self._lock:
             
@@ -1260,7 +1255,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         if do_wait:
             
-            time.sleep( HC.options[ 'website_download_polite_wait' ] )
+            ClientData.WaitPolitely( page_key )
             
         
     
@@ -1358,12 +1353,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             if not error_occurred and do_wait:
                 
-                with self._lock:
-                    
-                    self._SetParserStatus( page_key, 'waiting politely' )
-                    
-                
-                time.sleep( HC.options[ 'website_download_polite_wait' ] )
+                ClientData.WaitPolitely( page_key )
                 
             
             with self._lock:
@@ -2039,7 +2029,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             if do_wait:
                 
-                time.sleep( HC.options[ 'website_download_polite_wait' ] )
+                ClientData.WaitPolitely()
                 
             
         
@@ -2102,7 +2092,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     ( page_of_urls, definitely_no_more_pages ) = gallery.GetPage( self._query, page_index )
                     
-                    time.sleep( HC.options[ 'website_download_polite_wait' ] )
+                    ClientData.WaitPolitely()
                     
                     page_index += 1
                     
@@ -2463,7 +2453,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         if do_wait:
             
-            time.sleep( HC.options[ 'website_download_polite_wait' ] )
+            ClientData.WaitPolitely( page_key )
             
         
     
@@ -2614,12 +2604,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         if not error_occurred and do_wait:
             
-            with self._lock:
-                
-                self._SetWatcherStatus( page_key, 'waiting politely' )
-                
-            
-            time.sleep( HC.options[ 'website_download_polite_wait' ] )
+            ClientData.WaitPolitely( page_key )
             
         
         with self._lock:

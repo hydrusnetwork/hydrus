@@ -53,7 +53,7 @@
 			<p>All of a server's files and options are stored in its accompanying .db file and respective subdirectories, which are created on first startup (just like with the client). To backup or restore, you have two options:</p>
 			<ul>
 				<li>Shut down the server, copy the database files and directories, then restart it. This is the only way, currently, to restore a db.</li>
-				<li>Hit admin->your server->make a backup on your client. This will lock the db server-side while it makes a copy right in the /db directory. The .db file will be tidied up and copied to .db.backup and the subdirectories will be copied to _backup as well. When the operation is complete, you can ftp/batch-copy/whatever the backup wherever you like.</li>
+				<li>In the client, hit admin->your server->make a backup. This will lock the db server-side while it makes a copy of everything server-related to server_install_dir/db/server_backup. When the operation is complete, you can ftp/batch-copy/whatever the server_backup folder wherever you like.</li>
 			</ul>
 			<h3>OMG EVERYTHING WENT WRONG</h3>
 			<p>If you get to a point where you can no longer boot the repository, try running SQLite Studio and opening server.db. If the issue is simple—like manually changing the port number—you may be in luck. Send me an email if it is tricky.</p>

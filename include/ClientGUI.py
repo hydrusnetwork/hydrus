@@ -830,6 +830,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu = wx.Menu()
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'rebalance_client_files' ), p( '&Rebalance File Storage' ), p( 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.' ) )
             #submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
@@ -1027,15 +1028,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'db_profile_mode' )
             pubsub_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pubsub_profile_mode' )
-            special_debug_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'special_debug_mode' )
             
             debug = wx.Menu()
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
             debug.AppendCheckItem( pubsub_profile_mode_id, p( '&PubSub Profile Mode' ) )
             debug.Check( pubsub_profile_mode_id, HydrusGlobals.pubsub_profile_mode )
-            debug.AppendCheckItem( special_debug_mode_id, p( '&Special Debug Mode' ) )
-            debug.Check( special_debug_mode_id, HydrusGlobals.special_debug_mode )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle' ), p( 'Force Idle Mode' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_unbusy' ), p( 'Force Unbusy Mode' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
@@ -1431,6 +1429,21 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
+    def _RebalanceClientFiles( self ):
+        
+        text = 'This will move your files around your storage directories until they satisfy the weights you have set in the options. It will also recover and folders that are in the wrong place. Use this if you have recently changed your file storage locations and want to hurry any transfers you have set up, or if you are recovering a complicated backup.'
+        text += os.linesep * 2
+        text += 'The operation will lock file access and the database. Popup messages will report its progress.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._controller.CallToThread( self._controller.GetClientFilesManager().Rebalance, partial = False )
+                
+            
+        
+    
     def _RefreshStatusBar( self ):
         
         page = self._notebook.GetCurrentPage()
@@ -1491,11 +1504,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
                     
-                    hex_chars = '0123456789abcdef'
-                    
-                    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                    for prefix in HydrusData.IterateHexPrefixes():
                         
-                        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, one + two )
+                        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
                         
                         if not os.path.exists( dir ):
                             
@@ -1505,7 +1516,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     num_broken = 0
                     
-                    for ( i, path ) in enumerate( ClientFiles.IterateAllFilePaths() ):
+                    for ( i, path ) in enumerate( self._controller.GetClientFilesManager().IterateAllFilePaths() ):
                         
                         try:
                             
@@ -1812,6 +1823,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 error_messages = set()
                 
+                client_files_manager = self._controller.GetClientFilesManager()
+                
                 for ( i, media_result ) in enumerate( media_results ):
                     
                     while job_key.IsPaused() or job_key.IsCancelled():
@@ -1843,7 +1856,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     try:
                         
-                        path = ClientFiles.GetFilePath( hash, mime )
+                        path = client_files_manager.GetFilePath( hash, mime )
                         
                         with open( path, 'rb' ) as f: file = f.read()
                         
@@ -1953,6 +1966,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         job_key.SetVariable( 'popup_text_1', prefix + 'upload done!' )
+        
+        job_key.DeleteVariable( 'popup_gauge_1' )
         
         HydrusData.Print( job_key.ToString() )
         
@@ -2105,7 +2120,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == '8chan_board': webbrowser.open( 'https://8ch.net/hydrus/index.html' )
             elif command == 'file_integrity': self._CheckFileIntegrity()
-            elif command == 'help': webbrowser.open( 'file://' + HC.BASE_DIR + '/help/index.html' )
+            elif command == 'help': webbrowser.open( 'file://' + HC.HELP_DIR + '/index.html' )
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
             elif command == 'import_files': self._ImportFiles()
@@ -2157,6 +2172,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HydrusGlobals.pubsub_profile_mode = not HydrusGlobals.pubsub_profile_mode
                 
+            elif command == 'rebalance_client_files': self._RebalanceClientFiles()
             elif command == 'redo': self._controller.pub( 'redo' )
             elif command == 'refresh':
                 
@@ -2178,10 +2194,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.ShowHideSplit()
                 
             elif command == 'site': webbrowser.open( 'https://hydrusnetwork.github.io/hydrus/' )
-            elif command == 'special_debug_mode':
-                
-                HydrusGlobals.special_debug_mode = not HydrusGlobals.special_debug_mode
-                
             elif command == 'start_url_download': self._StartURLDownload()
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )

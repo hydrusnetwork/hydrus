@@ -440,7 +440,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         #
         
-        local_like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        local_like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
         
         self._like_checkboxes_to_info = {}
         
@@ -471,7 +471,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         #
         
-        local_numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        local_numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
         self._numerical_checkboxes_to_info = {}
         

@@ -5,7 +5,9 @@ import HydrusData
 import HydrusGlobals
 import HydrusServerResources
 import os
-import wx
+from twisted.web.static import File as FileResource
+
+local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
 
 class HydrusResourceCommandBooru( HydrusServerResources.HydrusResourceCommand ):
     
@@ -46,7 +48,9 @@ class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
-        path = ClientFiles.GetFilePath( hash )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetFilePath( hash )
         
         response_context = HydrusServerResources.ResponseContext( 200, path = path )
         
@@ -242,11 +246,9 @@ class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
         mime = media_result.GetMime()
         
         if mime in HC.MIMES_WITH_THUMBNAILS: path = ClientFiles.GetThumbnailPath( hash, full_size = False )
-        elif mime in HC.AUDIO: path = os.path.join( HC.STATIC_DIR, 'audio_resized.png' )
-        elif mime in HC.VIDEO: path = os.path.join( HC.STATIC_DIR, 'video_resized.png' )
-        elif mime == HC.APPLICATION_FLASH: path = os.path.join( HC.STATIC_DIR, 'flash_resized.png' )
-        elif mime == HC.APPLICATION_PDF: path = os.path.join( HC.STATIC_DIR, 'pdf_resized.png' )
-        else: path = os.path.join( HC.STATIC_DIR, 'hydrus_resized.png' )
+        elif mime in HC.AUDIO: path = os.path.join( HC.STATIC_DIR, 'audio.png' )
+        elif mime == HC.APPLICATION_PDF: path = os.path.join( HC.STATIC_DIR, 'pdf.png' )
+        else: path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
         response_context = HydrusServerResources.ResponseContext( 200, path = path )
         
@@ -259,7 +261,9 @@ class HydrusResourceCommandLocalFile( HydrusServerResources.HydrusResourceComman
         
         hash = request.hydrus_args[ 'hash' ]
         
-        path = ClientFiles.GetFilePath( hash )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetFilePath( hash )
         
         response_context = HydrusServerResources.ResponseContext( 200, path = path )
         

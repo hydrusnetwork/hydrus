@@ -105,7 +105,7 @@ def GetAllPaths( raw_paths ):
     gc.collect()
     
     return file_paths
-
+    
 def GetAllThumbnailHashes():
     
     thumbnail_hashes = set()
@@ -116,14 +116,6 @@ def GetAllThumbnailHashes():
         
     
     return thumbnail_hashes
-
-def GetExpectedFilePath( hash, mime ):
-    
-    hash_encoded = hash.encode( 'hex' )
-    
-    first_two_chars = hash_encoded[:2]
-    
-    return os.path.join( HC.CLIENT_FILES_DIR, first_two_chars, hash_encoded + HC.mime_ext_lookup[ mime ] )
     
 def GetExportPath():
     
@@ -147,35 +139,13 @@ def GetExportPath():
     
     return path
     
-def GetFilePath( hash, mime = None ):
+def GetExpectedFilePath( location, hash, mime ):
     
-    if mime is None:
-        
-        path = None
-        
-        for potential_mime in HC.ALLOWED_MIMES:
-            
-            potential_path = GetExpectedFilePath( hash, potential_mime )
-            
-            if os.path.exists( potential_path ):
-                
-                path = potential_path
-                
-                break
-                
-            
-        
-    else:
-        
-        path = GetExpectedFilePath( hash, mime )
-        
+    hash_encoded = hash.encode( 'hex' )
     
-    if path is None or not os.path.exists( path ):
-        
-        raise HydrusExceptions.NotFoundException( 'File not found!' )
-        
+    prefix = hash_encoded[:2]
     
-    return path
+    return os.path.join( location, prefix, hash_encoded + HC.mime_ext_lookup[ mime ] )
     
 def GetExpectedThumbnailPath( hash, full_size = True ):
     
@@ -191,7 +161,37 @@ def GetExpectedThumbnailPath( hash, full_size = True ):
         
     
     return path
-
+    
+def GetFilePath( location, hash, mime = None ):
+    
+    if mime is None:
+        
+        path = None
+        
+        for potential_mime in HC.ALLOWED_MIMES:
+            
+            potential_path = GetExpectedFilePath( location, hash, potential_mime )
+            
+            if os.path.exists( potential_path ):
+                
+                path = potential_path
+                
+                break
+                
+            
+        
+    else:
+        
+        path = GetExpectedFilePath( location, hash, mime )
+        
+    
+    if path is None or not os.path.exists( path ):
+        
+        raise HydrusExceptions.NotFoundException( 'File not found!' )
+        
+    
+    return path
+    
 def GetThumbnailPath( hash, full_size = True ):
     
     path = GetExpectedThumbnailPath( hash, full_size )
@@ -240,40 +240,6 @@ def GetExpectedUpdateDir( service_key ):
     
     return os.path.join( HC.CLIENT_UPDATES_DIR, service_key.encode( 'hex' ) )
     
-def IterateAllFileHashes():
-    
-    for path in IterateAllFilePaths():
-        
-        ( base, filename ) = os.path.split( path )
-        
-        result = filename.split( '.', 1 )
-        
-        if len( result ) != 2: continue
-        
-        ( hash_encoded, ext ) = result
-        
-        try: hash = hash_encoded.decode( 'hex' )
-        except TypeError: continue
-        
-        yield hash
-        
-    
-def IterateAllFilePaths():
-    
-    hex_chars = '0123456789abcdef'
-    
-    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
-        
-        dir = os.path.join( HC.CLIENT_FILES_DIR, one + two )
-        
-        next_paths = os.listdir( dir )
-        
-        for path in next_paths:
-            
-            yield os.path.join( dir, path )
-            
-        
-
 def IterateAllThumbnailHashes():
     
     for path in IterateAllThumbnailPaths():
@@ -291,11 +257,9 @@ def IterateAllThumbnailHashes():
     
 def IterateAllThumbnailPaths():
     
-    hex_chars = '0123456789abcdef'
-    
-    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+    for prefix in HydrusData.IterateHexPrefixes():
         
-        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, one + two )
+        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
         
         next_paths = os.listdir( dir )
         
@@ -413,21 +377,13 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def DoWork( self ):
         
-        if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' checking' )
-        
         if HydrusData.TimeHasPassed( self._last_checked + self._period ):
-            
-            if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' time to begin' )
             
             folder_path = self._name
             
             if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                 
-                if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' folder checks out ok' )
-                
                 query_hash_ids = HydrusGlobals.client_controller.Read( 'file_query_ids', self._file_search_context )
-                
-                if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' results found: ' + str( len( query_hash_ids ) ) )
                 
                 query_hash_ids = list( query_hash_ids )
                 
@@ -445,8 +401,6 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 while i < len( query_hash_ids ):
                     
-                    if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' building results: ' + str( i ) + '/' + str( len( query_hash_ids ) ) )
-                    
                     if HC.options[ 'pause_export_folders_sync' ]: return
                     
                     if i == 0: ( last_i, i ) = ( 0, base )
@@ -459,23 +413,15 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     media_results.extend( more_media_results )
                     
                 
-                if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' media_results: ' + str( len( media_results ) ) )
-                
                 #
                 
                 terms = ParseExportPhrase( self._phrase )
                 
                 previous_filenames = set( os.listdir( HydrusData.ToUnicode( folder_path ) ) )
                 
-                if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' existing filenames: ' + str( len( previous_filenames ) ) )
-                if HydrusGlobals.special_debug_mode:
-                    for previous_filename in previous_filenames:
-                        
-                        HydrusData.Print( previous_filename )
-                        
-                    
-                
                 sync_filenames = set()
+                
+                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
                 
                 for media_result in media_results:
                     
@@ -483,59 +429,58 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     mime = media_result.GetMime()
                     size = media_result.GetSize()
                     
-                    source_path = GetFilePath( hash, mime )
+                    source_path = client_files_manager.GetFilePath( hash, mime )
                     
                     filename = GenerateExportFilename( media_result, terms )
                     
                     dest_path = os.path.join( folder_path, filename )
-                    if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' dest path: ' + dest_path )
+                    
                     do_copy = True
                     
                     if filename in sync_filenames:
-                        if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' it was already attempted this run' )
+                        
                         do_copy = False
                         
                     elif os.path.exists( dest_path ):
-                        if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' it exists' )
+                        
                         dest_info = os.lstat( dest_path )
                         
                         dest_size = dest_info[6]
                         
                         if dest_size == size:
-                            if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' and the file size is the same' )
+                            
                             do_copy = False
                             
                         
-                    if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' copy decision: ' + str( do_copy ) )
+                    
                     if do_copy:
-                        if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' copy started' )
-                        shutil.copy( source_path, dest_path )
-                        shutil.copystat( source_path, dest_path )
+                        
+                        shutil.copy2( source_path, dest_path )
                         
                         try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
                         except: pass
-                        if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' copy ok' )
+                        
                     
                     sync_filenames.add( filename )
                     
-                if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' media results done' )
+                
                 if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
-                    if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' inside sync delete code' )
+                    
                     deletee_filenames = previous_filenames.difference( sync_filenames )
-                    if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' delete filenames: ' + str( len( deletee_filenames ) ) )
+                    
                     for deletee_filename in deletee_filenames:
                         
                         deletee_path = os.path.join( folder_path, deletee_filename )
-                        if HydrusGlobals.special_debug_mode: HydrusData.Print( deletee_path )
+                        
                         ClientData.DeletePath( deletee_path )
                         
                     
                 
             
             self._last_checked = HydrusData.GetNow()
-            if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' writing self back to db' )
+            
             HydrusGlobals.client_controller.WriteSynchronous( 'serialisable', self )
-            if HydrusGlobals.special_debug_mode: HydrusData.ShowText( self._name + ' saved ok' )
+            
         
     
     def ToTuple( self ):

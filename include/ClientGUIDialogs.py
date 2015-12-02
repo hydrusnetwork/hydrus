@@ -648,7 +648,7 @@ class DialogFirstStart( Dialog ):
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         message1 = 'Hi, this looks like the first time you have started the hydrus client. Don\'t forget to check out the'
-        link = wx.HyperlinkCtrl( self, id = -1, label = 'help', url = 'file://' + HC.BASE_DIR + '/help/index.html' )
+        link = wx.HyperlinkCtrl( self, id = -1, label = 'help', url = 'file://' + HC.HELP_DIR + '/index.html' )
         message2 = 'if you haven\'t already.'
         message3 = 'When you close this dialog, the client will start its local http server. You will probably get a firewall warning.'
         message4 = 'You can block it if you like, or you can allow it. It doesn\'t phone home, or expose your files to your network; it just provides another way to locally export your files.'
@@ -4468,6 +4468,8 @@ class DialogSetupExport( Dialog ):
         
         terms = ClientFiles.ParseExportPhrase( pattern )
         
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
         for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
             
             try:
@@ -4490,10 +4492,10 @@ class DialogSetupExport( Dialog ):
                         
                     
                 
-                source_path = ClientFiles.GetFilePath( hash, mime )
+                source_path = client_files_manager.GetFilePath( hash, mime )
                 
-                shutil.copy( source_path, path )
-                shutil.copystat( source_path, path )
+                shutil.copy2( source_path, path )
+                
                 try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
                 except: pass
                 

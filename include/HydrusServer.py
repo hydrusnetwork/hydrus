@@ -169,28 +169,6 @@ eris = '''<html><head><title>hydrus</title></head><body><pre>
                                      <font color="gray">MMMM</font>
 </pre></body></html>'''
 
-CLIENT_ROOT_MESSAGE = '''<html>
-    <head>
-        <title>hydrus client</title>
-    </head>
-    <body>
-        <p>This hydrus client uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
-        <p>It only serves requests from 127.0.0.1.</p>
-    </body>
-</html>'''
-
-ROOT_MESSAGE_BEGIN = '''<html>
-    <head>
-        <title>hydrus service</title>
-    </head>
-    <body>
-        <p>This hydrus service uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
-        <p>'''
-
-ROOT_MESSAGE_END = '''</p>
-    </body>
-</html>'''
-
 LOCAL_DOMAIN = HydrusServerResources.HydrusDomain( True )
 REMOTE_DOMAIN = HydrusServerResources.HydrusDomain( False )
 
@@ -225,15 +203,6 @@ class HydrusRequest( Request ):
         HydrusData.Print( message )
         
     
-class HydrusRequestRestricted( HydrusRequest ):
-    
-    def __init__( self, *args, **kwargs ):
-        
-        HydrusRequest.__init__( self, *args, **kwargs )
-        
-        self.hydrus_account = None
-        
-    
 class HydrusService( Site ):
     
     def __init__( self, service_key, service_type, message ):
@@ -258,79 +227,7 @@ class HydrusService( Site ):
         
         return root
         
-
-class HydrusServiceRestricted( HydrusService ):
     
-    def __init__( self, service_key, service_type, message ):
-        
-        HydrusService.__init__( self, service_key, service_type, message )
-        
-        self.requestFactory = HydrusRequestRestricted
-        
-    
-    def _InitRoot( self ):
-        
-        root = HydrusService._InitRoot( self )
-        
-        root.putChild( 'access_key', HydrusServerResources.HydrusResourceCommandAccessKey( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'access_key_verification', HydrusServerResources.HydrusResourceCommandAccessKeyVerification( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'session_key', HydrusServerResources.HydrusResourceCommandSessionKey( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        
-        root.putChild( 'account', HydrusServerResources.HydrusResourceCommandRestrictedAccount( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'account_info', HydrusServerResources.HydrusResourceCommandRestrictedAccountInfo( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'account_types', HydrusServerResources.HydrusResourceCommandRestrictedAccountTypes( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'registration_keys', HydrusServerResources.HydrusResourceCommandRestrictedRegistrationKeys( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'stats', HydrusServerResources.HydrusResourceCommandRestrictedStats( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        
-        return root
-        
-    
-class HydrusServiceAdmin( HydrusServiceRestricted ):
-    
-    def _InitRoot( self ):
-        
-        root = HydrusServiceRestricted._InitRoot( self )
-        
-        root.putChild( 'busy', HydrusServerResources.HydrusResourceBusyCheck() )
-        root.putChild( 'backup', HydrusServerResources.HydrusResourceCommandRestrictedBackup( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'init', HydrusServerResources.HydrusResourceCommandInit( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'services', HydrusServerResources.HydrusResourceCommandRestrictedServices( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'services_info', HydrusServerResources.HydrusResourceCommandRestrictedServicesInfo( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'shutdown', HydrusServerResources.HydrusResourceCommandShutdown( self._service_key, self._service_type, LOCAL_DOMAIN ) )
-        
-        return root
-        
-    
-class HydrusServiceRepository( HydrusServiceRestricted ):
-    
-    def _InitRoot( self ):
-        
-        root = HydrusServiceRestricted._InitRoot( self )
-        
-        root.putChild( 'news', HydrusServerResources.HydrusResourceCommandRestrictedNews( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'num_petitions', HydrusServerResources.HydrusResourceCommandRestrictedNumPetitions( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'petition', HydrusServerResources.HydrusResourceCommandRestrictedPetition( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'content_update_package', HydrusServerResources.HydrusResourceCommandRestrictedContentUpdate( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'immediate_content_update_package', HydrusServerResources.HydrusResourceCommandRestrictedImmediateContentUpdate( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'service_update_package', HydrusServerResources.HydrusResourceCommandRestrictedServiceUpdate( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        
-        return root
-        
-    
-class HydrusServiceRepositoryFile( HydrusServiceRepository ):
-    
-    def _InitRoot( self ):
-        
-        root = HydrusServiceRepository._InitRoot( self )
-        
-        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandRestrictedRepositoryFile( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'ip', HydrusServerResources.HydrusResourceCommandRestrictedIP( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandRestrictedRepositoryThumbnail( self._service_key, self._service_type, REMOTE_DOMAIN ) )
-        
-        return root
-        
-    
-class HydrusServiceRepositoryTag( HydrusServiceRepository ): pass
 '''
 class MessagingServiceFactory( ServerFactory ):
     

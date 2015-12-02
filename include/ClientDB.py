@@ -832,9 +832,11 @@ class MessageDB( object ):
         
         files = []
         
+        client_files_manager = self._controller.GetClientFilesManager()        
+        
         for hash in attachment_hashes:
             
-            path = ClientFiles.GetFilePath( hash )
+            path = client_files_manager.GetFilePath( hash )
             
             with open( path, 'rb' ) as f: file = f.read()
             
@@ -876,9 +878,11 @@ class MessageDB( object ):
         
         files = []
         
+        client_files_manager = self._controller.GetClientFilesManager()
+        
         for hash in attachment_hashes:
             
-            path = ClientFiles.GetFilePath( hash )
+            path = client_files_manager.GetFilePath( hash )
             
             with open( path, 'rb' ) as f: file = f.read()
             
@@ -1203,8 +1207,8 @@ class DB( HydrusDB.HydrusDB ):
             ClientData.DeletePath( deletee_path )
             
         
-        shutil.copy( self._db_path, os.path.join( path, 'client.db' ) )
-        if os.path.exists( self._db_path + '-wal' ): shutil.copy( self._db_path + '-wal', os.path.join( path, 'client.db-wal' ) )
+        shutil.copy2( self._db_path, os.path.join( path, 'client.db' ) )
+        if os.path.exists( self._db_path + '-wal' ): shutil.copy2( self._db_path + '-wal', os.path.join( path, 'client.db-wal' ) )
         
         shutil.copytree( HC.CLIENT_ARCHIVES_DIR, os.path.join( path, 'client_archives' ) ) 
         shutil.copytree( HC.CLIENT_FILES_DIR, os.path.join( path, 'client_files' ) )
@@ -1279,6 +1283,8 @@ class DB( HydrusDB.HydrusDB ):
         missing_count = 0
         deletee_hash_ids = []
         
+        client_files_manager = self._controller.GetClientFilesManager()
+        
         for ( i, ( hash_id, mime ) ) in enumerate( info ):
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
@@ -1293,7 +1299,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash = self._GetHash( hash_id )
             
-            try: path = ClientFiles.GetFilePath( hash, mime )
+            try: path = client_files_manager.GetFilePath( hash, mime )
             except HydrusExceptions.NotFoundException:
                 
                 deletee_hash_ids.append( hash_id )
@@ -1374,6 +1380,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CopyFiles( self, hashes ):
         
+        client_files_manager = self._controller.GetClientFilesManager()
+        
         if len( hashes ) > 0:
             
             error_messages = set()
@@ -1384,7 +1392,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    path = ClientFiles.GetFilePath( hash )
+                    path = client_files_manager.GetFilePath( hash )
                     
                     paths.append( path )
                     
@@ -1409,15 +1417,13 @@ class DB( HydrusDB.HydrusDB ):
         if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
         if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
         
-        hex_chars = '0123456789abcdef'
-        
-        for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+        for prefix in HydrusData.IterateHexPrefixes():
             
-            dir = os.path.join( HC.CLIENT_FILES_DIR, one + two )
+            dir = os.path.join( HC.CLIENT_FILES_DIR, prefix )
             
             if not os.path.exists( dir ): os.mkdir( dir )
             
-            dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, one + two )
+            dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
             
             if not os.path.exists( dir ): os.mkdir( dir )
             
@@ -1438,6 +1444,8 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE autocomplete_tags_cache ( file_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, tag_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY ( file_service_id, tag_service_id, namespace_id, tag_id ) );' )
         self._c.execute( 'CREATE INDEX autocomplete_tags_cache_tag_service_id_namespace_id_tag_id_index ON autocomplete_tags_cache ( tag_service_id, namespace_id, tag_id );' )
+        
+        self._c.execute( 'CREATE TABLE client_files_locations ( prefix TEXT, location TEXT );' )
         
         self._c.execute( 'CREATE TABLE contacts ( contact_id INTEGER PRIMARY KEY, contact_key BLOB_BYTES, public_key TEXT, name TEXT, host TEXT, port INTEGER );' )
         self._c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
@@ -1571,6 +1579,13 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
         
         # inserts
+        
+        location = HydrusPaths.ConvertAbsPathToPortablePath( HC.CLIENT_FILES_DIR )
+        
+        for prefix in HydrusData.IterateHexPrefixes():
+            
+            self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( prefix, location ) )
+            
         
         init_service_info = []
         
@@ -1716,7 +1731,9 @@ class DB( HydrusDB.HydrusDB ):
         
         time.sleep( 1 )
         
-        for hash in ClientFiles.IterateAllFileHashes():
+        client_files_manager = self._controller.GetClientFilesManager()
+        
+        for hash in client_files_manager.IterateAllFileHashes():
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
@@ -1727,7 +1744,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if hash in deletee_hashes:
                 
-                try: path = ClientFiles.GetFilePath( hash )
+                try: path = client_files_manager.GetFilePath( hash )
                 except HydrusExceptions.NotFoundException: continue
                 
                 try:
@@ -1866,9 +1883,11 @@ class DB( HydrusDB.HydrusDB ):
             
             file_hashes = self._GetHashes( deletable_file_hash_ids )
             
+            client_files_manager = self._controller.GetClientFilesManager()
+            
             for hash in file_hashes:
                 
-                try: path = ClientFiles.GetFilePath( hash )
+                try: path = client_files_manager.GetFilePath( hash )
                 except HydrusExceptions.NotFoundException: continue
                 
                 deletee_paths.add( path )
@@ -2266,6 +2285,13 @@ class DB( HydrusDB.HydrusDB ):
         predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, tag, counts = { HC.CURRENT : current_count, HC.PENDING : pending_count } ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
         
         return predicates
+        
+    
+    def _GetClientFilesLocations( self ):
+        
+        result = { prefix : HydrusPaths.ConvertPortablePathToAbsPath( location ) for ( prefix, location ) in self._c.execute( 'SELECT prefix, location FROM client_files_locations;' ) }
+        
+        return result
         
     
     def _GetDownloads( self ): return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
@@ -3578,6 +3604,27 @@ class DB( HydrusDB.HydrusDB ):
             self._service_cache[ service_id ] = service
             
         
+        if service.GetServiceType() == HC.LOCAL_BOORU:
+            
+            info = service.GetInfo()
+            
+            current_time_struct = time.gmtime()
+            
+            ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
+            
+            ( booru_year, booru_month ) = info[ 'current_data_month' ]
+            
+            if current_year != booru_year or current_month != booru_month:
+                
+                info[ 'used_monthly_data' ] = 0
+                info[ 'used_monthly_requests' ] = 0
+                
+                info[ 'current_data_month' ] = ( current_year, current_month )
+                
+                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
+            
+        
         return service
         
     
@@ -4048,11 +4095,13 @@ class DB( HydrusDB.HydrusDB ):
             
             mime = HydrusFileHandling.GetMime( path )
             
-            dest_path = ClientFiles.GetExpectedFilePath( hash, mime )
+            client_files_manager = self._controller.GetClientFilesManager()
+            
+            dest_path = client_files_manager.GetExpectedFilePath( hash, mime )
             
             if not os.path.exists( dest_path ):
                 
-                shutil.copy( path, dest_path )
+                shutil.copy2( path, dest_path )
                 
                 try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
                 except: pass
@@ -4265,7 +4314,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                 
-                HydrusGlobals.client_controller.pub( 'splash_set_status_text', content_update_index_string + 'committing' + update_speed_string )
+                self._controller.pub( 'splash_set_status_text', content_update_index_string + 'committing' + update_speed_string )
                 job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing' + update_speed_string )
                 
                 job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
@@ -4900,20 +4949,6 @@ class DB( HydrusDB.HydrusDB ):
             
             info = service.GetInfo()
             
-            current_time_struct = time.gmtime()
-            
-            ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
-            
-            ( booru_year, booru_month ) = info[ 'current_data_month' ]
-            
-            if current_year != booru_year or current_month != booru_month:
-                
-                info[ 'used_monthly_data' ] = 0
-                info[ 'used_monthly_requests' ] = 0
-                
-                info[ 'current_data_month' ] = ( current_year, current_month )
-                
-            
             info[ 'used_monthly_data' ] += sum( local_booru_requests_made )
             info[ 'used_monthly_requests' ] += len( local_booru_requests_made )
             
@@ -4929,6 +4964,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'tag_archive_info': result = self._GetTagArchiveInfo( *args, **kwargs )
         elif action == 'tag_archive_tags': result = self._GetTagArchiveTags( *args, **kwargs )
         elif action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
+        elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
         elif action == 'file_hash': result = self._GetFileHash( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
@@ -4965,6 +5001,31 @@ class DB( HydrusDB.HydrusDB ):
         else: raise Exception( 'db received an unknown read command: ' + action )
         
         return result
+        
+    
+    def _RelocateClientFiles( self, prefix, source, dest ):
+        
+        full_source = os.path.join( source, prefix )
+        full_dest = os.path.join( dest, prefix )
+        
+        if os.path.exists( full_source ):
+            
+            HydrusPaths.CopyAndMergeTree( full_source, full_dest )
+            
+        elif not os.path.exists( full_dest ):
+            
+            os.mkdir( full_dest )
+            
+        
+        portable_dest = HydrusPaths.ConvertAbsPathToPortablePath( dest )
+        
+        self._c.execute( 'UPDATE client_files_locations SET location = ? WHERE prefix = ?;', ( portable_dest, prefix ) )
+        
+        if os.path.exists( full_source ):
+            
+            try: HydrusPaths.RecyclePath( full_source )
+            except: pass
+            
         
     
     def _ResetService( self, service_key, delete_updates = False ):
@@ -5272,88 +5333,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 131:
-            
-            service_info = self._c.execute( 'SELECT service_id, info FROM services;' ).fetchall()
-            
-            for ( service_id, info ) in service_info:
-                
-                if 'account' in info:
-                    
-                    info[ 'account' ] = HydrusData.GetUnknownAccount()
-                    
-                    self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                    
-                
-            
-        
-        if version == 132:
-            
-            self._c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_FILES, ) )
-            
-            #
-            
-            options = self._GetOptions()
-            
-            client_size = options[ 'client_size' ]
-            
-            client_size[ 'fs_fullscreen' ] = True
-            
-            client_size[ 'gui_fullscreen' ] = False
-            
-            del options[ 'fullscreen_borderless' ]
-            
-            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
-            
-        
-        if version == 135:
-            
-            if not os.path.exists( HC.CLIENT_ARCHIVES_DIR ): os.mkdir( HC.CLIENT_ARCHIVES_DIR )
-            
-            #
-            
-            extra_hashes_data = self._c.execute( 'SELECT * FROM local_hashes;' ).fetchall()
-            
-            self._c.execute( 'DROP TABLE local_hashes;' )
-            
-            self._c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
-            self._c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
-            self._c.execute( 'CREATE INDEX local_hashes_sha1_index ON local_hashes ( sha1 );' )
-            self._c.execute( 'CREATE INDEX local_hashes_sha512_index ON local_hashes ( sha512 );' )
-            
-            for ( i, ( hash_id, md5, sha1 ) ) in enumerate( extra_hashes_data ):
-                
-                hash = self._GetHash( hash_id )
-                
-                try: path = ClientFiles.GetFilePath( hash )
-                except HydrusExceptions.NotFoundException: continue
-                
-                h_sha512 = hashlib.sha512()
-                
-                with open( path, 'rb' ) as f:
-                    
-                    for block in HydrusPaths.ReadFileLikeAsBlocks( f ): h_sha512.update( block )
-                    
-                    sha512 = h_sha512.digest()
-                    
-                
-                self._c.execute( 'INSERT INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
-                
-                if i % 100 == 0: self._controller.pub( 'splash_set_status_text', 'generating sha512 hashes: ' + HydrusData.ConvertIntToPrettyString( i ) )
-                
-            
-            #
-            
-            tag_service_info = self._c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HydrusData.SplayListForDB( HC.TAG_SERVICES ) + ';' ).fetchall()
-            
-            for ( service_id, info ) in tag_service_info:
-                
-                info[ 'tag_archive_sync' ] = {}
-                
-                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                
-            
         
         if version == 136:
             
@@ -5733,7 +5712,22 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            for ( i, path ) in enumerate( ClientFiles.IterateAllFilePaths() ):
+            def iterate_all_file_paths():
+                
+                for prefix in HydrusData.IterateHexPrefixes():
+                    
+                    dir = os.path.join( HC.CLIENT_FILES_DIR, prefix )
+                    
+                    next_paths = os.listdir( dir )
+                    
+                    for path in next_paths:
+                        
+                        yield os.path.join( dir, path )
+                        
+                    
+                
+            
+            for ( i, path ) in enumerate( iterate_all_file_paths() ):
                 
                 try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
                 except: pass
@@ -5862,7 +5856,7 @@ class DB( HydrusDB.HydrusDB ):
         if version == 175:
             
             HC.options = self._GetOptions()
-            HydrusGlobals.client_controller._options = HC.options
+            self._controller._options = HC.options
             
             self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_IMPORT_FOLDER, ) )
             
@@ -6160,23 +6154,31 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash = self._GetHash( hash_id )
                 
-                try:
-                    
-                    file_path = ClientFiles.GetFilePath( hash, HC.APPLICATION_FLASH )
-                    
-                except HydrusExceptions.NotFoundException:
-                    
-                    continue
-                    
+                file_path = ClientFiles.GetExpectedFilePath( HC.CLIENT_FILES_DIR, hash, HC.APPLICATION_FLASH )
                 
-                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
-                
-                self._AddThumbnails( [ ( hash, thumbnail ) ] )
+                if os.path.exists( file_path ):
+                    
+                    thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+                    
+                    self._AddThumbnails( [ ( hash, thumbnail ) ] )
+                    
                 
             
             #
             
             self._c.execute( 'DELETE FROM service_info WHERE info_type IN ( ?, ? );', ( HC.SERVICE_INFO_NUM_THUMBNAILS, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
+            
+        
+        if version == 183:
+            
+            self._c.execute( 'CREATE TABLE client_files_locations ( prefix TEXT, location TEXT );' )
+            
+            location = HydrusPaths.ConvertAbsPathToPortablePath( HC.CLIENT_FILES_DIR )
+            
+            for prefix in HydrusData.IterateHexPrefixes():
+                
+                self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( prefix, location ) )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
@@ -6693,7 +6695,7 @@ class DB( HydrusDB.HydrusDB ):
             
         except sqlite3.OperationalError:
             
-            HC.options[ 'maintenance_vacuum_period' ] = 0
+            HC.options[ 'maintenance_vacuum_period' ] = None
             
             self._SaveOptions( HC.options )
             
@@ -6749,6 +6751,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'pixiv_account': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
+        elif action == 'relocate_client_files': result = self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'reset_service': result = self._ResetService( *args, **kwargs )
         elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
@@ -6792,10 +6795,10 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        shutil.copy( os.path.join( path, 'client.db' ), self._db_path )
+        shutil.copy2( os.path.join( path, 'client.db' ), self._db_path )
         
         wal_path = os.path.join( path, 'client.db-wal' )
-        if os.path.exists( wal_path ): shutil.copy( wal_path, self._db_path + '-wal' )
+        if os.path.exists( wal_path ): shutil.copy2( wal_path, self._db_path + '-wal' )
         
         shutil.copytree( os.path.join( path, 'client_archives' ), HC.CLIENT_ARCHIVES_DIR )
         shutil.copytree( os.path.join( path, 'client_files' ), HC.CLIENT_FILES_DIR )

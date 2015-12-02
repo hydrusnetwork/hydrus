@@ -45,7 +45,7 @@ class Page( wx.SplitterWindow ):
         
         self._search_preview_split.Bind( wx.EVT_SPLITTER_DCLICK, self.EventPreviewUnsplit )
         
-        self._management_panel = ClientGUIManagement.CreateManagementPanel( self._search_preview_split, self, self._management_controller )
+        self._management_panel = ClientGUIManagement.CreateManagementPanel( self._search_preview_split, self, self._controller, self._management_controller )
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
         

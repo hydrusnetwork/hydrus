@@ -1,5 +1,4 @@
 import ClientLocalServerResources
-import HydrusServerResources
 import HydrusServer
 
 class HydrusServiceBooru( HydrusServer.HydrusService ):
@@ -12,7 +11,7 @@ class HydrusServiceBooru( HydrusServer.HydrusService ):
         root.putChild( 'page', ClientLocalServerResources.HydrusResourceCommandBooruPage( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( 'file', ClientLocalServerResources.HydrusResourceCommandBooruFile( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( 'thumbnail', ClientLocalServerResources.HydrusResourceCommandBooruThumbnail( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'style.css', HydrusServerResources.local_booru_css )
+        root.putChild( 'style.css', ClientLocalServerResources.local_booru_css )
         
         return root
 

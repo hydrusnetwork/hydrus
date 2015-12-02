@@ -234,6 +234,13 @@ def DAEMONMaintainTrash( controller ):
             
         
     
+def DAEMONRebalanceClientFiles( controller ):
+    
+    if controller.CurrentlyIdle() and not controller.SystemBusy():
+        
+        controller.GetClientFilesManager().Rebalance()
+        
+    
 def DAEMONSynchroniseAccounts( controller ):
     
     services = controller.GetServicesManager().GetServices( HC.RESTRICTED_SERVICES )

@@ -145,6 +145,8 @@ class AutoCompleteDropdown( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
+        self._intercept_key_events = True
+        
         self._last_search_text = ''
         self._next_updatelist_is_probably_fast = False
         
@@ -394,39 +396,87 @@ class AutoCompleteDropdown( wx.Panel ):
         
         HydrusGlobals.client_controller.ResetIdleTimer()
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
+        if event.KeyCode in ( wx.WXK_TAB, wx.WXK_NUMPAD_TAB ):
             
-            self._TakeResponsibilityForEnter()
-            
-        elif event.KeyCode == wx.WXK_ESCAPE:
-            
-            self.GetTopLevelParent().SetFocus()
-            
-        elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
-            
-            if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
-            elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
-            
-            new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
-            
-            self._text_ctrl.ProcessEvent( new_event )
-            
-        elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
-            
-            if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+            if event.ShiftDown():
                 
-                id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_previous' )
+                if self._intercept_key_events:
+                    
+                    self._intercept_key_events = False
+                    
+                    ( r, g, b ) = HC.options[ 'gui_colours' ][ 'autocomplete_background' ]
+                    
+                    if r != g or r != b or g != b:
+                        
+                        colour = wx.Colour( g, b, r )
+                        
+                    elif r > 127:
+                        
+                        colour = wx.Colour( g, b, r / 2 )
+                        
+                    else:
+                        
+                        colour = wx.Colour( g, b, r * 2 )
+                        
+                    
+                else:
+                    
+                    self._intercept_key_events = True
+                    
+                    colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] )
+                    
                 
-            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                self._text_ctrl.SetBackgroundColour( colour )
                 
-                id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_next' )
+                self._text_ctrl.Refresh()
+                
+            else:
+                
+                self._UpdateList()
+                
+                self._lag_timer.Stop()
                 
             
-            new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
+        elif self._intercept_key_events:
             
-            self._text_ctrl.ProcessEvent( new_event )
+            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
+                
+                self._TakeResponsibilityForEnter()
+                
+            elif event.KeyCode == wx.WXK_ESCAPE:
+                
+                self.GetTopLevelParent().SetFocus()
+                
+            elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
+                
+                if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
+                elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
+                
+                new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
+                
+                self._text_ctrl.ProcessEvent( new_event )
+                
+            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
+                
+                if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                    
+                    id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_previous' )
+                    
+                elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                    
+                    id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_next' )
+                    
+                
+                new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
+                
+                self._text_ctrl.ProcessEvent( new_event )
+                
+            else: self._dropdown_list.ProcessEvent( event )
             
-        else: self._dropdown_list.ProcessEvent( event )
+        else:
+            
+            event.Skip()
+            
         
     
     def EventKillFocus( self, event ):
@@ -500,11 +550,20 @@ class AutoCompleteDropdown( wx.Panel ):
         
         num_chars = len( self._text_ctrl.GetValue() )
         
-        ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
-        
-        if num_chars == 0 or self._next_updatelist_is_probably_fast: self._UpdateList()
-        elif num_chars < char_limit: self._lag_timer.Start( long_wait, wx.TIMER_ONE_SHOT )
-        else: self._lag_timer.Start( short_wait, wx.TIMER_ONE_SHOT )
+        if num_chars == 0:
+            
+            self._UpdateList()
+            
+        elif HC.options[ 'fetch_ac_results_automatically' ]:
+            
+            ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
+            
+            self._next_updatelist_is_probably_fast = self._next_updatelist_is_probably_fast and num_chars > len( self._last_search_text )
+            
+            if self._next_updatelist_is_probably_fast: self._UpdateList()
+            elif num_chars < char_limit: self._lag_timer.Start( long_wait, wx.TIMER_ONE_SHOT )
+            else: self._lag_timer.Start( short_wait, wx.TIMER_ONE_SHOT )
+            
         
     
     def TIMEREventDropdownHide( self, event ):
@@ -680,7 +739,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, page_key, file_service_key, tag_service_key, media_callable = None, include_current = True, include_pending = True, synchronised = True ):
+    def __init__( self, parent, page_key, file_service_key, tag_service_key, media_callable = None, include_current = True, include_pending = True, synchronised = True, include_unusual_predicate_types = True ):
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
         
@@ -697,6 +756,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._synchronised = OnOffButton( self._dropdown_window, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- tag counts may be inaccurate', start_on = synchronised )
         self._synchronised.SetToolTipString( 'select whether to renew the search as soon as a new predicate is entered' )
+        
+        self._include_unusual_predicate_types = include_unusual_predicate_types
         
         button_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -833,6 +894,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 half_complete_tag = search_text
                 
             
+            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+            
             if half_complete_tag == '':
                 
                 self._cache_text = self._current_namespace + ':'
@@ -858,7 +921,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                         
-                        predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = True )
+                        predicates = siblings_manager.CollapsePredicates( predicates )
+                        
+                        predicates = ClientSearch.SortPredicates( predicates )
                         
                     else:
                         
@@ -868,7 +933,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                             
-                            self._cached_results = ClientSearch.SortPredicates( self._cached_results, collapse_siblings = False )
+                            self._cached_results = siblings_manager.CollapsePredicates( self._cached_results )
+                            
+                            self._cached_results = ClientSearch.SortPredicates( self._cached_results )
                             
                         
                         predicates = self._cached_results
@@ -908,7 +975,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
                     
-                    predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = True )
+                    predicates = siblings_manager.CollapsePredicates( predicates )
+                    
+                    predicates = ClientSearch.SortPredicates( predicates )
                     
                     self._next_updatelist_is_probably_fast = True
                     
@@ -916,24 +985,27 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 matches = ClientSearch.FilterPredicates( search_text, predicates )
                 
             
-            if self._current_namespace != '':
+            if self._include_unusual_predicate_types:
                 
-                if '*' not in self._current_namespace:
+                if self._current_namespace != '':
                     
-                    matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
-                    
-                
-                if half_complete_tag != '':
-                    
-                    if '*' in self._current_namespace or ( '*' in half_complete_tag and half_complete_tag != '*' ):
+                    if '*' not in self._current_namespace:
                         
-                        matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                        matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
                         
                     
-                
-            elif '*' in search_text:
-                
-                matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                    if half_complete_tag != '':
+                        
+                        if '*' in self._current_namespace or ( '*' in half_complete_tag and half_complete_tag != '*' ):
+                            
+                            matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                            
+                        
+                    
+                elif '*' in search_text:
+                    
+                    matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                    
                 
             
             try:
@@ -1144,7 +1216,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 
                 predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
                 
-                predicates = ClientSearch.SortPredicates( predicates, collapse_siblings = False )
+                predicates = ClientSearch.SortPredicates( predicates )
                 
             else:
                 
@@ -1154,7 +1226,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, add_namespaceless = False )
                     
-                    self._cached_results = ClientSearch.SortPredicates( self._cached_results, collapse_siblings = False )
+                    self._cached_results = ClientSearch.SortPredicates( self._cached_results )
                     
                 
                 predicates = self._cached_results
@@ -1304,8 +1376,8 @@ class BufferedWindow( wx.Window ):
             
             self._dirty = True
             
-            self.Refresh()
-            
+        
+        self.Refresh()
         
     
 class BufferedWindowIcon( BufferedWindow ):
@@ -3746,12 +3818,13 @@ class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
 class NoneableSpinCtrl( wx.Panel ):
     
-    def __init__( self, parent, message, none_phrase = 'no limit', min = 0, max = 1000000, multiplier = 1, num_dimensions = 1 ):
+    def __init__( self, parent, message, none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1, num_dimensions = 1 ):
         
         wx.Panel.__init__( self, parent )
         
-        self._num_dimensions = num_dimensions
+        self._unit = unit
         self._multiplier = multiplier
+        self._num_dimensions = num_dimensions
         
         self._checkbox = wx.CheckBox( self, label = none_phrase )
         self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
@@ -3773,6 +3846,11 @@ class NoneableSpinCtrl( wx.Panel ):
             
             hbox.AddF( wx.StaticText( self, label = 'x' ), CC.FLAGS_MIXED )
             hbox.AddF( self._two, CC.FLAGS_MIXED )
+            
+        
+        if self._unit is not None:
+            
+            hbox.AddF( wx.StaticText( self, label = unit ), CC.FLAGS_MIXED )
             
         
         hbox.AddF( self._checkbox, CC.FLAGS_MIXED )
@@ -5768,3 +5846,57 @@ class ShowKeys( Frame ):
             
         
     
+class WaitingPolitely( BufferedWindow ):
+    
+    def __init__( self, parent, page_key ):
+        
+        BufferedWindow.__init__( self, parent, size = ( 19, 19 ) )
+        
+        self._page_key = page_key
+        self._waiting = False
+        
+        HydrusGlobals.client_controller.sub( self, 'SetWaitingPolitely', 'waiting_politely' )
+        
+        self.SetWaitingPolitely( self._page_key, False )
+        
+    
+    def _Draw( self, dc ):
+        
+        dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
+        
+        dc.Clear()
+        
+        if self._waiting:
+            
+            dc.SetBrush( wx.Brush( wx.Colour( 250, 190, 77 ) ) )
+            
+        else:
+            
+            dc.SetBrush( wx.Brush( wx.Colour( 77, 250, 144 ) ) )
+            
+        
+        dc.SetPen( wx.BLACK_PEN )
+        
+        dc.DrawCircle( 9, 9, 7 )
+        
+    
+    def SetWaitingPolitely( self, page_key, value ):
+        
+        if page_key == self._page_key:
+            
+            self._waiting = value
+            
+            if self._waiting:
+                
+                self.SetToolTipString( 'waiting before attempting another download' )
+                
+            else:
+                
+                self.SetToolTipString( 'ready to download' )
+                
+            
+            self._dirty = True
+            
+            self.Refresh()
+            
+        

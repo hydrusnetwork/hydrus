@@ -710,7 +710,9 @@ class Canvas( object ):
     
     def _CopyPathToClipboard( self ):
         
-        path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', path )
         
@@ -861,7 +863,9 @@ class Canvas( object ):
             hash = self._current_display_media.GetHash()
             mime = self._current_display_media.GetMime()
             
-            path = ClientFiles.GetFilePath( hash, mime )
+            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+            
+            path = client_files_manager.GetFilePath( hash, mime )
             
             HydrusPaths.LaunchFile( path )
             
@@ -2716,7 +2720,9 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
     
     def _CopyPathToClipboard( self ):
         
-        path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', path )
         
@@ -3175,7 +3181,9 @@ class MediaContainer( wx.Window ):
                     
                     self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
                     
-                    self._media_window.movie = ClientFiles.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH )
+                    client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                    
+                    self._media_window.movie = client_files_manager.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH )
                     
                 else:
                     
@@ -3417,7 +3425,9 @@ class OpenExternallyButton( wx.Button ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        path = ClientFiles.GetFilePath( hash, mime )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetFilePath( hash, mime )
         
         HydrusPaths.LaunchFile( path )
         

@@ -191,7 +191,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         display_media = self._focussed_media.GetDisplayMedia()
         
-        path = ClientFiles.GetFilePath( display_media.GetHash(), display_media.GetMime() )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetFilePath( display_media.GetHash(), display_media.GetMime() )
         
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', path )
         
@@ -330,7 +332,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 hash = display_media.GetHash()
                 mime = display_media.GetMime()
                 
-                path = ClientFiles.GetFilePath( hash, mime )
+                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                
+                path = client_files_manager.GetFilePath( hash, mime )
                 
                 HydrusPaths.LaunchFile( path )
                 
@@ -586,14 +590,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if self._focussed_media is not None:
             
-            hash = self._focussed_media.GetHash()
-            mime = self._focussed_media.GetMime()
-            
-            path = ClientFiles.GetFilePath( hash, mime )
-            
-            self._SetFocussedMedia( None )
-            
-            HydrusPaths.LaunchFile( path )
+            if CC.LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent():
+                
+                hash = self._focussed_media.GetHash()
+                mime = self._focussed_media.GetMime()
+                
+                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                self._SetFocussedMedia( None )
+                
+                HydrusPaths.LaunchFile( path )
+                
             
         
     
@@ -1620,9 +1629,11 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     file_data_object = wx.FileDataObject()
                     
+                    client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                    
                     for hash in hashes:
                         
-                        path = ClientFiles.GetFilePath( hash )
+                        path = client_files_manager.GetFilePath( hash )
                         
                         file_data_object.AddFile( path )
                         
@@ -2196,7 +2207,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 menu.AppendSeparator()
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'open_externally' ), '&open externally' )
+                if selection_has_local_file_service:
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'open_externally' ), '&open externally' )
+                    
                 
                 share_menu = wx.Menu()
                 

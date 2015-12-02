@@ -82,14 +82,7 @@ def FilterPredicates( search_entry, predicates, service_key = None, expand_paren
     
     return matches
 
-def SortPredicates( predicates, collapse_siblings = False ):
-    
-    if collapse_siblings:
-        
-        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-        
-        predicates = siblings_manager.CollapsePredicates( predicates )
-        
+def SortPredicates( predicates ):
     
     def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )
     

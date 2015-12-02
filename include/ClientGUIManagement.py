@@ -135,13 +135,13 @@ def CreateManagementControllerQuery( file_service_key, file_search_context, sear
     
     return management_controller
     
-def CreateManagementPanel( parent, page, management_controller ):
+def CreateManagementPanel( parent, page, controller, management_controller ):
     
     management_type = management_controller.GetType()
     
     management_class = management_panel_types_to_classes[ management_type ]
     
-    management_panel = management_class( parent, page, management_controller )
+    management_panel = management_class( parent, page, controller, management_controller )
     
     return management_panel
     
@@ -372,13 +372,13 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     def EventRefreshCaptcha( self, event ):
         
-        javascript_string = HydrusGlobals.client_controller.DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
+        javascript_string = self._controller.DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
         
         ( trash, rest ) = javascript_string.split( 'challenge : \'', 1 )
         
         ( self._captcha_challenge, trash ) = rest.split( '\'', 1 )
         
-        jpeg = HydrusGlobals.client_controller.DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
+        jpeg = self._controller.DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
         
         ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
@@ -621,7 +621,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
-    def __init__( self, parent, page, management_controller ):
+    def __init__( self, parent, page, controller, management_controller ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
@@ -629,12 +629,13 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self.SetBackgroundColour( wx.WHITE )
         
-        self._controller = management_controller
+        self._controller = controller
+        self._management_controller = management_controller
         
         self._page = page
-        self._page_key = self._controller.GetKey( 'page' )
+        self._page_key = self._management_controller.GetKey( 'page' )
         
-        HydrusGlobals.client_controller.sub( self, 'SetSearchFocus', 'set_search_focus' )
+        self._controller.sub( self, 'SetSearchFocus', 'set_search_focus' )
         
     
     def _MakeCollect( self, sizer ):
@@ -670,11 +671,11 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     '''
 class ManagementPanelDumper( ManagementPanel ):
     
-    def __init__( self, parent, page, management_controller ):
+    def __init__( self, parent, page, controller, management_controller ):
         
-        ManagementPanel.__init__( self, parent, page, management_controller )
+        ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
-        ( self._4chan_token, pin, timeout ) = HydrusGlobals.client_controller.Read( '4chan_pass' )
+        ( self._4chan_token, pin, timeout ) = self._controller.Read( '4chan_pass' )
         
         self._have_4chan_pass = timeout > HydrusData.GetNow()
         
@@ -802,8 +803,8 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self.SetSizer( vbox )
         
-        HydrusGlobals.client_controller.sub( self, 'FocusChanged', 'focus_changed' )
-        HydrusGlobals.client_controller.sub( self, 'SortedMediaPulse', 'sorted_media_pulse' )
+        self._controller.sub( self, 'FocusChanged', 'focus_changed' )
+        self._controller.sub( self, 'SortedMediaPulse', 'sorted_media_pulse' )
         
         self._sorted_media_hashes = [ media_result.GetHash() for media_result in media_results ]
         
@@ -841,7 +842,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         try:
             
-            response = HydrusGlobals.client_controller.DoHTTP( HC.POST, self._post_url, request_headers = headers, body = body )
+            response = self._controller.DoHTTP( HC.POST, self._post_url, request_headers = headers, body = body )
             
             ( status, phrase ) = ClientDownloading.Parse4chanPostScreen( response )
             
@@ -894,7 +895,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             tags_manager = media.GetTagsManager()
             
-            try: service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+            try: service = self._controller.GetServicesManager().GetService( service_key )
             except HydrusExceptions.NotFoundException: continue
             
             service_key = service.GetServiceKey()
@@ -1028,7 +1029,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_DUMPED_OK
             dump_status_string = 'dumped ok'
             
-            if hash == self._current_hash: HydrusGlobals.client_controller.pub( 'set_focus', self._page_key, None )
+            if hash == self._current_hash: self._controller.pub( 'set_focus', self._page_key, None )
             
             self._next_dump_time = HydrusData.GetNow() + self._flood_time
             
@@ -1100,7 +1101,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_UNRECOVERABLE_ERROR
             dump_status_string = phrase
             
-            if hash == self._current_hash: HydrusGlobals.client_controller.pub( 'set_focus', self._page_key, None )
+            if hash == self._current_hash: self._controller.pub( 'set_focus', self._page_key, None )
             
             self._next_dump_time = HydrusData.GetNow() + self._flood_time
             
@@ -1109,7 +1110,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self._hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, post_field_info )
         
-        HydrusGlobals.client_controller.pub( 'file_dumped', self._page_key, hash, dump_status_enum )
+        self._controller.pub( 'file_dumped', self._page_key, hash, dump_status_enum )
         
         if self._next_dump_index == len( self._sorted_media_hashes ):
             
@@ -1262,7 +1263,7 @@ class ManagementPanelDumper( ManagementPanel ):
                 
                 media_to_select = self._hashes_to_media[ hash_to_select ]
                 
-                HydrusGlobals.client_controller.pub( 'set_focus', self._page_key, media_to_select )
+                self._controller.pub( 'set_focus', self._page_key, media_to_select )
                 
             
         
@@ -1363,7 +1364,9 @@ class ManagementPanelDumper( ManagementPanel ):
                         
                         mime = media.GetMime()
                         
-                        path = ClientFiles.GetFilePath( hash, mime )
+                        client_files_manager = self._controller.GetClientFilesManager()
+                        
+                        path = client_files_manager.GetFilePath( hash, mime )
                         
                         with open( path, 'rb' ) as f: file = f.read()
                         
@@ -1377,7 +1380,7 @@ class ManagementPanelDumper( ManagementPanel ):
                         
                         self._actually_dumping = True
                         
-                        HydrusGlobals.client_controller.CallToThread( self._THREADDoDump, hash, post_field_info, headers, body )
+                        self._controller.CallToThread( self._THREADDoDump, hash, post_field_info, headers, body )
                         
                     
                 except Exception as e:
@@ -1400,9 +1403,9 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_DUMPER ] = ManagementPanelDum
 '''
 class ManagementPanelGalleryImport( ManagementPanel ):
     
-    def __init__( self, parent, page, management_controller ):
+    def __init__( self, parent, page, controller, management_controller ):
         
-        ManagementPanel.__init__( self, parent, page, management_controller )
+        ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
         self._gallery_downloader_panel = ClientGUICommon.StaticBox( self, 'gallery downloader' )
         
@@ -1412,6 +1415,8 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._current_action = wx.StaticText( self._import_queue_panel )
         self._file_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
+        
+        self._waiting_politely_indicator = ClientGUICommon.WaitingPolitely( self._import_queue_panel, self._page_key )
         
         self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
@@ -1487,6 +1492,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
+        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_MIXED )
         button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
         button_sizer.AddF( self._files_pause_button, CC.FLAGS_MIXED )
         
@@ -1520,9 +1526,9 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        HydrusGlobals.client_controller.sub( self, 'UpdateStatus', 'update_status' )
+        self._controller.sub( self, 'UpdateStatus', 'update_status' )
         
-        self._gallery_import = self._controller.GetVariable( 'gallery_import' )
+        self._gallery_import = self._management_controller.GetVariable( 'gallery_import' )
         
         gallery_identifier = self._gallery_import.GetGalleryIdentifier()
         
@@ -1763,7 +1769,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         seed_cache = self._gallery_import.GetSeedCache()
         
-        HydrusGlobals.client_controller.pub( 'show_seed_cache', seed_cache )
+        self._controller.pub( 'show_seed_cache', seed_cache )
         
     
     def SetSearchFocus( self, page_key ):
@@ -1783,9 +1789,9 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_GALLERY ] = Management
 
 class ManagementPanelHDDImport( ManagementPanel ):
     
-    def __init__( self, parent, page, management_controller ):
+    def __init__( self, parent, page, controller, management_controller ):
         
-        ManagementPanel.__init__( self, parent, page, management_controller )
+        ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import summary' )
         
@@ -1824,9 +1830,9 @@ class ManagementPanelHDDImport( ManagementPanel ):
         
         #
         
-        HydrusGlobals.client_controller.sub( self, 'UpdateStatus', 'update_status' )
+        self._controller.sub( self, 'UpdateStatus', 'update_status' )
         
-        self._hdd_import = self._controller.GetVariable( 'hdd_import' )
+        self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
         
         self._Update()
         
@@ -1904,7 +1910,7 @@ class ManagementPanelHDDImport( ManagementPanel ):
         
         seed_cache = self._hdd_import.GetSeedCache()
         
-        HydrusGlobals.client_controller.pub( 'show_seed_cache', seed_cache )
+        self._controller.pub( 'show_seed_cache', seed_cache )
         
     
     def TestAbleToClose( self ):
@@ -1935,9 +1941,9 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_HDD ] = ManagementPane
 
 class ManagementPanelPageOfImagesImport( ManagementPanel ):
     
-    def __init__( self, parent, page, management_controller ):
+    def __init__( self, parent, page, controller, management_controller ):
         
-        ManagementPanel.__init__( self, parent, page, management_controller )
+        ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
         self._page_of_images_panel = ClientGUICommon.StaticBox( self, 'page of images downloader' )
         
@@ -1952,12 +1958,15 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
         
+        self._waiting_politely_indicator = ClientGUICommon.WaitingPolitely( self._import_queue_panel, self._page_key )
+        
         self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
+        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_MIXED )
         button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
         button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
         
@@ -2034,9 +2043,9 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        HydrusGlobals.client_controller.sub( self, 'UpdateStatus', 'update_status' )
+        self._controller.sub( self, 'UpdateStatus', 'update_status' )
         
-        self._page_of_images_import = self._controller.GetVariable( 'page_of_images_import' )
+        self._page_of_images_import = self._management_controller.GetVariable( 'page_of_images_import' )
         
         def file_download_hook( gauge_range, gauge_value ):
             
@@ -2225,7 +2234,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         seed_cache = self._page_of_images_import.GetSeedCache()
         
-        HydrusGlobals.client_controller.pub( 'show_seed_cache', seed_cache )
+        self._controller.pub( 'show_seed_cache', seed_cache )
         
     
     def SetSearchFocus( self, page_key ):
@@ -2245,13 +2254,13 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES ] = Man
 
 class ManagementPanelPetitions( ManagementPanel ):
     
-    def __init__( self, parent, page, management_controller ):
+    def __init__( self, parent, page, controller, management_controller ):
         
         self._petition_service_key = management_controller.GetKey( 'petition_service' )
         
-        ManagementPanel.__init__( self, parent, page, management_controller )
+        ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
-        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._petition_service_key )
+        self._service = self._controller.GetServicesManager().GetService( self._petition_service_key )
         self._can_ban = self._service.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS )
         
         self._num_petitions = None
@@ -2321,7 +2330,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         wx.CallAfter( self.EventRefreshNumPetitions, None )
         
-        HydrusGlobals.client_controller.sub( self, 'RefreshQuery', 'refresh_query' )
+        self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         
     
     def _DrawCurrentPetition( self ):
@@ -2375,9 +2384,9 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _ShowHashes( self, hashes ):
         
-        file_service_key = self._controller.GetKey( 'file_service' )
+        file_service_key = self._management_controller.GetKey( 'file_service' )
     
-        with wx.BusyCursor(): media_results = HydrusGlobals.client_controller.Read( 'media_results', file_service_key, hashes )
+        with wx.BusyCursor(): media_results = self._controller.Read( 'media_results', file_service_key, hashes )
         
         panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
@@ -2385,7 +2394,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         panel.Sort( self._page_key, self._sort_by.GetChoice() )
         
-        HydrusGlobals.client_controller.pub( 'swap_media_panel', self._page_key, panel )
+        self._controller.pub( 'swap_media_panel', self._page_key, panel )
         
     
     def _DrawNumPetitions( self ):
@@ -2436,7 +2445,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+            self._controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
             
         
         if len( denied_contents ) > 0:
@@ -2445,7 +2454,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+            self._controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
             
         
         self._current_petition = None
@@ -2468,7 +2477,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._DrawCurrentPetition()
         
-        HydrusGlobals.client_controller.CallToThread( do_it )
+        self._controller.CallToThread( do_it )
         
     
     def EventModifyPetitioner( self, event ):
@@ -2503,7 +2512,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._num_petitions_text.SetLabel( u'Fetching\u2026' )
         
-        HydrusGlobals.client_controller.CallToThread( do_it )
+        self._controller.CallToThread( do_it )
         
     
     def RefreshQuery( self, page_key ):
@@ -2515,13 +2524,13 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_PETITIONS ] = ManagementPanel
 
 class ManagementPanelQuery( ManagementPanel ):
     
-    def __init__( self, parent, page, management_controller ):
+    def __init__( self, parent, page, controller, management_controller ):
         
-        ManagementPanel.__init__( self, parent, page, management_controller )
+        ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
-        file_search_context = self._controller.GetVariable( 'file_search_context' )
+        file_search_context = self._management_controller.GetVariable( 'file_search_context' )
         
-        search_enabled = self._controller.GetVariable( 'search_enabled' )
+        search_enabled = self._management_controller.GetVariable( 'search_enabled' )
         
         self._query_key = HydrusThreading.JobKey( cancellable = True )
         
@@ -2533,12 +2542,12 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._current_predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._search_panel, self._page_key, initial_predicates )
             
-            file_service_key = self._controller.GetKey( 'file_service' )
-            tag_service_key = self._controller.GetKey( 'tag_service' )
+            file_service_key = self._management_controller.GetKey( 'file_service' )
+            tag_service_key = self._management_controller.GetKey( 'tag_service' )
             
-            include_current = self._controller.GetVariable( 'include_current' )
-            include_pending = self._controller.GetVariable( 'include_pending' )
-            synchronised = self._controller.GetVariable( 'synchronised' )
+            include_current = self._management_controller.GetVariable( 'include_current' )
+            include_pending = self._management_controller.GetVariable( 'include_pending' )
+            synchronised = self._management_controller.GetVariable( 'synchronised' )
             
             self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_service_key, tag_service_key, self._page.GetMedia, include_current = include_current, include_pending = include_pending, synchronised = synchronised )            
             self._search_panel.AddF( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2558,43 +2567,43 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if len( initial_predicates ) > 0 and not file_search_context.IsComplete(): wx.CallAfter( self._DoQuery )
         
-        HydrusGlobals.client_controller.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
-        HydrusGlobals.client_controller.sub( self, 'ChangeFileRepositoryPubsub', 'change_file_repository' )
-        HydrusGlobals.client_controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
-        HydrusGlobals.client_controller.sub( self, 'IncludeCurrent', 'notify_include_current' )
-        HydrusGlobals.client_controller.sub( self, 'IncludePending', 'notify_include_pending' )
-        HydrusGlobals.client_controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
-        HydrusGlobals.client_controller.sub( self, 'ShowQuery', 'file_query_done' )
-        HydrusGlobals.client_controller.sub( self, 'RefreshQuery', 'refresh_query' )
+        self._controller.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
+        self._controller.sub( self, 'ChangeFileRepositoryPubsub', 'change_file_repository' )
+        self._controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
+        self._controller.sub( self, 'IncludeCurrent', 'notify_include_current' )
+        self._controller.sub( self, 'IncludePending', 'notify_include_pending' )
+        self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
+        self._controller.sub( self, 'ShowQuery', 'file_query_done' )
+        self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         
     
     def _DoQuery( self ):
         
-        HydrusGlobals.client_controller.ResetIdleTimer()
+        self._controller.ResetIdleTimer()
         
         self._query_key.Cancel()
         
         self._query_key = HydrusThreading.JobKey()
         
-        if self._controller.GetVariable( 'search_enabled' ) and self._controller.GetVariable( 'synchronised' ):
+        if self._management_controller.GetVariable( 'search_enabled' ) and self._management_controller.GetVariable( 'synchronised' ):
             
             try:
                 
-                file_service_key = self._controller.GetKey( 'file_service' )
-                tag_service_key = self._controller.GetKey( 'tag_service' )
+                file_service_key = self._management_controller.GetKey( 'file_service' )
+                tag_service_key = self._management_controller.GetKey( 'tag_service' )
             
-                include_current = self._controller.GetVariable( 'include_current' )
-                include_pending = self._controller.GetVariable( 'include_pending' )
+                include_current = self._management_controller.GetVariable( 'include_current' )
+                include_pending = self._management_controller.GetVariable( 'include_pending' )
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
                 search_context = ClientData.FileSearchContext( file_service_key, tag_service_key, include_current, include_pending, current_predicates )
                 
-                self._controller.SetVariable( 'file_search_context', search_context )
+                self._management_controller.SetVariable( 'file_search_context', search_context )
                 
                 if len( current_predicates ) > 0:
                     
-                    HydrusGlobals.client_controller.StartFileQuery( self._query_key, search_context )
+                    self._controller.StartFileQuery( self._query_key, search_context )
                     
                     panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
                     
@@ -2603,7 +2612,7 @@ class ManagementPanelQuery( ManagementPanel ):
                     panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
                     
                 
-                HydrusGlobals.client_controller.pub( 'swap_media_panel', self._page_key, panel )
+                self._controller.pub( 'swap_media_panel', self._page_key, panel )
                 
             except: wx.MessageBox( traceback.format_exc() )
             
@@ -2611,14 +2620,14 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def AddMediaResultsFromQuery( self, query_key, media_results ):
         
-        if query_key == self._query_key: HydrusGlobals.client_controller.pub( 'add_media_results', self._page_key, media_results, append = False )
+        if query_key == self._query_key: self._controller.pub( 'add_media_results', self._page_key, media_results, append = False )
         
     
     def ChangeFileRepositoryPubsub( self, page_key, service_key ):
         
         if page_key == self._page_key:
             
-            self._controller.SetKey( 'file_service', service_key )
+            self._management_controller.SetKey( 'file_service', service_key )
             
             self._DoQuery()
             
@@ -2628,7 +2637,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._controller.SetKey( 'tag_service', service_key )
+            self._management_controller.SetKey( 'tag_service', service_key )
             
             self._DoQuery()
             
@@ -2651,7 +2660,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._controller.SetVariable( 'include_current', value )
+            self._management_controller.SetVariable( 'include_current', value )
             
             self._DoQuery()
             
@@ -2661,7 +2670,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._controller.SetVariable( 'include_pending', value )
+            self._management_controller.SetVariable( 'include_pending', value )
             
             self._DoQuery()
             
@@ -2676,7 +2685,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._controller.SetVariable( 'synchronised', value )
+            self._management_controller.SetVariable( 'synchronised', value )
             
             self._DoQuery()
             
@@ -2687,7 +2696,7 @@ class ManagementPanelQuery( ManagementPanel ):
         if page_key == self._page_key:
             
             try: self._searchbox.SetFocus() # there's a chance this doesn't exist!
-            except: HydrusGlobals.client_controller.pub( 'set_media_focus' )
+            except: self._controller.pub( 'set_media_focus' )
             
         
     
@@ -2699,7 +2708,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                file_service_key = self._controller.GetKey( 'file_service' )
+                file_service_key = self._management_controller.GetKey( 'file_service' )
                 
                 panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
                 
@@ -2707,7 +2716,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 panel.Sort( self._page_key, self._sort_by.GetChoice() )
                 
-                HydrusGlobals.client_controller.pub( 'swap_media_panel', self._page_key, panel )
+                self._controller.pub( 'swap_media_panel', self._page_key, panel )
                 
             
         except: wx.MessageBox( traceback.format_exc() )
@@ -2717,9 +2726,9 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_QUERY ] = ManagementPanelQuer
 
 class ManagementPanelThreadWatcherImport( ManagementPanel ):
     
-    def __init__( self, parent, page, management_controller ):
+    def __init__( self, parent, page, controller, management_controller ):
         
-        ManagementPanel.__init__( self, parent, page, management_controller )
+        ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
         self._thread_watcher_panel = ClientGUICommon.StaticBox( self, 'thread watcher' )
         
@@ -2746,6 +2755,8 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         self._thread_check_now_button = wx.Button( self._options_panel, label = 'check now' )
         self._thread_check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
+        
+        self._waiting_politely_indicator = ClientGUICommon.WaitingPolitely( self._options_panel, self._page_key )
         
         self._seed_cache_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.seed_cache )
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
@@ -2774,6 +2785,7 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
         button_sizer.AddF( self._thread_check_now_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_MIXED )
         button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
         button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
         
@@ -2811,10 +2823,10 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        HydrusGlobals.client_controller.sub( self, 'UpdateStatus', 'update_status' )
-        HydrusGlobals.client_controller.sub( self, 'DecrementTimesToCheck', 'decrement_times_to_check' )
+        self._controller.sub( self, 'UpdateStatus', 'update_status' )
+        self._controller.sub( self, 'DecrementTimesToCheck', 'decrement_times_to_check' )
         
-        self._thread_watcher_import = self._controller.GetVariable( 'thread_watcher_import' )
+        self._thread_watcher_import = self._management_controller.GetVariable( 'thread_watcher_import' )
         
         def file_download_hook( gauge_range, gauge_value ):
             
@@ -3019,7 +3031,7 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         seed_cache = self._thread_watcher_import.GetSeedCache()
         
-        HydrusGlobals.client_controller.pub( 'show_seed_cache', seed_cache )
+        self._controller.pub( 'show_seed_cache', seed_cache )
         
     
     def EventTimesToCheck( self, event ):

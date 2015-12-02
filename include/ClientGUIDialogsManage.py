@@ -3069,6 +3069,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         self._listbook.AddPage( 'local server', self._ServerPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'shortcuts', self._ShortcutsPanel( self._listbook ) )
+        self._listbook.AddPage( 'file storage locations', self._ClientFilesPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook ) )
         self._listbook.AddPage( 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
@@ -3106,7 +3107,136 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         wx.CallAfter( self._ok.SetFocus )
         
-    
+
+    class _ClientFilesPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._client_files = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'path', -1 ), ( 'weight', 80 ) ] )
+            
+            self._add = wx.Button( self, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            
+            self._edit = wx.Button( self, label = 'edit weight' )
+            self._edit.Bind( wx.EVT_BUTTON, self.EventEditWeight )
+            
+            self._delete = wx.Button( self, label = 'delete' )
+            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+            
+            #
+            
+            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            
+            for ( location, weight ) in self._new_options.GetClientFilesLocationsToIdealWeights().items():
+                
+                self._client_files.Append( ( location, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( location, weight ) )
+                
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            text = 'Here you can change the folders where the client stores your files. Setting a higher weight increases the proportion of your collection that that folder stores.'
+            text += os.linesep * 2
+            text += 'If you add or remove folders here, it will take time for the client to incrementally rebalance your files across the new selection, but if you are in a hurry, you can force a full rebalance from the database->maintenance menu on the main gui.'
+            
+            st = wx.StaticText( self, label = text )
+            
+            st.Wrap( 400 )
+            
+            vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.AddF( self._client_files, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._add, CC.FLAGS_MIXED )
+            hbox.AddF( self._edit, CC.FLAGS_MIXED )
+            hbox.AddF( self._delete, CC.FLAGS_MIXED )
+            
+            vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+            
+            self.SetSizer( vbox )
+            
+        
+        def EventAdd( self, event ):
+            
+            with wx.DirDialog( self, 'Select the file location' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    path = HydrusData.ToUnicode( dlg.GetPath() )
+                    
+                    for ( location, weight ) in self._client_files.GetClientData():
+                        
+                        if path == location:
+                            
+                            wx.MessageBox( 'You already have that location entered!' )
+                            
+                            return
+                            
+                        
+                    
+                    with wx.NumberEntryDialog( self, 'Enter the weight of ' + path + '.', '', 'Enter Weight', value = 1, min = 1, max = 256 ) as dlg_num:
+                        
+                        if dlg_num.ShowModal() == wx.ID_OK:
+                            
+                            weight = dlg_num.GetValue()
+                            
+                            weight = float( weight )
+                            
+                            self._client_files.Append( ( path, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( path, weight ) )
+                            
+                        
+                    
+                
+            
+        
+        def EventDelete( self, event ):
+            
+            if len( self._client_files.GetAllSelected() ) < self._client_files.GetItemCount():
+                
+                self._client_files.RemoveAllSelected()
+                
+            
+        
+        def EventEditWeight( self, event ):
+            
+            for i in self._client_files.GetAllSelected():
+                
+                ( location, weight ) = self._client_files.GetClientData( i )
+                
+                with wx.NumberEntryDialog( self, 'Enter the weight of ' + location + '.', '', 'Enter Weight', value = int( weight ), min = 1, max = 256 ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        weight = dlg.GetValue()
+                        
+                        weight = float( weight )
+                        
+                        self._client_files.UpdateRow( i, ( location, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( location, weight ) )
+                        
+                    
+                
+            
+        
+        def UpdateOptions( self ):
+            
+            locations_to_weights = {}
+            
+            for ( location, weight ) in self._client_files.GetClientData():
+                
+                locations_to_weights[ location ] = weight
+                
+            
+            self._new_options.SetClientFilesLocationsToIdealWeights( locations_to_weights )
+            
+        
+
     class _ColoursPanel( wx.Panel ):
         
         def __init__( self, parent ):
@@ -3474,13 +3604,16 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._idle_panel = ClientGUICommon.StaticBox( self, 'when to run big jobs' )
+            self._idle_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
             self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
             
-            self._idle_period = wx.SpinCtrl( self._idle_panel, min = 0, max = 1000 )
-            self._idle_mouse_period = wx.SpinCtrl( self._idle_panel, min = 0, max = 1000 )
-            self._idle_cpu_max = wx.SpinCtrl( self._idle_panel, min = 0, max = 100 )
+            self._idle_normal = wx.CheckBox( self._idle_panel )
+            self._idle_normal.Bind( wx.EVT_CHECKBOX, self.EventIdleNormal )
+            
+            self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
+            self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
+            self._idle_cpu_max = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 0, max = 99, unit = '%', none_phrase = 'ignore cpu usage' )
             
             self._idle_shutdown = ClientGUICommon.BetterChoice( self._idle_panel )
             
@@ -3489,22 +3622,25 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 self._idle_shutdown.Append( CC.idle_string_lookup[ idle_id ], idle_id )
                 
             
+            self._idle_shutdown.Bind( wx.EVT_CHOICE, self.EventIdleShutdown )
+            
             self._idle_shutdown_max_minutes = wx.SpinCtrl( self._idle_panel, min = 1, max = 1440 )
             
-            self._maintenance_vacuum_period = wx.SpinCtrl( self._maintenance_panel, min = 0, max = 365 )
+            self._maintenance_vacuum_period = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 1, max = 365, multiplier = 86400, none_phrase = 'do not automatically vacuum' )
             
             self._processing_phase = wx.SpinCtrl( self._processing_panel, min = 0, max = 100000 )
             self._processing_phase.SetToolTipString( 'how long this client will delay processing updates after they are due. useful if you have multiple clients and do not want them to process at the same time' )
             
             #
             
-            self._idle_period.SetValue( HC.options[ 'idle_period' ] / 60 )
-            self._idle_mouse_period.SetValue( HC.options[ 'idle_mouse_period' ] / 60 )
+            self._idle_normal.SetValue( HC.options[ 'idle_normal' ] )
+            self._idle_period.SetValue( HC.options[ 'idle_period' ] )
+            self._idle_mouse_period.SetValue( HC.options[ 'idle_mouse_period' ] )
             self._idle_cpu_max.SetValue( HC.options[ 'idle_cpu_max' ] )
             self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
             self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
             
-            self._maintenance_vacuum_period.SetValue( HC.options[ 'maintenance_vacuum_period' ] / 86400 )
+            self._maintenance_vacuum_period.SetValue( HC.options[ 'maintenance_vacuum_period' ] )
             
             self._processing_phase.SetValue( HC.options[ 'processing_phase' ] )
             
@@ -3514,13 +3650,16 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of general client inactivity until client can be considered idle: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run jobs when the client is not busy?: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._idle_normal, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is busy if general browsing activity has occured in the past: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_period, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Minutes of unmoving mouse until client can be considered idle: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is busy if the mouse has been moved in the past: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_mouse_period, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Do not start a job if any CPU core has more than this percent usage: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is busy if any CPU core has recent average usage above: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_cpu_max, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run jobs on shutdown?: ' ), CC.FLAGS_MIXED )
@@ -3529,13 +3668,13 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Max number of minutes to run shutdown jobs: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_shutdown_max_minutes, CC.FLAGS_MIXED )
             
-            text = 'CPU-heavy jobs like maintenance routines and repository synchronisation processing will only start by themselves when you are not using the client.'
+            text = 'CPU-heavy jobs like maintenance routines and repository synchronisation processing will stutter or lock up your gui, so they do not normally run when you are searching for and looking at files.'
             text += os.linesep * 2
-            text += 'If you set both client inactivy and unmoving mouse to 0, the client will never consider itself idle and you should set up shutdown processing.'
+            text += 'You can set these jobs to run only when the client is not busy, or only during shutdown, or neither, or both.'
             
             st = wx.StaticText( self._idle_panel, label = text )
             
-            st.Wrap( 400 )
+            st.Wrap( 500 )
             
             self._idle_panel.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._idle_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3546,7 +3685,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_panel, label = 'Number of days to wait between vacuums (0 for never): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_panel, label = 'Number of days to wait between vacuums: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._maintenance_vacuum_period, CC.FLAGS_MIXED )
             
             self._maintenance_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3557,7 +3696,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._processing_panel, label = 'Delay update processing by (s): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._processing_panel, label = 'Delay repository update processing by (s): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._processing_phase, CC.FLAGS_MIXED )
             
             self._processing_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3572,16 +3711,60 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self.SetSizer( vbox )
             
+            self._EnableDisableIdleNormal()
+            self._EnableDisableIdleShutdown()
+            
+        
+        def _EnableDisableIdleNormal( self ):
+            
+            if self._idle_normal.GetValue() == True:
+                
+                self._idle_period.Enable()
+                self._idle_mouse_period.Enable()
+                self._idle_cpu_max.Enable()
+                
+            else:
+                
+                self._idle_period.Disable()
+                self._idle_mouse_period.Disable()
+                self._idle_cpu_max.Disable()
+                
+            
+        
+        def _EnableDisableIdleShutdown( self ):
+            
+            if self._idle_shutdown.GetChoice() == CC.IDLE_NOT_ON_SHUTDOWN:
+                
+                self._idle_shutdown_max_minutes.Disable()
+                
+            else:
+                
+                self._idle_shutdown_max_minutes.Enable()
+                
+            
+        
+        def EventIdleNormal( self, event ):
+            
+            self._EnableDisableIdleNormal()
+            
+        
+        def EventIdleShutdown( self, event ):
+            
+            self._EnableDisableIdleShutdown()
+            
         
         def UpdateOptions( self ):
             
-            HC.options[ 'idle_period' ] = 60 * self._idle_period.GetValue()
-            HC.options[ 'idle_mouse_period' ] = 60 * self._idle_mouse_period.GetValue()
+            HC.options[ 'idle_normal' ] = self._idle_normal.GetValue()
+            
+            HC.options[ 'idle_period' ] = self._idle_period.GetValue()
+            HC.options[ 'idle_mouse_period' ] = self._idle_mouse_period.GetValue()
             HC.options[ 'idle_cpu_max' ] = self._idle_cpu_max.GetValue()
+            
             HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
             HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
             
-            HC.options[ 'maintenance_vacuum_period' ] = 86400 * self._maintenance_vacuum_period.GetValue()
+            HC.options[ 'maintenance_vacuum_period' ] = self._maintenance_vacuum_period.GetValue()
             
             HC.options[ 'processing_phase' ] = self._processing_phase.GetValue()
             
@@ -4427,16 +4610,19 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._estimated_number_fullscreens = wx.StaticText( self, label = '' )
             
             self._num_autocomplete_chars = wx.SpinCtrl( self, min = 1, max = 100 )
-            self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db' + os.linesep + 'increase this if you find autocomplete results are slow' )
+            self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db. (otherwise, it will only fetch exact matches)' + os.linesep + 'increase this if you find autocomplete results are slow' )
+            
+            self._fetch_ac_results_automatically = wx.CheckBox( self )
+            self._fetch_ac_results_automatically.Bind( wx.EVT_CHECKBOX, self.EventFetchAuto )
             
             self._autocomplete_long_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
-            self._autocomplete_long_wait.SetToolTipString( 'how long the gui will wait, after you enter a character, before it queries the db with what you have entered so far' )
+            self._autocomplete_long_wait.SetToolTipString( 'how long the gui will typically wait, after you enter a character, before it queries the db with what you have entered so far' )
             
             self._autocomplete_short_wait_chars = wx.SpinCtrl( self, min = 1, max = 100 )
             self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
             
             self._autocomplete_short_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
-            self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
+            self._autocomplete_short_wait.SetToolTipString( 'how long the gui will typically wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
             
             #
             
@@ -4453,6 +4639,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
             
             self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
+            
+            self._fetch_ac_results_automatically.SetValue( HC.options[ 'fetch_ac_results_automatically' ] )
             
             ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
             
@@ -4479,6 +4667,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             fullscreens_sizer.AddF( self._fullscreen_cache_size, CC.FLAGS_MIXED )
             fullscreens_sizer.AddF( self._estimated_number_fullscreens, CC.FLAGS_MIXED )
             
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
@@ -4489,6 +4679,12 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'Thumbnail height: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._thumbnail_height, CC.FLAGS_MIXED )
             
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
             gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( thumbnails_sizer, CC.FLAGS_NONE )
             
@@ -4498,8 +4694,21 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for media viewer cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
             
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            text = 'If you want to disable automatic autocomplete results fetching, use the Tab key to fetch results manually.'
+            
+            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
             gridbox.AddF( wx.StaticText( self, label = 'Autocomplete character threshold: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._num_autocomplete_chars, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Automatically fetch autocomplete results after a short delay: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._fetch_ac_results_automatically, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait (ms): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_long_wait, CC.FLAGS_MIXED )
@@ -4510,15 +4719,34 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_short_wait, CC.FLAGS_MIXED )
             
-            self.SetSizer( gridbox )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
             
             #
             
+            self.EventFetchAuto( None )
             self.EventFullscreensUpdate( None )
             self.EventPreviewsUpdate( None )
             self.EventThumbnailsUpdate( None )
             
             wx.CallAfter( self.Layout ) # draws the static texts correctly
+            
+        
+        def EventFetchAuto( self, event ):
+            
+            if self._fetch_ac_results_automatically.GetValue() == True:
+                
+                self._autocomplete_long_wait.Enable()
+                self._autocomplete_short_wait_chars.Enable()
+                self._autocomplete_short_wait.Enable()
+                
+            else:
+                
+                self._autocomplete_long_wait.Disable()
+                self._autocomplete_short_wait_chars.Disable()
+                self._autocomplete_short_wait.Disable()
+                
             
         
         def EventFullscreensUpdate( self, event ):
@@ -4565,6 +4793,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
             
             HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
+            
+            HC.options[ 'fetch_ac_results_automatically' ] = self._fetch_ac_results_automatically.GetValue()
             
             long_wait = self._autocomplete_long_wait.GetValue()
             
@@ -6562,7 +6792,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             ( service_key, service_type, name, info ) = self._original_info
             
-            message = 'This will completely reset ' + name + ', deleting all downloaded and processed information from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will have to redownload and reprocess everything, which could take a very long time.' + os.linesep * 2 + 'If you do not understand what this button does, you definitely want to click no!'
+            message = 'This will completely reset ' + name + ', deleting all downloaded and processed information from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will slowly redownload and reprocess everything in the background.' + os.linesep * 2 + 'If you do not understand what this button does, you definitely want to click no!'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
@@ -6579,7 +6809,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             ( service_key, service_type, name, info ) = self._original_info
             
-            message = 'This will remove all the processed information for ' + name + ' from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will have to reprocess all the downloaded updates, which could take a very long time.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
+            message = 'This will remove all the processed information for ' + name + ' from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will slowly reprocess everything in the background.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 

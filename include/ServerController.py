@@ -5,12 +5,12 @@ import HydrusData
 import HydrusExceptions
 import HydrusGlobals
 import HydrusNetworking
-import HydrusServer
 import HydrusSessions
 import HydrusThreading
 import os
 import ServerDaemons
 import ServerDB
+import ServerServer
 import sys
 import time
 import traceback
@@ -227,9 +227,9 @@ class Controller( HydrusController.HydrusController ):
                         
                         message = options[ 'message' ]
                         
-                        if service_type == HC.SERVER_ADMIN: service_object = HydrusServer.HydrusServiceAdmin( service_key, service_type, message )
-                        elif service_type == HC.FILE_REPOSITORY: service_object = HydrusServer.HydrusServiceRepositoryFile( service_key, service_type, message )
-                        elif service_type == HC.TAG_REPOSITORY: service_object = HydrusServer.HydrusServiceRepositoryTag( service_key, service_type, message )
+                        if service_type == HC.SERVER_ADMIN: service_object = ServerServer.HydrusServiceAdmin( service_key, service_type, message )
+                        elif service_type == HC.FILE_REPOSITORY: service_object = ServerServer.HydrusServiceRepositoryFile( service_key, service_type, message )
+                        elif service_type == HC.TAG_REPOSITORY: service_object = ServerServer.HydrusServiceRepositoryTag( service_key, service_type, message )
                         elif service_type == HC.MESSAGE_DEPOT: return
                         
                         self._services[ service_key ] = reactor.listenTCP( port, service_object )
