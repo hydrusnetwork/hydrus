@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 184</h3></li>
+				<ul>
+					<li>added external client_files storage!</li>
+					<li>you can add external client_files folders in options->file storage locations, further giving them weight</li>
+					<li>a new daemon will incrementally rebalance your files (and recover orphaned subfolders!) over your different storage locations</li>
+					<li>you can also force a full rebalance from the new database->maintenance->rebalance file storage</li>
+					<li>simplified the maintenance and processing panel</li>
+					<li>the maintenance and processing panel controls now appropriately support being set to 'none'</li>
+					<li>the 'run jobs on idle?' question is now explicit on the maintenance and processing panel</li>
+					<li>deselecting 'run jobs on idle/shutdown' will now disable subordinate controls</li>
+					<li>hitting tab on the autocomplete control now triggers an immediate 'fetch results' call</li>
+					<li>added a checkbox to options->speed and memory to completely disable automatic autocomplete results fetching (i.e. if you want to manually control a/c result-fetching only with this new tab shortcut)</li>
+					<li>the new less-laggy autocomplete results fetch won't trigger if the latest query is shorter than the cached query (i.e. you won't get lag when hitting backspace a bunch of times on autocomplete)</li>
+					<li>hitting shift+tab on the autocomplete control now disables all other key event capture, letting you enter IME without your up/down/enter presses controlling the dropdown list of results</li>
+					<li>'waiting politely' time is now indicated with a small 'traffic light'-type circle control on all downloader pages</li>
+					<li>fixed some occasional 'I'll go sit in the top-left corner of the screen and not fix my position' hover window behaviour in Linux</li>
+					<li>fixed sibling predicate collapse for the 'read' autocomplete dropdown for database results</li>
+					<li>refactored how predicates are collapsed and sorted to be a bit more sensible</li>
+					<li>fixed maintenance of local booru data use even if local booru does not receive any requests</li>
+					<li>improved some service/content update error handling in repository sync</li>
+					<li>the system:rating value-entry dialog no longer lists its rating services in random order</li>
+					<li>'open externally' will no longer show for non-local thumbnails' right-click menus</li>
+					<li>fixed audio/pdf thumbnail display for local booru, although they will be full size for now</li>
+					<li>harmonised some hex-prefix folder generation code</li>
+					<li>improved some file and directory copying code</li>
+					<li>improved upload pending popup message cleanup</li>
+					<li>added help_dir to hydrusconstants</li>
+					<li>miscellaneous refactoring</li>
+					<li>misc cleanup</li>
+					<li>extracted server-specific services and server resources from the common import path to the server import path</li>
+					<li>a bit more misc server refactoring</li>
+					<li>updated a couple of bits of help</li>
+				</ul>
 				<li><h3>version 183</h3></li>
 				<ul>
 					<li>added swf thumbnail support--it works ok for most swfs!</li>
