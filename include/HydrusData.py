@@ -263,7 +263,33 @@ def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
     
 def ConvertTimeDeltaToPrettyString( seconds ):
     
-    if seconds > 1:
+    if seconds > 60:
+        
+        seconds = int( seconds )
+        
+        if seconds > 86400:
+            
+            days = seconds / 86400
+            hours = ( seconds % 86400 ) / 3600
+            
+            result = '%d' % days + ' days ' + '%d' % hours + ' hours'
+            
+        elif seconds > 3600:
+            
+            hours = seconds / 3600
+            minutes = ( seconds % 3600 ) / 60
+            
+            result = '%d' % hours + ' hours ' + '%d' % minutes + ' minutes'
+            
+        else:
+            
+            minutes = seconds / 60
+            seconds = seconds % 60
+            
+            result = '%d' % minutes + ' minutes ' + '%d' % seconds + ' seconds'
+            
+        
+    elif seconds > 1:
         
         result = '%.1f' % seconds + ' seconds'
         

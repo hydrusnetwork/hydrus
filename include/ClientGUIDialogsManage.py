@@ -14,6 +14,7 @@ import ClientGUIPredicates
 import ClientImporting
 import ClientMedia
 import ClientRatings
+import ClientSearch
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -1504,7 +1505,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
         
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
-        file_search_context = ClientData.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
         period = 15 * 60
         phrase = '{hash}'
         
@@ -1538,7 +1539,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         pretty_file_search_context = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in file_search_context.GetPredicates() )
         
-        pretty_period = str( period / 60 ) + ' minutes'
+        pretty_period = HydrusData.ConvertTimeDeltaToPrettyString( period )
         
         pretty_phrase = phrase
         
@@ -1658,13 +1659,11 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         #
         
-        self._period_box = ClientGUICommon.StaticBox( self, 'export period (minutes)' )
+        self._period_box = ClientGUICommon.StaticBox( self, 'export period' )
         
-        self._period = wx.SpinCtrl( self._period_box )
+        self._period = ClientGUICommon.TimeDeltaCtrl( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
-        self._period.SetRange( 3, 60 * 24 * 30 )
-        
-        self._period.SetValue( period / 60 )
+        self._period.SetValue( period )
         
         #
         
@@ -1764,7 +1763,7 @@ If you select synchronise, be careful!'''
         
         file_search_context.SetPredicates( predicates )
         
-        period = self._period.GetValue() * 60
+        period = self._period.GetValue()
         
         phrase = self._pattern.GetValue()
         
@@ -2598,7 +2597,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def _GetPrettyVariables( self, check_period ):
         
-        pretty_check_period = str( check_period / 60 ) + ' minutes'
+        pretty_check_period = HydrusData.ConvertTimeDeltaToPrettyString( check_period )
         
         return pretty_check_period
         
@@ -2726,7 +2725,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._open_popup = wx.CheckBox( self._folder_box )
         
-        self._period = wx.SpinCtrl( self._folder_box, min = 3, max = 60 * 24 * 30 )
+        self._period = ClientGUICommon.TimeDeltaCtrl( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
         self._paused = wx.CheckBox( self._folder_box )
         
@@ -2785,7 +2784,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._path.SetPath( path )
         self._open_popup.SetValue( open_popup )
         
-        self._period.SetValue( period / 60 )
+        self._period.SetValue( period )
         self._paused.SetValue( paused )
         
         self._mimes.SetInfo( mimes )
@@ -2829,7 +2828,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         gridbox.AddF( wx.StaticText( self._folder_box, label = 'folder path: '), CC.FLAGS_MIXED )
         gridbox.AddF( self._path, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self._folder_box, label = 'check period (mins): '), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self._folder_box, label = 'check period: '), CC.FLAGS_MIXED )
         gridbox.AddF( self._period, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         gridbox.AddF( wx.StaticText( self._folder_box, label = 'currently paused: '), CC.FLAGS_MIXED )
@@ -3036,7 +3035,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             action_locations[ CC.STATUS_FAILED ] = HydrusData.ToUnicode( self._location_failed.GetPath() )
             
         
-        period = self._period.GetValue() * 60
+        period = self._period.GetValue()
         open_popup = self._open_popup.GetValue()
         
         paused = self._paused.GetValue()
@@ -3058,7 +3057,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         self._listbook.AddPage( 'connection', self._ConnectionPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
-        self._listbook.AddPage( 'speed and memory', self._SpeedAndMemoryPanel( self._listbook ) )
+        self._listbook.AddPage( 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media', self._MediaPanel( self._listbook ) )
         self._listbook.AddPage( 'gui', self._GUIPanel( self._listbook ) )
@@ -3070,7 +3069,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         self._listbook.AddPage( 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'shortcuts', self._ShortcutsPanel( self._listbook ) )
         self._listbook.AddPage( 'file storage locations', self._ClientFilesPanel( self._listbook ) )
-        self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook ) )
+        self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'Save' )
@@ -3511,15 +3510,19 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
     
     class _DownloadingPanel( wx.Panel ):
         
-        def __init__( self, parent ):
+        def __init__( self, parent, new_options ):
             
             wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             general = ClientGUICommon.StaticBox( self, 'general' )
             
             self._website_download_polite_wait = wx.SpinCtrl( general, min = 1, max = 30 )
+            
+            self._waiting_politely_text = wx.CheckBox( general )
             
             #
             
@@ -3534,12 +3537,13 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._thread_times_to_check = wx.SpinCtrl( thread_checker, min = 0, max = 100 )
             self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
             
-            self._thread_check_period = wx.SpinCtrl( thread_checker, min = 30, max = 86400 )
+            self._thread_check_period = ClientGUICommon.TimeDeltaCtrl( thread_checker, min = 30, hours = True, minutes = True, seconds = True )
             self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
             
             #
             
             self._website_download_polite_wait.SetValue( HC.options[ 'website_download_polite_wait' ] )
+            self._waiting_politely_text.SetValue( self._new_options.GetBoolean( 'waiting_politely_text' ) )
             
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
             
@@ -3558,6 +3562,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( general, label = 'seconds to politely wait between gallery/thread url requests: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._website_download_polite_wait, CC.FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( general, label = 'instead of the traffic light waiting politely indicator, use text: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._waiting_politely_text, CC.FLAGS_MIXED )
+            
             general.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
@@ -3572,7 +3579,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddF( wx.StaticText( thread_checker, label = 'default number of times to check: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._thread_times_to_check, CC.FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( thread_checker, label = 'default wait in seconds between checks: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( thread_checker, label = 'default wait between checks: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._thread_check_period, CC.FLAGS_MIXED )
             
             thread_checker.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
@@ -3591,6 +3598,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         def UpdateOptions( self ):
             
             HC.options[ 'website_download_polite_wait' ] = self._website_download_polite_wait.GetValue()
+            self._new_options.SetBoolean( 'waiting_politely_text', self._waiting_politely_text.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
             HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
             
@@ -4582,9 +4590,11 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
     
     class _SpeedAndMemoryPanel( wx.Panel ):
         
-        def __init__( self, parent ):
+        def __init__( self, parent, new_options ):
             
             wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
@@ -4608,6 +4618,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
             
             self._estimated_number_fullscreens = wx.StaticText( self, label = '' )
+            
+            self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( self, '', min = 1, max = 100000 )
             
             self._num_autocomplete_chars = wx.SpinCtrl( self, min = 1, max = 100 )
             self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db. (otherwise, it will only fetch exact matches)' + os.linesep + 'increase this if you find autocomplete results are slow' )
@@ -4637,6 +4649,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
             
             self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
+            
+            self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
             
             self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
             
@@ -4699,6 +4713,15 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             text = 'If you want to disable automatic autocomplete results fetching, use the Tab key to fetch results manually.'
             
             vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Forced system:limit for all searches: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._forced_search_limit, CC.FLAGS_NONE )
+            
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
@@ -4791,6 +4814,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
             HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
             HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
+            
+            self._new_options.SetNoneableInteger( 'forced_search_limit', self._forced_search_limit.GetValue() )
             
             HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
             
@@ -6891,6 +6916,10 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         #
         
+        text_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        text_hbox.AddF( wx.StaticText( self, label = 'For more information about subscriptions, please check' ), CC.FLAGS_MIXED )
+        text_hbox.AddF( wx.HyperlinkCtrl( self, id = -1, label = 'here', url = 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' ), CC.FLAGS_MIXED )
+        
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
         add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
         add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
@@ -6901,6 +6930,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox.AddF( text_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
         vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
@@ -7107,11 +7137,11 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._booru_selector = wx.ListBox( self._query_panel )
             self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
             
-            self._period_days = wx.SpinCtrl( self._query_panel, min = 1, max = 1000 )
+            self._period = ClientGUICommon.TimeDeltaCtrl( self._query_panel, min = 3600 * 4, days = True, hours = True )
             
             self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
             
-            self._get_tags_if_redundant = wx.CheckBox( self._info_panel, label = 'get tags even if file already in db' )
+            self._get_tags_if_redundant = wx.CheckBox( self._info_panel, label = 'get tags even if new file is already in db' )
             
             self._initial_file_limit = ClientGUICommon.NoneableSpinCtrl( self._info_panel, 'initial file limit', none_phrase = 'no limit', min = 1, max = 1000000 )
             self._initial_file_limit.SetToolTipString( 'If set, the first sync will add no more than this many files. Otherwise, it will get everything the gallery has.' )
@@ -7145,8 +7175,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             hbox.AddF( wx.StaticText( self._query_panel, label = 'Check subscription every ' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._period_days, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._query_panel, label = 'days' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._period, CC.FLAGS_MIXED )
             
             self._query_panel.AddF( self._site_type, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._query_panel.AddF( self._query, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -7166,7 +7195,14 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             seed_cache = self._original_subscription.GetSeedCache()
             
-            seed_cache_text = str( seed_cache.GetSeedCount() ) + ' urls in cache'
+            seed_cache_text = HydrusData.ConvertIntToPrettyString( seed_cache.GetSeedCount() ) + ' urls in cache'
+            
+            num_failed = seed_cache.GetSeedCount( CC.STATUS_FAILED )
+            
+            if num_failed > 0:
+                
+                seed_cache_text += ', ' + HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed'
+                
             
             self._info_panel.AddF( wx.StaticText( self._info_panel, label = seed_cache_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             self._info_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
@@ -7284,7 +7320,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             self._query.SetValue( query )
             
-            self._period_days.SetValue( period / 86400 )
+            self._period.SetValue( period )
             
             self._get_tags_if_redundant.SetValue( get_tags_if_redundant )
             self._initial_file_limit.SetValue( initial_file_limit )
@@ -7341,7 +7377,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             query = self._query.GetValue()
             
-            period = self._period_days.GetValue() * 86400
+            period = self._period.GetValue()
             
             get_tags_if_redundant = self._get_tags_if_redundant.GetValue()
             initial_file_limit = self._initial_file_limit.GetValue()
@@ -7700,8 +7736,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
-            self._children = ClientGUICommon.ListBoxTagsStrings( self )
-            self._parents = ClientGUICommon.ListBoxTagsStrings( self )
+            self._children = ClientGUICommon.ListBoxTagsStrings( self, show_sibling_text = False )
+            self._parents = ClientGUICommon.ListBoxTagsStrings( self, show_sibling_text = False )
             
             expand_parents = True
             
@@ -8258,7 +8294,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             removed_callable = lambda tags: 1
             
-            self._old_siblings = ClientGUICommon.ListBoxTagsStrings( self )
+            self._old_siblings = ClientGUICommon.ListBoxTagsStrings( self, show_sibling_text = False )
             self._new_sibling = wx.StaticText( self )
             
             expand_parents = False
@@ -8730,7 +8766,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 self._old_siblings.RemoveTags( { new } )
                 
-                self._new_sibling.SetLabel( new )
+                self._new_sibling.SetLabel( HydrusTags.RenderTag( new ) )
                 
                 self._current_new = new
                 
@@ -9175,7 +9211,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                         
                         if sibling_tag is not None and num_sibling_current < num_files:
                             
-                            choices.append( ( 'add ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
+                            choices.append( ( 'add ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - num_sibling_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
                             
                         
                     
@@ -9202,7 +9238,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                             
                             if num_sibling_current + num_sibling_pending < num_files:
                                 
-                                choices.append( ( 'pend ' + sibling_tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_PEND, sibling_tag ) ) )
+                                choices.append( ( 'pend ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_sibling_current + num_sibling_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, sibling_tag ) ) )
                                 
                             
                         

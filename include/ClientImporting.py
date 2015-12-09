@@ -2593,7 +2593,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         delay = self._check_period
                         
                     
-                    watcher_status = 'checking again in ' + HydrusData.ConvertTimestampToPrettyPending( self._last_time_checked + delay ) + ' seconds'
+                    watcher_status = 'checking again ' + HydrusData.ConvertTimestampToPrettyPending( self._last_time_checked + delay )
                     
                 else:
                     

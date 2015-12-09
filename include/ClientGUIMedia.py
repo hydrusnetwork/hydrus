@@ -1768,6 +1768,8 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventPaint( self, event ):
         
+        dc = wx.BufferedPaintDC( self, self._client_bmp )
+        
         ( client_x, client_y ) = self.GetClientSize()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
@@ -1775,14 +1777,6 @@ class MediaPanelThumbnails( MediaPanel ):
         page_height = self._num_rows_per_canvas_page * thumbnail_span_height
         
         page_indices_to_display = self._CalculateVisiblePageIndices()
-        
-        dc = wx.BufferedPaintDC( self, self._client_bmp )
-        
-        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
-        
-        y_start = self._GetYStart()
-        
-        earliest_y = y_start * yUnit
         
         earliest_page_index_to_display = min( page_indices_to_display )
         last_page_index_to_display = max( page_indices_to_display )
@@ -1801,6 +1795,12 @@ class MediaPanelThumbnails( MediaPanel ):
         potential_clean_indices_to_steal = [ page_index for page_index in self._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
         
         random.shuffle( potential_clean_indices_to_steal )
+        
+        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
+        
+        y_start = self._GetYStart()
+        
+        earliest_y = y_start * yUnit
         
         for page_index in page_indices_to_draw:
             

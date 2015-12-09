@@ -2516,6 +2516,18 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 184:
+            
+            result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( '', ) ).fetchone()
+            
+            if result is not None:
+                
+                ( tag_id, ) = result
+                
+                self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
+                
+            
+        
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

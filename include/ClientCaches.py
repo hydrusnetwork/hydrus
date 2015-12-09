@@ -1350,7 +1350,7 @@ class TagParentsManager( object ):
                     
                     for parent in parents:
                         
-                        parent_predicate = ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
+                        parent_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
                         
                         results.append( parent_predicate )
                         
@@ -1543,7 +1543,7 @@ class TagSiblingsManager( object ):
                         
                         ( old_pred_type, old_value, old_inclusive ) = old_predicate.GetInfo()
                         
-                        new_predicate = ClientData.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
+                        new_predicate = ClientSearch.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
                         
                         tags_to_predicates[ new_tag ] = new_predicate
                         

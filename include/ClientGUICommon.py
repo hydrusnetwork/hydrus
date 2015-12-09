@@ -60,7 +60,7 @@ def FlushOutPredicates( parent, predicates ):
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED:
             
-            good_predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
+            good_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
             
         else:
             
@@ -843,7 +843,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         search_text = HydrusTags.CleanTag( search_text )
         
-        entry_predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
+        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+        
+        sibling = siblings_manager.GetSibling( search_text )
+        
+        if sibling is not None:
+            
+            search_text = sibling
+            
+        
+        entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
         
         return ( inclusive, search_text, entry_predicate )
         
@@ -973,7 +982,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
                     if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
                     
-                    predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
+                    predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
                     
                     predicates = siblings_manager.CollapsePredicates( predicates )
                     
@@ -991,20 +1000,20 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if '*' not in self._current_namespace:
                         
-                        matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
+                        matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
                         
                     
                     if half_complete_tag != '':
                         
                         if '*' in self._current_namespace or ( '*' in half_complete_tag and half_complete_tag != '*' ):
                             
-                            matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                            matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
                             
                         
                     
                 elif '*' in search_text:
                     
-                    matches.insert( 0, ClientData.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                    matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
                     
                 
             
@@ -1043,7 +1052,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def GetFileSearchContext( self ):
         
-        return ClientData.FileSearchContext( file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, include_current_tags = self._include_current, include_pending_tags = self._include_pending )
+        return ClientSearch.FileSearchContext( file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, include_current_tags = self._include_current, include_pending_tags = self._include_pending )
         
     
     def IncludeCurrent( self, page_key, value ):
@@ -1137,7 +1146,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         search_text = HydrusTags.CleanTag( raw_entry )
         
-        entry_predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, search_text )
+        entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, search_text )
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
@@ -1145,7 +1154,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         if sibling is not None:
             
-            sibling_predicate = ClientData.Predicate( HC.PREDICATE_TYPE_TAG, sibling )
+            sibling_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, sibling )
             
         else:
             
@@ -1168,14 +1177,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             return
             
         
-        if sibling_predicate is not None:
-            
-            self._BroadcastChoices( { sibling_predicate } )
-            
-        else:
-            
-            self._BroadcastChoices( { entry_predicate } )
-            
+        self._BroadcastChoices( { entry_predicate } )
         
     
     def _GenerateMatches( self ):
@@ -1248,41 +1250,41 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
     
     def _PutAtTopOfMatches( self, matches, predicate ):
-
+        
+        parents = []
+        
+        try:
+            
+            index = matches.index( predicate )
+            
+            predicate = matches[ index ]
+            
+            matches.remove( predicate )
+            
+            while matches[ index ].GetType() == HC.PREDICATE_TYPE_PARENT:
+                
+                parent = matches[ index ]
+                
+                matches.remove( parent )
+                
+                parents.append( parent )
+                
+            
+        except:
+            
+            if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
+                
+                tag = predicate.GetValue()
+                
+                parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                
+                raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
+                
+                parents = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
+                
+            
+        
         if self._expand_parents:
-            
-            parents = []
-            
-            try:
-                
-                index = matches.index( predicate )
-                
-                predicate = matches[ index ]
-                
-                matches.remove( predicate )
-                
-                while matches[ index ].GetType() == HC.PREDICATE_TYPE_PARENT:
-                    
-                    parent = matches[ index ]
-                    
-                    matches.remove( parent )
-                    
-                    parents.append( parent )
-                    
-                
-            except:
-                
-                if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
-                    
-                    tag = predicate.GetValue()
-                    
-                    parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-                    
-                    raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
-                    
-                    parents = [ ClientData.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
-                    
-                
             
             parents.reverse()
             
@@ -2272,6 +2274,41 @@ class ListBox( wx.ScrolledWindow ):
         return row_index
         
     
+    def _GetSelectedIncludeExcludePredicates( self ):
+        
+        include_predicates = []
+        exclude_predicates = []
+        
+        for term in self._selected_terms:
+            
+            if type( term ) == ClientSearch.Predicate:
+                
+                predicate_type = term.GetType()
+                
+                if predicate_type in ( HC.PREDICATE_TYPE_TAG, HC.PREDICATE_TYPE_NAMESPACE, HC.PREDICATE_TYPE_WILDCARD ):
+                    
+                    value = term.GetValue()
+                    
+                    include_predicates.append( ClientSearch.Predicate( predicate_type, value ) )
+                    exclude_predicates.append( ClientSearch.Predicate( predicate_type, value, inclusive = False ) )
+                    
+                else:
+                    
+                    include_predicates.append( term )
+                    
+                
+            else:
+                
+                s = term
+                
+                include_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
+                exclude_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term, inclusive = False ) )
+                
+            
+        
+        return ( include_predicates, exclude_predicates )
+        
+    
     def _GetTextColour( self, text ): return ( 0, 111, 250 )
     
     def _Hit( self, shift, ctrl, hit_index ):
@@ -2636,6 +2673,8 @@ class ListBoxTags( ListBox ):
         
         ListBox.__init__( self, *args, **kwargs )
         
+        self._predicates_callable = None
+        
         self._background_colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'tags_box' ] )
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
@@ -2678,13 +2717,13 @@ class ListBoxTags( ListBox ):
         
         for term in self._selected_terms:
             
-            if isinstance( term, ClientData.Predicate ):
+            if isinstance( term, ClientSearch.Predicate ):
                 
                 predicates.append( term )
                 
             else:
                 
-                predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
                 
             
         
@@ -2694,6 +2733,11 @@ class ListBoxTags( ListBox ):
             
             HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates )
             
+        
+    
+    def _ProcessMenuPredicateEvent( self, command ):
+        
+        pass
         
     
     def EventMenu( self, event ):
@@ -2706,14 +2750,13 @@ class ListBoxTags( ListBox ):
             
             if command in ( 'copy_terms', 'copy_sub_terms', 'copy_all_tags', 'copy_all_tags_with_counts' ):
                 
-                
                 if command in ( 'copy_terms', 'copy_sub_terms' ):
                     
                     texts = []
                     
                     for term in self._selected_terms:
                         
-                        if isinstance( term, ClientData.Predicate ):
+                        if isinstance( term, ClientSearch.Predicate ):
                             
                             text = term.GetUnicode()
                             
@@ -2744,6 +2787,10 @@ class ListBoxTags( ListBox ):
                     
                 
                 HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+                
+            elif command in ( 'add_include_predicates', 'remove_include_predicates', 'add_exclude_predicates', 'remove_exclude_predicates' ):
+                
+                self._ProcessMenuPredicateEvent( command )
                 
             elif command == 'new_search_page':
                 
@@ -2802,35 +2849,79 @@ class ListBoxTags( ListBox ):
                     
                     ( term, ) = self._selected_terms
                     
-                    if type( term ) == ClientData.Predicate:
+                    if type( term ) == ClientSearch.Predicate:
                         
-                        s = term.GetUnicode()
+                        if term.GetType() == HC.PREDICATE_TYPE_TAG:
+                            
+                            selection_string = '"' + term.GetValue() + '"'
+                            
+                        else:
+                            
+                            selection_string = '"' + term.GetUnicode() + '"'
+                            
                         
                     else:
                         
-                        s = term
-                        
-                    
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for ' + s )
-                    
-                    menu.AppendSeparator()
-                    
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_terms' ), 'copy "' + s + '"')
-                    
-                    if ':' in s:
-                        
-                        sub_s = s.split( ':', 1 )[1]
-                        
-                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy "' + sub_s + '"' )
+                        selection_string = '"' + term + '"'
                         
                     
                 else:
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for selection' )
+                    selection_string = 'selected'
                     
-                    menu.AppendSeparator()
+                
+                if self._predicates_callable is not None:
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_terms' ), 'copy selected tags' )
+                    current_predicates = self._predicates_callable()
+                    
+                    ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+                    
+                    if current_predicates is not None:
+                        
+                        if True in ( include_predicate in current_predicates for include_predicate in include_predicates ):
+                            
+                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove_include_predicates' ), 'discard ' + selection_string + ' from current search' )
+                            
+                        
+                        if True in ( include_predicate not in current_predicates for include_predicate in include_predicates ):
+                            
+                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'add_include_predicates' ), 'require ' + selection_string + ' for current search' )
+                            
+                        
+                        if True in ( exclude_predicate in current_predicates for exclude_predicate in exclude_predicates ):
+                            
+                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove_exclude_predicates' ), 'permit ' + selection_string + ' for current search' )
+                            
+                        
+                        if True in ( exclude_predicate not in current_predicates for exclude_predicate in exclude_predicates ):
+                            
+                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'add_exclude_predicates' ), 'exclude ' + selection_string + ' from current search' )
+                            
+                        
+                    
+                    if menu.GetMenuItemCount() > 0:
+                        
+                        menu.AppendSeparator()
+                        
+                    
+                
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for ' + selection_string )
+                
+                menu.AppendSeparator()
+                
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_terms' ), 'copy ' + selection_string )
+                
+                if len( self._selected_terms ) == 1:
+                    
+                    if ':' in selection_string:
+                        
+                        sub_selection_string = selection_string.split( ':', 1 )[1]
+                        
+                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy ' + sub_selection_string )
+                        
+                    
+                else:
+                    
                     menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy selected subtags' )
                     
                 
@@ -3134,7 +3225,7 @@ class ListBoxTagsCensorship( ListBoxTags ):
         
         if tag == '': return 'unnamespaced'
         elif tag == ':': return 'namespaced'
-        else: return tag
+        else: return HydrusTags.RenderTag( tag )
         
     
     def _RemoveTag( self, tag ):
@@ -3277,11 +3368,12 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
 class ListBoxTagsStrings( ListBoxTags ):
     
-    def __init__( self, parent, removed_callable = None ):
+    def __init__( self, parent, removed_callable = None, show_sibling_text = True ):
         
         ListBoxTags.__init__( self, parent )
         
         self._removed_callable = removed_callable
+        self._show_sibling_text = show_sibling_text
         self._tags = set()
         
     
@@ -3293,11 +3385,14 @@ class ListBoxTagsStrings( ListBoxTags ):
         
         for tag in self._tags:
             
-            tag_string = tag
+            tag_string = HydrusTags.RenderTag( tag )
             
-            sibling = siblings_manager.GetSibling( tag )
-            
-            if sibling is not None: tag_string += ' (will display as ' + sibling + ')'
+            if self._show_sibling_text:
+                
+                sibling = siblings_manager.GetSibling( tag )
+                
+                if sibling is not None: tag_string += ' (will display as ' + HydrusTags.RenderTag( sibling ) + ')'
+                
             
             self._strings_to_terms[ tag_string ] = tag
             
@@ -3410,6 +3505,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
         ListBoxTags.__init__( self, parent, min_height = 100 )
         
         self._page_key = page_key
+        self._predicates_callable = self.GetPredicates
         
         if len( initial_predicates ) > 0:
             
@@ -3435,18 +3531,12 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
         
     
-    def _EnterPredicates( self, predicates ):
+    def _EnterPredicates( self, predicates, permit_add = True, permit_remove = True ):
         
         if len( predicates ) == 0:
             
             return
             
-        
-        inbox_predicate = ClientSearch.SYSTEM_PREDICATE_INBOX
-        archive_predicate = ClientSearch.SYSTEM_PREDICATE_ARCHIVE
-        
-        local_predicate = ClientSearch.SYSTEM_PREDICATE_LOCAL
-        not_local_predicate = ClientSearch.SYSTEM_PREDICATE_NOT_LOCAL
         
         predicates_to_be_added = set()
         predicates_to_be_removed = set()
@@ -3457,28 +3547,23 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
             if self._HasPredicate( predicate ):
                 
-                predicates_to_be_removed.add( predicate )
+                if permit_remove:
+                    
+                    predicates_to_be_removed.add( predicate )
+                    
                 
             else:
                 
-                predicates_to_be_added.add( predicate )
-                
-                if predicate == inbox_predicate and self._HasPredicate( archive_predicate ):
+                if permit_add:
                     
-                    predicates_to_be_removed.add( archive_predicate )
+                    predicates_to_be_added.add( predicate )
                     
-                elif predicate == archive_predicate and self._HasPredicate( inbox_predicate ):
+                    inverse_predicate = predicate.GetInverseCopy()
                     
-                    predicates_to_be_removed.add( inbox_predicate )
-                    
-                
-                if predicate == local_predicate and self._HasPredicate( not_local_predicate ):
-                    
-                    predicates_to_be_removed.add( not_local_predicate )
-                    
-                elif predicate == not_local_predicate and self._HasPredicate( local_predicate ):
-                    
-                    predicates_to_be_removed.add( local_predicate )
+                    if self._HasPredicate( inverse_predicate ):
+                        
+                        predicates_to_be_removed.add( inverse_predicate )
+                        
                     
                 
             
@@ -3519,11 +3604,33 @@ class ListBoxTagsPredicates( ListBoxTags ):
     
     def _HasPredicate( self, predicate ): return predicate in self._strings_to_terms.values()
     
-    def EnterPredicates( self, page_key, predicates ):
+    def _ProcessMenuPredicateEvent( self, command ):
+        
+        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+        
+        if command == 'add_include_predicates':
+            
+            self._EnterPredicates( include_predicates, permit_remove = False )
+            
+        elif command == 'remove_include_predicates':
+            
+            self._EnterPredicates( include_predicates, permit_add = False )
+            
+        elif command == 'add_exclude_predicates':
+            
+            self._EnterPredicates( exclude_predicates, permit_remove = False )
+            
+        elif command == 'remove_exclude_predicates':
+            
+            self._EnterPredicates( exclude_predicates, permit_add = False )
+            
+        
+    
+    def EnterPredicates( self, page_key, predicates, permit_add = True, permit_remove = True ):
         
         if page_key == self._page_key:
             
-            self._EnterPredicates( predicates )
+            self._EnterPredicates( predicates, permit_add = permit_add, permit_remove = permit_remove )
             
         
     
@@ -3593,7 +3700,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         for tag in all_tags:
             
-            tag_string = tag
+            tag_string = HydrusTags.RenderTag( tag )
             
             if self._include_counts:
                 
@@ -3615,7 +3722,7 @@ class ListBoxTagsSelection( ListBoxTags ):
                 
                 if sibling is not None:
                     
-                    tag_string += ' (will display as ' + sibling + ')'
+                    tag_string += ' (will display as ' + HydrusTags.RenderTag( sibling ) + ')'
                     
                 
             
@@ -3734,11 +3841,12 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
     
 class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
-    def __init__( self, parent, page_key ):
+    def __init__( self, parent, page_key, predicates_callable = None ):
         
         ListBoxTagsSelection.__init__( self, parent, include_counts = True, collapse_siblings = True )
         
         self._page_key = page_key
+        self._predicates_callable = predicates_callable
         
         HydrusGlobals.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
         HydrusGlobals.client_controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
@@ -3746,11 +3854,33 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
     def _Activate( self ):
         
-        predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) for term in self._selected_terms ]
         
         if len( predicates ) > 0:
             
             HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+            
+        
+    
+    def _ProcessMenuPredicateEvent( self, command ):
+        
+        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
+        
+        if command == 'add_include_predicates':
+            
+            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_remove = False )
+            
+        elif command == 'remove_include_predicates':
+            
+            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_add = False )
+            
+        elif command == 'add_exclude_predicates':
+            
+            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_remove = False )
+            
+        elif command == 'remove_exclude_predicates':
+            
+            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_add = False )
             
         
     
@@ -5733,6 +5863,132 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
         
     
+class TimeDeltaCtrl( wx.Panel ):
+    
+    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._min = min
+        self._show_days = days
+        self._show_hours = hours
+        self._show_minutes = minutes
+        self._show_seconds = seconds
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        if self._show_days:
+            
+            self._days = wx.SpinCtrl( self, min = 0, max = 360, size = ( 50, -1 ) )
+            self._days.Bind( wx.EVT_SPINCTRL, self.EventSpin )
+            
+            hbox.AddF( self._days, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_MIXED )
+            
+        
+        if self._show_hours:
+            
+            self._hours = wx.SpinCtrl( self, min = 0, max = 23, size = ( 45, -1 ) )
+            self._hours.Bind( wx.EVT_SPINCTRL, self.EventSpin )
+            
+            hbox.AddF( self._hours, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'hours' ), CC.FLAGS_MIXED )
+            
+        
+        if self._show_minutes:
+            
+            self._minutes = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
+            self._minutes.Bind( wx.EVT_SPINCTRL, self.EventSpin )
+            
+            hbox.AddF( self._minutes, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'minutes' ), CC.FLAGS_MIXED )
+            
+        
+        if self._show_seconds:
+            
+            self._seconds = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
+            self._seconds.Bind( wx.EVT_SPINCTRL, self.EventSpin )
+            
+            hbox.AddF( self._seconds, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'seconds' ), CC.FLAGS_MIXED )
+            
+        
+        self.SetSizer( hbox )
+        
+    
+    def EventSpin( self, event ):
+        
+        value = self.GetValue()
+        
+        if value < self._min:
+            
+            self.SetValue( self._min )
+            
+        
+        wx.PostEvent( self, event )
+        
+    
+    def GetValue( self ):
+        
+        value = 0
+        
+        if self._show_days:
+            
+            value += self._days.GetValue() * 86400
+            
+        
+        if self._show_hours:
+            
+            value += self._hours.GetValue() * 3600
+            
+        
+        if self._show_minutes:
+            
+            value += self._minutes.GetValue() * 60
+            
+        
+        if self._show_seconds:
+            
+            value += self._seconds.GetValue()
+            
+        
+        return value
+        
+    
+    def SetValue( self, value ):
+        
+        if value < self._min:
+            
+            value = self._min
+            
+        
+        if self._show_days:
+            
+            self._days.SetValue( value / 86400 )
+            
+            value %= 86400
+            
+        
+        if self._show_hours:
+            
+            self._hours.SetValue( value / 3600 )
+            
+            value %= 3600
+            
+        
+        if self._show_minutes:
+            
+            self._minutes.SetValue( value / 60 )
+            
+            value %= 60
+            
+        
+        if self._show_seconds:
+            
+            self._seconds.SetValue( value )
+            
+        
+    
 class RadioBox( StaticBox ):
     
     def __init__( self, parent, title, choice_pairs, initial_index = None ):
@@ -5846,7 +6102,40 @@ class ShowKeys( Frame ):
             
         
     
-class WaitingPolitely( BufferedWindow ):
+class WaitingPolitelyStaticText( wx.StaticText ):
+    
+    def __init__( self, parent, page_key ):
+        
+        wx.StaticText.__init__( self, parent, label = 'ready  ' )
+        
+        self._page_key = page_key
+        self._waiting = False
+        
+        HydrusGlobals.client_controller.sub( self, 'SetWaitingPolitely', 'waiting_politely' )
+        
+        self.SetWaitingPolitely( self._page_key, False )
+        
+    
+    def SetWaitingPolitely( self, page_key, value ):
+        
+        if page_key == self._page_key:
+            
+            self._waiting = value
+            
+            if self._waiting:
+                
+                self.SetLabel( 'waiting' )
+                self.SetToolTipString( 'waiting before attempting another download' )
+                
+            else:
+                
+                self.SetLabel( 'ready  ' )
+                self.SetToolTipString( 'ready to download' )
+                
+            
+        
+    
+class WaitingPolitelyTrafficLight( BufferedWindow ):
     
     def __init__( self, parent, page_key ):
         
@@ -5900,3 +6189,17 @@ class WaitingPolitely( BufferedWindow ):
             self.Refresh()
             
         
+    
+def GetWaitingPolitelyControl( parent, page_key ):
+    
+    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    
+    if new_options.GetBoolean( 'waiting_politely_text' ):
+        
+        return WaitingPolitelyStaticText( parent, page_key )
+        
+    else:
+        
+        return WaitingPolitelyTrafficLight( parent, page_key )
+        
+    

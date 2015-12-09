@@ -4,6 +4,7 @@ import ClientConstants as CC
 import ClientData
 import ClientFiles
 import ClientRatings
+import ClientSearch
 import HydrusConstants as HC
 import HydrusTags
 import os
@@ -332,6 +333,81 @@ class MediaList( object ):
         self._sorted_media.remove_items( singleton_media.union( collected_media ) )
         
     
+    def AddMedia( self, new_media, append = True ):
+        
+        if append:
+            
+            self._singleton_media.update( new_media )
+            self._sorted_media.append_items( new_media )
+            
+        else:
+            
+            if self._collect_by is not None:
+                
+                keys_to_medias = self._CalculateCollectionKeysToMedias( self._collect_by, new_media )
+                
+                new_media = []
+                
+                for ( key, medias ) in keys_to_medias.items():
+                    
+                    if key in self._collect_map_singletons:
+                        
+                        singleton_media = self._collect_map_singletons[ key ]
+                        
+                        self._sorted_media.remove_items( singleton_media )
+                        self._singleton_media.discard( singleton_media )
+                        del self._collect_map_singletons[ key ]
+                        
+                        medias.append( singleton_media )
+                        
+                        collected_media = self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] )
+                        
+                        collected_media.Sort( self._sort_by )
+                        
+                        self._collected_media.add( collected_media )
+                        self._collect_map_collected[ key ] = collected_media
+                        
+                        new_media.append( collected_media )
+                        
+                    elif key in self._collect_map_collected:
+                        
+                        collected_media = self._collect_map_collected[ key ]
+                        
+                        self._sorted_media.remove_items( collected_media )
+                        
+                        collected_media.AddMedia( medias )
+                        
+                        collected_media.Sort( self._sort_by )
+                        
+                        new_media.append( collected_media )
+                        
+                    elif len( medias ) == 1:
+                        
+                        ( singleton_media, ) = medias
+                        
+                        self._singleton_media.add( singleton_media )
+                        self._collect_map_singletons[ key ] = singleton_media
+                        
+                    else:
+                        
+                        collected_media = self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] )
+                        
+                        collected_media.Sort( self._sort_by )
+                        
+                        self._collected_media.add( collected_media )
+                        self._collect_map_collected[ key ] = collected_media
+                        
+                        new_media.append( collected_media )
+                        
+                    
+                
+            
+            self._sorted_media.insert_items( new_media )
+            
+        
+        return new_media
+        
+    
     def Collect( self, collect_by = -1 ):
         
         if collect_by == -1: collect_by = self._collect_by
@@ -587,7 +663,7 @@ class ListeningMediaList( MediaList ):
         
         MediaList.__init__( self, file_service_key, media_results )
         
-        self._file_query_result = ClientData.FileQueryResult( media_results )
+        self._file_query_result = ClientSearch.FileQueryResult( media_results )
         
         HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HydrusGlobals.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
@@ -610,76 +686,7 @@ class ListeningMediaList( MediaList ):
             new_media.append( self._GenerateMediaSingleton( media_result ) )
             
         
-        if append:
-            
-            self._singleton_media.update( new_media )
-            self._sorted_media.append_items( new_media )
-            
-        else:
-            
-            if self._collect_by is not None:
-                
-                keys_to_medias = self._CalculateCollectionKeysToMedias( self._collect_by, new_media )
-                
-                new_media = []
-                
-                for ( key, medias ) in keys_to_medias.items():
-                    
-                    if key in self._collect_map_singletons:
-                        
-                        singleton_media = self._collect_map_singletons[ key ]
-                        
-                        self._sorted_media.remove_items( singleton_media )
-                        self._singleton_media.discard( singleton_media )
-                        del self._collect_map_singletons[ key ]
-                        
-                        medias.append( singleton_media )
-                        
-                        collected_media = self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] )
-                        
-                        collected_media.Sort( self._sort_by )
-                        
-                        self._collected_media.add( collected_media )
-                        self._collect_map_collected[ key ] = collected_media
-                        
-                        new_media.append( collected_media )
-                        
-                    elif key in self._collect_map_collected:
-                        
-                        collected_media = self._collect_map_collected[ key ]
-                        
-                        self._sorted_media.remove_items( collected_media )
-                        
-                        # mediacollection needs addmediaresult with efficient recalcinternals
-                        collected_media.MagicalAddMediasOrMediaResultsWhatever( medias )
-                        
-                        collected_media.Sort( self._sort_by )
-                        
-                        new_media.append( collected_media )
-                        
-                    elif len( medias ) == 1:
-                        
-                        ( singleton_media, ) = medias
-                        
-                        self._singleton_media.add( singleton_media )
-                        self._collect_map_singletons[ key ] = singleton_media
-                        
-                    else:
-                        
-                        collected_media = self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] )
-                        
-                        collected_media.Sort( self._sort_by )
-                        
-                        self._collected_media.add( collected_media )
-                        self._collect_map_collected[ key ] = collected_media
-                        
-                        new_media.append( collected_media )
-                        
-                    
-                
-            
-            self._sorted_media.insert_items( new_media )
-            
+        self.AddMedia( new_media, append = append )
         
         return new_media
         
@@ -750,6 +757,13 @@ class MediaCollection( MediaList, Media ):
         petitioned = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
         self._locations_manager = LocationsManager( current, deleted, pending, petitioned )
+        
+    
+    def AddMedia( self, new_media, append = True ):
+        
+        MediaList.AddMedia( self, new_media, append = True )
+        
+        self._RecalcInternals()
         
     
     def DeletePending( self, service_key ):
@@ -1487,9 +1501,21 @@ class TagsManager( TagsManagerSimple ):
             statuses_to_tags[ HC.CURRENT ].discard( tag )
             statuses_to_tags[ HC.PETITIONED ].discard( tag )
             
-        elif action == HC.CONTENT_UPDATE_PEND: statuses_to_tags[ HC.PENDING ].add( tag )
+        elif action == HC.CONTENT_UPDATE_PEND:
+            
+            if tag not in statuses_to_tags[ HC.CURRENT ]:
+                
+                statuses_to_tags[ HC.PENDING ].add( tag )
+                
+            
         elif action == HC.CONTENT_UPDATE_RESCIND_PEND: statuses_to_tags[ HC.PENDING ].discard( tag )
-        elif action == HC.CONTENT_UPDATE_PETITION: statuses_to_tags[ HC.PETITIONED ].add( tag )
+        elif action == HC.CONTENT_UPDATE_PETITION:
+            
+            if tag in statuses_to_tags[ HC.CURRENT ]:
+                
+                statuses_to_tags[ HC.PETITIONED ].add( tag )
+                
+            
         elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.PETITIONED ].discard( tag )
         
         self._RecalcCombined()

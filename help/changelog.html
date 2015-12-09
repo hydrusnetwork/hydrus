@@ -8,6 +8,46 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 185</h3></li>
+				<ul>
+					<li>right clicking on a tag/predicate in the 'selection tags' box or the 'search' list of active predicates provides new intelligent menu options to discard/require/permit/exclude the selected tags from the current search. try it out!</li>
+					<li>this system also works for namespace and wildcard and system predicates</li>
+					<li>'predicate a' and its inverse '-predicate a' are no longer considered the same!</li>
+					<li>namespace and wildcard predicates will now remove their inverts if they are added to the list of active predicates</li>
+					<li>the way inverse predicates are generated and compared is generalised and improved</li>
+					<li>fixed 'open a new search page for tag x', which might have been broken?</li>
+					<li>quick-entering a tag in the 'read' tag autocomplete entry will now always replace with a sibling if one exists</li>
+					<li>quick-entering a tag in the 'write' tag autocomplete entry will now not replace with a sibling--you will get the option of what you want to do</li>
+					<li>when this happens, the preferred sibling is labelled on the 'what do you want to do?' popup in the manage tags dialog</li>
+					<li>also when this happens, the affected file count for add/pend the preferred sibling should now be correct</li>
+					<li>fixed client support for tags that begin with ':', such as many emoticons. these should now be parsed correctly from websites and keyboard input, keep their leading colon through network and db conversions, and display correctly (for the most part!), despite a little bit of magic to make them work</li>
+					<li>created a new TimeDelta control to handle finer tuning of optional periods</li>
+					<li>improved timedelta->pretty string code to support >60s times</li>
+					<li>manage subscriptions dialog now supports day and hour period, with min period of four hours</li>
+					<li>manage export folders dialog now supports day/hour/minute period, and the parent dialog displays that time delta appropriately</li>
+					<li>manage import folders dialog now supports day/hour/minute period, and the parent dialog displays that time delta appropriately</li>
+					<li>the thread watcher now supports hour/minute/seconds check period</li>
+					<li>folded 'search' and 'download' menus into 'view' and renamed it 'pages'</li>
+					<li>'sessions' moved from 'file' to the new 'pages'</li>
+					<li>moved 'admin' menu to 'services->administrate services'</li>
+					<li>added 'forced system:limit' to options->speed and memory panel</li>
+					<li>if several system:limits exist in a search, the minimum will be used</li>
+					<li>added a checkbox to options->downloading to replace the traffic light waiting politely indicator with text</li>
+					<li>subscriptions with failed files will say 'x urls in cache, y failed' on their dialog panel</li>
+					<li>at the gui level, media that superfluously receives a 'pend tag' instruction for a tag that is already current will discard the instruction (this improves the accuracy of the pending tag count during and after the manage tag dialog)</li>
+					<li>and the same thing for 'petition tag' when the tag isn't already current</li>
+					<li>any accidentally added 'namespace:'-type tags will be deleted on update</li>
+					<li>fixed a bad merge in the manage tag siblings dialog's autocomplete dropdown lists</li>
+					<li>the thread watcher can now deal with urls with a #54951495 post anchor at the end</li>
+					<li>refactored some controller manager code</li>
+					<li>removed some useless old code</li>
+					<li>cleaned some misc code</li>
+					<li>improved some bad old orphan deletion code</li>
+					<li>deleted some old code</li>
+					<li>finished off some old media result streaming code</li>
+					<li>refactored a bunch of search stuff from clientdata to clientsearch</li>
+					<li>rewrote some subs gui/help text to be a bit clearer, and added a help link to the dialog</li>
+				</ul>
 				<li><h3>version 184</h3></li>
 				<ul>
 					<li>added external client_files storage!</li>

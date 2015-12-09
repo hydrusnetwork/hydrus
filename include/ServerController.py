@@ -302,12 +302,16 @@ class Controller( HydrusController.HydrusController ):
         self.ShutdownModel()
         
     
+    def GetServerSessionManager( self ):
+        
+        return self._server_session_manager
+        
+    
     def InitModel( self ):
         
         HydrusController.HydrusController.InitModel( self )
         
-        self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
-        self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
+        self._server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
         self._services = {}
         

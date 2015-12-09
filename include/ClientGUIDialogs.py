@@ -286,135 +286,123 @@ class DialogAdvancedContentUpdate( Dialog ):
     
     def __init__( self, parent, service_key, hashes = None ):
         
-        def InitialiseControls():
-            
-            self._internal_actions = ClientGUICommon.StaticBox( self, 'internal' )
-            
-            self._action_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
-            self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
-            self._tag_type_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
-            self._service_key_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
-            
-            self._go = wx.Button( self._internal_actions, label = 'Go!' )
-            self._go.Bind( wx.EVT_BUTTON, self.EventGo )
-            
-            expand_parents = False
-            
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._internal_actions, self.SetSomeTags, expand_parents, CC.COMBINED_FILE_SERVICE_KEY, self._service_key )
-            self._specific_tag = wx.StaticText( self._internal_actions, label = '', size = ( 100, -1 ) )
-            
-            self._import_from_hta = wx.Button( self._internal_actions, label = 'one-time mass import or delete using a hydrus tag archive' )
-            self._import_from_hta.Bind( wx.EVT_BUTTON, self.EventImportFromHTA )
-            
-            #
-            
-            self._external_actions = ClientGUICommon.StaticBox( self, 'external' )
-            
-            self._export_to_hta = wx.Button( self._external_actions, label = 'export to hydrus tag archive' )
-            self._export_to_hta.Bind( wx.EVT_BUTTON, self.EventExportToHTA )
-            
-            #
-            
-            self._done = wx.Button( self, label = 'done' )
-            
-        
-        def PopulateControls():
-            
-            self._action_dropdown.Append( 'copy', self.COPY )
-            if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
-                
-                self._action_dropdown.Append( 'delete', self.DELETE )
-                self._action_dropdown.Append( 'clear deleted record', self.DELETE_DELETED )
-                
-            
-            self._action_dropdown.Select( 0 )
-            
-            #
-            
-            self._tag_type_dropdown.Append( 'all mappings', self.ALL_MAPPINGS )
-            self._tag_type_dropdown.Append( 'specific tag\'s mappings', self.SPECIFIC_MAPPINGS )
-            self._tag_type_dropdown.Append( 'specific namespace\'s mappings', self.SPECIFIC_NAMESPACE )
-            
-            self._tag_type_dropdown.Select( 0 )
-            
-            #
-            
-            services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
-            
-            for service in services:
-                
-                self._service_key_dropdown.Append( service.GetName(), service.GetServiceKey() )
-                
-            
-            self._service_key_dropdown.Select( 0 )
-            
-        
-        def ArrangeControls():
-            
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._action_dropdown, CC.FLAGS_MIXED )
-            hbox.AddF( self._tag_type_dropdown, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._internal_actions, label = 'to' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._service_key_dropdown, CC.FLAGS_MIXED )
-            hbox.AddF( self._go, CC.FLAGS_MIXED )
-            
-            self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._internal_actions, label = 'set specific tag or namespace: ' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._specific_tag, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
-            
-            self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
-            self._external_actions.AddF( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable. You may need to refresh your existing searches to see their effect.' 
-            
-            st = wx.StaticText( self, label = message )
-            
-            st.Wrap( 360 )
-            
-            vbox.AddF( st, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._internal_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._external_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._done, CC.FLAGS_LONE_BUTTON )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 360: x = 360
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'Advanced Content Update' )
         
         self._service_key = service_key
         self._tag = ''
         self._hashes = hashes
         
-        InitialiseControls()
+        self._internal_actions = ClientGUICommon.StaticBox( self, 'internal' )
         
-        PopulateControls()
+        self._action_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
+        self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
+        self._tag_type_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
+        self._service_key_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
         
-        ArrangeControls()
+        self._go = wx.Button( self._internal_actions, label = 'Go!' )
+        self._go.Bind( wx.EVT_BUTTON, self.EventGo )
+        
+        expand_parents = False
+        
+        self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._internal_actions, self.SetSomeTags, expand_parents, CC.COMBINED_FILE_SERVICE_KEY, self._service_key )
+        self._specific_tag = wx.StaticText( self._internal_actions, label = '', size = ( 100, -1 ) )
+        
+        self._import_from_hta = wx.Button( self._internal_actions, label = 'one-time mass import or delete using a hydrus tag archive' )
+        self._import_from_hta.Bind( wx.EVT_BUTTON, self.EventImportFromHTA )
+        
+        #
+        
+        self._external_actions = ClientGUICommon.StaticBox( self, 'external' )
+        
+        self._export_to_hta = wx.Button( self._external_actions, label = 'export to hydrus tag archive' )
+        self._export_to_hta.Bind( wx.EVT_BUTTON, self.EventExportToHTA )
+        
+        #
+        
+        self._done = wx.Button( self, label = 'done' )
+        
+        #
+        
+        self._action_dropdown.Append( 'copy', self.COPY )
+        if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
+            
+            self._action_dropdown.Append( 'delete', self.DELETE )
+            self._action_dropdown.Append( 'clear deleted record', self.DELETE_DELETED )
+            
+        
+        self._action_dropdown.Select( 0 )
+        
+        #
+        
+        self._tag_type_dropdown.Append( 'all mappings', self.ALL_MAPPINGS )
+        self._tag_type_dropdown.Append( 'specific tag\'s mappings', self.SPECIFIC_MAPPINGS )
+        self._tag_type_dropdown.Append( 'specific namespace\'s mappings', self.SPECIFIC_NAMESPACE )
+        
+        self._tag_type_dropdown.Select( 0 )
+        
+        #
+        
+        services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
+        
+        for service in services:
+            
+            self._service_key_dropdown.Append( service.GetName(), service.GetServiceKey() )
+            
+        
+        self._service_key_dropdown.Select( 0 )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._action_dropdown, CC.FLAGS_MIXED )
+        hbox.AddF( self._tag_type_dropdown, CC.FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self._internal_actions, label = 'to' ), CC.FLAGS_MIXED )
+        hbox.AddF( self._service_key_dropdown, CC.FLAGS_MIXED )
+        hbox.AddF( self._go, CC.FLAGS_MIXED )
+        
+        self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( wx.StaticText( self._internal_actions, label = 'set specific tag or namespace: ' ), CC.FLAGS_MIXED )
+        hbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._specific_tag, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
+        
+        self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        self._external_actions.AddF( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable. You may need to refresh your existing searches to see their effect.' 
+        
+        st = wx.StaticText( self, label = message )
+        
+        st.Wrap( 360 )
+        
+        vbox.AddF( st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._internal_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._external_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._done, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 360: x = 360
+        
+        self.SetInitialSize( ( x, y ) )
         
     
     def EventChoice( self, event ):
@@ -498,7 +486,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             self._tag = list( tags )[0]
             
-            self._specific_tag.SetLabel( self._tag )
+            self._specific_tag.SetLabel( HydrusTags.RenderTag( self._tag ) )
             
         
     
@@ -680,74 +668,63 @@ class DialogGenerateNewAccounts( Dialog ):
     
     def __init__( self, parent, service_key ):
         
-        def InitialiseControls():
-            
-            self._num = wx.SpinCtrl( self, min = 1, max = 10000, size = ( 80, -1 ) )
-            
-            self._account_types = wx.Choice( self, size = ( 400, -1 ) )
-            
-            self._lifetime = wx.Choice( self )
-            
-            self._ok = wx.Button( self, label = 'Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._num.SetValue( 1 )
-            
-            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-            
-            response = service.Request( HC.GET, 'account_types' )
-            
-            account_types = response[ 'account_types' ]
-            
-            for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
-            self._account_types.SetSelection( 0 ) # admin
-            
-            for ( str, value ) in HC.lifetimes: self._lifetime.Append( str, value )
-            self._lifetime.SetSelection( 3 ) # one year
-            
-        
-        def ArrangeControls():
-            
-            ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            ctrl_box.AddF( wx.StaticText( self, label = 'generate' ), CC.FLAGS_MIXED )
-            ctrl_box.AddF( self._num, CC.FLAGS_MIXED )
-            ctrl_box.AddF( self._account_types, CC.FLAGS_MIXED )
-            ctrl_box.AddF( wx.StaticText( self, label = 'accounts, to expire in' ), CC.FLAGS_MIXED )
-            ctrl_box.AddF( self._lifetime, CC.FLAGS_MIXED )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( ctrl_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'configure new accounts' )
         
         self._service_key = service_key
         
-        InitialiseControls()
+        self._num = wx.SpinCtrl( self, min = 1, max = 10000, size = ( 80, -1 ) )
         
-        PopulateControls()
+        self._account_types = wx.Choice( self, size = ( 400, -1 ) )
         
-        ArrangeControls()
+        self._lifetime = wx.Choice( self )
+        
+        self._ok = wx.Button( self, label = 'Ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._num.SetValue( 1 )
+        
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        
+        response = service.Request( HC.GET, 'account_types' )
+        
+        account_types = response[ 'account_types' ]
+        
+        for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
+        self._account_types.SetSelection( 0 ) # admin
+        
+        for ( str, value ) in HC.lifetimes: self._lifetime.Append( str, value )
+        self._lifetime.SetSelection( 3 ) # one year
+        
+        #
+        
+        ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        ctrl_box.AddF( wx.StaticText( self, label = 'generate' ), CC.FLAGS_MIXED )
+        ctrl_box.AddF( self._num, CC.FLAGS_MIXED )
+        ctrl_box.AddF( self._account_types, CC.FLAGS_MIXED )
+        ctrl_box.AddF( wx.StaticText( self, label = 'accounts, to expire in' ), CC.FLAGS_MIXED )
+        ctrl_box.AddF( self._lifetime, CC.FLAGS_MIXED )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( ctrl_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -842,187 +819,6 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, service_key = None, action = 'archive' ):
         
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            self._shortcut_panel = ClientGUICommon.StaticBox( self, 'shortcut' )
-            
-            self._shortcut = ClientGUICommon.Shortcut( self._shortcut_panel, modifier, key )
-            
-            self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
-            
-            self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', '', 'next', 'first', 'last', 'open_externally' ] )
-            
-            self._ok_none = wx.Button( self._none_panel, label = 'ok' )
-            self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
-            self._ok_none.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._tag_panel = ClientGUICommon.StaticBox( self, 'tag service actions' )
-            
-            self._tag_service_keys = wx.Choice( self._tag_panel )
-            self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
-            
-            expand_parents = False
-            
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
-            
-            self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
-            self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
-            self._ok_tag.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._ratings_like_panel = ClientGUICommon.StaticBox( self, 'like/dislike ratings service actions' )
-            
-            self._ratings_like_service_keys = wx.Choice( self._ratings_like_panel )
-            self._ratings_like_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
-            self._ratings_like_like = wx.RadioButton( self._ratings_like_panel, style = wx.RB_GROUP, label = 'like' )
-            self._ratings_like_dislike = wx.RadioButton( self._ratings_like_panel, label = 'dislike' )
-            self._ratings_like_remove = wx.RadioButton( self._ratings_like_panel, label = 'remove rating' )
-            
-            self._ok_ratings_like = wx.Button( self._ratings_like_panel, label = 'ok' )
-            self._ok_ratings_like.Bind( wx.EVT_BUTTON, self.EventOKRatingsLike )
-            self._ok_ratings_like.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._ratings_numerical_panel = ClientGUICommon.StaticBox( self, 'numerical ratings service actions' )
-            
-            self._ratings_numerical_service_keys = wx.Choice( self._ratings_numerical_panel )
-            self._ratings_numerical_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
-            self._ratings_numerical_slider = wx.Slider( self._ratings_numerical_panel, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
-            self._ratings_numerical_remove = wx.CheckBox( self._ratings_numerical_panel, label = 'remove rating' )
-            
-            self._ok_ratings_numerical = wx.Button( self._ratings_numerical_panel, label = 'ok' )
-            self._ok_ratings_numerical.Bind( wx.EVT_BUTTON, self.EventOKRatingsNumerical )
-            self._ok_ratings_numerical.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-            
-            for service in services:
-                
-                service_type = service.GetServiceType()
-                
-                if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): choice = self._tag_service_keys
-                elif service_type == HC.LOCAL_RATING_LIKE: choice = self._ratings_like_service_keys
-                elif service_type == HC.LOCAL_RATING_NUMERICAL: choice = self._ratings_numerical_service_keys
-                
-                choice.Append( service.GetName(), service.GetServiceKey() )
-                
-            
-            self._SetActions()
-            
-            if self._service_key is None:
-                
-                self._none_actions.SetStringSelection( self._action )
-                
-            else:
-                
-                self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-                
-                service_name = self._service.GetName()
-                service_type = self._service.GetServiceType()
-                
-                if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
-                    
-                    self._tag_service_keys.SetStringSelection( service_name )
-                    
-                    self._tag_value.SetValue( self._action )
-                    
-                elif service_type == HC.LOCAL_RATING_LIKE:
-                    
-                    self._ratings_like_service_keys.SetStringSelection( service_name )
-                    
-                    self._SetActions()
-                    
-                    if self._action is None: self._ratings_like_remove.SetValue( True )
-                    elif self._action == True: self._ratings_like_like.SetValue( True )
-                    elif self._action == False: self._ratings_like_dislike.SetValue( True )
-                    
-                elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    self._ratings_numerical_service_keys.SetStringSelection( service_name )
-                    
-                    self._SetActions()
-                    
-                    if self._action is None: self._ratings_numerical_remove.SetValue( True )
-                    else:
-                        
-                        num_stars = self._current_ratings_numerical_service.GetInfo( 'num_stars' )
-                        
-                        slider_value = int( round( self._action * num_stars ) )
-                        
-                        self._ratings_numerical_slider.SetValue( slider_value )
-                        
-                    
-                
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            self._shortcut_panel.AddF( self._shortcut, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            none_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            none_hbox.AddF( self._none_actions, CC.FLAGS_EXPAND_DEPTH_ONLY )
-            none_hbox.AddF( self._ok_none, CC.FLAGS_MIXED )
-            
-            self._none_panel.AddF( none_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            tag_sub_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            tag_sub_vbox.AddF( self._tag_value, CC.FLAGS_EXPAND_PERPENDICULAR )
-            tag_sub_vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            tag_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            tag_hbox.AddF( self._tag_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-            tag_hbox.AddF( tag_sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            tag_hbox.AddF( self._ok_tag, CC.FLAGS_MIXED )
-            
-            self._tag_panel.AddF( tag_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            ratings_like_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            ratings_like_hbox.AddF( self._ratings_like_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-            ratings_like_hbox.AddF( self._ratings_like_like, CC.FLAGS_MIXED )
-            ratings_like_hbox.AddF( self._ratings_like_dislike, CC.FLAGS_MIXED )
-            ratings_like_hbox.AddF( self._ratings_like_remove, CC.FLAGS_MIXED )
-            ratings_like_hbox.AddF( self._ok_ratings_like, CC.FLAGS_MIXED )
-            
-            self._ratings_like_panel.AddF( ratings_like_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            ratings_numerical_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            ratings_numerical_hbox.AddF( self._ratings_numerical_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-            ratings_numerical_hbox.AddF( self._ratings_numerical_slider, CC.FLAGS_MIXED )
-            ratings_numerical_hbox.AddF( self._ratings_numerical_remove, CC.FLAGS_MIXED )
-            ratings_numerical_hbox.AddF( self._ok_ratings_numerical, CC.FLAGS_MIXED )
-            
-            self._ratings_numerical_panel.AddF( ratings_numerical_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._none_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._shortcut_panel, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = u'\u2192' ), CC.FLAGS_MIXED )
-            hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            self.SetSizer( hbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( 680, y ) )
-            
-        
         Dialog.__init__( self, parent, 'input custom filter action' )
         
         self._service_key = service_key
@@ -1031,11 +827,177 @@ class DialogInputCustomFilterAction( Dialog ):
         self._current_ratings_like_service = None
         self._current_ratings_numerical_service = None
         
-        InitialiseControls()
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        PopulateControls()
+        self._shortcut_panel = ClientGUICommon.StaticBox( self, 'shortcut' )
         
-        ArrangeControls()
+        self._shortcut = ClientGUICommon.Shortcut( self._shortcut_panel, modifier, key )
+        
+        self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
+        
+        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', '', 'next', 'first', 'last', 'open_externally' ] )
+        
+        self._ok_none = wx.Button( self._none_panel, label = 'ok' )
+        self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
+        self._ok_none.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._tag_panel = ClientGUICommon.StaticBox( self, 'tag service actions' )
+        
+        self._tag_service_keys = wx.Choice( self._tag_panel )
+        self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
+        
+        expand_parents = False
+        
+        self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
+        
+        self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
+        self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
+        self._ok_tag.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._ratings_like_panel = ClientGUICommon.StaticBox( self, 'like/dislike ratings service actions' )
+        
+        self._ratings_like_service_keys = wx.Choice( self._ratings_like_panel )
+        self._ratings_like_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
+        self._ratings_like_like = wx.RadioButton( self._ratings_like_panel, style = wx.RB_GROUP, label = 'like' )
+        self._ratings_like_dislike = wx.RadioButton( self._ratings_like_panel, label = 'dislike' )
+        self._ratings_like_remove = wx.RadioButton( self._ratings_like_panel, label = 'remove rating' )
+        
+        self._ok_ratings_like = wx.Button( self._ratings_like_panel, label = 'ok' )
+        self._ok_ratings_like.Bind( wx.EVT_BUTTON, self.EventOKRatingsLike )
+        self._ok_ratings_like.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._ratings_numerical_panel = ClientGUICommon.StaticBox( self, 'numerical ratings service actions' )
+        
+        self._ratings_numerical_service_keys = wx.Choice( self._ratings_numerical_panel )
+        self._ratings_numerical_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
+        self._ratings_numerical_slider = wx.Slider( self._ratings_numerical_panel, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
+        self._ratings_numerical_remove = wx.CheckBox( self._ratings_numerical_panel, label = 'remove rating' )
+        
+        self._ok_ratings_numerical = wx.Button( self._ratings_numerical_panel, label = 'ok' )
+        self._ok_ratings_numerical.Bind( wx.EVT_BUTTON, self.EventOKRatingsNumerical )
+        self._ok_ratings_numerical.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        
+        for service in services:
+            
+            service_type = service.GetServiceType()
+            
+            if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): choice = self._tag_service_keys
+            elif service_type == HC.LOCAL_RATING_LIKE: choice = self._ratings_like_service_keys
+            elif service_type == HC.LOCAL_RATING_NUMERICAL: choice = self._ratings_numerical_service_keys
+            
+            choice.Append( service.GetName(), service.GetServiceKey() )
+            
+        
+        self._SetActions()
+        
+        if self._service_key is None:
+            
+            self._none_actions.SetStringSelection( self._action )
+            
+        else:
+            
+            self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+            
+            service_name = self._service.GetName()
+            service_type = self._service.GetServiceType()
+            
+            if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                
+                self._tag_service_keys.SetStringSelection( service_name )
+                
+                self._tag_value.SetValue( self._action )
+                
+            elif service_type == HC.LOCAL_RATING_LIKE:
+                
+                self._ratings_like_service_keys.SetStringSelection( service_name )
+                
+                self._SetActions()
+                
+                if self._action is None: self._ratings_like_remove.SetValue( True )
+                elif self._action == True: self._ratings_like_like.SetValue( True )
+                elif self._action == False: self._ratings_like_dislike.SetValue( True )
+                
+            elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                
+                self._ratings_numerical_service_keys.SetStringSelection( service_name )
+                
+                self._SetActions()
+                
+                if self._action is None: self._ratings_numerical_remove.SetValue( True )
+                else:
+                    
+                    num_stars = self._current_ratings_numerical_service.GetInfo( 'num_stars' )
+                    
+                    slider_value = int( round( self._action * num_stars ) )
+                    
+                    self._ratings_numerical_slider.SetValue( slider_value )
+                    
+                
+            
+        
+        #
+        
+        self._shortcut_panel.AddF( self._shortcut, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        none_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        none_hbox.AddF( self._none_actions, CC.FLAGS_EXPAND_DEPTH_ONLY )
+        none_hbox.AddF( self._ok_none, CC.FLAGS_MIXED )
+        
+        self._none_panel.AddF( none_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        tag_sub_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        tag_sub_vbox.AddF( self._tag_value, CC.FLAGS_EXPAND_PERPENDICULAR )
+        tag_sub_vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        tag_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        tag_hbox.AddF( self._tag_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+        tag_hbox.AddF( tag_sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        tag_hbox.AddF( self._ok_tag, CC.FLAGS_MIXED )
+        
+        self._tag_panel.AddF( tag_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        ratings_like_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        ratings_like_hbox.AddF( self._ratings_like_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+        ratings_like_hbox.AddF( self._ratings_like_like, CC.FLAGS_MIXED )
+        ratings_like_hbox.AddF( self._ratings_like_dislike, CC.FLAGS_MIXED )
+        ratings_like_hbox.AddF( self._ratings_like_remove, CC.FLAGS_MIXED )
+        ratings_like_hbox.AddF( self._ok_ratings_like, CC.FLAGS_MIXED )
+        
+        self._ratings_like_panel.AddF( ratings_like_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        ratings_numerical_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        ratings_numerical_hbox.AddF( self._ratings_numerical_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+        ratings_numerical_hbox.AddF( self._ratings_numerical_slider, CC.FLAGS_MIXED )
+        ratings_numerical_hbox.AddF( self._ratings_numerical_remove, CC.FLAGS_MIXED )
+        ratings_numerical_hbox.AddF( self._ok_ratings_numerical, CC.FLAGS_MIXED )
+        
+        self._ratings_numerical_panel.AddF( ratings_numerical_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._none_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._shortcut_panel, CC.FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self, label = u'\u2192' ), CC.FLAGS_MIXED )
+        hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( hbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( 680, y ) )
         
         wx.CallAfter( self._ok_none.SetFocus )
         
@@ -1305,116 +1267,105 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def __init__( self, parent, share_key, name, text, timeout, hashes, new_share = False ):
         
-        def InitialiseControls():
-            
-            self._name = wx.TextCtrl( self )
-            
-            self._text = wx.TextCtrl( self, style = wx.TE_MULTILINE )
-            self._text.SetMinSize( ( -1, 100 ) )
-            
-            message = 'expires in' 
-            
-            self._timeout_number = ClientGUICommon.NoneableSpinCtrl( self, message, none_phrase = 'no expiration', max = 1000000, multiplier = 1 )
-            
-            self._timeout_multiplier = ClientGUICommon.BetterChoice( self )
-            self._timeout_multiplier.Append( 'minutes', 60 )
-            self._timeout_multiplier.Append( 'hours', 60 * 60 )
-            self._timeout_multiplier.Append( 'days', 60 * 60 * 24 )
-            
-            self._copy_internal_share_link = wx.Button( self, label = 'copy internal share link' )
-            self._copy_internal_share_link.Bind( wx.EVT_BUTTON, self.EventCopyInternalShareURL )
-            
-            self._copy_external_share_link = wx.Button( self, label = 'copy external share link' )
-            self._copy_external_share_link.Bind( wx.EVT_BUTTON, self.EventCopyExternalShareURL )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._share_key = share_key
-            self._name.SetValue( name )
-            self._text.SetValue( text )
-            
-            if timeout is None:
-                
-                self._timeout_number.SetValue( None )
-                
-                self._timeout_multiplier.SelectClientData( 60 )
-                
-            else:
-                
-                time_left = max( 0, timeout - HydrusData.GetNow() )
-                
-                if time_left < 60 * 60 * 12: time_value = 60
-                elif time_left < 60 * 60 * 24 * 7: time_value = 60 * 60 
-                else: time_value = 60 * 60 * 24
-                
-                self._timeout_number.SetValue( time_left / time_value )
-                
-                self._timeout_multiplier.SelectClientData( time_value )
-                
-            
-            self._hashes = hashes
-            
-        
-        def ArrangeControls():
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'share name' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'share text' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            timeout_box = wx.BoxSizer( wx.HORIZONTAL )
-            timeout_box.AddF( self._timeout_number, CC.FLAGS_EXPAND_BOTH_WAYS )
-            timeout_box.AddF( self._timeout_multiplier, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            link_box = wx.BoxSizer( wx.HORIZONTAL )
-            link_box.AddF( self._copy_internal_share_link, CC.FLAGS_MIXED )
-            link_box.AddF( self._copy_external_share_link, CC.FLAGS_MIXED )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            intro = 'Sharing ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files.'
-            intro += os.linesep + 'Title and text are optional.'
-            
-            if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
-            
-            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( timeout_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( link_box, CC.FLAGS_BUTTON_SIZER )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            x = max( x, 350 )
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'configure local booru share' )
         
-        InitialiseControls()
+        self._name = wx.TextCtrl( self )
         
-        PopulateControls()
+        self._text = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._text.SetMinSize( ( -1, 100 ) )
         
-        ArrangeControls()
+        message = 'expires in' 
+        
+        self._timeout_number = ClientGUICommon.NoneableSpinCtrl( self, message, none_phrase = 'no expiration', max = 1000000, multiplier = 1 )
+        
+        self._timeout_multiplier = ClientGUICommon.BetterChoice( self )
+        self._timeout_multiplier.Append( 'minutes', 60 )
+        self._timeout_multiplier.Append( 'hours', 60 * 60 )
+        self._timeout_multiplier.Append( 'days', 60 * 60 * 24 )
+        
+        self._copy_internal_share_link = wx.Button( self, label = 'copy internal share link' )
+        self._copy_internal_share_link.Bind( wx.EVT_BUTTON, self.EventCopyInternalShareURL )
+        
+        self._copy_external_share_link = wx.Button( self, label = 'copy external share link' )
+        self._copy_external_share_link.Bind( wx.EVT_BUTTON, self.EventCopyExternalShareURL )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._share_key = share_key
+        self._name.SetValue( name )
+        self._text.SetValue( text )
+        
+        if timeout is None:
+            
+            self._timeout_number.SetValue( None )
+            
+            self._timeout_multiplier.SelectClientData( 60 )
+            
+        else:
+            
+            time_left = max( 0, timeout - HydrusData.GetNow() )
+            
+            if time_left < 60 * 60 * 12: time_value = 60
+            elif time_left < 60 * 60 * 24 * 7: time_value = 60 * 60 
+            else: time_value = 60 * 60 * 24
+            
+            self._timeout_number.SetValue( time_left / time_value )
+            
+            self._timeout_multiplier.SelectClientData( time_value )
+            
+        
+        self._hashes = hashes
+        
+        #
+        
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'share name' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'share text' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        timeout_box = wx.BoxSizer( wx.HORIZONTAL )
+        timeout_box.AddF( self._timeout_number, CC.FLAGS_EXPAND_BOTH_WAYS )
+        timeout_box.AddF( self._timeout_multiplier, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        link_box = wx.BoxSizer( wx.HORIZONTAL )
+        link_box.AddF( self._copy_internal_share_link, CC.FLAGS_MIXED )
+        link_box.AddF( self._copy_external_share_link, CC.FLAGS_MIXED )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = 'Sharing ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files.'
+        intro += os.linesep + 'Title and text are optional.'
+        
+        if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
+        
+        vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( timeout_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( link_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        x = max( x, 350 )
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -1836,259 +1787,6 @@ class DialogInputLocalFiles( Dialog ):
         wx.CallAfter( self.DoneParsing )
         
     
-class DialogInputMessageSystemPredicate( Dialog ):
-    
-    def __init__( self, parent, predicate_type ):
-        
-        def Age():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '>' ] )
-                
-                self._years = wx.SpinCtrl( self, max = 30 )
-                self._months = wx.SpinCtrl( self, max = 60 )
-                self._days = wx.SpinCtrl( self, max = 90 )
-                
-                self._ok = wx.Button( self, label = 'Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                self._sign.SetSelection( 0 )
-                
-                self._years.SetValue( 0 )
-                self._months.SetValue( 0 )
-                self._days.SetValue( 7 )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:age' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._years, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'years' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._months, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'months' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._days, CC.FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter age predicate' )
-            
-            InitialiseControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._ok.SetFocus )
-            
-        
-        def From():
-            
-            def InitialiseControls():
-                
-                contact_names = HydrusGlobals.client_controller.Read( 'contact_names' )
-                
-                self._contact = wx.Choice( self, choices=contact_names )
-                
-                self._ok = wx.Button( self, label = 'Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                self._contact.SetSelection( 0 )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:from' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._contact, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter from predicate' )
-            
-            InitialiseControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._ok.SetFocus )
-            
-        
-        def StartedBy():
-            
-            def InitialiseControls():
-                
-                contact_names = HydrusGlobals.client_controller.Read( 'contact_names' )
-                
-                self._contact = wx.Choice( self, choices = contact_names )
-                
-                self._ok = wx.Button( self, label = 'Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                self._contact.SetSelection( 0 )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:started_by' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._contact, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter started by predicate' )
-            
-            InitialiseControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._ok.SetFocus )
-            
-        
-        def To():
-            
-            def InitialiseControls():
-                
-                contact_names = [ name for name in HydrusGlobals.client_controller.Read( 'contact_names' ) if name != 'Anonymous' ]
-                
-                self._contact = wx.Choice( self, choices = contact_names )
-                
-                self._ok = wx.Button( self, label = 'Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                self._contact.SetSelection( 0 )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:to' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._contact, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter to predicate' )
-            
-            InitialiseControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._ok.SetFocus )
-            
-        
-        def NumAttachments():
-            
-            def InitialiseControls():
-                
-                self._sign = wx.Choice( self, choices=[ '<', '=', '>' ] )
-                
-                self._num_attachments = wx.SpinCtrl( self, max = 2000 )
-                
-                self._ok = wx.Button( self, label = 'Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                self._sign.SetSelection( 0 )
-                
-                self._num_attachments.SetValue( 4 )
-                
-            
-            def ArrangeControls():
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self, label = 'system:numattachments' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._sign, CC.FLAGS_MIXED )
-                hbox.AddF( self._num_attachments, CC.FLAGS_MIXED )
-                hbox.AddF( self._ok, CC.FLAGS_MIXED )
-                
-                self.SetSizer( hbox )
-                
-            
-            Dialog.__init__( self, parent, 'enter number of attachments predicate' )
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-        
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-            wx.CallAfter( self._ok.SetFocus )
-            
-        
-        self._type = predicate_type
-        
-        if self._type == 'system:age': Age()
-        elif self._type == 'system:started_by': StartedBy()
-        elif self._type == 'system:from': From()
-        elif self._type == 'system:to': To()
-        elif self._type == 'system:numattachments': NumAttachments()
-        
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        
-    
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
-    
-    def GetString( self ):
-        
-        if self._type == 'system:age': return 'system:age' + self._sign.GetStringSelection() + str( self._years.GetValue() ) + 'y' + str( self._months.GetValue() ) + 'm' + str( self._days.GetValue() ) + 'd'
-        elif self._type == 'system:started_by': return 'system:started_by=' + self._contact.GetStringSelection()
-        elif self._type == 'system:from': return 'system:from=' + self._contact.GetStringSelection()
-        elif self._type == 'system:to': return 'system:to=' + self._contact.GetStringSelection()
-        elif self._type == 'system:numattachments': return 'system:numattachments' + self._sign.GetStringSelection() + str( self._num_attachments.GetValue() )
-        
-    
 class DialogInputNamespaceRegex( Dialog ):
     
     def __init__( self, parent, namespace = '', regex = '' ):
@@ -2188,81 +1886,6 @@ class DialogInputNewAccountType( Dialog ):
     
     def __init__( self, parent, account_type = None ):
         
-        def InitialiseControls():
-            
-            self._title = wx.TextCtrl( self )
-            
-            self._permissions_panel = ClientGUICommon.StaticBox( self, 'permissions' )
-            
-            self._permissions = wx.ListBox( self._permissions_panel )
-            
-            self._permission_choice = wx.Choice( self._permissions_panel )
-            
-            self._add_permission = wx.Button( self._permissions_panel, label = 'add' )
-            self._add_permission.Bind( wx.EVT_BUTTON, self.EventAddPermission )
-            
-            self._remove_permission = wx.Button( self._permissions_panel, label = 'remove' )
-            self._remove_permission.Bind( wx.EVT_BUTTON, self.EventRemovePermission )
-            
-            self._max_num_mb = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly data (MB)', multiplier = 1048576 )
-            self._max_num_mb.SetValue( max_num_bytes )
-            
-            self._max_num_requests = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly requests' )
-            self._max_num_requests.SetValue( max_num_requests )
-            
-            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-            self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._title.SetValue( title )
-            
-            for permission in permissions: self._permissions.Append( HC.permissions_string_lookup[ permission ], permission )
-            
-            for permission in HC.CREATABLE_PERMISSIONS: self._permission_choice.Append( HC.permissions_string_lookup[ permission ], permission )
-            self._permission_choice.SetSelection( 0 )
-            
-        
-        def ArrangeControls():
-            
-            t_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            t_box.AddF( wx.StaticText( self, label = 'title: ' ), CC.FLAGS_SMALL_INDENT )
-            t_box.AddF( self._title, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            perm_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            perm_buttons_box.AddF( self._permission_choice, CC.FLAGS_MIXED )
-            perm_buttons_box.AddF( self._add_permission, CC.FLAGS_MIXED )
-            perm_buttons_box.AddF( self._remove_permission, CC.FLAGS_MIXED )
-            
-            self._permissions_panel.AddF( self._permissions, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._permissions_panel.AddF( perm_buttons_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            b_box.AddF( self._apply, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( t_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._max_num_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._max_num_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( 800, y ) )
-            
-        
         if account_type is None:
             
             title = ''
@@ -2280,11 +1903,75 @@ class DialogInputNewAccountType( Dialog ):
         
         Dialog.__init__( self, parent, 'edit account type' )
         
-        InitialiseControls()
+        self._title = wx.TextCtrl( self )
         
-        PopulateControls()
+        self._permissions_panel = ClientGUICommon.StaticBox( self, 'permissions' )
         
-        ArrangeControls()
+        self._permissions = wx.ListBox( self._permissions_panel )
+        
+        self._permission_choice = wx.Choice( self._permissions_panel )
+        
+        self._add_permission = wx.Button( self._permissions_panel, label = 'add' )
+        self._add_permission.Bind( wx.EVT_BUTTON, self.EventAddPermission )
+        
+        self._remove_permission = wx.Button( self._permissions_panel, label = 'remove' )
+        self._remove_permission.Bind( wx.EVT_BUTTON, self.EventRemovePermission )
+        
+        self._max_num_mb = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly data (MB)', multiplier = 1048576 )
+        self._max_num_mb.SetValue( max_num_bytes )
+        
+        self._max_num_requests = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly requests' )
+        self._max_num_requests.SetValue( max_num_requests )
+        
+        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
+        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._title.SetValue( title )
+        
+        for permission in permissions: self._permissions.Append( HC.permissions_string_lookup[ permission ], permission )
+        
+        for permission in HC.CREATABLE_PERMISSIONS: self._permission_choice.Append( HC.permissions_string_lookup[ permission ], permission )
+        self._permission_choice.SetSelection( 0 )
+        
+        #
+        
+        t_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        t_box.AddF( wx.StaticText( self, label = 'title: ' ), CC.FLAGS_SMALL_INDENT )
+        t_box.AddF( self._title, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        perm_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        perm_buttons_box.AddF( self._permission_choice, CC.FLAGS_MIXED )
+        perm_buttons_box.AddF( self._add_permission, CC.FLAGS_MIXED )
+        perm_buttons_box.AddF( self._remove_permission, CC.FLAGS_MIXED )
+        
+        self._permissions_panel.AddF( self._permissions, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._permissions_panel.AddF( perm_buttons_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        b_box.AddF( self._apply, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( t_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._max_num_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._max_num_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( 800, y ) )
         
         wx.CallAfter( self._apply.SetFocus )
         
@@ -2327,80 +2014,69 @@ class DialogInputNewFormField( Dialog ):
     
     def __init__( self, parent, form_field = None ):
         
-        def InitialiseControls():
-            
-            self._name = wx.TextCtrl( self )
-            
-            self._type = wx.Choice( self )
-            
-            self._default = wx.TextCtrl( self )
-            
-            self._editable = wx.CheckBox( self )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )   
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._name.SetValue( name )
-            
-            for temp_type in CC.FIELDS: self._type.Append( CC.field_string_lookup[ temp_type ], temp_type )
-            self._type.Select( field_type )
-            
-            self._default.SetValue( default )
-            
-            self._editable.SetValue( editable )
-            
-        
-        def ArrangeControls():
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'name' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'type' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._type, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'default' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'editable' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._editable, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            b_box.AddF( self._ok, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'configure form field' )
         
         if form_field is None: ( name, field_type, default, editable ) = ( '', CC.FIELD_TEXT, '', True )
         else: ( name, field_type, default, editable ) = form_field
         
-        InitialiseControls()
+        self._name = wx.TextCtrl( self )
         
-        PopulateControls()
+        self._type = wx.Choice( self )
         
-        ArrangeControls()
+        self._default = wx.TextCtrl( self )
+        
+        self._editable = wx.CheckBox( self )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )   
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._name.SetValue( name )
+        
+        for temp_type in CC.FIELDS: self._type.Append( CC.field_string_lookup[ temp_type ], temp_type )
+        self._type.Select( field_type )
+        
+        self._default.SetValue( default )
+        
+        self._editable.SetValue( editable )
+        
+        #
+        
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'name' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'type' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'default' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._default, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'editable' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._editable, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         

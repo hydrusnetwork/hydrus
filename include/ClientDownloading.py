@@ -135,6 +135,11 @@ def GetImageboardThreadURLs( thread_url ):
     
     try:
         
+        if '#' in thread_url:
+            
+            ( thread_url, post_anchor_gumpf ) = thread_url.split( '#', 1 )
+            
+        
         parse_result = urlparse.urlparse( thread_url )
         
         host = parse_result.hostname
@@ -148,7 +153,10 @@ def GetImageboardThreadURLs( thread_url ):
     is_4chan = '4chan.org' in host
     is_8chan = '8chan.co' in host or '8ch.net' in host
     
-    if not ( is_4chan or is_8chan ): raise Exception( 'This only works for 4chan and 8chan right now!' )
+    if not ( is_4chan or is_8chan ):
+        
+        raise Exception( 'This only works for 4chan and 8chan right now!' )
+        
     
     try:
         
@@ -180,7 +188,10 @@ def GetImageboardThreadURLs( thread_url ):
             file_base = 'http://8ch.net/' + board + '/src/'
             
         
-    except: raise Exception( 'Could not understand the board or thread id!' )
+    except:
+        
+        raise Exception( 'Could not understand the board or thread id!' )
+        
     
     return ( json_url, file_base )
     

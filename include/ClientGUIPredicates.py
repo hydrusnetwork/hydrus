@@ -3,6 +3,7 @@ import ClientData
 import ClientGUICommon
 import ClientGUIOptionsPanels
 import ClientRatings
+import ClientSearch
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals
@@ -22,7 +23,7 @@ class PanelPredicateSystem( wx.Panel ):
         
         info = self.GetInfo()
         
-        predicates = ( ClientData.Predicate( self.PREDICATE_TYPE, info ), )
+        predicates = ( ClientSearch.Predicate( self.PREDICATE_TYPE, info ), )
         
         return predicates
         
@@ -602,7 +603,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         infos = self.GetInfo()
         
-        predicates = [ ClientData.Predicate( self.PREDICATE_TYPE, info ) for info in infos ]
+        predicates = [ ClientSearch.Predicate( self.PREDICATE_TYPE, info ) for info in infos ]
         
         return predicates
         

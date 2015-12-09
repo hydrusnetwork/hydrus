@@ -1403,49 +1403,38 @@ class IMFrame( ClientGUICommon.Frame ):
     
     def __init__( self, parent, me_account, them_account, context ):
         
-        def InitialiseControls():
-            
-            self._me_label = MeLabel( self, me_account ) # maybe these two should be the same, and infer me/them status itself
-            self._them_label = ThemLabel( self, them_account )
-            self._convo_box = ConvoBox( self, context_key ) # something like this
-            self._text_input = ConvoTextInput( self, callable ) # callable should be private method of this, or similar!
-            
-        
-        def PopulateControls():
-            
-            # could introduce last convo here, or whatever.
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._me_label, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = ' talking to ' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._them_label, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._convo_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._text_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-            self.SetInitialSize( ( 400, 600 ) ) # this should be remembered, stuck in options
-            
-        
         me_name = me_account.GetNameBlah()
         them_name = them_account.GetNameBlah()
         
         ClientGUICommon.Frame.__init__( self, parent, title = me_name + ' talking to ' + them_name )
         
-        InitialiseControls()
+        self._me_label = MeLabel( self, me_account ) # maybe these two should be the same, and infer me/them status itself
+        self._them_label = ThemLabel( self, them_account )
+        self._convo_box = ConvoBox( self, context_key ) # something like this
+        self._text_input = ConvoTextInput( self, callable ) # callable should be private method of this, or similar!
         
-        PopulateControls()
+        #
         
-        ArrangeControls()
+        # could introduce last convo here, or whatever.
+        
+        pass
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._me_label, CC.FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self, label = ' talking to ' ), CC.FLAGS_MIXED )
+        hbox.AddF( self._them_label, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._convo_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._text_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        self.SetInitialSize( ( 400, 600 ) ) # this should be remembered, stuck in options
         
         self.Show( True )
         

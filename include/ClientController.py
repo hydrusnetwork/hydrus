@@ -389,6 +389,11 @@ class Controller( HydrusController.HydrusController ):
         return self._client_files_manager
         
     
+    def GetClientSessionManager( self ):
+        
+        return self._client_session_manager
+        
+    
     def GetDB( self ): return self._db
     
     def GetGUI( self ): return self._gui
@@ -425,7 +430,8 @@ class Controller( HydrusController.HydrusController ):
         
         self._client_files_manager = ClientCaches.ClientFilesManager( self )
         
-        self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManager( self )
+        self._client_session_manager = ClientCaches.HydrusSessionManager( self )
+        
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )

@@ -127,6 +127,8 @@ def CleanTag( tag ):
             tag = re.sub( '\\A(\\s|-|system:)', '', tag, flags = re.UNICODE ) # removes spaces or garbage at the beginning
             
         
+        tag = re.sub( '^:(?!:)', '::', tag, flags = re.UNICODE ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
+        
     except Exception as e:
         
         text = 'Was unable to parse the tag: ' + HydrusData.ToUnicode( tag )
@@ -153,4 +155,33 @@ def CleanTags( tags ):
         
     
     return clean_tags
+    
+def CombineTag( namespace, tag ):
+    
+    if namespace == '':
+        
+        if tag.startswith( ':' ):
+            
+            return ':' + tag
+            
+        else:
+            
+            return tag
+            
+        
+    else:
+        
+        return namespace + ':' + tag
+        
+    
+def RenderTag( tag ):
+    
+    if tag.startswith( '::' ):
+        
+        return tag[1:]
+        
+    else:
+        
+        return tag
+        
     

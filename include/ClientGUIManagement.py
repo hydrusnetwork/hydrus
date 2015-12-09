@@ -1416,7 +1416,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._file_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         
-        self._waiting_politely_indicator = ClientGUICommon.WaitingPolitely( self._import_queue_panel, self._page_key )
+        self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._import_queue_panel, self._page_key )
         
         self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
@@ -1958,7 +1958,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
         
-        self._waiting_politely_indicator = ClientGUICommon.WaitingPolitely( self._import_queue_panel, self._page_key )
+        self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._import_queue_panel, self._page_key )
         
         self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
@@ -2530,13 +2530,13 @@ class ManagementPanelQuery( ManagementPanel ):
         
         file_search_context = self._management_controller.GetVariable( 'file_search_context' )
         
-        search_enabled = self._management_controller.GetVariable( 'search_enabled' )
+        self._search_enabled = self._management_controller.GetVariable( 'search_enabled' )
         
         self._query_key = HydrusThreading.JobKey( cancellable = True )
         
         initial_predicates = file_search_context.GetPredicates()
         
-        if search_enabled:
+        if self._search_enabled:
             
             self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
             
@@ -2559,7 +2559,7 @@ class ManagementPanelQuery( ManagementPanel ):
         self._MakeSort( vbox )
         self._MakeCollect( vbox )
         
-        if search_enabled: vbox.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        if self._search_enabled: vbox.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2597,7 +2597,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                search_context = ClientData.FileSearchContext( file_service_key, tag_service_key, include_current, include_pending, current_predicates )
+                search_context = ClientSearch.FileSearchContext( file_service_key, tag_service_key, include_current, include_pending, current_predicates )
                 
                 self._management_controller.SetVariable( 'file_search_context', search_context )
                 
@@ -2616,6 +2616,24 @@ class ManagementPanelQuery( ManagementPanel ):
                 
             except: wx.MessageBox( traceback.format_exc() )
             
+        
+    
+    def _MakeCurrentSelectionTagsBox( self, sizer ):
+        
+        tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        
+        if self._search_enabled:
+            
+            t = ClientGUICommon.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, predicates_callable = self._current_predicates_box.GetPredicates )
+            
+        else:
+            
+            t = ClientGUICommon.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key )
+            
+        
+        tags_box.SetTagsBox( t )
+        
+        sizer.AddF( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def AddMediaResultsFromQuery( self, query_key, media_results ):
@@ -2749,14 +2767,14 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         self._thread_times_to_check.SetValue( times_to_check )
         self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventTimesToCheck )
         
-        self._thread_check_period = wx.SpinCtrl( self._options_panel, size = ( 60, -1 ), min = 30, max = 86400 )
+        self._thread_check_period = ClientGUICommon.TimeDeltaCtrl( self._options_panel, min = 30, hours = True, minutes = True, seconds = True )
         self._thread_check_period.SetValue( check_period )
         self._thread_check_period.Bind( wx.EVT_SPINCTRL, self.EventCheckPeriod )
         
         self._thread_check_now_button = wx.Button( self._options_panel, label = 'check now' )
         self._thread_check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
         
-        self._waiting_politely_indicator = ClientGUICommon.WaitingPolitely( self._options_panel, self._page_key )
+        self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._options_panel, self._page_key )
         
         self._seed_cache_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.seed_cache )
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
@@ -2780,7 +2798,6 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         hbox_2.AddF( wx.StaticText( self._options_panel, label = 'check every ' ), CC.FLAGS_MIXED )
         hbox_2.AddF( self._thread_check_period, CC.FLAGS_MIXED )
-        hbox_2.AddF( wx.StaticText( self._options_panel, label = ' seconds' ), CC.FLAGS_MIXED )
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         

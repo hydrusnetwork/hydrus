@@ -1763,50 +1763,47 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix + 'deleting internal orphan information' )
         
-        perceptual_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM perceptual_hashes;' ) }
-        
-        hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info;' ) }
-        
-        perceptual_deletees = perceptual_hash_ids - hash_ids
-        
-        self._c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( perceptual_deletees ) + ';' )
+        self._c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id NOT IN SELECT hash_id FROM files_info;' )
         
         job_key.SetVariable( 'popup_text_1', prefix + 'gathering thumbnail information' )
         
-        local_thumbnail_hashes = ClientFiles.GetAllThumbnailHashes()
-        
-        hashes = set( self._GetHashes( hash_ids ) )
-        
         job_key.SetVariable( 'popup_text_1', prefix + 'deleting orphan thumbnails' )
         
-        for hash in local_thumbnail_hashes - hashes:
+        for hash in ClientFiles.IterateAllThumbnailHashes():
             
-            path = ClientFiles.GetExpectedThumbnailPath( hash, True )
-            resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
+            hash_id = self._GetHashId( hash )
             
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            result = self._c.execute( 'SELECT 1 FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
             
-            if should_quit:
+            if result is None:
                 
-                return
+                path = ClientFiles.GetExpectedThumbnailPath( hash, True )
+                resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
                 
-            
-            try:
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                 
-                if os.path.exists( path ):
+                if should_quit:
                     
-                    ClientData.DeletePath( path )
-                    
-                
-                if os.path.exists( resized_path ):
-                    
-                    ClientData.DeletePath( resized_path )
+                    return
                     
                 
-            except OSError:
-                
-                HydrusData.Print( 'In trying to delete the orphan ' + path + ' or ' + resized_path + ', this error was encountered:' )
-                HydrusData.Print( traceback.format_exc() )
+                try:
+                    
+                    if os.path.exists( path ):
+                        
+                        ClientData.DeletePath( path )
+                        
+                    
+                    if os.path.exists( resized_path ):
+                        
+                        ClientData.DeletePath( resized_path )
+                        
+                    
+                except OSError:
+                    
+                    HydrusData.Print( 'In trying to delete the orphan ' + path + ' or ' + resized_path + ', this error was encountered:' )
+                    HydrusData.Print( traceback.format_exc() )
+                    
                 
             
         
@@ -2009,7 +2006,7 @@ class DB( HydrusDB.HydrusDB ):
                 ( archive_hash, ) = result
                 
             
-            tags = { namespace + ':' + tag if namespace != '' else tag for ( namespace, tag ) in self._c.execute( 'SELECT namespace, tag FROM namespaces, ( tags, mappings USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? );', ( hash_id, service_id, HC.CURRENT, HC.PENDING ) ) }
+            tags = { HydrusTags.CombineTag( namespace, tag ) for ( namespace, tag ) in self._c.execute( 'SELECT namespace, tag FROM namespaces, ( tags, mappings USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? );', ( hash_id, service_id, HC.CURRENT, HC.PENDING ) ) }
             
             hta.AddMappings( archive_hash, tags )
             
@@ -2282,7 +2279,7 @@ class DB( HydrusDB.HydrusDB ):
         
         filtered_tags = tag_censorship_manager.FilterTags( tag_service_key, tags_to_do )
         
-        predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_TAG, tag, counts = { HC.CURRENT : current_count, HC.PENDING : pending_count } ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, counts = { HC.CURRENT : current_count, HC.PENDING : pending_count } ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
         
         return predicates
         
@@ -2326,16 +2323,16 @@ class DB( HydrusDB.HydrusDB ):
         
         predicates = []
         
-        if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ): predicates.extend( [ ClientData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
+        if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ): predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
         elif service_type in ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
             
             service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
+            predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
             
-            predicates.extend( [ ClientData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
             
         elif service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
             
@@ -2354,27 +2351,27 @@ class DB( HydrusDB.HydrusDB ):
                 num_archive = num_local - num_inbox
                 
             
-            predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
+            predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
             
             if num_inbox > 0:
                 
-                predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : num_inbox } ) )
-                predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : num_archive } ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : num_inbox } ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : num_archive } ) )
                 
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, counts = { HC.CURRENT : num_local } ) )
-                predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : num_not_local } ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, counts = { HC.CURRENT : num_local } ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : num_not_local } ) )
                 
             
-            predicates.extend( [ ClientData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             ratings_service_ids = self._GetServiceIds( HC.RATINGS_SERVICES )
             
-            if len( ratings_service_ids ) > 0: predicates.append( ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, None ) )
+            if len( ratings_service_ids ) > 0: predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, None ) )
             
-            predicates.extend( [ ClientData.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
             
         
         return predicates
@@ -3153,9 +3150,9 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
         
-        hash_ids_to_tags = HydrusData.BuildKeyToListDict( [ ( hash_id, ( service_id, ( status, namespace + ':' + tag ) ) ) if namespace != '' else ( hash_id, ( service_id, ( status, tag ) ) ) for ( hash_id, service_id, namespace, tag, status ) in self._c.execute( 'SELECT hash_id, service_id, namespace, tag, status FROM namespaces, ( tags, mappings USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
+        hash_ids_to_tags = HydrusData.BuildKeyToListDict( [ ( hash_id, ( service_id, ( status, HydrusTags.CombineTag( namespace, tag ) ) ) ) for ( hash_id, service_id, namespace, tag, status ) in self._c.execute( 'SELECT hash_id, service_id, namespace, tag, status FROM namespaces, ( tags, mappings USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
         
-        hash_ids_to_petitioned_tags = HydrusData.BuildKeyToListDict( [ ( hash_id, ( service_id, ( HC.PETITIONED, namespace + ':' + tag ) ) ) if namespace != '' else ( hash_id, ( service_id, ( HC.PETITIONED, tag ) ) ) for ( hash_id, service_id, namespace, tag ) in self._c.execute( 'SELECT hash_id, service_id, namespace, tag FROM namespaces, ( tags, mapping_petitions USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
+        hash_ids_to_petitioned_tags = HydrusData.BuildKeyToListDict( [ ( hash_id, ( service_id, ( HC.PETITIONED, HydrusTags.CombineTag( namespace, tag ) ) ) ) for ( hash_id, service_id, namespace, tag ) in self._c.execute( 'SELECT hash_id, service_id, namespace, tag FROM namespaces, ( tags, mapping_petitions USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
         
         for ( hash_id, tag_data ) in hash_ids_to_petitioned_tags.items(): hash_ids_to_tags[ hash_id ].extend( tag_data )
         
@@ -3299,7 +3296,10 @@ class DB( HydrusDB.HydrusDB ):
         
         ( tag, ) = result
         
-        if namespace_id == 1: return tag
+        if namespace_id == 1:
+            
+            return HydrusTags.CombineTag( '', tag )
+            
         else:
             
             result = self._c.execute( 'SELECT namespace FROM namespaces WHERE namespace_id = ?;', ( namespace_id, ) ).fetchone()
@@ -3308,7 +3308,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( namespace, ) = result
             
-            return namespace + ':' + tag
+            return HydrusTags.CombineTag( namespace, tag )
             
         
     
@@ -6178,6 +6178,18 @@ class DB( HydrusDB.HydrusDB ):
             for prefix in HydrusData.IterateHexPrefixes():
                 
                 self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( prefix, location ) )
+                
+            
+        
+        if version == 184:
+            
+            result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( '', ) ).fetchone()
+            
+            if result is not None:
+                
+                ( tag_id, ) = result
+                
+                self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
                 
             
         

@@ -104,15 +104,14 @@ class Controller( object ):
         
         self._services_manager = ClientCaches.ServicesManager( self )
         self._client_files_manager = ClientCaches.ClientFilesManager( self )
+        self._client_session_manager = ClientCaches.HydrusSessionManager( self )
         
-        self._managers[ 'hydrus_sessions' ] = ClientCaches.HydrusSessionManager( self )
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
         self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
         self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
-        self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
-        self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
+        self._server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
         
         self._cookies = {}
@@ -149,6 +148,11 @@ class Controller( object ):
         return self._client_files_manager
         
     
+    def GetClientSessionManager( self ):
+        
+        return self._client_session_manager
+        
+    
     def GetHTTP( self ): return self._http
     
     def GetNewOptions( self ):
@@ -166,6 +170,11 @@ class Controller( object ):
     def GetServicesManager( self ):
         
         return self._services_manager
+        
+    
+    def GetServerSessionManager( self ):
+        
+        return self._server_session_manager
         
     
     def GetWrite( self, name ):

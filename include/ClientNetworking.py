@@ -26,7 +26,7 @@ def AddHydrusCredentialsToHeaders( credentials, request_headers ):
     
 def AddHydrusSessionKeyToHeaders( service_key, request_headers ):
     
-    session_manager = HydrusGlobals.client_controller.GetManager( 'hydrus_sessions' )
+    session_manager = HydrusGlobals.client_controller.GetClientSessionManager()
     
     session_key = session_manager.GetSessionKey( service_key )
     

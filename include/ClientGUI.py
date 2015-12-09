@@ -42,7 +42,7 @@ ID_TIMER_UPDATES = wx.NewId()
 
 # Sizer Flags
 
-MENU_ORDER = [ 'file', 'undo', 'view', 'search', 'download', 'database', 'pending', 'services', 'admin', 'help' ]
+MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'services', 'help' ]
 
 class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
@@ -640,40 +640,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendMenu( CC.ID_NULL, p( 'Open' ), open )
             
             menu.AppendSeparator()
-            
-            gui_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-            
-            sessions = wx.Menu()
-            
-            if len( gui_session_names ) > 0:
-                
-                load = wx.Menu()
-                
-                for name in gui_session_names:
-                    
-                    load.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'load_gui_session', name ), name )
-                    
-                
-                sessions.AppendMenu( CC.ID_NULL, p( 'Load' ), load )
-                
-            
-            sessions.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'save_gui_session' ), p( 'Save Current' ) )
-            
-            if len( gui_session_names ) > 0:
-                
-                delete = wx.Menu()
-                
-                for name in gui_session_names:
-                    
-                    delete.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_gui_session', name ), name )
-                    
-                
-                sessions.AppendMenu( CC.ID_NULL, p( 'Delete' ), delete )
-                
-            
-            menu.AppendMenu( CC.ID_NULL, p( 'Sessions' ), sessions )
-            
-            menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'options' ), p( '&Options' ) )
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'exit' ), p( '&Exit' ) )
@@ -746,17 +712,50 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             return ( menu, p( '&Undo' ), show )
             
         
-        def view():
+        def pages():
             
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'show_hide_splitters' ), p( 'Show/Hide Splitters' ), p( 'Show or hide the current page\'s splitters.' ) )
+            
+            menu.AppendSeparator()
+            
+            gui_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            
+            sessions = wx.Menu()
+            
+            if len( gui_session_names ) > 0:
+                
+                load = wx.Menu()
+                
+                for name in gui_session_names:
+                    
+                    load.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'load_gui_session', name ), name )
+                    
+                
+                sessions.AppendMenu( CC.ID_NULL, p( 'Load' ), load )
+                
+            
+            sessions.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'save_gui_session' ), p( 'Save Current' ) )
+            
+            if len( gui_session_names ) > 0:
+                
+                delete = wx.Menu()
+                
+                for name in gui_session_names:
+                    
+                    delete.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_gui_session', name ), name )
+                    
+                
+                sessions.AppendMenu( CC.ID_NULL, p( 'Delete' ), delete )
+                
+            
+            menu.AppendMenu( CC.ID_NULL, p( 'Sessions' ), sessions )
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
             
-            return ( menu, p( '&View' ), True )
+            #
             
-        
-        def search():
+            search_menu = wx.Menu()
             
             services = self._controller.GetServicesManager().GetServices()
             
@@ -768,24 +767,37 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             petition_resolve_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
-            menu = wx.Menu()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', CC.TRASH_SERVICE_KEY ), p( '&New Trash Search' ), p( 'Open a new search tab for your recently deleted files' ) )
-            for service in file_repositories: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
+            search_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
+            search_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', CC.TRASH_SERVICE_KEY ), p( '&New Trash Search' ), p( 'Open a new search tab for your recently deleted files' ) )
+            for service in file_repositories: search_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
+            
+            menu.AppendMenu( CC.ID_NULL, p( 'New Search Page' ), search_menu )
+            
+            #
+            
             if len( petition_resolve_tag_services ) > 0 or len( petition_resolve_file_services ) > 0:
                 
-                menu.AppendSeparator()
-                for service in petition_resolve_tag_services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
-                for service in petition_resolve_file_services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
+                petition_menu = wx.Menu()
+                
+                for service in petition_resolve_tag_services:
+                    
+                    petition_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
+                    
+                
+                for service in petition_resolve_file_services:
+                    
+                    petition_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
+                    
+                
+                menu.AppendMenu( CC.ID_NULL, p( 'New Petition Page' ), petition_menu )
                 
             
-            return ( menu, p( '&Search' ), True )
+            #
             
-        
-        def download():
+            download_menu = wx.Menu()
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_page_of_images' ), p( '&New Page of Images Download Page' ), p( 'Open a new tab to download files from generic galleries or threads.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
+            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_page_of_images' ), p( '&New Page of Images Download Page' ), p( 'Open a new tab to download files from generic galleries or threads.' ) )
+            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
             
             submenu = wx.Menu()
             
@@ -810,13 +822,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_TUMBLR ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
             
-            menu.AppendMenu( CC.ID_NULL, p( '&New Gallery Download Page' ), submenu )
+            download_menu.AppendMenu( CC.ID_NULL, p( '&New Gallery Download Page' ), submenu )
             
-            menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
+            download_menu.AppendSeparator()
+            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
             
-            return ( menu, p( 'Do&wnload' ), True )
+            menu.AppendMenu( CC.ID_NULL, p( 'New Download Page' ), download_menu )
+            
+            #
+            
+            return ( menu, p( '&Pages' ), True )
             
         
         def database():
@@ -910,6 +926,72 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'review_services' ), p( '&Review Services' ), p( 'Look at the services your client connects to.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_services' ), p( '&Manage Services' ), p( 'Edit the services your client connects to.' ) )
+            
+            tag_repositories = self._controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            admin_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
+            
+            file_repositories = self._controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
+            admin_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
+            
+            servers_admin = self._controller.GetServicesManager().GetServices( ( HC.SERVER_ADMIN, ) )
+            server_admins = [ service for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
+            
+            if len( admin_tag_services ) > 0 or len( admin_file_services ) > 0 or len( server_admins ) > 0:
+                
+                admin_menu = wx.Menu()
+                
+                for service in admin_tag_services:
+                    
+                    submenu = wx.Menu()
+                    
+                    service_key = service.GetServiceKey()
+                    
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
+                    
+                    admin_menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
+                    
+                
+                for service in admin_file_services:
+                    
+                    submenu = wx.Menu()
+                    
+                    service_key = service.GetServiceKey()
+                    
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'fetch_ip', service_key ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
+                    
+                    admin_menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
+                    
+                
+                for service in server_admins:
+                    
+                    submenu = wx.Menu()
+                    
+                    service_key = service.GetServiceKey()
+                    
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_server_services', service_key ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'backup_service', service_key ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
+                    
+                    admin_menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
+                    
+                
+                menu.AppendMenu( CC.ID_NULL, p( 'Administrate Services' ), admin_menu )
+                
+            
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_censorship' ), p( '&Manage Tag Censorship' ), p( 'Set which tags you want to see from which services.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
@@ -933,75 +1015,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
             
             return ( menu, p( '&Services' ), True )
-            
-        
-        def admin():
-            
-            tag_repositories = self._controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
-            admin_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
-            
-            file_repositories = self._controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
-            admin_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
-            
-            servers_admin = self._controller.GetServicesManager().GetServices( ( HC.SERVER_ADMIN, ) )
-            server_admins = [ service for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
-            
-            if len( admin_tag_services ) > 0 or len( admin_file_services ) > 0 or len( server_admins ) > 0:
-                
-                show = True
-                
-                for service in admin_tag_services:
-                    
-                    submenu = wx.Menu()
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
-                    
-                    menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
-                    
-                
-                for service in admin_file_services:
-                    
-                    submenu = wx.Menu()
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'fetch_ip', service_key ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
-                    
-                    menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
-                    
-                
-                for service in server_admins:
-                    
-                    submenu = wx.Menu()
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_server_services', service_key ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'backup_service', service_key ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
-                    
-                    menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
-                    
-                
-            else: show = False
-            
-            return( menu, p( '&Admin' ), show )
             
         
         def help():
@@ -1049,13 +1062,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if name == 'file': return file()
         elif name == 'undo': return undo()
-        elif name == 'view': return view()
-        elif name == 'download': return download()
+        elif name == 'pages': return pages()
         elif name == 'database': return database()
         elif name == 'pending': return pending()
-        elif name == 'search': return search()
         elif name == 'services': return services()
-        elif name == 'admin': return admin()
         elif name == 'help': return help()
         
     
@@ -1360,7 +1370,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         search_enabled = len( initial_media_results ) == 0
         
-        file_search_context = ClientData.FileSearchContext( file_service_key = file_service_key, predicates = initial_predicates )
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, predicates = initial_predicates )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( file_service_key, file_search_context, search_enabled )
         
@@ -2311,7 +2321,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         hamming_distance = HC.options[ 'file_system_predicates' ][ 'hamming_distance' ]
         
-        initial_predicates = [ ClientData.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, hamming_distance ) ) ]
+        initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, hamming_distance ) ) ]
         
         self._NewPageQuery( file_service_key, initial_predicates = initial_predicates )
         
@@ -2327,18 +2337,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NotifyNewPermissions( self ):
         
-        self.RefreshMenu( 'search' )
-        self.RefreshMenu( 'admin' )
+        self.RefreshMenu( 'pages' )
+        self.RefreshMenu( 'services' )
         
     
     def NotifyNewServices( self ):
         
-        self.RefreshMenu( 'search' )
+        self.RefreshMenu( 'pages' )
         self.RefreshMenu( 'services' )
-        self.RefreshMenu( 'admin' )
         
     
-    def NotifyNewSessions( self ): self.RefreshMenu( 'file' )
+    def NotifyNewSessions( self ): self.RefreshMenu( 'pages' )
     
     def NotifyNewUndo( self ): self.RefreshMenu( 'undo' )
     
