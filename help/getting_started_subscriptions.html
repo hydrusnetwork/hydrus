@@ -7,9 +7,9 @@
 	<body>
 		<div class="content">
 			<p><a href="getting_started_tags.html"><--- Back to tags</a></p>
-			<p class="warning">Do not try to create a subscription until you are comfortable with a normal gallery download page! Go <i>F9->download->gallery->[your preference]</i> and run some searches, just so you get a feel before you make a mistake here.</p>
+			<p class="warning">Do not try to create a subscription until you are comfortable with a normal gallery download page! If you haven't downloaded anything yet, go <i>F9->download->gallery->[your preference]</i> and run some searches, just so you get a feel before you make a mistake here.</p>
 			<h3>what are subs?</h3>
-			<p>Subscriptions are a way of telling the client to stay synchronised with a gallery search. The client will regularly check the gallery and download any new files behind the scenes, just as if you were running the download yourself.</p>
+			<p>Subscriptions are a way of telling the client to quietly and regularly repeat a gallery search. The client will sync with the gallery and download any new files behind the scenes, just as if you were running the download yourself.</p>
 			<p>You can set up a subscription for any of the gallery websites in the normal <i>new page->download->gallery</i> menu.</p>
 			<p>Here's the dialog, which is under <i>services->manage subscriptions</i>:</p>
 			<p><img src="subs_dialog.png" /></p>
@@ -19,12 +19,11 @@
 				<li>It has never run before and has found as many files as the 'initial sync file limit'.</li>
 				<li>It has run before and discovers a url it has previously seen.</li>
 			</ul>
-			<p>Since I have set it to stop after 10, it will finish quickly, which is fine for this example.</p>
-			<p>Once it has found enough urls, it will go into them and strip out the file and any tags you have set it.</p>
+			<p>Once it has finished adding urls, it will visit each new one in turn and strip out the file and any tags you have set it to parse. <b>Urls it has checked in previous runs will not be rechecked, and tags will not be retroactively fetched.</b></p>
 			<h3>when they run</h3>
 			<p>When a subscription runs, it will show a popup message:</p>
 			<p><img src="subs_popup.png" /></p>
-			<p>You don't really have to care about this all that much; it just lets you know what it is doing. The 'show x files' button is useful just to quickly make sure it is getting what you meant it to. Once it is done, it will compress down and wait for you to dismiss it with a right click.</p>
+			<p>You don't really have to care about this all that much; it just lets you know what it is doing. The 'show x files' button is useful just to quickly make sure it is getting what you meant it to. Once it is done, it will collapse down and wait for you to dismiss it with a right click.</p>
 			<p>Serious errors, like server 404s, are recovered from as gracefully as possible. The client will retry those subscriptions the next day.</p>
 			<p>Here's the result of the subscription I set up above:</p>
 			<p><img src="subs_import_done.png" /></p>
