@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 186</h3></li>
+				<ul>
+				<ul>
+					<li>Windows release is now 64-bit!</li>
+					<li>some libraries got updated for windows, to varying minor effects</li>
+					<li>BeautifulSoup updated to latest version for everything</li>
+					<li>fixed a warning from newer versions of BeautifulSoup by explicitly using lxml</li>
+					<li>updated the running_from_source help file to what is currently needed</li>
+					<li>ffmpeg.exe is also 64-bit</li>
+					<li>wrote a "reducing program lag" page for the help</li>
+					<li>added program restart to file menu, doesn't work for linux yet</li>
+					<li>improved restart code (it was used in restore database, and for some users would not close the parent process down properly)</li>
+					<li>in the media viewer, page up/down, arrow keys and mouse scroll no longer unhide the mouse</li>
+					<li>in the media viewer under Windows, dragging no longer unhides the mouse</li>
+					<li>the implicit delay in the downloader-importers is reduced, so redundant files should always stream in a super fast now</li>
+					<li>export files dialog will now auto-create missing destination directories</li>
+					<li>export files dialog will now work off the gui thread (to stop gui hangups on big jobs) and will report its export status through the export button, which will be disabled until the job is finished</li>
+					<li>changed the new tab/shift+tab shortcuts because they break panel control navigation (I want to make these editable soon):</li>
+					<li>'fetch autocomplete results now' shortcut is now Ctrl+Space (Raw Control for OS X, not command)</li>
+					<li>'IME mode toggle' is now Insert</li>
+					<li>cleaned up how control is handled cross-platform--in general, 'control' is always control for windows and linux, and 'control' is command for os x. this may be incorrect.</li>
+					<li>json dump errors now report more information about the specific object and its serialisable contents that are causing the problem</li>
+					<li>clipped sibling/parent reason entry dialog message when lots of pairs are added</li>
+					<li>fixed a bit of bad logic in sibling/parent dialog->content-update workflow</li>
+					<li>fixed the thumbnail canvas not refreshing on a canvas shrink caused by expansion of the management panel that doesn't change the thumb column count</li>
+					<li>fixed emergency boot error reporting for when HydrusData won't load</li>
+					<li>added some unicode conversion unit tests</li>
+				</ul>
 				<li><h3>version 185</h3></li>
 				<ul>
 					<li>right clicking on a tag/predicate in the 'selection tags' box or the 'search' list of active predicates provides new intelligent menu options to discard/require/permit/exclude the selected tags from the current search. try it out!</li>
