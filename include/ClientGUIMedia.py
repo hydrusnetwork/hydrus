@@ -1453,8 +1453,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 self._dirty_canvas_pages = []
                 
-                self.Refresh()
-                
+            
+            self.Refresh()
             
         
     

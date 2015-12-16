@@ -853,6 +853,12 @@ def RecordRunningStart( instance ):
         f.write( ToByteString( record_string ) )
         
     
+def RestartProcess():
+    
+    time.sleep( 1 ) # time for ports to unmap
+    
+    os.execl( sys.executable, sys.executable, *sys.argv )
+    
 def ShowExceptionDefault( e ):
     
     if isinstance( e, HydrusExceptions.ShutdownException ):

@@ -52,3 +52,33 @@ class TestClientDownloadingFunctions( unittest.TestCase ):
         self.assertEqual( i_pretty, '123,456,789' )
         
     
+    def test_unicode_conversion( self ):
+        
+        u = u'here is a unicode character: \u76f4'
+        
+        b = HydrusData.ToByteString( u )
+        
+        bu = HydrusData.ToUnicode( b )
+        
+        self.assertEqual( type( b ), str )
+        self.assertEqual( b, 'here is a unicode character: \xe7\x9b\xb4' )
+        
+        self.assertEqual( type( bu ), unicode )
+        self.assertEqual( bu, u )
+        
+        d = {}
+        
+        u = HydrusData.ToUnicode( d )
+        b = HydrusData.ToByteString( d )
+        
+        self.assertEqual( type( u ), unicode )
+        self.assertEqual( u, u'{}' )
+        
+        self.assertEqual( type( b ), str )
+        self.assertEqual( b, '{}' )
+        
+        pretty_num = HydrusData.ConvertIntToPrettyString( 123456789 )
+        
+        self.assertEqual( type( pretty_num ), unicode )
+        
+    

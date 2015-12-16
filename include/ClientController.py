@@ -776,21 +776,24 @@ class Controller( HydrusController.HydrusController ):
                             
                             wx.CallAfter( self.Exit )
                             
-                            while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+                            while not self._db.LoopIsFinished():
+                                
+                                time.sleep( 0.1 )
+                                
                             
                             self._db.RestoreBackup( path )
                             
-                            cmd = [ sys.executable ]
+                            while not HydrusGlobals.shutdown_complete:
+                                
+                                time.sleep( 0.1 )
+                                
                             
-                            cmd.extend( sys.argv )
-                            
-                            subprocess.Popen( cmd )
+                            HydrusData.RestartProcess()
                             
                         
                         restart_thread = threading.Thread( target = THREADRestart, name = 'Application Restart Thread' )
                         
                         restart_thread.start()
-                        
                         
                     
                 

@@ -59,11 +59,18 @@ try:
             
         
     
+    HydrusGlobals.shutdown_complete = True
+    
+    if HydrusGlobals.restart:
+        
+        HydrusData.RestartProcess()
+        
+    
 except:
     
     import traceback
     
-    HydrusData.Print( 'Critical error occured! Details written to crash.log!' )
+    print( 'Critical error occured! Details written to crash.log!' )
     
     with open( 'crash.log', 'wb' ) as f: f.write( traceback.format_exc() )
     

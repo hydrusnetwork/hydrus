@@ -4140,48 +4140,71 @@ class DialogSetupExport( Dialog ):
         
         directory = self._directory_picker.GetPath()
         
+        if not os.path.exists( directory ):
+            
+            os.makedirs( directory )
+            
+        
         pattern = self._pattern.GetValue()
         
         terms = ClientFiles.ParseExportPhrase( pattern )
         
         client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
         
-        for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
+        self._export.Disable()
+        
+        to_do = self._paths.GetClientData()
+        
+        num_to_do = len( to_do )
+        
+        def do_it():
             
-            try:
+            for ( index, ( ( ordering_index, media ), mime, path ) ) in enumerate( to_do ):
                 
-                hash = media.GetHash()
-                
-                if export_tag_txts:
+                try:
                     
-                    tags_manager = media.GetTagsManager()
+                    wx.CallAfter( self._export.SetLabel, HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do ) )
                     
-                    tags = tags_manager.GetCurrent()
+                    hash = media.GetHash()
                     
-                    filename = ClientFiles.GenerateExportFilename( media, terms )
-                    
-                    txt_path = os.path.join( directory, filename + '.txt' )
-                    
-                    with open( txt_path, 'wb' ) as f:
+                    if export_tag_txts:
                         
-                        f.write( HydrusData.ToByteString( os.linesep.join( tags ) ) )
+                        tags_manager = media.GetTagsManager()
+                        
+                        tags = tags_manager.GetCurrent()
+                        
+                        filename = ClientFiles.GenerateExportFilename( media, terms )
+                        
+                        txt_path = os.path.join( directory, filename + '.txt' )
+                        
+                        with open( txt_path, 'wb' ) as f:
+                            
+                            f.write( HydrusData.ToByteString( os.linesep.join( tags ) ) )
+                            
                         
                     
-                
-                source_path = client_files_manager.GetFilePath( hash, mime )
-                
-                shutil.copy2( source_path, path )
-                
-                try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                except: pass
-                
-            except:
-                
-                wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
-                
-                break
+                    source_path = client_files_manager.GetFilePath( hash, mime )
+                    
+                    shutil.copy2( source_path, path )
+                    
+                    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                    except: pass
+                    
+                except:
+                    
+                    wx.CallAfter( wx.MessageBox, 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
+                    
+                    break
+                    
                 
             
+            wx.CallAfter( self._export.SetLabel, 'done!' )
+            time.sleep( 1 )
+            wx.CallAfter( self._export.SetLabel, 'export' )
+            wx.CallAfter( self._export.Enable )
+            
+        
+        HydrusGlobals.client_controller.CallToThread( do_it )
         
     
     def EventOpenLocation( self, event ):

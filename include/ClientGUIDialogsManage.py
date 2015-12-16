@@ -4710,7 +4710,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            text = 'If you want to disable automatic autocomplete results fetching, use the Tab key to fetch results manually.'
+            text = 'If you want to disable automatic autocomplete results fetching, use Ctrl+Space to fetch results manually.'
             
             vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -7842,7 +7842,14 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
                     else:
                         
-                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in new_pairs ) )
+                        if len( new_pairs ) > 10:
+                            
+                            pair_strings = 'The many pairs you entered.'
+                            
+                        else:
+                            
+                            pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in new_pairs ) )
+                            
                         
                         message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
                         
@@ -7877,7 +7884,15 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     
                     if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                         
-                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
+                        
+                        if len( current_pairs ) > 10:
+                            
+                            pair_strings = 'The many pairs you entered.'
+                            
+                        else:
+                            
+                            pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
+                            
                         
                         if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
                         else: message = 'The pair ' + pair_strings + ' already exists.'
@@ -7906,6 +7921,11 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                                     for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
                                     
                                 
+                                
+                            else:
+                                
+                                do_it = False
+                                
                             
                         
                     
@@ -7918,8 +7938,15 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     
                 
                 if len( pending_pairs ) > 0:
-                    
-                    pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
+                
+                    if len( pending_pairs ) > 10:
+                        
+                        pair_strings = 'The many pairs you entered.'
+                        
+                    else:
+                        
+                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
+                        
                     
                     if len( pending_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
                     else: message = 'The pair ' + pair_strings + ' is pending.'
@@ -7936,8 +7963,15 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     
                 
                 if len( petitioned_pairs ) > 0:
-                    
-                    pair_strings = ', '.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
+                
+                    if len( petitioned_pairs ) > 10:
+                        
+                        pair_strings = 'The many pairs you entered.'
+                        
+                    else:
+                        
+                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
+                        
                     
                     if len( petitioned_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
                     else: message = 'The pair ' + pair_strings + ' is petitioned.'
@@ -8407,7 +8441,14 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
                     else:
                         
-                        pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in new_pairs ) )
+                        if len( new_pairs ) > 10:
+                            
+                            pair_strings = 'The many pairs you entered.'
+                            
+                        else:
+                            
+                            pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in new_pairs ) )
+                            
                         
                         message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
                         
@@ -8442,7 +8483,14 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                     if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                         
-                        pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
+                        if len( current_pairs ) > 10:
+                            
+                            pair_strings = 'The many pairs you entered.'
+                            
+                        else:
+                            
+                            pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
+                            
                         
                         if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
                         else: message = 'The pair ' + pair_strings + ' already exists.'
@@ -8468,6 +8516,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                                     for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
                                     
                                 
+                            else:
+                                
+                                do_it = False
+                                
                             
                         
                     
@@ -8481,8 +8533,15 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                 
                 if len( pending_pairs ) > 0:
-                    
-                    pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
+                
+                    if len( pending_pairs ) > 10:
+                        
+                        pair_strings = 'The many pairs you entered.'
+                        
+                    else:
+                        
+                        pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
+                        
                     
                     if len( pending_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
                     else: message = 'The pair ' + pair_strings + ' is pending.'
@@ -8499,8 +8558,15 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                 
                 if len( petitioned_pairs ) > 0:
-                    
-                    pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
+                
+                    if len( petitioned_pairs ) > 10:
+                        
+                        pair_strings = 'The many pairs you entered.'
+                        
+                    else:
+                        
+                        pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
+                        
                     
                     if len( petitioned_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
                     else: message = 'The pair ' + pair_strings + ' is petitioned.'

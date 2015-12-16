@@ -1,0 +1,594 @@
+<html>
+	<head>
+		<title>reducing lag</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<h3>hydrus is cpu and hdd hungry</h3>
+			<p>The hydrus client manages a lot of complicated data and gives you a lot of power over it. To add millions of files and tags to its database, and then to perform difficult searches over that information, it needs to use a lot of CPU time and hard drive time--sometimes in small laggy blips, and occasionally in big 100% CPU chunks. I don't put training wheels or limiters on the software either, so if you search for 300,000 files, the client will try to fetch that many.</p>
+			<p>In general, the client works best on snappy computers with low-latency hard drives where it does not have to constantly compete with other CPU- or HDD- heavy programs. Running hydrus on your games computer is no problem at all, but you should have it set to not start a big job while your CPU is otherwise busy so your games can run freely. Similarly, if you run two clients on the same computer, you should have them set to work at different times, because if they both try to process 500,000 tags at once on the same hard drive, they will each slow to a crawl.</p>
+			<p>Keeping your HDDs defragged is very important, and good practise for all your programs anyway. Make sure you know what this is and that you do it. I use PerfectDisk. O&O Defrag is also good.</p>
+			<h3>maintenance and processing</h3>
+			<p>I have attempted to offload most of the background maintenance of the client (which typically means repository processing and internal database defragging) to time when you are not using the client. This can either be 'idle time' or 'shutdown time'. The calculations for what these exactly mean are customisable in <i>file->options->maintenance and processing</i>.</p>
+			<p>If you run a quick computer, you likely don't have to change any of these options. Repositories will synchronise and the database will stay fairly optimal without you even noticing the work that is going on. This is especially true if you leave your client on all the time.</p>
+			<p>If you have an old, slower computer though, or if your hard drive is high latency for one reason or another (e.g. you use encryption), make sure these options are set for whatever is best for your situation. Turning off idle time completely is often helpful as some older computers are slow to even recognise--mid task--that you want to use the client again, or take too long to abandon a big task half way through. If you set your client to only do work on shutdown, then you can control exactly when that happens.</p>
+			<p>Keeping the database vacuumed is important, so if you remove it from the normal maintenance schedule, make sure you run it every now and then manually from <i>database->maintenance->vacuum</i>. It takes a few minutes to run, but it is great for cleaning up a database recently fragged by several million new rows of data.</p>
+			<h3>reducing search and general gui lag</h3>
+			<p>Searching for tags via the autocomplete dropdown and searching for files in general can sometimes take a very long time. It depends on many things. In general, the more predicates (tags and system:something) you have active for a search, the faster it will be. And the more specific the search domain (e.g. "local files" instead of "all known files" and "my tag repo" instead of "all known tags"), the faster it will be.</p>
+			<p>You can also look at <i>file->options->speed and memory</i>, again especially if you have a slow computer. Increasing the autocomplete thresholds is very often helpful. You can even force autocompletes to only fetch results when you manually ask for them.</p>
+			<p>Having lots of thumbnails open can slow many things down. If you get lag with 10,000 files open in your searches, try cutting it down to only 1,000 or so. Split your downloading binges and subscriptions into smaller, rarer chunks, and don't try to watch 1080p webms while five other things are going on.</p>
+			<h3>finally</h3>
+			<p>Lots of my code remains unoptimised for certain situations. My development environment is obviously specific to me and has only a few thousand images and a few million tags. As I write code, I am usually more concerned with getting it to work at all rather than getting it to work fast for every possible scenario. So, if something is running particularly slow for you, but your computer is otherwise working fine, let me know and I can almost always speed it up.</p>
+			<p>Let me know:</p>
+			<ul>
+				<li>The general steps to reproduce the problem (e.g. "Running system:numtags>4 is ridiculously slow on its own on 'all known tags'.")</li>
+				<li>Your operating system and its version (e.g. "Windows 8.1")</li>
+				<li>Your computer's general power (e.g. "A couple of years old. It runs most stuff ok.")</li>
+				<li>The type of hard drive you are running hydrus from. (e.g. "A 2TB 7200rpm drive that is 20% full. I regularly defrag it.")</li>
+				<li>Any <i>profiles</i> you have collected.</li>
+			</ul>
+			<p>A <i>profile</i> is a block of debug text that lets me know which parts of my code are running slow for you. Hydrus reports look like this:</p>
+			<pre>2015/12/15 14:41:14: Profiling write import_file
+2015/12/15 14:41:14: Stats
+
+         825 function calls in 0.188 seconds
+
+   Ordered by: internal time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.077    0.077    0.077    0.077 {dct}
+        1    0.031    0.031    0.032    0.032 function_base.py:492(average)
+        1    0.023    0.023    0.023    0.023 {method 'decode' of 'ImagingDecoder' objects}
+        1    0.015    0.015    0.015    0.015 {cvtColor}
+       28    0.011    0.000    0.011    0.000 {method 'execute' of 'sqlite3.Cursor' objects}
+        1    0.007    0.007    0.007    0.007 {resize}
+        1    0.004    0.004    0.004    0.004 {method 'resize' of 'ImagingCore' objects}
+        1    0.004    0.004    0.136    0.136 ClientImageHandling.py:66(GeneratePerceptualHash)
+        1    0.003    0.003    0.003    0.003 {method 'encode' of 'ImagingEncoder' objects}
+        4    0.001    0.000    0.001    0.000 {method 'update' of '_hashlib.HASH' objects}
+        1    0.001    0.001    0.001    0.001 {imread}
+        9    0.001    0.000    0.001    0.000 {open}
+        4    0.001    0.000    0.001    0.000 {wx._core_.PostEvent}
+        1    0.001    0.001    0.001    0.001 {method 'any' of 'numpy.generic' objects}
+        4    0.000    0.000    0.000    0.000 {wx._core_.PyEvent__SetSelf}
+       71    0.000    0.000    0.000    0.000 {method 'read' of 'file' objects}
+        9    0.000    0.000    0.000    0.000 {method 'executemany' of 'sqlite3.Cursor' objects}
+        4    0.000    0.000    0.000    0.000 {wx._core_.Event_SetEventType}
+        1    0.000    0.000    0.000    0.000 {method '__enter__' of 'thread.lock' objects}
+        4    0.000    0.000    0.002    0.001 _core.py:16750(CallAfter)
+        1    0.000    0.000    0.145    0.145 ClientDB.py:1147(_AddThumbnails)
+        4    0.000    0.000    0.001    0.000 _core.py:7583(__init__)
+        4    0.000    0.000    0.003    0.001 HydrusPubSub.py:129(pub)
+        4    0.000    0.000    0.000    0.000 {wx._core_.GetApp}
+        1    0.000    0.000    0.183    0.183 ClientDB.py:4055(_ImportFile)
+        3    0.000    0.000    0.000    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+        1    0.000    0.000    0.002    0.002 ClientDB.py:1000(_AddFiles)
+        4    0.000    0.000    0.000    0.000 {wx._core_.new_PyEvent}
+        1    0.000    0.000    0.000    0.000 threading.py:373(notify)
+        1    0.000    0.000    0.188    0.188 HydrusDB.py:180(_ProcessJob)
+        1    0.000    0.000    0.002    0.002 HydrusFileHandling.py:126(GetExtraHashesFromPath)
+        1    0.000    0.000    0.000    0.000 {method 'write' of 'file' objects}
+        2    0.000    0.000    0.000    0.000 JpegImagePlugin.py:287(_open)
+        1    0.000    0.000    0.001    0.001 ClientDB.py:1621(_DeleteFiles)
+        3    0.000    0.000    0.000    0.000 HydrusFileHandling.py:201(GetMime)
+        7    0.000    0.000    0.000    0.000 {method 'join' of 'str' objects}
+        2    0.000    0.000    0.024    0.012 ImageFile.py:124(load)
+        1    0.000    0.000    0.000    0.000 {nt.stat}
+        1    0.000    0.000    0.000    0.000 HydrusImageHandling.py:130(GetImageProperties)
+        2    0.000    0.000    0.001    0.000 ClientDB.py:5338(_UpdateAutocompleteTagCacheFromFiles)
+        1    0.000    0.000    0.028    0.028 Image.py:1498(resize)
+       11    0.000    0.000    0.000    0.000 {range}
+        2    0.000    0.000    0.000    0.000 {method 'sum' of 'numpy.ndarray' objects}
+        2    0.000    0.000    0.000    0.000 ImageFile.py:81(__init__)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1708(GetType)
+        8    0.000    0.000    0.000    0.000 {method 'seek' of 'file' objects}
+        1    0.000    0.000    0.001    0.001 ClientDB.py:5228(_SyncFileToTagArchive)
+       37    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+        6    0.000    0.000    0.000    0.000 JpegImagePlugin.py:60(APP)
+        1    0.000    0.000    0.001    0.001 threading.py:576(set)
+        1    0.000    0.000    0.000    0.000 {PIL._imaging.new}
+        2    0.000    0.000    0.001    0.000 JpegImagePlugin.py:708(jpeg_factory)
+        7    0.000    0.000    0.000    0.000 HydrusData.py:890(SplayListForDB)
+        1    0.000    0.000    0.003    0.003 Image.py:1592(save)
+        1    0.000    0.000    0.000    0.000 {method 'acquire' of 'thread.lock' objects}
+        1    0.000    0.000    0.000    0.000 threading.py:300(_is_owned)
+        1    0.000    0.000    0.000    0.000 HydrusTags.py:59(FilterNamespaces)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:3631(_GetServices)
+       15    0.000    0.000    0.000    0.000 HydrusData.py:890(<genexpr>)
+        6    0.000    0.000    0.000    0.000 {method 'fetchall' of 'sqlite3.Cursor' objects}
+        8    0.000    0.000    0.000    0.000 {method 'fetchone' of 'sqlite3.Cursor' objects}
+        1    0.000    0.000    0.000    0.000 {nt.lstat}
+        1    0.000    0.000    0.003    0.003 ImageFile.py:442(_save)
+        1    0.000    0.000    0.000    0.000 HydrusFileHandling.py:190(GetHashFromPath)
+        4    0.000    0.000    0.003    0.001 HydrusController.py:84(pub)
+        9    0.000    0.000    0.000    0.000 {hasattr}
+        1    0.000    0.000    0.000    0.000 JpegImagePlugin.py:337(draft)
+        1    0.000    0.000    0.003    0.003 JpegImagePlugin.py:560(_save)
+        4    0.000    0.000    0.001    0.000 _core.py:7590(_SetSelf)
+        4    0.000    0.000    0.000    0.000 _core.py:4972(SetEventType)
+        2    0.000    0.000    0.000    0.000 ClientDB.py:2393(_GetHashId)
+        4    0.000    0.000    0.002    0.001 ClientController.py:588(NotifyPubSubs)
+        2    0.000    0.000    0.001    0.000 Image.py:2260(_open_core)
+        1    0.000    0.000    0.000    0.000 {method 'convert' of 'ImagingCore' objects}
+        2    0.000    0.000    0.000    0.000 JpegImagePlugin.py:134(SOF)
+        2    0.000    0.000    0.000    0.000 Image.py:511(_new)
+        4    0.000    0.000    0.000    0.000 Image.py:491(__init__)
+        1    0.000    0.000    0.000    0.000 threading.py:288(__exit__)
+        2    0.000    0.000    0.000    0.000 JpegImagePlugin.py:182(DQT)
+        4    0.000    0.000    0.000    0.000 _core.py:8421(GetApp)
+       42    0.000    0.000    0.000    0.000 _binary.py:52(i16be)
+        4    0.000    0.000    0.001    0.000 _core.py:8403(PostEvent)
+        6    0.000    0.000    0.000    0.000 ntpath.py:96(splitdrive)
+        1    0.000    0.000    0.000    0.000 HydrusImageHandling.py:18(ConvertToPngIfBmp)
+        4    0.000    0.000    0.000    0.000 {method 'digest' of '_hashlib.HASH' objects}
+        2    0.000    0.000    0.000    0.000 JpegImagePlugin.py:441(_getmp)
+        2    0.000    0.000    0.001    0.000 Image.py:2218(open)
+        1    0.000    0.000    0.000    0.000 threading.py:285(__enter__)
+        4    0.000    0.000    0.000    0.000 {wx._core_.PyEvent_swiginit}
+        1    0.000    0.000    0.032    0.032 HydrusFileHandling.py:64(GenerateThumbnail)
+        2    0.000    0.000    0.000    0.000 ClientDB.py:3595(_GetService)
+        4    0.000    0.000    0.000    0.000 HydrusPaths.py:178(ReadFileLikeAsBlocks)
+        1    0.000    0.000    0.000    0.000 HydrusTagArchive.py:229(GetTags)
+        1    0.000    0.000    0.028    0.028 Image.py:1738(thumbnail)
+        1    0.000    0.000    0.183    0.183 ClientDB.py:6763(_Write)
+        1    0.000    0.000    0.000    0.000 HydrusTagArchive.py:95(_GetHashId)
+        2    0.000    0.000    0.000    0.000 ntpath.py:63(join)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:4193(_InboxFiles)
+        1    0.000    0.000    0.000    0.000 threading.py:400(notifyAll)
+        4    0.000    0.000    0.000    0.000 JpegImagePlugin.py:55(Skip)
+       48    0.000    0.000    0.000    0.000 _binary.py:17(i8)
+        2    0.000    0.000    0.000    0.000 numeric.py:406(asarray)
+        2    0.000    0.000    0.000    0.000 _methods.py:31(_sum)
+       10    0.000    0.000    0.000    0.000 {isinstance}
+        1    0.000    0.000    0.000    0.000 {numpy.core.multiarray.copyto}
+        4    0.000    0.000    0.000    0.000 HydrusDB.py:236(pub_after_commit)
+        1    0.000    0.000    0.032    0.032 HydrusFileHandling.py:45(SaveThumbnailToStream)
+        1    0.000    0.000    0.001    0.001 HydrusFileHandling.py:148(GetFileInfo)
+        1    0.000    0.000    0.000    0.000 Image.py:401(_getdecoder)
+       42    0.000    0.000    0.000    0.000 {_struct.unpack}
+        5    0.000    0.000    0.000    0.000 Image.py:739(load)
+        1    0.000    0.000    0.001    0.001 HydrusData.py:1712(PutResult)
+       34    0.000    0.000    0.000    0.000 {len}
+        3    0.000    0.000    0.000    0.000 {method 'encode' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 Image.py:784(convert)
+        1    0.000    0.000    0.000    0.000 numeric.py:141(ones)
+        1    0.000    0.000    0.000    0.000 {numpy.core.multiarray.result_type}
+        3    0.000    0.000    0.000    0.000 hex_codec.py:13(hex_encode)
+        1    0.000    0.000    0.000    0.000 {numpy.core.multiarray.empty}
+        4    0.000    0.000    0.000    0.000 Image.py:617(__getattr__)
+        4    0.000    0.000    0.000    0.000 ClientDB.py:5350(<genexpr>)
+       14    0.000    0.000    0.000    0.000 ImageFile.py:496(_safe_read)
+        1    0.000    0.000    0.028    0.028 HydrusImageHandling.py:59(EfficientlyThumbnailPILImage)
+        1    0.000    0.000    0.000    0.000 HydrusTagArchive.py:190(GetHashType)
+        1    0.000    0.000    0.000    0.000 HydrusImageHandling.py:148(GetResolutionAndNumFrames)
+        1    0.000    0.000    0.000    0.000 ClientFiles.py:150(GetExpectedThumbnailPath)
+        5    0.000    0.000    0.000    0.000 _util.py:7(isPath)
+        1    0.000    0.000    0.000    0.000 ClientCaches.py:324(GetExpectedFilePath)
+        2    0.000    0.000    0.000    0.000 {method 'sort' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 ClientDB.py:6804(pub_content_updates_after_commit)
+        1    0.000    0.000    0.000    0.000 Image.py:418(_getencoder)
+        1    0.000    0.000    0.000    0.000 _methods.py:37(_any)
+        1    0.000    0.000    0.188    0.188 <string>:1(<module>)
+        1    0.000    0.000    0.000    0.000 ClientFiles.py:142(GetExpectedFilePath)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:629(GetNow)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1555(__init__)
+        1    0.000    0.000    0.000    0.000 genericpath.py:93(_splitext)
+        2    0.000    0.000    0.001    0.000 HydrusImageHandling.py:73(GeneratePILImage)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:1164(<setcomp>)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:2380(_GetHash)
+        1    0.000    0.000    0.000    0.000 {method 'write' of 'cStringIO.StringO' objects}
+        2    0.000    0.000    0.000    0.000 JpegImagePlugin.py:275(_accept)
+        1    0.000    0.000    0.000    0.000 {_hashlib.openssl_md5}
+        1    0.000    0.000    0.000    0.000 ClientCaches.py:199(_GetLocation)
+        1    0.000    0.000    0.000    0.000 HydrusTags.py:143(CleanTags)
+        2    0.000    0.000    0.000    0.000 ClientDB.py:5348(<setcomp>)
+        2    0.000    0.000    0.000    0.000 JpegImagePlugin.py:393(_getmp)
+        3    0.000    0.000    0.000    0.000 {binascii.b2a_hex}
+        1    0.000    0.000    0.000    0.000 genericpath.py:23(exists)
+        1    0.000    0.000    0.000    0.000 {PIL._imaging.jpeg_encoder}
+        2    0.000    0.000    0.000    0.000 {method 'replace' of 'unicode' objects}
+        2    0.000    0.000    0.000    0.000 {method 'intersection' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 HydrusDB.py:111(_GetRowCount)
+        2    0.000    0.000    0.000    0.000 {method 'copy' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 ImageFile.py:251(load_prepare)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:3014(_GetHashIdStatus)
+        2    0.000    0.000    0.000    0.000 Image.py:2204(_decompression_bomb_check)
+        5    0.000    0.000    0.000    0.000 {max}
+        2    0.000    0.000    0.000    0.000 ClientData.py:958(GetServiceType)
+        1    0.000    0.000    0.000    0.000 {PIL._imaging.jpeg_decoder}
+        1    0.000    0.000    0.000    0.000 ClientData.py:730(ToTuple)
+        2    0.000    0.000    0.000    0.000 ClientData.py:948(GetServiceKey)
+        1    0.000    0.000    0.000    0.000 ClientDB.py:1627(<setcomp>)
+        2    0.000    0.000    0.000    0.000 {divmod}
+        2    0.000    0.000    0.000    0.000 ClientData.py:942(GetInfo)
+        2    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 ntpath.py:199(splitext)
+        3    0.000    0.000    0.000    0.000 {method 'startswith' of 'str' objects}
+        4    0.000    0.000    0.000    0.000 {method 'pixel_access' of 'ImagingCore' objects}
+        1    0.000    0.000    0.000    0.000 {_hashlib.openssl_sha256}
+        3    0.000    0.000    0.000    0.000 {method 'rfind' of 'str' objects}
+       48    0.000    0.000    0.000    0.000 {ord}
+        1    0.000    0.000    0.000    0.000 {_hashlib.openssl_sha512}
+        1    0.000    0.000    0.000    0.000 {method 'remove' of 'list' objects}
+        4    0.000    0.000    0.000    0.000 {callable}
+        2    0.000    0.000    0.000    0.000 {numpy.core.multiarray.array}
+        4    0.000    0.000    0.000    0.000 {method 'replace' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 TiffImagePlugin.py:214(_accept)
+        1    0.000    0.000    0.000    0.000 threading.py:64(_note)
+        2    0.000    0.000    0.000    0.000 ClientDB.py:4195(<genexpr>)
+        3    0.000    0.000    0.000    0.000 Image.py:341(preinit)
+        1    0.000    0.000    0.000    0.000 {_hashlib.openssl_sha1}
+        6    0.000    0.000    0.000    0.000 {method 'update' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1710(IsSynchronous)
+        2    0.000    0.000    0.000    0.000 BmpImagePlugin.py:54(_accept)
+        1    0.000    0.000    0.000    0.000 {method '__exit__' of 'thread.lock' objects}
+        1    0.000    0.000    0.000    0.000 {method 'read' of 'cStringIO.StringO' objects}
+        1    0.000    0.000    0.000    0.000 {method 'setimage' of 'ImagingEncoder' objects}
+        1    0.000    0.000    0.000    0.000 {sum}
+        1    0.000    0.000    0.000    0.000 {method 'setimage' of 'ImagingDecoder' objects}
+        9    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
+        2    0.000    0.000    0.000    0.000 GifImagePlugin.py:45(_accept)
+        2    0.000    0.000    0.000    0.000 {getattr}
+        1    0.000    0.000    0.000    0.000 Image.py:1671(seek)
+        1    0.000    0.000    0.000    0.000 {time.time}
+        2    0.000    0.000    0.000    0.000 {method 'upper' of 'str' objects}
+        2    0.000    0.000    0.000    0.000 ImageFile.py:69(_tilesort)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1674(GetAction)
+        1    0.000    0.000    0.000    0.000 {method 'add' of 'set' objects}
+        1    0.000    0.000    0.000    0.000 {method 'cleanup' of 'ImagingDecoder' objects}
+        1    0.000    0.000    0.000    0.000 {method 'seek' of 'cStringIO.StringO' objects}
+        1    0.000    0.000    0.000    0.000 {method 'release' of 'thread.lock' objects}
+        1    0.000    0.000    0.000    0.000 _util.py:4(isStringType)
+        1    0.000    0.000    0.000    0.000 {cStringIO.StringIO}
+        1    0.000    0.000    0.000    0.000 ClientController.py:387(GetClientFilesManager)
+        1    0.000    0.000    0.000    0.000 JpegImagePlugin.py:604(validate_qtables)
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1678(GetKWArgs)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        1    0.000    0.000    0.000    0.000 {method 'flush' of 'cStringIO.StringO' objects}
+        1    0.000    0.000    0.000    0.000 {method 'close' of 'cStringIO.StringO' objects}
+        1    0.000    0.000    0.000    0.000 HydrusData.py:1676(GetArgs)
+        1    0.000    0.000    0.000    0.000 ImageFile.py:260(load_end)
+        1    0.000    0.000    0.000    0.000 {method 'lower' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {method 'cleanup' of 'ImagingEncoder' objects}
+
+
+
+2015/12/15 14:41:14: Callers
+
+   Ordered by: internal time
+
+Function                                                 was called by...
+                                                             ncalls  tottime  cumtime
+{dct}                                                    <-       1    0.077    0.077  ClientImageHandling.py:66(GeneratePerceptualHash)
+function_base.py:492(average)                            <-       1    0.031    0.032  ClientImageHandling.py:66(GeneratePerceptualHash)
+{method 'decode' of 'ImagingDecoder' objects}            <-       1    0.023    0.023  ImageFile.py:124(load)
+{cvtColor}                                               <-       1    0.015    0.015  ClientImageHandling.py:66(GeneratePerceptualHash)
+{method 'execute' of 'sqlite3.Cursor' objects}           <-       6    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  2    0.009    0.009  ClientDB.py:1147(_AddThumbnails)
+                                                                  5    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+                                                                  1    0.000    0.000  ClientDB.py:2380(_GetHash)
+                                                                  2    0.000    0.000  ClientDB.py:2393(_GetHashId)
+                                                                  1    0.000    0.000  ClientDB.py:3014(_GetHashIdStatus)
+                                                                  1    0.000    0.000  ClientDB.py:3631(_GetServices)
+                                                                  1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+                                                                  1    0.000    0.000  ClientDB.py:5228(_SyncFileToTagArchive)
+                                                                  4    0.000    0.000  ClientDB.py:5338(_UpdateAutocompleteTagCacheFromFiles)
+                                                                  2    0.001    0.001  HydrusDB.py:180(_ProcessJob)
+                                                                  1    0.000    0.000  HydrusTagArchive.py:95(_GetHashId)
+                                                                  1    0.000    0.000  HydrusTagArchive.py:190(GetHashType)
+{resize}                                                 <-       1    0.007    0.007  ClientImageHandling.py:66(GeneratePerceptualHash)
+{method 'resize' of 'ImagingCore' objects}               <-       1    0.004    0.004  Image.py:1498(resize)
+ClientImageHandling.py:66(GeneratePerceptualHash)        <-       1    0.004    0.136  ClientDB.py:1147(_AddThumbnails)
+{method 'encode' of 'ImagingEncoder' objects}            <-       1    0.003    0.003  ImageFile.py:442(_save)
+{method 'update' of '_hashlib.HASH' objects}             <-       3    0.001    0.001  HydrusFileHandling.py:126(GetExtraHashesFromPath)
+                                                                  1    0.000    0.000  HydrusFileHandling.py:190(GetHashFromPath)
+{imread}                                                 <-       1    0.001    0.001  ClientImageHandling.py:66(GeneratePerceptualHash)
+{open}                                                   <-       1    0.000    0.000  ClientDB.py:1147(_AddThumbnails)
+                                                                  1    0.000    0.000  HydrusFileHandling.py:126(GetExtraHashesFromPath)
+                                                                  1    0.000    0.000  HydrusFileHandling.py:190(GetHashFromPath)
+                                                                  3    0.000    0.000  HydrusFileHandling.py:201(GetMime)
+                                                                  1    0.000    0.000  HydrusImageHandling.py:18(ConvertToPngIfBmp)
+                                                                  2    0.000    0.000  Image.py:2218(open)
+{wx._core_.PostEvent}                                    <-       4    0.001    0.001  _core.py:8403(PostEvent)
+{method 'any' of 'numpy.generic' objects}                <-       1    0.001    0.001  function_base.py:492(average)
+{wx._core_.PyEvent__SetSelf}                             <-       4    0.000    0.000  _core.py:7590(_SetSelf)
+{method 'read' of 'file' objects}                        <-       3    0.000    0.000  HydrusFileHandling.py:201(GetMime)
+                                                                  1    0.000    0.000  HydrusImageHandling.py:18(ConvertToPngIfBmp)
+                                                                  4    0.000    0.000  HydrusPaths.py:178(ReadFileLikeAsBlocks)
+                                                                  2    0.000    0.000  Image.py:2218(open)
+                                                                  1    0.000    0.000  ImageFile.py:124(load)
+                                                                 14    0.000    0.000  ImageFile.py:496(_safe_read)
+                                                                  4    0.000    0.000  JpegImagePlugin.py:55(Skip)
+                                                                  6    0.000    0.000  JpegImagePlugin.py:60(APP)
+                                                                  2    0.000    0.000  JpegImagePlugin.py:134(SOF)
+                                                                  2    0.000    0.000  JpegImagePlugin.py:182(DQT)
+                                                                 32    0.000    0.000  JpegImagePlugin.py:287(_open)
+{method 'executemany' of 'sqlite3.Cursor' objects}       <-       1    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  1    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+                                                                  1    0.000    0.000  ClientDB.py:4193(_InboxFiles)
+                                                                  6    0.000    0.000  ClientDB.py:5338(_UpdateAutocompleteTagCacheFromFiles)
+{wx._core_.Event_SetEventType}                           <-       4    0.000    0.000  _core.py:4972(SetEventType)
+{method '__enter__' of 'thread.lock' objects}            <-       1    0.000    0.000  threading.py:285(__enter__)
+_core.py:16750(CallAfter)                                <-       4    0.000    0.002  ClientController.py:588(NotifyPubSubs)
+ClientDB.py:1147(_AddThumbnails)                         <-       1    0.000    0.145  ClientDB.py:4055(_ImportFile)
+_core.py:7583(__init__)                                  <-       4    0.000    0.001  _core.py:16750(CallAfter)
+HydrusPubSub.py:129(pub)                                 <-       4    0.000    0.003  HydrusController.py:84(pub)
+{wx._core_.GetApp}                                       <-       4    0.000    0.000  _core.py:8421(GetApp)
+ClientDB.py:4055(_ImportFile)                            <-       1    0.000    0.183  ClientDB.py:6763(_Write)
+{method 'reduce' of 'numpy.ufunc' objects}               <-       2    0.000    0.000  _methods.py:31(_sum)
+                                                                  1    0.000    0.000  _methods.py:37(_any)
+ClientDB.py:1000(_AddFiles)                              <-       1    0.000    0.002  ClientDB.py:4055(_ImportFile)
+{wx._core_.new_PyEvent}                                  <-       4    0.000    0.000  _core.py:7583(__init__)
+threading.py:373(notify)                                 <-       1    0.000    0.000  threading.py:400(notifyAll)
+HydrusDB.py:180(_ProcessJob)                             <-       1    0.000    0.188  <string>:1(<module>)
+HydrusFileHandling.py:126(GetExtraHashesFromPath)        <-       1    0.000    0.002  ClientDB.py:4055(_ImportFile)
+{method 'write' of 'file' objects}                       <-       1    0.000    0.000  ClientDB.py:1147(_AddThumbnails)
+JpegImagePlugin.py:287(_open)                            <-       2    0.000    0.000  ImageFile.py:81(__init__)
+ClientDB.py:1621(_DeleteFiles)                           <-       1    0.000    0.001  ClientDB.py:1000(_AddFiles)
+HydrusFileHandling.py:201(GetMime)                       <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+                                                                  1    0.000    0.000  HydrusFileHandling.py:64(GenerateThumbnail)
+                                                                  1    0.000    0.000  HydrusFileHandling.py:148(GetFileInfo)
+{method 'join' of 'str' objects}                         <-       7    0.000    0.000  HydrusData.py:890(SplayListForDB)
+ImageFile.py:124(load)                                   <-       1    0.000    0.000  Image.py:784(convert)
+                                                                  1    0.000    0.024  Image.py:1498(resize)
+{nt.stat}                                                <-       1    0.000    0.000  genericpath.py:23(exists)
+HydrusImageHandling.py:130(GetImageProperties)           <-       1    0.000    0.000  HydrusFileHandling.py:148(GetFileInfo)
+ClientDB.py:5338(_UpdateAutocompleteTagCacheFromFiles)   <-       1    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  1    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+Image.py:1498(resize)                                    <-       1    0.000    0.028  Image.py:1738(thumbnail)
+{range}                                                  <-       9    0.000    0.000  ClientImageHandling.py:66(GeneratePerceptualHash)
+                                                                  2    0.000    0.000  JpegImagePlugin.py:134(SOF)
+{method 'sum' of 'numpy.ndarray' objects}                <-       2    0.000    0.000  function_base.py:492(average)
+ImageFile.py:81(__init__)                                <-       2    0.000    0.000  JpegImagePlugin.py:708(jpeg_factory)
+HydrusData.py:1708(GetType)                              <-       1    0.000    0.000  HydrusDB.py:180(_ProcessJob)
+{method 'seek' of 'file' objects}                        <-       3    0.000    0.000  HydrusFileHandling.py:201(GetMime)
+                                                                  2    0.000    0.000  Image.py:2218(open)
+                                                                  2    0.000    0.000  Image.py:2260(_open_core)
+                                                                  1    0.000    0.000  ImageFile.py:124(load)
+ClientDB.py:5228(_SyncFileToTagArchive)                  <-       1    0.000    0.001  ClientDB.py:4055(_ImportFile)
+{method 'append' of 'list' objects}                      <-       5    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  4    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+                                                                  8    0.000    0.000  ClientImageHandling.py:66(GeneratePerceptualHash)
+                                                                  4    0.000    0.000  HydrusDB.py:236(pub_after_commit)
+                                                                  4    0.000    0.000  HydrusPubSub.py:129(pub)
+                                                                  6    0.000    0.000  JpegImagePlugin.py:60(APP)
+                                                                  6    0.000    0.000  JpegImagePlugin.py:134(SOF)
+JpegImagePlugin.py:60(APP)                               <-       6    0.000    0.000  JpegImagePlugin.py:287(_open)
+threading.py:576(set)                                    <-       1    0.000    0.001  HydrusData.py:1712(PutResult)
+{PIL._imaging.new}                                       <-       1    0.000    0.000  ImageFile.py:251(load_prepare)
+JpegImagePlugin.py:708(jpeg_factory)                     <-       2    0.000    0.001  Image.py:2260(_open_core)
+HydrusData.py:890(SplayListForDB)                        <-       2    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  2    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+                                                                  1    0.000    0.000  ClientDB.py:3631(_GetServices)
+                                                                  2    0.000    0.000  ClientDB.py:5338(_UpdateAutocompleteTagCacheFromFiles)
+Image.py:1592(save)                                      <-       1    0.000    0.003  HydrusFileHandling.py:45(SaveThumbnailToStream)
+{method 'acquire' of 'thread.lock' objects}              <-       1    0.000    0.000  threading.py:300(_is_owned)
+threading.py:300(_is_owned)                              <-       1    0.000    0.000  threading.py:373(notify)
+HydrusTags.py:59(FilterNamespaces)                       <-       1    0.000    0.000  ClientDB.py:5228(_SyncFileToTagArchive)
+ClientDB.py:3631(_GetServices)                           <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+HydrusData.py:890(<genexpr>)                             <-      15    0.000    0.000  {method 'join' of 'str' objects}
+{method 'fetchall' of 'sqlite3.Cursor' objects}          <-       1    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  1    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+                                                                  4    0.000    0.000  ClientDB.py:5338(_UpdateAutocompleteTagCacheFromFiles)
+{method 'fetchone' of 'sqlite3.Cursor' objects}          <-       1    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  1    0.000    0.000  ClientDB.py:2380(_GetHash)
+                                                                  2    0.000    0.000  ClientDB.py:2393(_GetHashId)
+                                                                  1    0.000    0.000  ClientDB.py:3014(_GetHashIdStatus)
+                                                                  1    0.000    0.000  ClientDB.py:5228(_SyncFileToTagArchive)
+                                                                  1    0.000    0.000  HydrusTagArchive.py:95(_GetHashId)
+                                                                  1    0.000    0.000  HydrusTagArchive.py:190(GetHashType)
+{nt.lstat}                                               <-       1    0.000    0.000  HydrusFileHandling.py:148(GetFileInfo)
+ImageFile.py:442(_save)                                  <-       1    0.000    0.003  JpegImagePlugin.py:560(_save)
+HydrusFileHandling.py:190(GetHashFromPath)               <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+HydrusController.py:84(pub)                              <-       4    0.000    0.003  HydrusDB.py:180(_ProcessJob)
+{hasattr}                                                <-       1    0.000    0.000  Image.py:1592(save)
+                                                                  2    0.000    0.000  ImageFile.py:124(load)
+                                                                  2    0.000    0.000  ImageFile.py:442(_save)
+                                                                  4    0.000    0.000  _core.py:16750(CallAfter)
+JpegImagePlugin.py:337(draft)                            <-       1    0.000    0.000  Image.py:1738(thumbnail)
+JpegImagePlugin.py:560(_save)                            <-       1    0.000    0.003  Image.py:1592(save)
+_core.py:7590(_SetSelf)                                  <-       4    0.000    0.001  _core.py:7583(__init__)
+_core.py:4972(SetEventType)                              <-       4    0.000    0.000  _core.py:16750(CallAfter)
+ClientDB.py:2393(_GetHashId)                             <-       1    0.000    0.000  ClientDB.py:1147(_AddThumbnails)
+                                                                  1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+ClientController.py:588(NotifyPubSubs)                   <-       4    0.000    0.002  HydrusPubSub.py:129(pub)
+Image.py:2260(_open_core)                                <-       2    0.000    0.001  Image.py:2218(open)
+{method 'convert' of 'ImagingCore' objects}              <-       1    0.000    0.000  Image.py:784(convert)
+JpegImagePlugin.py:134(SOF)                              <-       2    0.000    0.000  JpegImagePlugin.py:287(_open)
+Image.py:511(_new)                                       <-       1    0.000    0.000  Image.py:784(convert)
+                                                                  1    0.000    0.000  Image.py:1498(resize)
+Image.py:491(__init__)                                   <-       2    0.000    0.000  Image.py:511(_new)
+                                                                  2    0.000    0.000  ImageFile.py:81(__init__)
+threading.py:288(__exit__)                               <-       1    0.000    0.000  threading.py:576(set)
+JpegImagePlugin.py:182(DQT)                              <-       2    0.000    0.000  JpegImagePlugin.py:287(_open)
+_core.py:8421(GetApp)                                    <-       4    0.000    0.000  _core.py:16750(CallAfter)
+_binary.py:52(i16be)                                     <-       4    0.000    0.000  JpegImagePlugin.py:55(Skip)
+                                                                 14    0.000    0.000  JpegImagePlugin.py:60(APP)
+                                                                  6    0.000    0.000  JpegImagePlugin.py:134(SOF)
+                                                                  2    0.000    0.000  JpegImagePlugin.py:182(DQT)
+                                                                 16    0.000    0.000  JpegImagePlugin.py:287(_open)
+_core.py:8403(PostEvent)                                 <-       4    0.000    0.001  _core.py:16750(CallAfter)
+ntpath.py:96(splitdrive)                                 <-       6    0.000    0.000  ntpath.py:63(join)
+HydrusImageHandling.py:18(ConvertToPngIfBmp)             <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+{method 'digest' of '_hashlib.HASH' objects}             <-       3    0.000    0.000  HydrusFileHandling.py:126(GetExtraHashesFromPath)
+                                                                  1    0.000    0.000  HydrusFileHandling.py:190(GetHashFromPath)
+JpegImagePlugin.py:441(_getmp)                           <-       2    0.000    0.000  JpegImagePlugin.py:393(_getmp)
+Image.py:2218(open)                                      <-       2    0.000    0.001  HydrusImageHandling.py:73(GeneratePILImage)
+threading.py:285(__enter__)                              <-       1    0.000    0.000  threading.py:576(set)
+{wx._core_.PyEvent_swiginit}                             <-       4    0.000    0.000  _core.py:7583(__init__)
+HydrusFileHandling.py:64(GenerateThumbnail)              <-       1    0.000    0.032  ClientDB.py:4055(_ImportFile)
+ClientDB.py:3595(_GetService)                            <-       2    0.000    0.000  ClientDB.py:3631(_GetServices)
+HydrusPaths.py:178(ReadFileLikeAsBlocks)                 <-       2    0.000    0.000  HydrusFileHandling.py:126(GetExtraHashesFromPath)
+                                                                  2    0.000    0.000  HydrusFileHandling.py:190(GetHashFromPath)
+HydrusTagArchive.py:229(GetTags)                         <-       1    0.000    0.000  ClientDB.py:5228(_SyncFileToTagArchive)
+Image.py:1738(thumbnail)                                 <-       1    0.000    0.028  HydrusImageHandling.py:59(EfficientlyThumbnailPILImage)
+ClientDB.py:6763(_Write)                                 <-       1    0.000    0.183  HydrusDB.py:180(_ProcessJob)
+HydrusTagArchive.py:95(_GetHashId)                       <-       1    0.000    0.000  HydrusTagArchive.py:229(GetTags)
+ntpath.py:63(join)                                       <-       1    0.000    0.000  ClientFiles.py:142(GetExpectedFilePath)
+                                                                  1    0.000    0.000  ClientFiles.py:150(GetExpectedThumbnailPath)
+ClientDB.py:4193(_InboxFiles)                            <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+threading.py:400(notifyAll)                              <-       1    0.000    0.000  threading.py:576(set)
+JpegImagePlugin.py:55(Skip)                              <-       4    0.000    0.000  JpegImagePlugin.py:287(_open)
+_binary.py:17(i8)                                        <-       4    0.000    0.000  JpegImagePlugin.py:60(APP)
+                                                                 22    0.000    0.000  JpegImagePlugin.py:134(SOF)
+                                                                  4    0.000    0.000  JpegImagePlugin.py:182(DQT)
+                                                                 18    0.000    0.000  JpegImagePlugin.py:287(_open)
+numeric.py:406(asarray)                                  <-       2    0.000    0.000  function_base.py:492(average)
+_methods.py:31(_sum)                                     <-       2    0.000    0.000  {method 'sum' of 'numpy.ndarray' objects}
+{isinstance}                                             <-       1    0.000    0.000  Image.py:401(_getdecoder)
+                                                                  1    0.000    0.000  Image.py:418(_getencoder)
+                                                                  1    0.000    0.000  JpegImagePlugin.py:560(_save)
+                                                                  1    0.000    0.000  _util.py:4(isStringType)
+                                                                  5    0.000    0.000  _util.py:7(isPath)
+                                                                  1    0.000    0.000  function_base.py:492(average)
+{numpy.core.multiarray.copyto}                           <-       1    0.000    0.000  numeric.py:141(ones)
+HydrusDB.py:236(pub_after_commit)                        <-       1    0.000    0.000  ClientDB.py:1147(_AddThumbnails)
+                                                                  1    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+                                                                  2    0.000    0.000  ClientDB.py:6804(pub_content_updates_after_commit)
+HydrusFileHandling.py:45(SaveThumbnailToStream)          <-       1    0.000    0.032  HydrusFileHandling.py:64(GenerateThumbnail)
+HydrusFileHandling.py:148(GetFileInfo)                   <-       1    0.000    0.001  ClientDB.py:4055(_ImportFile)
+Image.py:401(_getdecoder)                                <-       1    0.000    0.000  ImageFile.py:124(load)
+{_struct.unpack}                                         <-      42    0.000    0.000  _binary.py:52(i16be)
+Image.py:739(load)                                       <-       1    0.000    0.000  Image.py:1592(save)
+                                                                  3    0.000    0.000  ImageFile.py:124(load)
+                                                                  1    0.000    0.000  ImageFile.py:442(_save)
+HydrusData.py:1712(PutResult)                            <-       1    0.000    0.001  HydrusDB.py:180(_ProcessJob)
+{len}                                                    <-       4    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  4    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+                                                                  1    0.000    0.000  ClientDB.py:5228(_SyncFileToTagArchive)
+                                                                  1    0.000    0.000  ImageFile.py:124(load)
+                                                                  2    0.000    0.000  JpegImagePlugin.py:134(SOF)
+                                                                 10    0.000    0.000  JpegImagePlugin.py:182(DQT)
+                                                                  1    0.000    0.000  JpegImagePlugin.py:337(draft)
+                                                                  1    0.000    0.000  JpegImagePlugin.py:560(_save)
+                                                                  3    0.000    0.000  hex_codec.py:13(hex_encode)
+                                                                  6    0.000    0.000  ntpath.py:96(splitdrive)
+                                                                  1    0.000    0.000  threading.py:400(notifyAll)
+{method 'encode' of 'str' objects}                       <-       1    0.000    0.000  ClientCaches.py:199(_GetLocation)
+                                                                  1    0.000    0.000  ClientFiles.py:142(GetExpectedFilePath)
+                                                                  1    0.000    0.000  ClientFiles.py:150(GetExpectedThumbnailPath)
+Image.py:784(convert)                                    <-       1    0.000    0.000  HydrusFileHandling.py:45(SaveThumbnailToStream)
+numeric.py:141(ones)                                     <-       1    0.000    0.000  ClientImageHandling.py:66(GeneratePerceptualHash)
+{numpy.core.multiarray.result_type}                      <-       1    0.000    0.000  function_base.py:492(average)
+hex_codec.py:13(hex_encode)                              <-       3    0.000    0.000  {method 'encode' of 'str' objects}
+{numpy.core.multiarray.empty}                            <-       1    0.000    0.000  numeric.py:141(ones)
+Image.py:617(__getattr__)                                <-       3    0.000    0.000  ImageFile.py:124(load)
+                                                                  1    0.000    0.000  {hasattr}
+ClientDB.py:5350(<genexpr>)                              <-       4    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+ImageFile.py:496(_safe_read)                             <-       4    0.000    0.000  JpegImagePlugin.py:55(Skip)
+                                                                  6    0.000    0.000  JpegImagePlugin.py:60(APP)
+                                                                  2    0.000    0.000  JpegImagePlugin.py:134(SOF)
+                                                                  2    0.000    0.000  JpegImagePlugin.py:182(DQT)
+HydrusImageHandling.py:59(EfficientlyThumbnailPILImage)  <-       1    0.000    0.028  HydrusFileHandling.py:45(SaveThumbnailToStream)
+HydrusTagArchive.py:190(GetHashType)                     <-       1    0.000    0.000  ClientDB.py:5228(_SyncFileToTagArchive)
+HydrusImageHandling.py:148(GetResolutionAndNumFrames)    <-       1    0.000    0.000  HydrusImageHandling.py:130(GetImageProperties)
+ClientFiles.py:150(GetExpectedThumbnailPath)             <-       1    0.000    0.000  ClientDB.py:1147(_AddThumbnails)
+_util.py:7(isPath)                                       <-       1    0.000    0.000  Image.py:1592(save)
+                                                                  2    0.000    0.000  Image.py:2218(open)
+                                                                  2    0.000    0.000  ImageFile.py:81(__init__)
+ClientCaches.py:324(GetExpectedFilePath)                 <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+{method 'sort' of 'list' objects}                        <-       1    0.000    0.000  ImageFile.py:124(load)
+                                                                  1    0.000    0.000  ImageFile.py:442(_save)
+ClientDB.py:6804(pub_content_updates_after_commit)       <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+Image.py:418(_getencoder)                                <-       1    0.000    0.000  ImageFile.py:442(_save)
+_methods.py:37(_any)                                     <-       1    0.000    0.000  {method 'any' of 'numpy.generic' objects}
+<string>:1(<module>)                                     <-
+ClientFiles.py:142(GetExpectedFilePath)                  <-       1    0.000    0.000  ClientCaches.py:324(GetExpectedFilePath)
+HydrusData.py:629(GetNow)                                <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+HydrusData.py:1555(__init__)                             <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+genericpath.py:93(_splitext)                             <-       1    0.000    0.000  ntpath.py:199(splitext)
+HydrusImageHandling.py:73(GeneratePILImage)              <-       1    0.000    0.000  HydrusFileHandling.py:64(GenerateThumbnail)
+                                                                  1    0.000    0.000  HydrusImageHandling.py:148(GetResolutionAndNumFrames)
+ClientDB.py:1164(<setcomp>)                              <-       1    0.000    0.000  ClientDB.py:1147(_AddThumbnails)
+ClientDB.py:2380(_GetHash)                               <-       1    0.000    0.000  ClientDB.py:5228(_SyncFileToTagArchive)
+{method 'write' of 'cStringIO.StringO' objects}          <-       1    0.000    0.000  ImageFile.py:442(_save)
+JpegImagePlugin.py:275(_accept)                          <-       2    0.000    0.000  Image.py:2260(_open_core)
+{_hashlib.openssl_md5}                                   <-       1    0.000    0.000  HydrusFileHandling.py:126(GetExtraHashesFromPath)
+ClientCaches.py:199(_GetLocation)                        <-       1    0.000    0.000  ClientCaches.py:324(GetExpectedFilePath)
+HydrusTags.py:143(CleanTags)                             <-       1    0.000    0.000  ClientDB.py:5228(_SyncFileToTagArchive)
+ClientDB.py:5348(<setcomp>)                              <-       2    0.000    0.000  ClientDB.py:5338(_UpdateAutocompleteTagCacheFromFiles)
+JpegImagePlugin.py:393(_getmp)                           <-       2    0.000    0.000  JpegImagePlugin.py:708(jpeg_factory)
+{binascii.b2a_hex}                                       <-       3    0.000    0.000  hex_codec.py:13(hex_encode)
+genericpath.py:23(exists)                                <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+{PIL._imaging.jpeg_encoder}                              <-       1    0.000    0.000  Image.py:418(_getencoder)
+{method 'replace' of 'unicode' objects}                  <-       2    0.000    0.000  ntpath.py:96(splitdrive)
+{method 'intersection' of 'set' objects}                 <-       1    0.000    0.000  ClientDB.py:1000(_AddFiles)
+                                                                  1    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+HydrusDB.py:111(_GetRowCount)                            <-       1    0.000    0.000  ClientDB.py:4193(_InboxFiles)
+{method 'copy' of 'dict' objects}                        <-       2    0.000    0.000  Image.py:511(_new)
+ImageFile.py:251(load_prepare)                           <-       1    0.000    0.000  ImageFile.py:124(load)
+ClientDB.py:3014(_GetHashIdStatus)                       <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+Image.py:2204(_decompression_bomb_check)                 <-       2    0.000    0.000  Image.py:2260(_open_core)
+{max}                                                    <-       1    0.000    0.000  Image.py:1738(thumbnail)
+                                                                  1    0.000    0.000  ImageFile.py:442(_save)
+                                                                  1    0.000    0.000  JpegImagePlugin.py:337(draft)
+                                                                  1    0.000    0.000  JpegImagePlugin.py:560(_save)
+                                                                  1    0.000    0.000  genericpath.py:93(_splitext)
+ClientData.py:958(GetServiceType)                        <-       2    0.000    0.000  ClientDB.py:3595(_GetService)
+{PIL._imaging.jpeg_decoder}                              <-       1    0.000    0.000  Image.py:401(_getdecoder)
+ClientData.py:730(ToTuple)                               <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+ClientData.py:948(GetServiceKey)                         <-       2    0.000    0.000  ClientDB.py:4055(_ImportFile)
+ClientDB.py:1627(<setcomp>)                              <-       1    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+{divmod}                                                 <-       2    0.000    0.000  JpegImagePlugin.py:60(APP)
+ClientData.py:942(GetInfo)                               <-       2    0.000    0.000  ClientDB.py:4055(_ImportFile)
+{method 'items' of 'dict' objects}                       <-       2    0.000    0.000  ClientDB.py:4055(_ImportFile)
+ntpath.py:199(splitext)                                  <-       1    0.000    0.000  Image.py:1592(save)
+{method 'startswith' of 'str' objects}                   <-       3    0.000    0.000  HydrusFileHandling.py:201(GetMime)
+{method 'pixel_access' of 'ImagingCore' objects}         <-       4    0.000    0.000  Image.py:739(load)
+{_hashlib.openssl_sha256}                                <-       1    0.000    0.000  HydrusFileHandling.py:190(GetHashFromPath)
+{method 'rfind' of 'str' objects}                        <-       3    0.000    0.000  genericpath.py:93(_splitext)
+{ord}                                                    <-      48    0.000    0.000  _binary.py:17(i8)
+{_hashlib.openssl_sha512}                                <-       1    0.000    0.000  HydrusFileHandling.py:126(GetExtraHashesFromPath)
+{method 'remove' of 'list' objects}                      <-       1    0.000    0.000  threading.py:373(notify)
+{callable}                                               <-       4    0.000    0.000  _core.py:16750(CallAfter)
+{numpy.core.multiarray.array}                            <-       2    0.000    0.000  numeric.py:406(asarray)
+{method 'replace' of 'str' objects}                      <-       4    0.000    0.000  ntpath.py:96(splitdrive)
+TiffImagePlugin.py:214(_accept)                          <-       2    0.000    0.000  Image.py:2260(_open_core)
+threading.py:64(_note)                                   <-       1    0.000    0.000  threading.py:373(notify)
+ClientDB.py:4195(<genexpr>)                              <-       2    0.000    0.000  {method 'executemany' of 'sqlite3.Cursor' objects}
+Image.py:341(preinit)                                    <-       1    0.000    0.000  Image.py:1592(save)
+                                                                  2    0.000    0.000  Image.py:2218(open)
+{_hashlib.openssl_sha1}                                  <-       1    0.000    0.000  HydrusFileHandling.py:126(GetExtraHashesFromPath)
+{method 'update' of 'set' objects}                       <-       6    0.000    0.000  HydrusTags.py:59(FilterNamespaces)
+HydrusData.py:1710(IsSynchronous)                        <-       1    0.000    0.000  HydrusDB.py:180(_ProcessJob)
+BmpImagePlugin.py:54(_accept)                            <-       2    0.000    0.000  Image.py:2260(_open_core)
+{method '__exit__' of 'thread.lock' objects}             <-       1    0.000    0.000  threading.py:288(__exit__)
+{method 'read' of 'cStringIO.StringO' objects}           <-       1    0.000    0.000  HydrusFileHandling.py:64(GenerateThumbnail)
+{method 'setimage' of 'ImagingEncoder' objects}          <-       1    0.000    0.000  ImageFile.py:442(_save)
+{sum}                                                    <-       1    0.000    0.000  ClientDB.py:1621(_DeleteFiles)
+{method 'setimage' of 'ImagingDecoder' objects}          <-       1    0.000    0.000  ImageFile.py:124(load)
+{method 'get' of 'dict' objects}                         <-       9    0.000    0.000  JpegImagePlugin.py:560(_save)
+GifImagePlugin.py:45(_accept)                            <-       2    0.000    0.000  Image.py:2260(_open_core)
+{getattr}                                                <-       1    0.000    0.000  Image.py:401(_getdecoder)
+                                                                  1    0.000    0.000  Image.py:418(_getencoder)
+Image.py:1671(seek)                                      <-       1    0.000    0.000  HydrusImageHandling.py:148(GetResolutionAndNumFrames)
+{time.time}                                              <-       1    0.000    0.000  HydrusData.py:629(GetNow)
+{method 'upper' of 'str' objects}                        <-       2    0.000    0.000  Image.py:1592(save)
+ImageFile.py:69(_tilesort)                               <-       2    0.000    0.000  {method 'sort' of 'list' objects}
+HydrusData.py:1674(GetAction)                            <-       1    0.000    0.000  HydrusDB.py:180(_ProcessJob)
+{method 'add' of 'set' objects}                          <-       1    0.000    0.000  ClientDB.py:1000(_AddFiles)
+{method 'cleanup' of 'ImagingDecoder' objects}           <-       1    0.000    0.000  ImageFile.py:124(load)
+{method 'seek' of 'cStringIO.StringO' objects}           <-       1    0.000    0.000  HydrusFileHandling.py:64(GenerateThumbnail)
+{method 'release' of 'thread.lock' objects}              <-       1    0.000    0.000  threading.py:373(notify)
+_util.py:4(isStringType)                                 <-       1    0.000    0.000  JpegImagePlugin.py:560(_save)
+{cStringIO.StringIO}                                     <-       1    0.000    0.000  HydrusFileHandling.py:64(GenerateThumbnail)
+ClientController.py:387(GetClientFilesManager)           <-       1    0.000    0.000  ClientDB.py:4055(_ImportFile)
+JpegImagePlugin.py:604(validate_qtables)                 <-       1    0.000    0.000  JpegImagePlugin.py:560(_save)
+HydrusData.py:1678(GetKWArgs)                            <-       1    0.000    0.000  HydrusDB.py:180(_ProcessJob)
+{method 'disable' of '_lsprof.Profiler' objects}         <-
+{method 'flush' of 'cStringIO.StringO' objects}          <-       1    0.000    0.000  ImageFile.py:442(_save)
+{method 'close' of 'cStringIO.StringO' objects}          <-       1    0.000    0.000  HydrusFileHandling.py:64(GenerateThumbnail)
+HydrusData.py:1676(GetArgs)                              <-       1    0.000    0.000  HydrusDB.py:180(_ProcessJob)
+ImageFile.py:260(load_end)                               <-       1    0.000    0.000  ImageFile.py:124(load)
+{method 'lower' of 'str' objects}                        <-       1    0.000    0.000  Image.py:1592(save)
+{method 'cleanup' of 'ImagingEncoder' objects}           <-       1    0.000    0.000  ImageFile.py:442(_save)</pre>
+	<p>Which is essentially the same data twice, in simple and expanded form.</p>		
+	<p>It is very helpful to me to have a profile. You can generate one by going <i>help->debug->db profile mode</i>, which tells the client to generate profile information for every subsequent database request. This will spam your logfile, so don't leave it on for a very long time (you can turn it off by hitting the help menu entry again).</p>
+			<p>Turn on profile mode, do the thing that runs slow for you (importing a file, fetching some tags, whatever), and then shut the client down and go to your logfile, which should be at install_dir/logs/client.log. At the bottom of that file will be some big tables with timing information for different code calls. Find the ones labelled for your problem request (e.g. "import_file") and copy and paste that to me.</p>
+			<p><i>gui profile mode</i> is experimental and very log heavy. Feel free to play with it, but it is really for my own purposes. Almost everything that is slow in the program is due to my inefficient database queries.</p>
+			<p>You can <a href="contact.html">contact me</a> however you like--through email, on the 8chan board, on tumblr, github, whatever you prefer.</p>
+		</div>
+	</body>
+</html>

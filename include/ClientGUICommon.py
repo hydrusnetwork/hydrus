@@ -396,46 +396,43 @@ class AutoCompleteDropdown( wx.Panel ):
         
         HydrusGlobals.client_controller.ResetIdleTimer()
         
-        if event.KeyCode in ( wx.WXK_TAB, wx.WXK_NUMPAD_TAB ):
+        if event.KeyCode in ( wx.WXK_INSERT, wx.WXK_NUMPAD_INSERT ):
             
-            if event.ShiftDown():
+            if self._intercept_key_events:
                 
-                if self._intercept_key_events:
+                self._intercept_key_events = False
+                
+                ( r, g, b ) = HC.options[ 'gui_colours' ][ 'autocomplete_background' ]
+                
+                if r != g or r != b or g != b:
                     
-                    self._intercept_key_events = False
+                    colour = wx.Colour( g, b, r )
                     
-                    ( r, g, b ) = HC.options[ 'gui_colours' ][ 'autocomplete_background' ]
+                elif r > 127:
                     
-                    if r != g or r != b or g != b:
-                        
-                        colour = wx.Colour( g, b, r )
-                        
-                    elif r > 127:
-                        
-                        colour = wx.Colour( g, b, r / 2 )
-                        
-                    else:
-                        
-                        colour = wx.Colour( g, b, r * 2 )
-                        
+                    colour = wx.Colour( g, b, r / 2 )
                     
                 else:
                     
-                    self._intercept_key_events = True
+                    colour = wx.Colour( g, b, r * 2 )
                     
-                    colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] )
-                    
-                
-                self._text_ctrl.SetBackgroundColour( colour )
-                
-                self._text_ctrl.Refresh()
                 
             else:
                 
-                self._UpdateList()
+                self._intercept_key_events = True
                 
-                self._lag_timer.Stop()
+                colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] )
                 
+            
+            self._text_ctrl.SetBackgroundColour( colour )
+            
+            self._text_ctrl.Refresh()
+            
+        elif event.KeyCode == wx.WXK_SPACE and event.RawControlDown(): # this is control, not command on os x, for which command+space does some os stuff
+            
+            self._UpdateList()
+            
+            self._lag_timer.Stop()
             
         elif self._intercept_key_events:
             
@@ -2535,7 +2532,7 @@ class ListBox( wx.ScrolledWindow ):
     def EventKeyDown( self, event ):
         
         shift = event.ShiftDown()
-        ctrl = event.CmdDown() or event.ControlDown()
+        ctrl = event.CmdDown()
         
         key_code = event.GetKeyCode()
         
@@ -2606,7 +2603,7 @@ class ListBox( wx.ScrolledWindow ):
         hit_index = self._GetIndexUnderMouse( event )
         
         shift = event.ShiftDown()
-        ctrl = event.CmdDown() or event.ControlDown()
+        ctrl = event.CmdDown()
         
         self._Hit( shift, ctrl, hit_index )
         
@@ -2823,7 +2820,7 @@ class ListBoxTags( ListBox ):
         hit_index = self._GetIndexUnderMouse( event )
         
         shift = event.ShiftDown()
-        ctrl = event.CmdDown() or event.ControlDown()
+        ctrl = event.CmdDown()
         
         self._Hit( shift, ctrl, hit_index )
         
@@ -2835,7 +2832,7 @@ class ListBoxTags( ListBox ):
         hit_index = self._GetIndexUnderMouse( event )
         
         shift = event.ShiftDown()
-        ctrl = event.CmdDown() or event.ControlDown()
+        ctrl = event.CmdDown()
         
         self._Hit( shift, ctrl, hit_index )
         
@@ -3132,7 +3129,7 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
             
             
             shift = event.ShiftDown()
-            ctrl = event.CmdDown() or event.ControlDown()
+            ctrl = event.CmdDown()
             
             self._Hit( shift, ctrl, hit_index )
             

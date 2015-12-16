@@ -592,6 +592,42 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         wx.CallAfter( gc.collect )
         
     
+    def _Exit( self, restart = False ):
+        
+        if HC.options[ 'confirm_client_exit' ]:
+            
+            if restart:
+                
+                text = 'Are you sure you want to restart the client? (Will auto-yes in 15 seconds)'
+                
+            else:
+                
+                text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
+                
+            
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                
+                call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
+                
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    call_later.Stop()
+                    
+                    return
+                    
+                
+                call_later.Stop()
+                
+            
+        
+        if restart:
+            
+            HydrusGlobals.restart = True
+            
+        
+        self._controller.Exit()
+        
+    
     def _FetchIP( self, service_key ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the file\'s hash.' ) as dlg:
@@ -642,6 +678,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'options' ), p( '&Options' ) )
             menu.AppendSeparator()
+            if not HC.PLATFORM_LINUX:
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'restart' ), p( '&Restart' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'exit' ), p( '&Exit' ) )
             
             return ( menu, p( '&File' ), True )
@@ -2023,26 +2061,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventExit( self, event ):
         
-        if HC.options[ 'confirm_client_exit' ]:
-            
-            text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
-            
-            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                
-                call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
-                
-                if dlg.ShowModal() == wx.ID_NO:
-                    
-                    call_later.Stop()
-                    
-                    return
-                    
-                
-                call_later.Stop()
-                
-            
-        
-        self._controller.Exit()
+        self._Exit()
         
     
     def EventFocus( self, event ):
@@ -2118,7 +2137,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'delete_orphans': self._DeleteOrphans()
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'delete_service_info': self._DeleteServiceInfo()
-            elif command == 'exit': self.EventExit( event )
+            elif command == 'exit': self._Exit()
             elif command == 'fetch_ip': self._FetchIP( data )
             elif command == 'force_idle':
                 
@@ -2191,6 +2210,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.RefreshQuery()
                 
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
+            elif command == 'restart': self._Exit( restart = True )
             elif command == 'restore_database': self._controller.RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()

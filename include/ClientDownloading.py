@@ -8,6 +8,7 @@ import HydrusPaths
 import HydrusSerialisable
 import HydrusThreading
 import json
+import lxml # to force import for later bs4 stuff
 import os
 import pafy
 import re
@@ -195,6 +196,10 @@ def GetImageboardThreadURLs( thread_url ):
     
     return ( json_url, file_base )
     
+def GetSoup( html ):
+    
+    return bs4.BeautifulSoup( html, 'lxml' )
+    
 def GetYoutubeFormats( youtube_url ):
     
     try: p = pafy.Pafy( youtube_url )
@@ -258,7 +263,7 @@ def THREADDownloadURL( job_key, url, url_string ):
     
 def Parse4chanPostScreen( html ):
     
-    soup = bs4.BeautifulSoup( html )
+    soup = GetSoup( html )
     
     title_tag = soup.find( 'title' )
     
@@ -302,7 +307,7 @@ def Parse4chanPostScreen( html ):
     
 def ParsePageForURLs( html, starting_url ):
     
-    soup = bs4.BeautifulSoup( html )
+    soup = GetSoup( html )
     
     all_links = soup.find_all( 'a' )
     
@@ -532,7 +537,7 @@ class GalleryBooru( Gallery ):
         urls_set = set()
         urls = []
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         # this catches 'post-preview' along with 'post-preview not-approved' sort of bullshit
         def starts_with_classname( classname ): return classname is not None and classname.startswith( self._thumb_classname )
@@ -590,7 +595,7 @@ class GalleryBooru( Gallery ):
         
         ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         image_base = None
         
@@ -788,7 +793,7 @@ class GalleryDeviantArt( Gallery ):
         
         urls = []
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         thumbs_container = soup.find( class_ = 'zones-container' )
         
@@ -828,7 +833,7 @@ class GalleryDeviantArt( Gallery ):
     
     def _ParseImagePage( self, html, referer_url ):
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         download_button = soup.find( 'a', class_ = 'dev-page-download' )
         
@@ -988,7 +993,7 @@ class GalleryHentaiFoundry( Gallery ):
         
         urls_set = set()
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         def correct_url( href ):
             
@@ -1057,7 +1062,7 @@ class GalleryHentaiFoundry( Gallery ):
             raise Exception( 'Could not parse image url!' + os.linesep + HydrusData.ToUnicode( e ) )
             
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         tags = []
         
@@ -1155,7 +1160,7 @@ class GalleryNewgrounds( Gallery ):
     
     def _ParseGalleryPage( self, html, url_base ):
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         fatcol = soup.find( 'div', class_ = 'fatcol' )
         
@@ -1191,7 +1196,7 @@ class GalleryNewgrounds( Gallery ):
     
     def _ParseImagePage( self, html, url_base ):
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         tags = set()
         
@@ -1309,7 +1314,7 @@ class GalleryPixiv( Gallery ):
         
         urls = []
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         manga_links = soup.find_all( class_ = 'manga' )
         thumbnail_links = soup.find_all( class_ = 'work' )
@@ -1348,7 +1353,7 @@ class GalleryPixiv( Gallery ):
             raise Exception( page_url + ' was manga, not a single image, so could not be downloaded.' )
             
         
-        soup = bs4.BeautifulSoup( html )
+        soup = GetSoup( html )
         
         #
         

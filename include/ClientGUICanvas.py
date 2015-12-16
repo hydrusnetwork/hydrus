@@ -246,7 +246,7 @@ class Animation( wx.Window ):
             
             etype = event.GetEventType()
             
-            if not ( event.ShiftDown() or event.ControlDown() or event.CmdDown() or event.AltDown() ):
+            if not ( event.ShiftDown() or event.CmdDown() or event.AltDown() ):
                 
                 if etype == wx.wxEVT_LEFT_DOWN:
                     
@@ -649,6 +649,7 @@ class Canvas( object ):
         self._canvas_zoom = 1.0
         
         self._last_drag_coordinates = None
+        self._last_motion_coordinates = ( 0, 0 )
         self._total_drag_delta = ( 0, 0 )
         
         self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) )
@@ -1844,16 +1845,35 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         self._focus_holder.SetFocus()
         
+        ( x, y ) = event.GetPosition()
+        
+        show_mouse = False
+        
+        if ( x, y ) != self._last_motion_coordinates:
+            
+            self._last_motion_coordinates = ( x, y )
+            
+            show_mouse = True
+            
+        
         if event.Dragging() and self._last_drag_coordinates is not None:
             
             ( old_x, old_y ) = self._last_drag_coordinates
             
-            ( x, y ) = event.GetPosition()
-            
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
             
-            if HC.PLATFORM_WINDOWS: self.WarpPointer( old_x, old_y )
-            else: self._last_drag_coordinates = ( x, y )
+            if HC.PLATFORM_WINDOWS:
+                
+                show_mouse = False
+                
+                self.WarpPointer( old_x, old_y )
+                
+            else:
+                
+                show_mouse = True
+                
+                self._last_drag_coordinates = ( x, y )
+                
             
             ( old_delta_x, old_delta_y ) = self._total_drag_delta
             
@@ -1862,9 +1882,12 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
             self._DrawCurrentMedia()
             
         
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        if show_mouse:
         
-        self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+            self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+            
+            self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+            
         
     
     def EventDragBegin( self, event ):

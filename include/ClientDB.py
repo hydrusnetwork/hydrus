@@ -3567,31 +3567,6 @@ class DB( HydrusDB.HydrusDB ):
         return reason_id
         
     
-    def _GetRatingsMediaResult( self, service_key, min, max ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        half_point = ( min + max ) / 2
-        
-        tighter_min = ( min + half_point ) / 2
-        tighter_max = ( max + half_point ) / 2
-        
-        # I know this is horrible, ordering by random, but I can't think of a better way to do it right now
-        result = self._c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, tighter_min, tighter_max ) ).fetchone()
-        
-        if result is None: result = self._c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, min, max ) ).fetchone()
-        
-        if result is None: return None
-        else:
-            
-            ( hash_id, ) = result
-            
-            ( media_result, ) = self._GetMediaResults( CC.COMBINED_FILE_SERVICE_KEY, { hash_id } )
-            
-            return media_result
-            
-        
-    
     def _GetService( self, service_id ):
         
         if service_id in self._service_cache: service = self._service_cache[ service_id ]
@@ -4986,7 +4961,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
         elif action == 'pixiv_account': result = self._GetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account' )
-        elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( *args, **kwargs )
         elif action == 'remote_booru': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'remote_boorus': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU )
         elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
@@ -5136,7 +5110,17 @@ class DB( HydrusDB.HydrusDB ):
             
             ( dump_type, dump_name, version, serialisable_info ) = obj.GetSerialisableTuple()
             
-            dump = json.dumps( serialisable_info )
+            try:
+                
+                dump = json.dumps( serialisable_info )
+                
+            except:
+                
+                HydrusData.Print( obj )
+                HydrusData.Print( serialisable_info )
+                
+                raise Exception( 'Trying to json dump the object ' + HydrusData.ToUnicode( obj ) + ' with name ' + dump_name + ' caused an error. Its serialisable info has been dumped to the log.' )
+                
             
             self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
             
@@ -5146,7 +5130,17 @@ class DB( HydrusDB.HydrusDB ):
             
             ( dump_type, version, serialisable_info ) = obj.GetSerialisableTuple()
             
-            dump = json.dumps( serialisable_info )
+            try:
+                
+                dump = json.dumps( serialisable_info )
+                
+            except:
+                
+                HydrusData.Print( obj )
+                HydrusData.Print( serialisable_info )
+                
+                raise Exception( 'Trying to json dump the object ' + HydrusData.ToUnicode( obj ) + ' caused an error. Its serialisable info has been dumped to the log.' )
+                
             
             self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
             

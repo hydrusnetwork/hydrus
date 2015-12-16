@@ -412,7 +412,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         self._WorkOnFiles( page_key )
                         
                     
-                    time.sleep( 1 )
+                    time.sleep( 0.1 )
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     
@@ -1289,7 +1289,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 
                 html = HydrusGlobals.client_controller.DoHTTP( HC.GET, page_url )
                 
-                soup = bs4.BeautifulSoup( html )
+                soup = ClientDownloading.GetSoup( html )
                 
                 #
                 
@@ -1401,7 +1401,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                     self._WorkOnFiles( page_key )
                     
-                    time.sleep( 1 )
+                    time.sleep( 0.1 )
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     
@@ -2645,7 +2645,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         self._WorkOnFiles( page_key )
                         
                     
-                    time.sleep( 1 )
+                    time.sleep( 0.1 )
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     

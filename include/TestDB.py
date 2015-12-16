@@ -955,14 +955,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertTrue( result, ( pixiv_id, password ) )
         
     
-    def test_ratings_media_result( self ):
-        
-        # add some ratings, slice different media results?
-        # check exactly what this does again, figure a good test
-        
-        pass
-        
-    
     def test_repo_downloads( self ):
         
         result = self._read( 'downloads' )

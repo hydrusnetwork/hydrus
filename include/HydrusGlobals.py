@@ -11,3 +11,6 @@ is_db_updated = False
 db_profile_mode = False
 pubsub_profile_mode = False
 server_busy = False
+
+shutdown_complete = False
+restart = False
