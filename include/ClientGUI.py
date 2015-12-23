@@ -678,8 +678,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'options' ), p( '&Options' ) )
             menu.AppendSeparator()
-            if not HC.PLATFORM_LINUX:
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'restart' ), p( '&Restart' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'restart' ), p( '&Restart' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'exit' ), p( '&Exit' ) )
             
             return ( menu, p( '&File' ), True )
@@ -1552,9 +1551,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
                     
-                    for prefix in HydrusData.IterateHexPrefixes():
+                    for p in HydrusData.IterateHexPrefixes():
                         
-                        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
+                        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, p )
                         
                         if not os.path.exists( dir ):
                             

@@ -252,6 +252,8 @@ class Animation( wx.Window ):
                     
                     self.PausePlay()
                     
+                    self.GetParent().BeginDrag()
+                    
                     return
                     
                 
@@ -1060,6 +1062,21 @@ class Canvas( object ):
                     
                 
             
+        
+    
+    def BeginDrag( self, pos = None ):
+        
+        if pos is None:
+            
+            ( x, y ) = self.ScreenToClient( wx.GetMousePosition() )
+            
+        else:
+            
+            ( x, y ) = pos
+            
+        
+        self._last_drag_coordinates = ( x, y )
+        
         
     
     def EventEraseBackground( self, event ): pass
@@ -1894,32 +1911,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         ( x, y ) = event.GetPosition()
         
-        ( client_x, client_y ) = self.GetClientSize()
-        
-        if self._current_display_media.GetMime() != HC.APPLICATION_FLASH: # to stop warping over flash
-            
-            if x < 20 or x > client_x - 20 or y < 20 or y > client_y -20:
-                
-                better_x = x
-                better_y = y
-                
-                if x < 20: better_x = 20
-                if y < 20: better_y = 20
-                
-                if x > client_x - 20: better_x = client_x - 20
-                if y > client_y - 20: better_y = client_y - 20
-                
-                if HC.PLATFORM_WINDOWS:
-                    
-                    self.WarpPointer( better_x, better_y )
-                    
-                    x = better_x
-                    y = better_y
-                    
-                
-            
-        
-        self._last_drag_coordinates = ( x, y )
+        self.BeginDrag( ( x, y ) )
         
         event.Skip()
         
@@ -3225,6 +3217,11 @@ class MediaContainer( wx.Window ):
                 self._media_window = self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
                 
             
+        
+    
+    def BeginDrag( self ):
+        
+        self.GetParent().BeginDrag()
         
     
     def EventEmbedButton( self, event ):

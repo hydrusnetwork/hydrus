@@ -3958,7 +3958,10 @@ class NoneableSpinCtrl( wx.Panel ):
         
         self._one = wx.SpinCtrl( self, min = min, max = max, size = ( 60, -1 ) )
         
-        if num_dimensions == 2: self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max, size = ( 60, -1 ) )
+        if num_dimensions == 2:
+            
+            self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max, size = ( 60, -1 ) )
+            
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -5290,7 +5293,7 @@ class RegexButton( wx.Button ):
         submenu.AppendSeparator()
         
         submenu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
-        submenu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)' )
+        submenu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + ']*?(?=\..*$)' )
         
         menu.AppendMenu( -1, 'regex components', submenu )
         
@@ -5341,7 +5344,7 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_LOOKBEHIND: phrase = r'(?<=...)'
         elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = r'(?<!...)'
         elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
-        elif id == self.ID_REGEX_FILENAME: phrase = r'(?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)'
+        elif id == self.ID_REGEX_FILENAME: phrase = '(?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + ']*?(?=\..*$)'
         elif id == self.ID_REGEX_MANAGE_FAVOURITES:
             
             import ClientGUIDialogsManage

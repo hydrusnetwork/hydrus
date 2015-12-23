@@ -87,6 +87,10 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_key.SetVariable( 'result', result )
                 
+            except HydrusExceptions.PermissionException as e:
+                
+                job_key.SetVariable( 'error', e )
+                
             except Exception as e:
                 
                 job_key.SetVariable( 'error', e )

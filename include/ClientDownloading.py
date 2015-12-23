@@ -1350,7 +1350,7 @@ class GalleryPixiv( Gallery ):
             
             manga_url = page_url.replace( 'medium', 'manga' )
             
-            raise Exception( page_url + ' was manga, not a single image, so could not be downloaded.' )
+            raise HydrusExceptions.MimeException( page_url + ' was manga, not a single image, so could not be downloaded.' )
             
         
         soup = GetSoup( html )

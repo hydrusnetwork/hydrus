@@ -943,6 +943,92 @@ class ThumbnailCache( object ):
         self._controller.sub( self, 'Clear', 'thumbnail_resize' )
         
     
+    def _GetResizedHydrusBitmapFromHardDrive( self, display_media, from_error = False ):
+        
+        hash = display_media.GetHash()
+        
+        path = None
+        
+        locations_manager = display_media.GetLocationsManager()
+        
+        if locations_manager.HasLocal():
+            
+            try:
+                
+                path = ClientFiles.GetThumbnailPath( hash, False )
+                
+            except HydrusExceptions.NotFoundException as e:
+                
+                HydrusData.ShowException( e )
+                
+            
+        else:
+            
+            try:
+                
+                path = ClientFiles.GetThumbnailPath( hash, False )
+                
+            except:
+                
+                pass
+                
+            
+        
+        if path is None:
+            
+            hydrus_bitmap = self._special_thumbs[ 'hydrus' ]
+            
+        else:
+            
+            try:
+                
+                hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path )
+                
+            except Exception as e:
+                
+                if from_error:
+                    
+                    raise
+                    
+                
+                HydrusData.ShowException( e )
+                
+                try:
+                    
+                    try:
+                        
+                        os.remove( path )
+                        
+                    except:
+                        
+                        raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. Furthermore, the faulty thumbnail file could not be deleted. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+                        
+                    
+                    try:
+                        
+                        hydrus_bitmap = self._GetHydrusBitmapFromHardDrive( display_media, from_error = True )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowException( e )
+                        
+                        raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. It was deleted, but it could not be regenerated for the other above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
+                        
+                    
+                    HydrusData.ShowText( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. It was deleted and regenerated. This event could indicate hard drive corruption. Please check everything is ok.' )
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    hydrus_bitmap = self._special_thumbs[ 'hydrus' ]
+                    
+                
+            
+        
+        return hydrus_bitmap
+        
+    
     def _RecalcWaterfallQueueRandom( self ):
     
         self._waterfall_queue_random = list( self._waterfall_queue_quick )
@@ -1005,20 +1091,7 @@ class ThumbnailCache( object ):
             
             if not self._data_cache.HasData( hash ):
                 
-                path = None
-                
-                try:
-                    
-                    path = ClientFiles.GetThumbnailPath( hash, False )
-                    
-                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path )
-                    
-                except HydrusExceptions.NotFoundException:
-                    
-                    HydrusData.Print( 'Could not find the thumbnail for ' + hash.encode( 'hex' ) + '!' )
-                    
-                    return self._special_thumbs[ 'hydrus' ]
-                    
+                hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
                 
                 self._data_cache.AddData( hash, hydrus_bitmap )
                 

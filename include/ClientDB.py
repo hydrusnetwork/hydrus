@@ -3274,7 +3274,7 @@ class DB( HydrusDB.HydrusDB ):
             
             tag_id = self._c.lastrowid
             
-            self._c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) VALUES ( ?, ? );', ( tag_id, tag ) )
+            self._c.execute( 'REPLACE INTO tags_fts4 ( docid, tag ) VALUES ( ?, ? );', ( tag_id, tag ) )
             
         else: ( tag_id, ) = result
         
@@ -4794,7 +4794,10 @@ class DB( HydrusDB.HydrusDB ):
             self.pub_after_commit( 'notify_new_siblings' )
             self.pub_after_commit( 'notify_new_parents' )
             
-        elif notify_new_parents: self.pub_after_commit( 'notify_new_parents' )
+        elif notify_new_parents:
+            
+            self.pub_after_commit( 'notify_new_parents' )
+            
         
         if continue_pubsub:
             
@@ -5114,8 +5117,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 dump = json.dumps( serialisable_info )
                 
-            except:
+            except Exception as e:
                 
+                HydrusData.ShowException( e )
                 HydrusData.Print( obj )
                 HydrusData.Print( serialisable_info )
                 
@@ -5134,8 +5138,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 dump = json.dumps( serialisable_info )
                 
-            except:
+            except Exception as e:
                 
+                HydrusData.ShowException( e )
                 HydrusData.Print( obj )
                 HydrusData.Print( serialisable_info )
                 

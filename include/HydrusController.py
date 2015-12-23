@@ -33,7 +33,7 @@ class HydrusController( object ):
         self._caches = {}
         self._managers = {}
         
-        self._call_to_threads = [ HydrusThreading.DAEMONCallToThread( self ) for i in range( 10 ) ]
+        self._call_to_threads = [ HydrusThreading.THREADCallToThread( self ) for i in range( 10 ) ]
         
         self._timestamps = collections.defaultdict( lambda: 0 )
         
@@ -129,6 +129,11 @@ class HydrusController( object ):
         
     
     def InitModel( self ):
+        
+        for thread in self._call_to_threads:
+            
+            thread.start()
+            
         
         self._db = self._InitDB()
         

@@ -67,6 +67,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._lock = threading.Lock()
         
+        self._gallery = None
+        
         self._gallery_status = 'ready to start'
         self._seed_cache_status = ( 'initialising', ( 0, 1 ) )
         self._file_download_hook = None
@@ -155,8 +157,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             return
             
         
-        gallery = ClientDownloading.GetGallery( self._gallery_identifier )
-        
         do_wait = False
         
         url = self._seed_cache.GetNextSeed( CC.STATUS_UNKNOWN )
@@ -165,6 +165,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             return
             
+        
+        gallery = ClientDownloading.GetGallery( self._gallery_identifier )
         
         try:
             
@@ -218,7 +220,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             self._seed_cache.UpdateSeedStatus( url, status )
             
-            if hash is not None:
+            if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                 
                 service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, tags )
                 
@@ -231,6 +233,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
+            
+        except HydrusExceptions.MimeException as e:
+            
+            error_text = traceback.format_exc()
+            
+            status = CC.STATUS_UNINTERESTING_MIME
+            
+            self._seed_cache.UpdateSeedStatus( url, status, note = error_text )
             
         except Exception:
             
@@ -702,6 +712,14 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     
                 
             
+        except HydrusExceptions.MimeException as e:
+            
+            error_text = traceback.format_exc()
+            
+            status = CC.STATUS_UNINTERESTING_MIME
+            
+            self._paths_cache.UpdateSeedStatus( path, status, note = error_text )
+            
         except Exception as e:
             
             error_text = traceback.format_exc()
@@ -1103,7 +1121,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path = path
         self._mimes = mimes
         self._import_file_options = import_file_options
-        self._import_tag_options
+        self._import_tag_options = import_tag_options
         self._actions = actions
         self._action_locations = action_locations
         self._period = period
@@ -1235,6 +1253,14 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
+            
+        except HydrusExceptions.MimeException as e:
+            
+            error_text = traceback.format_exc()
+            
+            status = CC.STATUS_UNINTERESTING_MIME
+            
+            self._urls_cache.UpdateSeedStatus( file_url, status, note = error_text )
             
         except Exception:
             
@@ -1544,7 +1570,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self ):
         
@@ -1595,6 +1621,26 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 self._seeds_to_info[ seed ] = seed_info
                 
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            new_serialisable_info = []
+            
+            for ( seed, seed_info ) in old_serialisable_info:
+                
+                if 'note' in seed_info:
+                    
+                    seed_info[ 'note' ] = HydrusData.ToUnicode( seed_info[ 'note' ] )
+                    
+                
+                new_serialisable_info.append( ( seed, seed_info ) )
+                
+            
+            return ( 2, new_serialisable_info )
             
         
     
@@ -1830,6 +1876,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            note = HydrusData.ToUnicode( note )
+            
             seed_info = self._seeds_to_info[ seed ]
             
             seed_info[ 'status' ] = status
@@ -1904,6 +1952,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
     
     def _WorkOnFiles( self, job_key ):
+        
+        error_count = 0
         
         num_urls = self._seed_cache.GetSeedCount()
         
@@ -2012,7 +2062,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                 
+            except HydrusExceptions.MimeException as e:
+                
+                error_text = traceback.format_exc()
+                
+                status = CC.STATUS_UNINTERESTING_MIME
+                
+                self._seed_cache.UpdateSeedStatus( url, status, note = error_text )
+                
             except Exception as e:
+                
+                error_count += 1
                 
                 error_text = traceback.format_exc()
                 HydrusData.Print( error_text )
@@ -2020,6 +2080,13 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 status = CC.STATUS_FAILED
                 
                 self._seed_cache.UpdateSeedStatus( url, status, note = error_text )
+                
+                time.sleep( 10 )
+                
+                if error_count > 4:
+                    
+                    raise Exception( 'The subscription ' + self._name + ' encountered several errors when downloading files, so it abandoned its sync.' )
+                    
                 
             
             if len( successful_hashes ) > 0:
@@ -2433,6 +2500,14 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
+            
+        except HydrusExceptions.MimeException as e:
+            
+            error_text = traceback.format_exc()
+            
+            status = CC.STATUS_UNINTERESTING_MIME
+            
+            self._urls_cache.UpdateSeedStatus( file_url, status, note = error_text )
             
         except Exception as e:
             

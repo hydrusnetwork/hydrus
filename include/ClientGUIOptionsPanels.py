@@ -459,7 +459,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         self._vbox.Clear( True )
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ), randomised = False )
         
         button_id = 1
         

@@ -194,35 +194,91 @@ def GetFilePath( location, hash, mime = None ):
     
 def GetThumbnailPath( hash, full_size = True ):
     
+    if not full_size:
+        
+        options = HydrusGlobals.client_controller.GetOptions()
+        
+        thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
+        
+        if tuple( thumbnail_dimensions ) == HC.UNSCALED_THUMBNAIL_DIMENSIONS:
+            
+            full_size = True
+            
+        
+    
     path = GetExpectedThumbnailPath( hash, full_size )
     
     if not os.path.exists( path ):
         
         if full_size:
             
-            raise HydrusExceptions.NotFoundException( 'Thumbnail not found!' )
+            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+            
+            try:
+                
+                file_path = client_files_manager.GetFilePath( hash )
+                
+            except HydrusExceptions.NotFoundException:
+                
+                raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
+                
+            
+            try:
+                
+                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
+                
+            
+            try:
+                
+                with open( path, 'wb' ) as f:
+                    
+                    f.write( thumbnail )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+                
+            
+            HydrusData.ShowText( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok.' )
             
         else:
             
             full_size_path = GetThumbnailPath( hash, True )
             
-            options = HydrusGlobals.client_controller.GetOptions()
-            
-            thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
-            
-            if tuple( thumbnail_dimensions ) == HC.UNSCALED_THUMBNAIL_DIMENSIONS:
-                
-                path = full_size_path
-                
-            else:
+            try:
                 
                 thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
                 
-                with open( path, 'wb' ) as f:
+            except:
+                
+                try:
                     
-                    f.write( thumbnail_resized )
+                    os.remove( full_size_path )
+                    
+                except:
+                    
+                    raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
                     
                 
+                full_size_path = GetThumbnailPath( hash, True )
+                
+                thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
+                
+            
+            with open( path, 'wb' ) as f:
+                
+                f.write( thumbnail_resized )
+                
+            
             
         
     

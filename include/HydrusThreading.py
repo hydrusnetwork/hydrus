@@ -195,15 +195,13 @@ class DAEMONWorker( DAEMON ):
     
     def set( self, *args, **kwargs ): self._event.set()
     
-class DAEMONCallToThread( DAEMON ):
+class THREADCallToThread( DAEMON ):
     
     def __init__( self, controller ):
         
         DAEMON.__init__( self, controller, 'CallToThread' )
         
         self._queue = Queue.Queue()
-        
-        self.start()
         
     
     def put( self, callable, *args, **kwargs ):

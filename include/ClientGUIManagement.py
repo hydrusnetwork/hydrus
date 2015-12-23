@@ -1696,6 +1696,8 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._gallery_import.SetFileLimit( self._file_limit.GetValue() )
         
+        event.Skip()
+        
     
     def EventFilesPause( self, event ):
         

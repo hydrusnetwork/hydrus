@@ -69,7 +69,12 @@ class Controller( object ):
         
         HydrusData.ShowText = show_text
         
-        self._call_to_threads = [ HydrusThreading.DAEMONCallToThread( self ) for i in range( 10 ) ]
+        self._call_to_threads = [ HydrusThreading.THREADCallToThread( self ) for i in range( 10 ) ]
+        
+        for thread in self._call_to_threads:
+            
+            thread.start()
+            
         
         self._http = ClientNetworking.HTTPConnectionManager()
         

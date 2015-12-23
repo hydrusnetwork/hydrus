@@ -142,7 +142,7 @@ def SetProxy( proxytype, host, port, username = None, password = None ):
     elif proxytype == 'socks4': proxytype = socks.PROXY_TYPE_SOCKS4
     elif proxytype == 'socks5': proxytype = socks.PROXY_TYPE_SOCKS5
     
-    socks.setdefaultproxy( proxytype = proxytype, addr = host, port = port, username = username, password = password )
+    socks.setdefaultproxy( proxy_type = proxytype, addr = host, port = port, username = username, password = password )
     
     socks.wrapmodule( httplib )
     

@@ -748,6 +748,16 @@ def IsAlreadyRunning( instance ):
             
             try:
                 
+                me = psutil.Process()
+                
+                if me.pid == pid and me.create_time() == create_time:
+                    
+                    # this is me! there is no conflict, lol!
+                    # this happens when a linux process restarts with os.execl(), for instance (unlike Windows, it keeps its pid)
+                    
+                    return False
+                    
+                
                 if psutil.pid_exists( pid ):
                     
                     p = psutil.Process( pid )

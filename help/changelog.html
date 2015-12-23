@@ -8,8 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
-				<li><h3>version 186</h3></li>
+				<li><h3>version 187</h3></li>
 				<ul>
+					<li>file->restart now works for linux</li>
+					<li>the 'call to' thread pool now has a delayed start, which fixes a shutdown hang in linux (and perhaps the other platforms, in one way or another), when the user hits 'forget it' on the 'already running' boot dialog</li>
+					<li>removed some console error junk on abandoned client boot</li>
+					<li>if a requested full-size thumbnail is missing, the client will now attempt to regenerate it</li>
+					<li>if a requested full-size thumbnail does not render (for instance, during a request to generate a resized thumbnail), the client will now attempt to regenerate it</li>
+					<li>some thumbnail fetching and generation logic is slightly improved</li>
+					<li>you can now drag animated media around when the inital drag click begins over the animation canvas</li>
+					<li>ditched some ultimately unhelpful mouse warping when the cursor was near the edge of the media viewer when a drag began</li>
+					<li>possibly fixed a strange tags_fts4 mirroring problem that has hit some users for a reason I do not understand</li>
+					<li>import tag options panels will no longer order their tag services randomly</li>
+					<li>fixed a bug where import folders would not save changes to their explicit tags</li>
+					<li>fixed a bug where under some circumstances, the gallery importer was attempting to display previously deleted files on the screen, causing errors.</li>
+					<li>subscriptions will now pause a few seconds after a file import error, which should solve a problem with client hanging when lots and lots of subscription file errors occur one after another</li>
+					<li>if subscriptions encounter 5 file import errors, they will pause their sync and try continuing later</li>
+					<li>pixiv manga error handling is improved</li>
+					<li>bad mime error handling is improved for all importers</li>
+					<li>fixed an important bug in the import status cache where error texts were not being stored as unicode, so error texts with non-unicode-compatible characters were causing exceptions when the session was being saved to the db or the import status frame was being loaded</li>
+					<li>existing sessions' import status caches should automatically convert their 'notes' to unicode on update</li>
+					<li>removed booru db fetch spam when booru download page has no work to do</li>
+					<li>fixed a typo in regenerate thumbnails popup message</li>
+					<li>fixed some bad event handling for the gallery page's file limit control</li>
+					<li>updated some regex defaults to have better multiplatform support and handle a wider array of valid characters</li>
+				</ul>
+				<li><h3>version 186</h3></li>
 				<ul>
 					<li>Windows release is now 64-bit!</li>
 					<li>some libraries got updated for windows, to varying minor effects</li>
