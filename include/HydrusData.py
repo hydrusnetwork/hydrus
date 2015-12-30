@@ -826,7 +826,7 @@ def Profile( code, g, l ):
     
     output.seek( 0 )
     
-    Print( output.read() )
+    DebugPrint( output.read() )
     
     output.seek( 0 )
     
@@ -837,7 +837,7 @@ def Profile( code, g, l ):
     
     output.seek( 0 )
     
-    Print( output.read() )
+    DebugPrint( output.read() )
     
 def RecordRunningStart( instance ):
     
@@ -898,6 +898,27 @@ ShowException = ShowExceptionDefault
 ShowText = Print
 
 def SplayListForDB( xs ): return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
+
+def SplitIteratorIntoChunks( iterator, n ):
+    
+    chunk = []
+    
+    for item in iterator:
+        
+        chunk.append( item )
+        
+        if len( chunk ) == n:
+            
+            yield chunk
+            
+            chunk = []
+            
+        
+    
+    if len( chunk ) > 0:
+        
+        yield chunk
+        
 
 def SplitListIntoChunks( xs, n ):
     

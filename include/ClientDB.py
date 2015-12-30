@@ -2293,24 +2293,39 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetDownloads( self ): return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
     
-    def _GetFileHash( self, hash, hash_type ):
+    def _GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ):
         
-        hash_id = self._GetHashId( hash )
-        
-        result = self._c.execute( 'SELECT md5, sha1, sha512 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        if result is None:
+        if given_hash_type == 'sha256':
             
-            raise HydrusExceptions.NotFoundException( 'Could not find that hash record in the database!' )
+            hash_ids = self._GetHashIds( given_hashes )
             
         else:
             
-            ( md5, sha1, sha512 ) = result
+            hash_ids = []
             
-            if hash_type == 'md5': return md5
-            elif hash_type == 'sha1': return sha1
-            elif hash_type == 'sha512': return sha512
+            for given_hash in given_hashes:
+                
+                result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE ' + given_hash_type + ' = ?;', ( sqlite3.Binary( given_hash ), ) ).fetchone()
+                
+                if result is not None:
+                    
+                    ( hash_id, ) = result
+                    
+                    hash_ids.append( hash_id )
+                    
+                
             
+        
+        if desired_hash_type == 'sha256':
+            
+            desired_hashes = self._GetHashes( hash_ids )
+            
+        else:
+            
+            desired_hashes = [ desired_hash for ( desired_hash, ) in self._c.execute( 'SELECT ' + desired_hash_type + ' FROM local_hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) ]
+            
+        
+        return desired_hashes
         
     
     def _GetFileSystemPredicates( self, service_key ):
@@ -2353,7 +2368,16 @@ class DB( HydrusDB.HydrusDB ):
             
             predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
             
-            if num_inbox > 0:
+            show_inbox_and_archive = True
+            
+            new_options = self._controller.GetNewOptions()
+            
+            if new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) and ( num_inbox == 0 or num_archive == 0 ):
+                
+                show_inbox_and_archive = False
+                
+            
+            if show_inbox_and_archive:
                 
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : num_inbox } ) )
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : num_archive } ) )
@@ -2655,9 +2679,31 @@ class DB( HydrusDB.HydrusDB ):
         
         if 'hash' in simple_preds:
             
-            hash_id = self._GetHashId( simple_preds[ 'hash' ] )
+            ( search_hash, search_hash_type ) = simple_preds[ 'hash' ]
             
-            query_hash_ids.intersection_update( { hash_id } )
+            if search_hash_type != 'sha256':
+                
+                result = self._GetFileHashes( [ search_hash ], search_hash_type, 'sha256' )
+                
+                if len( result ) == 0:
+                    
+                    query_hash_ids = {}
+                    
+                else:
+                    
+                    ( search_hash, ) = result
+                    
+                    hash_id = self._GetHashId( search_hash )
+                    
+                    query_hash_ids.intersection_update( { hash_id } )
+                    
+                
+            else:
+                
+                hash_id = self._GetHashId( search_hash )
+                
+                query_hash_ids.intersection_update( { hash_id } )
+                
             
         
         #
@@ -3385,36 +3431,16 @@ class DB( HydrusDB.HydrusDB ):
         
         service_type = service.GetServiceType()
         
+        content_data_dict = HydrusData.GetEmptyDataDict()
+        all_hash_ids = set()
+        
         if service_type == HC.TAG_REPOSITORY:
-            
-            content_update_packages = []
             
             # mappings
             
-            max_update_weight = 50
-            
-            content_data_dict = HydrusData.GetEmptyDataDict()
-            
-            all_hash_ids = set()
-            
-            current_update_weight = 0
-            
-            pending_dict = HydrusData.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
-            
-            pending_chunks = []
+            pending_dict = HydrusData.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status = ? ORDER BY tag_id LIMIT 100;', ( service_id, HC.PENDING ) ) ] )
             
             for ( ( namespace_id, tag_id ), hash_ids ) in pending_dict.items():
-                
-                if len( hash_ids ) > max_update_weight:
-                    
-                    chunks_of_hash_ids = HydrusData.SplitListIntoChunks( hash_ids, max_update_weight )
-                    
-                    for chunk_of_hash_ids in chunks_of_hash_ids: pending_chunks.append( ( namespace_id, tag_id, chunk_of_hash_ids ) )
-                    
-                else: pending_chunks.append( ( namespace_id, tag_id, hash_ids ) )
-                
-            
-            for ( namespace_id, tag_id, hash_ids ) in pending_chunks:
                 
                 pending = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids )
                 
@@ -3422,38 +3448,10 @@ class DB( HydrusDB.HydrusDB ):
                 
                 all_hash_ids.update( hash_ids )
                 
-                current_update_weight += len( hash_ids )
-                
-                if current_update_weight >= max_update_weight:
-                    
-                    hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
-                    
-                    content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes ) )
-                    
-                    content_data_dict = HydrusData.GetEmptyDataDict()
-                    
-                    all_hash_ids = set()
-                    
-                    current_update_weight = 0
-                    
-                
             
-            petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( namespace_id, tag_id, reason_id ), hash_id ) for ( namespace_id, tag_id, hash_id, reason_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-            petitioned_chunks = []
+            petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( namespace_id, tag_id, reason_id ), hash_id ) for ( namespace_id, tag_id, hash_id, reason_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ] )
             
             for ( ( namespace_id, tag_id, reason_id ), hash_ids ) in petitioned_dict.items():
-                
-                if len( hash_ids ) > max_update_weight:
-                    
-                    chunks_of_hash_ids = HydrusData.SplitListIntoChunks( hash_ids, max_update_weight )
-                    
-                    for chunk_of_hash_ids in chunks_of_hash_ids: petitioned_chunks.append( ( namespace_id, tag_id, reason_id, chunk_of_hash_ids ) )
-                    
-                else: petitioned_chunks.append( ( namespace_id, tag_id, reason_id, hash_ids ) )
-                
-            
-            for ( namespace_id, tag_id, reason_id, hash_ids ) in petitioned_chunks:
                 
                 petitioned = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids, self._GetReason( reason_id ) )
                 
@@ -3461,83 +3459,74 @@ class DB( HydrusDB.HydrusDB ):
                 
                 all_hash_ids.update( hash_ids )
                 
-                current_update_weight += len( hash_ids )
-                
-                if current_update_weight >= max_update_weight:
-                    
-                    hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
-                    
-                    content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes ) )
-                    
-                    content_data_dict = HydrusData.GetEmptyDataDict()
-                    
-                    all_hash_ids = set()
-                    
-                    current_update_weight = 0
-                    
-                
-            
-            if len( content_data_dict ) > 0:
-                
-                hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
-                
-                content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes ) )
-                
-                content_data_dict = HydrusData.GetEmptyDataDict()
-                
-                all_hash_ids = set()
-                
-                current_update_weight = 0
-                
             
             # tag siblings
             
-            pending = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
+            pending = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.PENDING ) ).fetchall() ]
             
-            if len( pending ) > 0: content_data_dict[ HC.CONTENT_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PEND ] = pending
+            if len( pending ) > 0:
+                
+                content_data_dict[ HC.CONTENT_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PEND ] = pending
+                
             
-            petitioned = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
+            petitioned = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
-            if len( petitioned ) > 0: content_data_dict[ HC.CONTENT_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            if len( petitioned ) > 0:
+                
+                content_data_dict[ HC.CONTENT_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+                
             
             # tag parents
             
-            pending = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
+            pending = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.PENDING ) ).fetchall() ]
             
-            if len( pending ) > 0: content_data_dict[ HC.CONTENT_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PEND ] = pending
-            
-            petitioned = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
-            
-            if len( petitioned ) > 0: content_data_dict[ HC.CONTENT_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
-            
-            if len( content_data_dict ) > 0:
+            if len( pending ) > 0:
                 
-                hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
-                
-                content_update_packages.append( HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes ) )
+                content_data_dict[ HC.CONTENT_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PEND ] = pending
                 
             
-            return content_update_packages
+            petitioned = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.PETITIONED ) ).fetchall() ]
+            
+            if len( petitioned ) > 0:
+                
+                content_data_dict[ HC.CONTENT_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+                
             
         elif service_type == HC.FILE_REPOSITORY:
             
-            upload_hashes = [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes, file_transfers USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ) ]
+            result = self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
             
-            content_data_dict = HydrusData.GetEmptyDataDict()
+            if result is not None:
+                
+                ( hash_id, ) = result
+                
+                ( media_result, ) = self._GetMediaResults( CC.LOCAL_FILE_SERVICE_KEY, ( hash_id, ) )
+                
+                return media_result
+                
             
-            content_data_dict[ HC.CONTENT_TYPE_FILES ] = {}
+            petitioned = [ ( hash_ids, reason ) for ( reason, hash_ids ) in HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason, hash_id FROM reasons, file_petitions USING ( reason_id ) WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items() ]
             
-            petitioned = [ ( hash_ids, reason ) for ( reason, hash_ids ) in HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason, hash_id FROM reasons, file_petitions USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ) ).items() ]
+            if len( petitioned ) > 0:
+                
+                all_hash_ids = { hash_id for hash_id in itertools.chain.from_iterable( ( hash_ids for ( hash_ids, reason ) in petitioned ) ) }
+                
+                content_data_dict[ HC.CONTENT_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+                
             
-            all_hash_ids = { hash_id for hash_id in itertools.chain.from_iterable( ( hash_ids for ( hash_ids, reason ) in petitioned ) ) }
+        
+        
+        if len( content_data_dict ) > 0:
             
             hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
             
-            content_data_dict[ HC.CONTENT_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
-            
             content_update_package = HydrusData.ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes )
             
-            return ( upload_hashes, content_update_package )
+            return content_update_package
+            
+        else:
+            
+            return None
             
         
     
@@ -3796,13 +3785,16 @@ class DB( HydrusDB.HydrusDB ):
         return site_id
         
     
-    def _GetTagArchiveInfo( self ): return { archive_name : hta.GetNamespaces() for ( archive_name, hta ) in self._tag_archives.items() }
+    def _GetTagArchiveInfo( self ):
+        
+        return { archive_name : hta.GetNamespaces() for ( archive_name, ( hta_path, hta ) ) in self._tag_archives.items() }
+        
     
     def _GetTagArchiveTags( self, hashes ):
         
         result = {}
         
-        for ( archive_name, hta ) in self._tag_archives.items():
+        for ( archive_name, ( hta_path, hta ) ) in self._tag_archives.items():
             
             hash_type = hta.GetHashType()
             
@@ -4154,10 +4146,10 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( archive_name, namespaces ) in tag_archive_sync.items():
                 
-                hta = self._tag_archives[ archive_name ]
+                ( hta_path, hta ) = self._tag_archives[ archive_name ]
                 adding = True
                 
-                try: self._SyncFileToTagArchive( hash_id, hta, adding, namespaces, service_key )
+                try: self._SyncHashesToTagArchive( [ hash ], hta_path, adding, namespaces, service_key )
                 except: pass
                 
             
@@ -4193,11 +4185,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    hta = HydrusTagArchive.HydrusTagArchive( os.path.join( HC.CLIENT_ARCHIVES_DIR, filename ) )
+                    hta_path = os.path.join( HC.CLIENT_ARCHIVES_DIR, filename )
+                    
+                    hta = HydrusTagArchive.HydrusTagArchive( hta_path )
                     
                     archive_name = filename[:-3]
                     
-                    self._tag_archives[ archive_name ] = hta
+                    self._tag_archives[ archive_name ] = ( hta_path, hta )
                     
                 except Exception as e:
                     
@@ -4242,6 +4236,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ProcessContentUpdatePackage( self, service_key, content_update_package, job_key, only_when_idle ):
         
+        self.pub_after_commit( 'notify_new_pending' )
+        self.pub_after_commit( 'notify_new_siblings' )
+        self.pub_after_commit( 'notify_new_parents' )
+        
         pending_content_updates = []
         pending_weight = 0
         
@@ -4252,9 +4250,11 @@ class DB( HydrusDB.HydrusDB ):
         
         content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
         
-        job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing' + update_speed_string )
+        job_key.SetVariable( 'popup_text_2', content_update_index_string + 'writing' + update_speed_string )
         
         job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
+        
+        quit_early = False
         
         for content_update in content_update_package.IterateContentUpdates():
             
@@ -4262,19 +4262,26 @@ class DB( HydrusDB.HydrusDB ):
             
             if only_when_idle and not self._controller.CurrentlyIdle():
                 
-                job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing transaction' )
-                
-                return ( False, c_u_p_total_weight_processed )
+                quit_early = True
                 
             
             if options[ 'pause_repo_sync' ]:
                 
-                return ( False, c_u_p_total_weight_processed )
+                quit_early = True
                 
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
             if should_quit:
+                
+                quit_early = True
+                
+            
+            if quit_early:
+                
+                job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing transaction' )
+                
+                time.sleep( 1 )
                 
                 return ( False, c_u_p_total_weight_processed )
                 
@@ -4289,14 +4296,14 @@ class DB( HydrusDB.HydrusDB ):
                 
                 content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                 
-                self._controller.pub( 'splash_set_status_text', content_update_index_string + 'committing' + update_speed_string )
-                job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing' + update_speed_string )
+                self._controller.pub( 'splash_set_status_text', content_update_index_string + 'writing' + update_speed_string )
+                job_key.SetVariable( 'popup_text_2', content_update_index_string + 'writing' + update_speed_string )
                 
                 job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
                 
                 precise_timestamp = HydrusData.GetNowPrecise()
                 
-                self._ProcessContentUpdates( { service_key : pending_content_updates }, continue_pubsub = False )
+                self._ProcessContentUpdates( { service_key : pending_content_updates }, do_pubsubs = False )
                 
                 it_took = HydrusData.GetNowPrecise() - precise_timestamp
                 
@@ -4313,7 +4320,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( pending_content_updates ) > 0:
             
-            self._ProcessContentUpdates( { service_key : pending_content_updates }, continue_pubsub = False )
+            self._ProcessContentUpdates( { service_key : pending_content_updates }, do_pubsubs = False )
             
             c_u_p_total_weight_processed += pending_weight
             
@@ -4324,10 +4331,12 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_gauge_2', ( c_u_p_num_rows, c_u_p_num_rows ) )
         
+        time.sleep( 1 )
+        
         return ( True, c_u_p_total_weight_processed )
         
     
-    def _ProcessContentUpdates( self, service_keys_to_content_updates, continue_pubsub = True ):
+    def _ProcessContentUpdates( self, service_keys_to_content_updates, do_pubsubs = True ):
         
         notify_new_downloads = False
         notify_new_pending = False
@@ -4535,14 +4544,6 @@ class DB( HydrusDB.HydrusDB ):
                                 self._c.execute( 'DROP TABLE temp_operation;' )
                                 
                                 self.pub_after_commit( 'notify_new_pending' )
-                                
-                            elif sub_action == 'hta':
-                                
-                                ( hta_path, adding, namespaces ) = sub_row
-                                
-                                hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-                                
-                                self._SyncToTagArchive( hta, adding, namespaces, service_key )
                                 
                             
                         else:
@@ -4787,19 +4788,19 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if notify_new_downloads: self.pub_after_commit( 'notify_new_downloads' )
-        if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
-        if notify_new_siblings:
+        if do_pubsubs:
             
-            self.pub_after_commit( 'notify_new_siblings' )
-            self.pub_after_commit( 'notify_new_parents' )
-            
-        elif notify_new_parents:
-            
-            self.pub_after_commit( 'notify_new_parents' )
-            
-        
-        if continue_pubsub:
+            if notify_new_downloads: self.pub_after_commit( 'notify_new_downloads' )
+            if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
+            if notify_new_siblings:
+                
+                self.pub_after_commit( 'notify_new_siblings' )
+                self.pub_after_commit( 'notify_new_parents' )
+                
+            elif notify_new_parents:
+                
+                self.pub_after_commit( 'notify_new_parents' )
+                
             
             self.pub_content_updates_after_commit( service_keys_to_content_updates )
             
@@ -4944,7 +4945,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
-        elif action == 'file_hash': result = self._GetFileHash( *args, **kwargs )
+        elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
@@ -5204,101 +5205,76 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _SyncFileToTagArchive( self, hash_id, hta, adding, namespaces, service_key, continue_pubsub = False ):
+    def _SyncHashesToTagArchive( self, hashes, hta_path, adding, namespaces, service_key ):
+        
+        hta = None
+        
+        for ( potential_hta_path, potential_hta ) in self._tag_archives.items():
+            
+            if hta_path == potential_hta_path:
+                
+                hta = potential_hta
+                
+            
+        
+        if hta is None:
+            
+            hta = HydrusTagArchive.HydrusTagArchive( hta_path )
+            
         
         hash_type = hta.GetHashType()
         
-        hash = self._GetHash( hash_id )
+        content_updates = []
         
-        if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: archive_hash = hash
-        else:
+        for hash in hashes:
             
-            if hash_type == HydrusTagArchive.HASH_TYPE_MD5: h = 'md5'
-            elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
-            elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
-            
-            try: ( archive_hash, ) = self._c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-            except: return
-            
-        
-        tags = HydrusTags.CleanTags( hta.GetTags( archive_hash ) )
-        
-        desired_tags = HydrusTags.FilterNamespaces( tags, namespaces )
-        
-        if len( desired_tags ) > 0:
-            
-            if service_key != CC.LOCAL_TAG_SERVICE_KEY and not adding:
-                
-                action = HC.CONTENT_UPDATE_PETITION
-                
-                rows = [ ( tag, ( hash, ), 'admin: tag archive desync' ) for tag in desired_tags ]
-                
+            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: archive_hash = hash
             else:
                 
-                if adding:
-                    
-                    if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
-                    else: action = HC.CONTENT_UPDATE_PEND
-                    
-                else: action = HC.CONTENT_UPDATE_DELETE
-                
-                rows = [ ( tag, ( hash, )  ) for tag in desired_tags ]
-                
-            
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, row ) for row in rows ]
-            
-            service_keys_to_content_updates = { service_key : content_updates }
-            
-            self._ProcessContentUpdates( service_keys_to_content_updates, continue_pubsub = continue_pubsub )
-            
-        
-    
-    def _SyncToTagArchive( self, hta, adding, namespaces, service_key ):
-        
-        prefix_string = 'syncing to tag archive ' + hta.GetName() + ': '
-        
-        job_key = HydrusThreading.JobKey()
-        
-        job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
-        
-        self._controller.pub( 'message', job_key )
-        
-        hash_type = hta.GetHashType()
-        
-        hash_ids = set()
-        
-        for hash in hta.IterateHashes():
-            
-            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: hash_id = self._GetHashId( hash )
-            else:
+                hash_id = self._GetHashId( hash )
                 
                 if hash_type == HydrusTagArchive.HASH_TYPE_MD5: h = 'md5'
                 elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
                 elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
                 
-                try: ( hash_id, ) = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE ' + h + ' = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
-                except: continue
+                try: ( archive_hash, ) = self._c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                except: return
                 
             
-            hash_ids.add( hash_id )
+            tags = HydrusTags.CleanTags( hta.GetTags( archive_hash ) )
             
-        
-        for ( i, hash_id ) in enumerate( hash_ids ):
+            desired_tags = HydrusTags.FilterNamespaces( tags, namespaces )
             
-            try: self._SyncFileToTagArchive( hash_id, hta, adding, namespaces, service_key, continue_pubsub = False )
-            except: pass
-            
-            if i % 100 == 0:
+            if len( desired_tags ) > 0:
                 
-                job_key.SetVariable( 'popup_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( hash_ids ) ) )
-                job_key.SetVariable( 'popup_gauge_1', ( i, len( hash_ids ) ) )
+                if service_key != CC.LOCAL_TAG_SERVICE_KEY and not adding:
+                    
+                    action = HC.CONTENT_UPDATE_PETITION
+                    
+                    rows = [ ( tag, ( hash, ), 'admin: tag archive desync' ) for tag in desired_tags ]
+                    
+                else:
+                    
+                    if adding:
+                        
+                        if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
+                        else: action = HC.CONTENT_UPDATE_PEND
+                        
+                    else: action = HC.CONTENT_UPDATE_DELETE
+                    
+                    rows = [ ( tag, ( hash, )  ) for tag in desired_tags ]
+                    
+                
+                content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, row ) for row in rows ] )
                 
             
         
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetVariable( 'popup_text_1', prefix_string + 'done!' )
+        if len( content_updates ) > 0:
         
-        self.pub_after_commit( 'notify_new_pending' )
+            service_keys_to_content_updates = { service_key : content_updates }
+            
+            self._ProcessContentUpdates( service_keys_to_content_updates )
+            
         
     
     def _UndeleteFiles( self, hash_ids ):
@@ -5312,7 +5288,6 @@ class DB( HydrusDB.HydrusDB ):
             self._AddFiles( self._local_file_service_id, rows )
             
         
-    
     
     def _UpdateAutocompleteTagCacheFromFiles( self, file_service_id, hash_ids, direction ):
         
@@ -6653,10 +6628,10 @@ class DB( HydrusDB.HydrusDB ):
                             if len( namespaces ) == 0: continue
                             
                         
-                        hta = self._tag_archives[ archive_name ]
+                        ( hta_path, hta ) = self._tag_archives[ archive_name ]
                         adding = True
                         
-                        self._SyncToTagArchive( hta, adding, namespaces, service_key )
+                        self._controller.pub( 'sync_to_tag_archive', hta_path, adding, namespaces, service_key )
                         
                     
                 
@@ -6769,6 +6744,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'serialisable': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'service_updates': result = self._ProcessServiceUpdates( *args, **kwargs )
         elif action == 'set_password': result = self._SetPassword( *args, **kwargs )
+        elif action == 'sync_hashes_to_tag_archive': result = self._SyncHashesToTagArchive( *args, **kwargs )
         elif action == 'tag_censorship': result = self._SetTagCensorship( *args, **kwargs )
         elif action == 'thumbnails': result = self._AddThumbnails( *args, **kwargs )
         elif action == 'update_server_services': result = self._UpdateServerServices( *args, **kwargs )

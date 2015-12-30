@@ -243,9 +243,18 @@ class HydrusController( object ):
         
         while True:
             
-            if self._view_shutdown: raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-            elif self._pubsub.NoJobsQueued() and not self._currently_doing_pubsub: return
-            else: time.sleep( 0.00001 )
+            if self._view_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
+                
+            elif self._pubsub.NoJobsQueued() and not self._currently_doing_pubsub:
+                
+                return
+                
+            else:
+                
+                time.sleep( 0.00001 )
+                
             
         
     

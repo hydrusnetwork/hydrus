@@ -343,9 +343,9 @@ class FileSystemPredicates( object ):
             
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
                 
-                hash = value
+                ( hash, hash_type ) = value
                 
-                self._common_info[ 'hash' ] = hash
+                self._common_info[ 'hash' ] = ( hash, hash_type )
                 
             
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
@@ -629,9 +629,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
             
-            hash = self._value
+            ( hash, hash_type ) = self._value
             
-            serialisable_value = hash.encode( 'hex' )
+            serialisable_value = ( hash.encode( 'hex' ), hash_type )
             
         else:
             
@@ -659,7 +659,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
             
-            self._value = serialisable_value.decode( 'hex' )
+            ( serialisable_hash, hash_type ) = serialisable_value
+            
+            self._value = ( serialisable_hash.decode( 'hex' ), hash_type )
             
         else:
             
@@ -754,12 +756,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: base = u'system:local'
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = u'system:not local'
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = u'system:dimensions'
-            elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_WIDTH, HC.PREDICATE_TYPE_SYSTEM_HEIGHT, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
+            elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_WIDTH, HC.PREDICATE_TYPE_SYSTEM_HEIGHT, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
                 
                 if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: base = u'system:number of tags'
                 elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH: base = u'system:width'
                 elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HEIGHT: base = u'system:height'
-                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION: base = u'system:duration'
                 elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: base = u'system:number of words'
                 
                 if self._value is not None:
@@ -767,6 +768,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     ( operator, value ) = self._value
                     
                     base += u' ' + operator + u' ' + HydrusData.ConvertIntToPrettyString( value )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION:
+                
+                base = u'system:duration'
+                
+                if self._value is not None:
+                    
+                    ( operator, value ) = self._value
+                    
+                    base += u' ' + operator + u' ' + HydrusData.ConvertMillisecondsToPrettyTime( value )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATIO:
@@ -830,9 +842,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if self._value is not None:
                     
-                    hash = self._value
+                    ( hash, hash_type ) = self._value
                     
-                    base += u' is ' + hash.encode( 'hex' )
+                    base = u'system:' + hash_type + ' hash is ' + hash.encode( 'hex' )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:

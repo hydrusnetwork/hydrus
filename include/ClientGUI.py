@@ -11,6 +11,7 @@ import ClientGUIDialogsManage
 import ClientGUIManagement
 import ClientGUIPages
 import ClientDownloading
+import ClientMedia
 import ClientSearch
 import gc
 import HydrusData
@@ -22,6 +23,7 @@ import HydrusImageHandling
 import HydrusNATPunch
 import HydrusNetworking
 import HydrusSerialisable
+import HydrusTagArchive
 import HydrusThreading
 import itertools
 import os
@@ -104,6 +106,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
         self._controller.sub( self, 'ShowSeedCache', 'show_seed_cache' )
+        self._controller.sub( self, 'SyncToTagArchive', 'sync_to_tag_archive' )
         
         self._menus = {}
         
@@ -1541,11 +1544,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 def THREADRegenerateThumbnails():
                     
-                    prefix = 'regenerating thumbnails: '
-                    
                     job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
                     
-                    job_key.SetVariable( 'popup_text_1', prefix + 'creating directories' )
+                    job_key.SetVariable( 'popup_title', 'regenerating thumbnails' )
+                    job_key.SetVariable( 'popup_text_1', 'creating directories' )
                     
                     self._controller.pub( 'message', job_key )
                     
@@ -1571,14 +1573,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                                 time.sleep( 0.1 )
                                 
-                                if job_key.IsPaused():
-                                    
-                                    job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
-                                    
-                                
                                 if job_key.IsCancelled():
                                     
-                                    job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
+                                    job_key.SetVariable( 'popup_text_1', 'cancelled' )
                                     
                                     HydrusData.Print( job_key.ToString() )
                                     
@@ -1590,7 +1587,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             if mime in HC.MIMES_WITH_THUMBNAILS:
                                 
-                                job_key.SetVariable( 'popup_text_1', prefix + HydrusData.ConvertIntToPrettyString( i ) + ' done' )
+                                job_key.SetVariable( 'popup_text_1', HydrusData.ConvertIntToPrettyString( i ) + ' done' )
                                 
                                 ( base, filename ) = os.path.split( path )
                                 
@@ -1621,8 +1618,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                         
                     
-                    if num_broken > 0: job_key.SetVariable( 'popup_text_1', prefix + 'done! ' + HydrusData.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
-                    else: job_key.SetVariable( 'popup_text_1', prefix + 'done!' )
+                    if num_broken > 0:
+                        
+                        job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
+                        
+                    else:
+                        
+                        job_key.SetVariable( 'popup_text_1', 'done!' )
+                        
                     
                     HydrusData.Print( job_key.ToString() )
                     
@@ -1839,6 +1842,106 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def _THREADSyncToTagArchive( self, hta_path, adding, namespaces, service_key ):
+        
+        job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+        
+        try:
+            
+            hta = HydrusTagArchive.HydrusTagArchive( hta_path )
+            
+            job_key.SetVariable( 'popup_title', 'syncing to tag archive ' + hta.GetName() )
+            job_key.SetVariable( 'popup_text_1', 'preparing' )
+            
+            self._controller.pub( 'message', job_key )
+            
+            hydrus_hashes = []
+            
+            hash_type = hta.GetHashType()
+            
+            total_num_hta_hashes = 0
+            
+            for chunk_of_hta_hashes in HydrusData.SplitIteratorIntoChunks( hta.IterateHashes(), 1000 ):
+        
+                while job_key.IsPaused() or job_key.IsCancelled():
+                    
+                    time.sleep( 0.1 )
+                    
+                    if job_key.IsCancelled():
+                        
+                        job_key.SetVariable( 'popup_text_1', 'cancelled' )
+                        
+                        HydrusData.Print( job_key.ToString() )
+                        
+                        return
+                        
+                    
+                
+                if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
+                    
+                    chunk_of_hydrus_hashes = chunk_of_hta_hashes
+                    
+                else:
+                    
+                    if hash_type == HydrusTagArchive.HASH_TYPE_MD5: given_hash_type = 'md5'
+                    elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: given_hash_type = 'sha1'
+                    elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: given_hash_type = 'sha512'
+                    
+                    chunk_of_hydrus_hashes = self._controller.Read( 'file_hashes', chunk_of_hta_hashes, given_hash_type, 'sha256' )
+                    
+                
+                hydrus_hashes.extend( chunk_of_hydrus_hashes )
+                
+                total_num_hta_hashes += len( chunk_of_hta_hashes )
+                
+                job_key.SetVariable( 'popup_text_1', 'matched ' + HydrusData.ConvertValueRangeToPrettyString( len( hydrus_hashes ), total_num_hta_hashes ) + ' files' )
+                
+                HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                
+            
+            del hta
+            
+            total_num_processed = 0
+            
+            for chunk_of_hydrus_hashes in HydrusData.SplitListIntoChunks( hydrus_hashes, 50 ):
+        
+                while job_key.IsPaused() or job_key.IsCancelled():
+                    
+                    time.sleep( 0.1 )
+                    
+                    if job_key.IsCancelled():
+                        
+                        job_key.SetVariable( 'popup_text_1', 'cancelled' )
+                        
+                        HydrusData.Print( job_key.ToString() )
+                        
+                        return
+                        
+                    
+                
+                self._controller.WriteSynchronous( 'sync_hashes_to_tag_archive', chunk_of_hydrus_hashes, hta_path, adding, namespaces, service_key )
+                
+                total_num_processed += len( chunk_of_hydrus_hashes )
+                
+                job_key.SetVariable( 'popup_text_1', 'synced ' + HydrusData.ConvertValueRangeToPrettyString( total_num_processed, len( hydrus_hashes ) ) + ' files' )
+                job_key.SetVariable( 'popup_gauge_1', ( total_num_processed, len( hydrus_hashes ) ) )
+                
+                HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                
+            
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            job_key.Cancel()
+            
+        
+    
     def _THREADUploadPending( self, service_key ):
         
         service = self._controller.GetServicesManager().GetService( service_key )
@@ -1846,62 +1949,61 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         service_name = service.GetName()
         service_type = service.GetServiceType()
         
+        nums_pending = self._controller.Read( 'nums_pending' )
+        
+        info = nums_pending[ service_key ]
+        
+        initial_num_pending = sum( info.values() )
+        
+        result = self._controller.Read( 'pending', service_key )
+        
         try:
-            
-            prefix = 'uploading pending to ' + service_name + ': '
             
             job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
             
-            job_key.SetVariable( 'popup_text_1', prefix + 'gathering pending content' )
+            job_key.SetVariable( 'popup_title', 'uploading pending to ' + service_name )
             
             self._controller.pub( 'message', job_key )
             
-            result = self._controller.Read( 'pending', service_key )
-            
-            if service_type == HC.FILE_REPOSITORY:
+            while result is not None:
                 
-                ( upload_hashes, update ) = result
+                nums_pending = self._controller.Read( 'nums_pending' )
                 
-                media_results = self._controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
+                info = nums_pending[ service_key ]
                 
-                job_key.SetVariable( 'popup_text_1', prefix + 'connecting to repository' )
+                remaining_num_pending = sum( info.values() )
+                done_num_pending = initial_num_pending - remaining_num_pending
                 
-                good_hashes = []
+                job_key.SetVariable( 'popup_text_1', 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( done_num_pending, initial_num_pending ) )
+                job_key.SetVariable( 'popup_gauge_1', ( done_num_pending, initial_num_pending ) )
                 
-                error_messages = set()
-                
-                client_files_manager = self._controller.GetClientFilesManager()
-                
-                for ( i, media_result ) in enumerate( media_results ):
+                while job_key.IsPaused() or job_key.IsCancelled():
                     
-                    while job_key.IsPaused() or job_key.IsCancelled():
+                    time.sleep( 0.1 )
+                    
+                    if job_key.IsCancelled():
                         
-                        time.sleep( 0.1 )
+                        job_key.DeleteVariable( 'popup_gauge_1' )
+                        job_key.SetVariable( 'popup_text_1', 'cancelled' )
                         
-                        if job_key.IsPaused():
-                            
-                            job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
-                            
+                        HydrusData.Print( job_key.ToString() )
                         
-                        if job_key.IsCancelled():
-                            
-                            job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
-                            
-                            HydrusData.Print( job_key.ToString() )
-                            
-                            return
-                            
+                        wx.CallLater( 1000 * 5, job_key.Delete )
+                        
+                        return
                         
                     
-                    i += 1
+                
+                try:
                     
-                    hash = media_result.GetHash()
-                    mime = media_result.GetMime()
-                    
-                    job_key.SetVariable( 'popup_text_1', prefix + 'uploading file ' + HydrusData.ConvertIntToPrettyString( i ) + ' of ' + HydrusData.ConvertIntToPrettyString( len( media_results ) ) )
-                    job_key.SetVariable( 'popup_gauge_1', ( i, len( media_results ) ) )
-                    
-                    try:
+                    if isinstance( result, ClientMedia.MediaResult ):
+                        
+                        media_result = result
+                        
+                        client_files_manager = self._controller.GetClientFilesManager()
+                        
+                        hash = media_result.GetHash()
+                        mime = media_result.GetMime()
                         
                         path = client_files_manager.GetFilePath( hash, mime )
                         
@@ -1917,112 +2019,52 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                         
-                        self._controller.Write( 'content_updates', { service_key : content_updates } )
+                    else:
                         
-                    except HydrusExceptions.ServerBusyException:
+                        content_update_package = result
                         
-                        job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
+                        service.Request( HC.POST, 'content_update_package', { 'update' : content_update_package } )
                         
-                        job_key.DeleteVariable( 'popup_gauge_1' )
-                        
-                        job_key.Cancel()
-                        
-                        return
+                        content_updates = content_update_package.GetContentUpdates( for_client = True )
                         
                     
-                    time.sleep( 0.1 )
+                    self._controller.WriteSynchronous( 'content_updates', { service_key : content_updates } )
                     
-                    self._controller.WaitUntilPubSubsEmpty()
+                except HydrusExceptions.ServerBusyException:
                     
-                
-                if not update.IsEmpty():
+                    job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
                     
-                    job_key.SetVariable( 'popup_text_1', prefix + 'uploading petitions' )
+                    job_key.Cancel()
                     
-                    service.Request( HC.POST, 'content_update_package', { 'update' : update } )
-                    
-                    content_updates = update.GetContentUpdates( for_client = True )
-                    
-                    self._controller.Write( 'content_updates', { service_key : content_updates } )
+                    return
                     
                 
-            elif service_type == HC.TAG_REPOSITORY:
+                self._controller.pub( 'notify_new_pending' )
                 
-                updates = result
+                time.sleep( 0.1 )
                 
-                job_key.SetVariable( 'popup_text_1', prefix + 'connecting to repository' )
+                self._controller.WaitUntilPubSubsEmpty()
                 
-                for ( i, update ) in enumerate( updates ):
-                    
-                    while job_key.IsPaused() or job_key.IsCancelled():
-                        
-                        time.sleep( 0.1 )
-                        
-                        if job_key.IsPaused():
-                            
-                            job_key.SetVariable( 'popup_text_1', prefix + 'paused' )
-                            
-                        
-                        if job_key.IsCancelled():
-                            
-                            job_key.SetVariable( 'popup_text_1', prefix + 'cancelled' )
-                            
-                            HydrusData.Print( job_key.ToString() )
-                            
-                            return
-                            
-                        
-                    
-                    job_key.SetVariable( 'popup_text_1', prefix + 'posting update: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( updates ) ) )
-                    job_key.SetVariable( 'popup_gauge_1', ( i, len( updates ) ) )
-                    
-                    try:
-                        
-                        service.Request( HC.POST, 'content_update_package', { 'update' : update } )
-                        
-                        content_updates = update.GetContentUpdates( for_client = True )
-                        
-                        self._controller.Write( 'content_updates', { service_key : content_updates } )
-                        
-                    except HydrusExceptions.ServerBusyException:
-                        
-                        job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
-                        
-                        job_key.DeleteVariable( 'popup_gauge_1' )
-                        
-                        job_key.Cancel()
-                        
-                        return
-                        
-                    
-                    time.sleep( 0.1 )
-                    
-                    self._controller.WaitUntilPubSubsEmpty()
-                    
+                result = self._controller.Read( 'pending', service_key )
                 
             
         except Exception as e:
             
             job_key.SetVariable( 'popup_text_1', service.GetName() + ' error' )
             
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            
             job_key.Cancel()
             
             raise
             
         
-        job_key.SetVariable( 'popup_text_1', prefix + 'upload done!' )
-        
         job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', 'upload done!' )
         
         HydrusData.Print( job_key.ToString() )
         
         job_key.Finish()
         
         wx.CallLater( 1000 * 5, job_key.Delete )
-        
-        self._controller.pub( 'notify_new_pending' )
         
     
     def ClearClosedPages( self ):
@@ -2486,6 +2528,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.Write( 'save_options', HC.options )
         
         wx.CallAfter( self.Destroy )
+        
+    
+    def SyncToTagArchive( self, hta, adding, namespaces, service_key ):
+        
+        self._controller.CallToThread( self._THREADSyncToTagArchive, hta, adding, namespaces, service_key )
         
     
     def TestAbleToClose( self ):
@@ -3355,13 +3402,27 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._refresh.Disable()
             
-            response = self._service.Request( HC.GET, 'account' )
+            def do_it():
+                
+                try:
+                    
+                    response = self._service.Request( HC.GET, 'account' )
+                    
+                    account = response[ 'account' ]
+                    
+                    account.MakeFresh()
+                    
+                    self._controller.Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
+                    
+                except:
+                    
+                    wx.CallAfter( self._refresh.Enable )
+                    
+                    raise
+                    
+                
             
-            account = response[ 'account' ]
-            
-            account.MakeFresh()
-            
-            self._controller.Write( 'service_updates', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
+            self._controller.CallToThread( do_it )
             
         
         def ProcessServiceUpdates( self, service_keys_to_service_updates ):

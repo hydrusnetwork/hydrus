@@ -1353,6 +1353,11 @@ class GalleryPixiv( Gallery ):
             raise HydrusExceptions.MimeException( page_url + ' was manga, not a single image, so could not be downloaded.' )
             
         
+        if 'member_illust.php?mode=ugoira_view' in html:
+            
+            raise HydrusExceptions.MimeException( page_url + ' was ugoira, not a single image, so could not be downloaded.' )
+            
+        
         soup = GetSoup( html )
         
         #

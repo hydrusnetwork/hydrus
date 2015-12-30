@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 188</h3></li>
+				<ul>
+					<li>if you have custom filters set up, they will now be listed in the normal thumbnail right-click menu, which will expand for them</li>
+					<li>'refresh account' button's event no longer waits for service response on the gui thread</li>
+					<li>'refresh account' button on review services will now re-enable if the call fails</li>
+					<li>added 'hide inbox and archive predicates' checkbox to options->default file system predicates. not sure if this is the best place for it!</li>
+					<li>system:hash can now query md5, sha1, and sha256</li>
+					<li>existing pages with system:hash will break on update. since this is such a rare predicate, I assume this is not a problem!</li>
+					<li>improved db hash cross-reference flexibility</li>
+					<li>any pausable popups will now explicitly change their text to 'paused' when they are paused</li>
+					<li>upload pending popup now has a title, so it should pause a little more sanely</li>
+					<li>regenerate thumbnails popup now has a title, so it should pause a little more sanely</li>
+					<li>cleaned up some job pause status logic</li>
+					<li>upload pending now works on a stream, so gigantic uploads will cause fewer hitches and overall problems</li>
+					<li>upload pending code is cleaned and simplified in several ways, with better error handling and progress reporting</li>
+					<li>synctotagarchive is now split into a thousand tiny separate jobs and runs on a separate non-db thread. it will no longer lock the db the whole time</li>
+					<li>synctotagarchive popup should be a lot more responsive and will specifically give the gui some time to catch up after every chunk of data processed</li>
+					<li>synctotagarchive will update pending tags count (and gui stuff will show the pending tags) as it goes</li>
+					<li>synctotagarchive is now a pausable and cancellable operation!</li>
+					<li>large repository sync jobs should be a little less laggy on final commit</li>
+					<li>system:duration now displays its value as a properly formatted milliseconds time delta, rather than just a big int</li>
+					<li>profiles now flush to the log immediately</li>
+					<li>some cpu-heavy daemon recheck periods have been extended to reduce potential hangs on slower computers</li>
+					<li>some repository sync messaging wording and logic is improved (it should report what it is doing more reliably when you are cpu-busy)</li>
+					<li>reordered instances of 'waiting politely', so download text/gauge updates should occur before the wait does</li>
+					<li>some misc 'waiting politely' logic is improved</li>
+					<li>pixiv ugoira is detected and a better error (that will be ignored by the new sub error throttling code, for instance) is produced</li>
+					<li>'uninteresting mime' errors have nicer import status note text</li>
+					<li>fixed the 'thumbnail grid background' custom colour option</li>
+				</ul>
 				<li><h3>version 187</h3></li>
 				<ul>
 					<li>file->restart now works for linux</li>

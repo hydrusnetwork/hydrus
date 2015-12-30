@@ -3062,7 +3062,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         self._listbook.AddPage( 'media', self._MediaPanel( self._listbook ) )
         self._listbook.AddPage( 'gui', self._GUIPanel( self._listbook ) )
         #self._listbook.AddPage( 'sound', self._SoundPanel( self._listbook ) )
-        self._listbook.AddPage( 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook ) )
+        self._listbook.AddPage( 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'local server', self._ServerPanel( self._listbook ) )
@@ -3780,11 +3780,17 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
     
     class _DefaultFileSystemPredicatesPanel( wx.Panel ):
         
-        def __init__( self, parent ):
+        def __init__( self, parent, new_options ):
             
             wx.Panel.__init__( self, parent )
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._new_options = new_options
+            
+            self._filter_inbox_and_archive_predicates = wx.CheckBox( self, label = 'hide inbox and archive predicates if either has no files' )
+            
+            self._filter_inbox_and_archive_predicates.SetValue( self._new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) )
             
             self._file_system_predicate_age = ClientGUIPredicates.PanelPredicateSystemAge( self )
             self._file_system_predicate_duration = ClientGUIPredicates.PanelPredicateSystemDuration( self )
@@ -3803,6 +3809,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            vbox.AddF( self._filter_inbox_and_archive_predicates, CC.FLAGS_MIXED )
+            vbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._file_system_predicate_height, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3820,6 +3828,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
         
         def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'filter_inbox_and_archive_predicates', self._filter_inbox_and_archive_predicates.GetValue() )
             
             system_predicates = HC.options[ 'file_system_predicates' ]
             

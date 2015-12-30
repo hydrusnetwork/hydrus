@@ -11,6 +11,7 @@ import ClientMedia
 import collections
 import HydrusExceptions
 import HydrusPaths
+import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
@@ -138,7 +139,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if display_media.GetLocationsManager().HasLocal():
                 
-                other_hash = HydrusGlobals.client_controller.Read( 'file_hash', sha256_hash, hash_type )
+                ( other_hash, ) = HydrusGlobals.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
                 hex_hash = other_hash.encode( 'hex' )
                 
@@ -165,7 +166,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if len( sha256_hashes ) > 0:
                 
-                other_hashes = [ HydrusGlobals.client_controller.Read( 'file_hash', sha256_hash, hash_type ) for sha256_hash in sha256_hashes ]
+                other_hashes = HydrusGlobals.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
                 
                 hex_hashes = os.linesep.join( [ other_hash.encode( 'hex' ) for other_hash in other_hashes ] )
                 
@@ -198,20 +199,32 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', path )
         
     
-    def _CustomFilter( self ):
+    def _CustomFilter( self, shortcuts_name = None ):
         
-        with ClientGUIDialogs.DialogShortcuts( self ) as dlg:
+        shortcuts = None
+        
+        if shortcuts_name is not None:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, shortcuts_name )
+            
+        else:
+            
+            with ClientGUIDialogs.DialogShortcuts( self ) as dlg:
                 
-                shortcuts = dlg.GetShortcuts()
-                
-                media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ), for_media_viewer = True )
-                
-                if len( media_results ) > 0:
+                if dlg.ShowModal() == wx.ID_OK:
                     
-                    ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, media_results, shortcuts )
+                    shortcuts = dlg.GetShortcuts()
                     
+                
+            
+        
+        if shortcuts is not None:
+    
+            media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ), for_media_viewer = True )
+            
+            if len( media_results ) > 0:
+                
+                ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, media_results, shortcuts )
                 
             
         
@@ -1106,7 +1119,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         dc = wx.MemoryDC( bmp )
         
-        dc.SetBrush( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'thumbgrid_background' ] ) ) )
+        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'thumbgrid_background' ] ) ) )
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
@@ -1697,7 +1710,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if self._focussed_media is not None: self._HitMedia( self._focussed_media, True, False )
                 
-            elif command == 'custom_filter': self._CustomFilter()
+            elif command == 'custom_filter':
+                
+                self._CustomFilter( data )
+                
             elif command == 'delete':
                 
                 if data is None:
@@ -2180,7 +2196,27 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'filter' ), 'archive/delete' )
                     
-                    filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'custom_filter' ), 'custom filter' )
+                    shortcut_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+                    
+                    if len( shortcut_names ) > 0:
+                        
+                        custom_shortcuts_menu = wx.Menu()
+                        
+                        custom_shortcuts_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'custom_filter' ), 'manage custom filters' )
+                        
+                        custom_shortcuts_menu.AppendSeparator()
+                        
+                        for shortcut_name in shortcut_names:
+                            
+                            custom_shortcuts_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'custom_filter', shortcut_name ), shortcut_name )
+                            
+                        
+                        filter_menu.AppendMenu( CC.ID_NULL, 'custom filter', custom_shortcuts_menu )
+                        
+                    else:
+                        
+                        filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'custom_filter' ), 'custom filter' )
+                        
                     
                     menu.AppendMenu( CC.ID_NULL, 'filter', filter_menu )
                     

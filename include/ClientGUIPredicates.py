@@ -180,11 +180,19 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         self._hash = wx.TextCtrl( self )
         
+        self._hash_type = ClientGUICommon.BetterChoice( self )
+        self._hash_type.Append( 'sha256', 'sha256' )
+        self._hash_type.Append( 'md5', 'md5' )
+        self._hash_type.Append( 'sha1', 'sha1' )
+        self._hash_type.Append( 'sha512', 'sha512' )
+        
+        self._hash_type.SetSelection( 0 )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.AddF( wx.StaticText( self, label = 'system:hash=' ), CC.FLAGS_MIXED )
         hbox.AddF( self._hash, CC.FLAGS_MIXED )
+        hbox.AddF( self._hash_type, CC.FLAGS_MIXED )
         
         self.SetSizer( hbox )
         
@@ -200,9 +208,11 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         if len( hash ) == 0: hash = '00'
         elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte
         
-        info = hash.decode( 'hex' )
+        hash = hash.decode( 'hex' )
         
-        return info
+        hash_type = self._hash_type.GetChoice()
+        
+        return ( hash, hash_type )
         
     
 class PanelPredicateSystemHeight( PanelPredicateSystem ):

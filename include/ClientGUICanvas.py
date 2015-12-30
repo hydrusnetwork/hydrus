@@ -689,7 +689,7 @@ class Canvas( object ):
             
             if self._current_display_media.GetLocationsManager().HasLocal():
                 
-                other_hash = HydrusGlobals.client_controller.Read( 'file_hash', sha256_hash, hash_type )
+                ( other_hash, ) = HydrusGlobals.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
                 hex_hash = other_hash.encode( 'hex' )
                 

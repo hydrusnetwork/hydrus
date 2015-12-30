@@ -332,8 +332,8 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, hash, 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( '0123456789abcdef' * 4 ).decode( 'hex' ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( hash, 'sha256' ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( ( '0123456789abcdef' * 4 ).decode( 'hex' ), 'sha256' ), 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 200 ), 0 ) )
@@ -536,10 +536,10 @@ class TestClientDB( unittest.TestCase ):
         predicates = []
         
         predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 1 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 0 } ) )
         predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
-        
+        for r in result: print( repr( r ) )
+        print( 'yo' )
+        for r in predicates: print( repr( r ) )
         self.assertEqual( result, predicates )
         
         for i in range( len( predicates ) ): self.assertEqual( result[i].GetCount(), predicates[i].GetCount() )
@@ -923,14 +923,9 @@ class TestClientDB( unittest.TestCase ):
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
-        pending = self._read( 'pending', service_key )
+        result = self._read( 'pending', service_key )
         
-        self.assertEqual( len( pending ), 4 )
-        
-        for obj in pending:
-            
-            self.assertEqual( type( obj ), HydrusData.ClientToServerContentUpdatePackage )
-            
+        self.assertIsInstance( result, HydrusData.ClientToServerContentUpdatePackage )
         
         #
         

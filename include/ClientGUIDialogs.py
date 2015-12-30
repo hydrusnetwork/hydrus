@@ -176,11 +176,7 @@ def ImportFromHTA( parent, path, service_key ):
                 
                 if dlg_final.ShowModal() == wx.ID_YES:
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'hta', ( path, adding, namespaces ) ) )
-                    
-                    service_keys_to_content_updates = { service_key : [ content_update ] }
-                    
-                    HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', path, adding, namespaces, service_key )
                     
                 
             

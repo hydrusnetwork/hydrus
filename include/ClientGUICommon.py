@@ -4375,9 +4375,16 @@ class PopupMessage( PopupWindow ):
             
         else: self._title.Hide()
         
-        if self._job_key.HasVariable( 'popup_text_1' ) and not self._job_key.IsPaused():
+        if self._job_key.HasVariable( 'popup_text_1' ) or self._job_key.IsPaused():
             
-            text = self._job_key.GetVariable( 'popup_text_1' )
+            if self._job_key.IsPaused():
+                
+                text = 'paused'
+                
+            else:
+                
+                text = self._job_key.GetVariable( 'popup_text_1' )
+                
             
             if self._text_1.GetLabel() != text: self._text_1.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             

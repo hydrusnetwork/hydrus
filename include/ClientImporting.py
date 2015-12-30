@@ -157,7 +157,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             return
             
         
-        do_wait = False
+        do_wait = True
         
         url = self._seed_cache.GetNextSeed( CC.STATUS_UNKNOWN )
         
@@ -188,7 +188,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     
                     tags = gallery.GetTags( url, report_hooks = [ self._file_download_hook ] )
                     
-                    do_wait = True
+                else:
+                    
+                    do_wait = False
                     
                 
             elif status == CC.STATUS_NEW:
@@ -208,14 +210,16 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         gallery.GetFile( temp_path, url, report_hooks = [ self._file_download_hook ] )
                         
                     
-                    do_wait = True
-                    
                     ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, url = url )
                     
                 finally:
                     
                     HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                     
+                
+            else:
+                
+                do_wait = False
                 
             
             self._seed_cache.UpdateSeedStatus( url, status )
@@ -236,7 +240,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.MimeException as e:
             
-            error_text = traceback.format_exc()
+            error_text = HydrusData.ToUnicode( e )
             
             status = CC.STATUS_UNINTERESTING_MIME
             
@@ -253,14 +257,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             self._seed_cache.UpdateSeedStatus( url, status, note = error_text )
             
         
-        if do_wait:
-            
-            ClientData.WaitPolitely( page_key )
-            
-        
         with self._lock:
             
             self._RegenerateSeedCacheStatus( page_key )
+            
+        
+        if do_wait:
+            
+            ClientData.WaitPolitely( page_key )
             
         
     
@@ -385,14 +389,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             time.sleep( 5 )
             
         
-        ClientData.WaitPolitely( page_key )
-        
         with self._lock:
             
             self._RegenerateSeedCacheStatus( page_key )
             
             self._SetGalleryStatus( page_key, HydrusData.ConvertIntToPrettyString( self._current_query_num_urls ) + ' urls found so far for ' + query )
             
+        
+        ClientData.WaitPolitely( page_key )
         
     
     def _THREADWork( self, page_key ):
@@ -714,7 +718,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.MimeException as e:
             
-            error_text = traceback.format_exc()
+            error_text = HydrusData.ToUnicode( e )
             
             status = CC.STATUS_UNINTERESTING_MIME
             
@@ -1196,7 +1200,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
     
     def _WorkOnFiles( self, page_key ):
         
-        do_wait = False
+        do_wait = True
         
         file_url = self._urls_cache.GetNextSeed( CC.STATUS_UNKNOWN )
         
@@ -1233,8 +1237,6 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                             
                         
                     
-                    do_wait = True
-                    
                     HydrusGlobals.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
                     ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, url = file_url )
@@ -1243,6 +1245,10 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                     HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                     
+                
+            else:
+                
+                do_wait = False
                 
             
             self._urls_cache.UpdateSeedStatus( file_url, status )
@@ -1256,7 +1262,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.MimeException as e:
             
-            error_text = traceback.format_exc()
+            error_text = HydrusData.ToUnicode( e )
             
             status = CC.STATUS_UNINTERESTING_MIME
             
@@ -1296,8 +1302,6 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         if len( self._pending_page_urls ) > 0:
             
-            do_wait = False
-            
             with self._lock:
                 
                 page_url = self._pending_page_urls.pop( 0 )
@@ -1310,8 +1314,6 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             error_occurred = False
             
             try:
-                
-                do_wait = True
                 
                 html = HydrusGlobals.client_controller.DoHTTP( HC.GET, page_url )
                 
@@ -1377,11 +1379,6 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 parser_status = HydrusData.ToUnicode( e )
                 
             
-            if not error_occurred and do_wait:
-                
-                ClientData.WaitPolitely( page_key )
-                
-            
             with self._lock:
                 
                 self._SetParserStatus( page_key, parser_status )
@@ -1393,6 +1390,10 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 time.sleep( 5 )
                 
             
+            HydrusGlobals.client_controller.pub( 'update_status', page_key )
+            
+            ClientData.WaitPolitely( page_key )
+            
         else:
             
             with self._lock:
@@ -1400,8 +1401,8 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 self._SetParserStatus( page_key, '' )
                 
             
-        
-        HydrusGlobals.client_controller.pub( 'update_status', page_key )
+            HydrusGlobals.client_controller.pub( 'update_status', page_key )
+            
         
     
     def _THREADWork( self, page_key ):
@@ -1971,7 +1972,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             num_unknown = self._seed_cache.GetSeedCount( CC.STATUS_UNKNOWN )
             num_done = num_urls - num_unknown
             
-            do_wait = False
+            do_wait = True
             
             url = self._seed_cache.GetNextSeed( CC.STATUS_UNKNOWN )
             
@@ -2016,7 +2017,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         tags = gallery.GetTags( url, report_hooks = [ hook ] )
                         
-                        do_wait = True
+                    else:
+                        
+                        do_wait = False
                         
                     
                 elif status == CC.STATUS_NEW:
@@ -2024,8 +2027,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
                     
                     try:
-                        
-                        do_wait = True
                         
                         job_key.SetVariable( 'popup_text_1', x_out_of_y + 'downloading file' )
                         
@@ -2049,6 +2050,10 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                         
                     
+                else:
+                    
+                    do_wait = False
+                    
                 
                 self._seed_cache.UpdateSeedStatus( url, status )
                 
@@ -2064,7 +2069,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except HydrusExceptions.MimeException as e:
                 
-                error_text = traceback.format_exc()
+                error_text = HydrusData.ToUnicode( e )
                 
                 status = CC.STATUS_UNINTERESTING_MIME
                 
@@ -2159,8 +2164,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     ( page_of_urls, definitely_no_more_pages ) = gallery.GetPage( self._query, page_index )
                     
-                    ClientData.WaitPolitely()
-                    
                     page_index += 1
                     
                     if definitely_no_more_pages:
@@ -2217,6 +2220,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                     job_key.SetVariable( 'popup_text_1', prefix + ': found ' + HydrusData.ConvertIntToPrettyString( total_new_urls ) + ' new files' )
+                    
+                    ClientData.WaitPolitely()
                     
                 
             
@@ -2425,7 +2430,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _WorkOnFiles( self, page_key ):
         
-        do_wait = False
+        do_wait = True
         
         file_url = self._urls_cache.GetNextSeed( CC.STATUS_UNKNOWN )
         
@@ -2470,8 +2475,6 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                             
                         
                     
-                    do_wait = True
-                    
                     HydrusGlobals.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
                     ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, url = file_url )
@@ -2480,6 +2483,10 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                     
+                
+            else:
+                
+                do_wait = False
                 
             
             self._urls_cache.UpdateSeedStatus( file_url, status )
@@ -2503,7 +2510,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.MimeException as e:
             
-            error_text = traceback.format_exc()
+            error_text = HydrusData.ToUnicode( e )
             
             status = CC.STATUS_UNINTERESTING_MIME
             
@@ -2677,15 +2684,15 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        if not error_occurred and do_wait:
-            
-            ClientData.WaitPolitely( page_key )
-            
-        
         with self._lock:
             
             self._SetWatcherStatus( page_key, watcher_status )
             self._RegenerateSeedCacheStatus( page_key )
+            
+        
+        if do_wait:
+            
+            ClientData.WaitPolitely( page_key )
             
         
         if error_occurred:

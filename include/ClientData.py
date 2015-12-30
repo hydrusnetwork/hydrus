@@ -367,6 +367,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'waiting_politely_text' ] = False
+        self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = True
         
         self._dictionary[ 'noneable_integers' ] = {}
         

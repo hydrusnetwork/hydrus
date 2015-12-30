@@ -136,7 +136,7 @@ class DAEMONQueue( DAEMON ):
     
 class DAEMONWorker( DAEMON ):
     
-    def __init__( self, controller, name, callable, topics = None, period = 1200, init_wait = 3, pre_callable_wait = 3 ):
+    def __init__( self, controller, name, callable, topics = None, period = 3600, init_wait = 3, pre_callable_wait = 3 ):
         
         if topics is None: topics = []
         

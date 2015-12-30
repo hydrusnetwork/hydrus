@@ -435,9 +435,9 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:archive (1,000)' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 1000 ) )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 200 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:duration < 1,000' )
+        self.assertEqual( p.GetUnicode(), u'system:duration < 200 milliseconds' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 2000 } )
         
@@ -451,9 +451,9 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:is not pending to local files' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, 'abcd'.decode( 'hex' ) )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, ( 'abcd'.decode( 'hex' ), 'sha256' ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:hash is abcd' )
+        self.assertEqual( p.GetUnicode(), u'system:sha256 hash is abcd' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
         
