@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 189</h3></li>
+				<ul>
+					<li>split the big analyze db calls into individual table/index calls and moved them from update code to the normal maintenance routines</li>
+					<li>on vacuum, both the client and server dbs will now bump their page size up to 4096 if they are running on windows (server vacuum is triggered by running a backup)</li>
+					<li>vacuum should be a slightly faster operation for both the client and server</li>
+					<li>boosted the db cache significantly--we'll see if it makes much difference for things.</li>
+					<li>the way the selection tags control updates its taglist on increases to its media cache is massively sped up. An update on a 5,000-thumbnail-strong page now typically works in 3ms instead of ~250ms. large import pages should stream new results much more quickly now</li>
+					<li>sped up some slow hash calculation code that was lagging a variety of large operations</li>
+					<li>some hash caching responsibility is moved about to make it available for the add_media_results comparison, which now typically works in sub-millisecond time (was about 16ms before)</li>
+					<li>some sorted media list index recalculation now works faster</li>
+					<li>some internal media object hashing is now cached, so sorted list index regeneration is a bit faster</li>
+					<li>some medialist file counting is now superfast</li>
+					<li>wrote a new pauser object to break big jobs up more conveniently and reduce gui choking</li>
+					<li>the repo processing db call now uses this pauser</li>
+					<li>some copy and mirror directory functions now use this pauser</li>
+					<li>backup and restore code for the client now skips re-copying files if they share the same last modified date and file size</li>
+					<li>backup code for the server now skips re-copying files if they share the same last modified date and file size</li>
+					<li>http cannotsendrequest and badstatusline errors will now provoke two reattempts before being raised</li>
+					<li>socket error 10013 (no access permission, usually due to a firewall) is caught and a nicer error produced</li>
+					<li>socket error 10054 (remote host reset connection) is caught, and the connection is reattempted twice before being raised</li>
+					<li>the old giphy API is gone, so I have removed giphy</li>
+					<li>forced shutdown due to system exit/logoff is handled better</li>
+					<li>pubsub-related shutdown exceptions are now caught and silenced</li>
+					<li>an unusual shutdown exception is now caught</li>
+					<li>fixed a copy subtag menu typo</li>
+					<li>cleaned some misc hydrus path code</li>
+					<li>tags that begin with a colon (like ':)' ) will now render correctly in the media canvas background</li>
+					<li>some misc code cleanup</li>
+					<li>dropped flvlib since ffmpeg parses flv metadata better anyway</li>
+				</ul>
 				<li><h3>version 188</h3></li>
 				<ul>
 					<li>if you have custom filters set up, they will now be listed in the normal thumbnail right-click menu, which will expand for them</li>
