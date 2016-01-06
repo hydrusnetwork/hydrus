@@ -1,5 +1,6 @@
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import Queue
 import threading
 import traceback
@@ -121,7 +122,14 @@ class HydrusPubSub( object ):
                 
             else:
                 
-                callable( *args, **kwargs )
+                try:
+                    
+                    callable( *args, **kwargs )
+                    
+                except HydrusExceptions.ShutdownException:
+                    
+                    return
+                    
                 
             
         

@@ -7,6 +7,7 @@ import HydrusGlobals
 import os
 import pstats
 import Queue
+import random
 import sqlite3
 import sys
 import traceback
@@ -44,8 +45,6 @@ class HydrusDB( object ):
         
         ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
-        run_analyze_after = version < HC.SOFTWARE_VERSION
-        
         if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + str( version ) + ' is too old for this version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
         
         while version < HC.SOFTWARE_VERSION:
@@ -74,19 +73,7 @@ class HydrusDB( object ):
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
             
         
-        if run_analyze_after:
-            
-            self._AnalyzeAfterUpdate()
-            
-        
         self._CloseDBCursor()
-        
-    
-    def _AnalyzeAfterUpdate( self ):
-        
-        HydrusData.Print( 'Analyzing db after update...' )
-        
-        self._c.execute( 'ANALYZE' )
         
     
     def _CleanUpCaches( self ):
@@ -167,9 +154,10 @@ class HydrusDB( object ):
         
         self._c.execute( 'DROP TABLE IF EXISTS ratings_aggregates;' )
         
-        self._c.execute( 'PRAGMA cache_size = 10000;' )
+        self._c.execute( 'PRAGMA cache_size = -50000;' )
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         self._c.execute( 'PRAGMA synchronous = 1;' )
+        self._c.execute( 'PRAGMA journal_mode = WAL;' )
         
     
     def _ManageDBError( self, job, e ):

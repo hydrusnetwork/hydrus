@@ -42,8 +42,8 @@ class TestServer( unittest.TestCase ):
         services_manager._keys_to_services[ self._tag_service.GetServiceKey() ] = self._tag_service
         services_manager._keys_to_services[ self._admin_service.GetServiceKey() ] = self._admin_service
         
-        os.mkdir( ServerFiles.GetExpectedUpdateDir( self._file_service.GetServiceKey() ) )
-        os.mkdir( ServerFiles.GetExpectedUpdateDir( self._tag_service.GetServiceKey() ) )
+        os.makedirs( ServerFiles.GetExpectedUpdateDir( self._file_service.GetServiceKey() ) )
+        os.makedirs( ServerFiles.GetExpectedUpdateDir( self._tag_service.GetServiceKey() ) )
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         

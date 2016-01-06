@@ -1307,6 +1307,26 @@ UNKNOWN_ACCOUNT_TYPE = AccountType( 'unknown account', [ HC.UNKNOWN_PERMISSION ]
 
 def GetUnknownAccount( account_key = None ): return Account( account_key, UNKNOWN_ACCOUNT_TYPE, 0, None, 0, 0 )
 
+class BigJobPauser( object ):
+    
+    def __init__( self, period = 10, wait_time = 0.1 ):
+        
+        self._period = period
+        self._wait_time = wait_time
+        
+        self._next_pause = GetNow() + self._period
+        
+    
+    def Pause( self ):
+        
+        if TimeHasPassed( self._next_pause ):
+            
+            time.sleep( self._wait_time )
+            
+            self._next_pause = GetNow() + self._period
+            
+        
+    
 class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
     
     yaml_tag = u'!ClientToServerContentUpdatePackage'
@@ -1624,6 +1644,11 @@ class ContentUpdate( object ):
         if type( hashes ) != set: hashes = set( hashes )
         
         return hashes
+        
+    
+    def GetWeight( self ):
+        
+        return len( self.GetHashes() )
         
     
     def IsInboxRelated( self ):

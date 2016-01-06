@@ -2912,7 +2912,7 @@ class ListBoxTags( ListBox ):
                     
                     if ':' in selection_string:
                         
-                        sub_selection_string = selection_string.split( ':', 1 )[1]
+                        sub_selection_string = '"' + selection_string.split( ':', 1 )[1]
                         
                         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy ' + sub_selection_string )
                         
@@ -3681,71 +3681,145 @@ class ListBoxTagsSelection( ListBoxTags ):
             
         
     
-    def _RecalcStrings( self ):
+    def _GetTagString( self, tag ):
         
-        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+        tag_string = HydrusTags.RenderTag( tag )
         
-        all_tags = set()
-        
-        if self._show_current: all_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
-        if self._show_deleted: all_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
-        if self._show_pending: all_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
-        if self._show_petitioned: all_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
-        
-        self._ordered_strings = []
-        self._strings_to_terms = {}
-        
-        for tag in all_tags:
+        if self._include_counts:
             
-            tag_string = HydrusTags.RenderTag( tag )
+            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HydrusData.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
+            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HydrusData.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
+            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HydrusData.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HydrusData.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
             
-            if self._include_counts:
+        else:
+            
+            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+)'
+            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-)'
+            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X)'
+            
+        
+        if not self._collapse_siblings:
+            
+            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None:
                 
-                if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HydrusData.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
-                if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HydrusData.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
-                if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HydrusData.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
-                if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HydrusData.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
-                
-            else:
-                
-                if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+)'
-                if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-)'
-                if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X)'
+                tag_string += ' (will display as ' + HydrusTags.RenderTag( sibling ) + ')'
                 
             
-            if not self._collapse_siblings:
+        
+        return tag_string
+        
+    
+    def _RecalcStrings( self, limit_to_these_tags = None ):
+        
+        if limit_to_these_tags is None:
+            
+            all_tags = set()
+            
+            if self._show_current: all_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
+            if self._show_deleted: all_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
+            if self._show_pending: all_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
+            if self._show_petitioned: all_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
+            
+            self._ordered_strings = []
+            self._strings_to_terms = {}
+            
+            for tag in all_tags:
                 
-                sibling = siblings_manager.GetSibling( tag )
+                tag_string = self._GetTagString( tag )
                 
-                if sibling is not None:
+                self._ordered_strings.append( tag_string )
+                self._strings_to_terms[ tag_string ] = tag
+                
+            
+            self._SortTags()
+            
+        else:
+            
+            sort_needed = False
+            
+            terms_to_old_strings = { tag : tag_string for ( tag_string, tag ) in self._strings_to_terms.items() }
+            
+            for tag in limit_to_these_tags:
+                
+                tag_string = self._GetTagString( tag )
+                
+                do_insert = True
+                
+                if tag in terms_to_old_strings:
                     
-                    tag_string += ' (will display as ' + HydrusTags.RenderTag( sibling ) + ')'
+                    old_tag_string = terms_to_old_strings[ tag ]
+                    
+                    if tag_string == old_tag_string:
+                        
+                        do_insert = False
+                        
+                    else:
+                        
+                        self._ordered_strings.remove( old_tag_string )
+                        del self._strings_to_terms[ old_tag_string ]
+                        
+                    
+                
+                if do_insert:
+                    
+                    self._ordered_strings.append( tag_string )
+                    self._strings_to_terms[ tag_string ] = tag
+                    
+                    sort_needed = True
                     
                 
             
-            self._ordered_strings.append( tag_string )
-            self._strings_to_terms[ tag_string ] = tag
+            if sort_needed:
+                
+                self._SortTags()
+                
             
-        
-        self._SortTags()
         
     
     def _SortTags( self ):
         
-        if self._sort == CC.SORT_BY_LEXICOGRAPHIC_ASC: compare_function = lambda a, b: cmp( a, b )
-        elif self._sort == CC.SORT_BY_LEXICOGRAPHIC_DESC: compare_function = lambda a, b: cmp( b, a )
+        if self._sort == CC.SORT_BY_LEXICOGRAPHIC_ASC:
+            
+            key = None
+            
+            reverse = False
+            
+        elif self._sort == CC.SORT_BY_LEXICOGRAPHIC_DESC:
+            
+            key = None
+            
+            reverse = True
+            
         elif self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
             
-            tags_to_count = collections.defaultdict( lambda: 0 )
+            tags_to_count = collections.Counter()
             
-            tags_to_count.update( self._current_tags_to_count )
-            for ( tag, count ) in self._pending_tags_to_count.items(): tags_to_count[ tag ] += count
+            if self._show_current: tags_to_count.update( self._current_tags_to_count )
+            if self._show_deleted: tags_to_count.update( self._deleted_tags_to_count )
+            if self._show_pending: tags_to_count.update( self._pending_tags_to_count )
+            if self._show_petitioned: tags_to_count.update( self._petitioned_tags_to_count )
             
-            if self._sort == CC.SORT_BY_INCIDENCE_ASC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ a ] ], a ), ( tags_to_count[ self._strings_to_terms[ b ] ], b ) )
-            elif self._sort == CC.SORT_BY_INCIDENCE_DESC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ b ] ], a ), ( tags_to_count[ self._strings_to_terms[ a ] ], b ) )
+            def key( a ):
+                
+                return tags_to_count[ self._strings_to_terms[ a ] ]
+                
+            
+            if self._sort == CC.SORT_BY_INCIDENCE_ASC:
+                
+                reverse = False
+                
+            elif self._sort == CC.SORT_BY_INCIDENCE_DESC:
+                
+                reverse = True
+                
             
         
-        self._ordered_strings.sort( compare_function )
+        self._ordered_strings.sort( key = key, reverse = reverse )
         
         self._TextsHaveChanged()
         
@@ -3774,6 +3848,30 @@ class ListBoxTagsSelection( ListBoxTags ):
         self._RecalcStrings()
         
     
+    def IncrementTagsByMedia( self, media ):
+        
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( media, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
+        
+        self._current_tags_to_count.update( current_tags_to_count )
+        self._deleted_tags_to_count.update( deleted_tags_to_count )
+        self._pending_tags_to_count.update( pending_tags_to_count )
+        self._petitioned_tags_to_count.update( petitioned_tags_to_count )
+        
+        tags_changed = set()
+        
+        if self._show_current: tags_changed.update( current_tags_to_count.keys() )
+        if self._show_deleted: tags_changed.update( deleted_tags_to_count.keys() )
+        if self._show_pending: tags_changed.update( pending_tags_to_count.keys() )
+        if self._show_petitioned: tags_changed.update( petitioned_tags_to_count.keys() )
+        
+        if len( tags_changed ) > 0:
+            
+            self._RecalcStrings( tags_changed )
+            
+        
+        self._last_media.update( media )
+        
+    
     def SetTagsByMedia( self, media, force_reload = False ):
         
         media = set( media )
@@ -3786,6 +3884,8 @@ class ListBoxTagsSelection( ListBoxTags ):
             self._deleted_tags_to_count = deleted_tags_to_count
             self._pending_tags_to_count = pending_tags_to_count
             self._petitioned_tags_to_count = petitioned_tags_to_count
+            
+            self._RecalcStrings()
             
         else:
             
@@ -3816,8 +3916,25 @@ class ListBoxTagsSelection( ListBoxTags ):
                     
                 
             
-        
-        self._RecalcStrings()
+            if len( removees ) == 0:
+                
+                tags_changed = set()
+                
+                if self._show_current: tags_changed.update( current_tags_to_count.keys() )
+                if self._show_deleted: tags_changed.update( deleted_tags_to_count.keys() )
+                if self._show_pending: tags_changed.update( pending_tags_to_count.keys() )
+                if self._show_petitioned: tags_changed.update( petitioned_tags_to_count.keys() )
+                
+                if len( tags_changed ) > 0:
+                    
+                    self._RecalcStrings( tags_changed )
+                    
+                
+            else:
+                
+                self._RecalcStrings()
+                
+            
         
         self._last_media = media
         
@@ -3845,6 +3962,7 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         self._page_key = page_key
         self._predicates_callable = predicates_callable
         
+        HydrusGlobals.client_controller.sub( self, 'IncrementTagsByMediaPubsub', 'increment_tags_selection' )
         HydrusGlobals.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
         HydrusGlobals.client_controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
         
@@ -3886,9 +4004,20 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         if page_key == self._page_key: self.ChangeTagRepository( service_key )
         
     
+    def IncrementTagsByMediaPubsub( self, page_key, media ):
+        
+        if page_key == self._page_key:
+            
+            self.IncrementTagsByMedia( media )
+            
+        
+    
     def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
         
-        if page_key == self._page_key: self.SetTagsByMedia( media, force_reload = force_reload )
+        if page_key == self._page_key:
+            
+            self.SetTagsByMedia( media, force_reload = force_reload )
+            
         
     
 class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):

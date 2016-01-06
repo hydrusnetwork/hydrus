@@ -62,8 +62,6 @@ class Controller( HydrusController.HydrusController ):
                 
                 text = 'Are you sure "' + path + '" is the correct directory?'
                 text += os.linesep * 2
-                text += 'Everything already in that directory will be deleted before the backup starts.'
-                text += os.linesep * 2
                 text += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
                 
                 with ClientGUIDialogs.DialogYesNo( self._gui, text ) as dlg_yn:
@@ -117,8 +115,18 @@ class Controller( HydrusController.HydrusController ):
             time.sleep( 0.05 )
             
         
-        if job_key.HasVariable( 'result' ): return job_key.GetVariable( 'result' )
-        else: raise job_key.GetVariable( 'error' )
+        if job_key.HasVariable( 'result' ):
+            
+            return job_key.GetVariable( 'result' )
+            
+        elif job_key.HasVariable( 'error' ):
+            
+            raise job_key.GetVariable( 'error' )
+            
+        else:
+            
+            raise HydrusExceptions.ShutdownException()
+            
         
     
     def CheckAlreadyRunning( self ):
@@ -337,29 +345,37 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
-        try:
+        if HydrusGlobals.emergency_exit:
             
-            self._gui.TestAbleToClose()
+            self.ShutdownView()
+            self.ShutdownModel()
             
-        except HydrusExceptions.PermissionException:
+        else:
             
-            return
+            try:
+                
+                self._gui.TestAbleToClose()
+                
+            except HydrusExceptions.PermissionException:
+                
+                return
+                
             
-        
-        try:
+            try:
+                
+                self._splash = ClientGUI.FrameSplash( self )
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'There was an error trying to start the splash screen!' )
+                
+                HydrusData.Print( traceback.format_exc() )
+                
             
-            self._splash = ClientGUI.FrameSplash( self )
+            exit_thread = threading.Thread( target = self.THREADExitEverything, name = 'Application Exit Thread' )
             
-        except Exception as e:
+            exit_thread.start()
             
-            HydrusData.Print( 'There was an error trying to start the splash screen!' )
-            
-            HydrusData.Print( traceback.format_exc() )
-            
-        
-        exit_thread = threading.Thread( target = self.THREADExitEverything, name = 'Application Exit Thread' )
-        
-        exit_thread.start()
         
     
     def ForceIdle( self ):
@@ -545,6 +561,13 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'vacuum' )
                 
             
+        
+        stale_time_delta = 14 * 86400
+        stop_time = HydrusData.GetNow() + 120
+        
+        self.pub( 'splash_set_status_text', 'analyzing' )
+        
+        self.WriteSynchronous( 'analyze', stale_time_delta, stop_time )
         
         if self._timestamps[ 'last_service_info_cache_fatten' ] == 0:
             
@@ -836,54 +859,63 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownView( self ):
         
-        self.CallBlockingToWx( self._gui.Shutdown )
-        
-        self.pub( 'splash_set_status_text', 'waiting for daemons to exit' )
-        
-        self._ShutdownDaemons()
-        
-        idle_shutdown_action = self._options[ 'idle_shutdown' ]
-        
-        if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
+        if HydrusGlobals.emergency_exit:
             
-            self.pub( 'splash_set_status_text', 'running maintenance' )
+            self._gui.Shutdown()
             
-            self.ResetIdleTimer()
+            HydrusController.HydrusController.ShutdownView( self )
             
-            do_it = True
+        else:
             
-            if CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
+            self.CallBlockingToWx( self._gui.Shutdown )
+            
+            self.pub( 'splash_set_status_text', 'waiting for daemons to exit' )
+            
+            self._ShutdownDaemons()
+            
+            idle_shutdown_action = self._options[ 'idle_shutdown' ]
+            
+            if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
                 
-                if self.ThereIsIdleShutdownWorkDue():
+                self.pub( 'splash_set_status_text', 'running maintenance' )
+                
+                self.ResetIdleTimer()
+                
+                do_it = True
+                
+                if CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
                     
-                    def wx_code():
+                    if self.ThereIsIdleShutdownWorkDue():
                         
-                        text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( self._options[ 'idle_shutdown_max_minutes' ] ) + ' minutes\' maintenance work?'
-                        
-                        with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
+                        def wx_code():
                             
-                            if dlg_yn.ShowModal() == wx.ID_YES:
+                            text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( self._options[ 'idle_shutdown_max_minutes' ] ) + ' minutes\' maintenance work?'
+                            
+                            with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
                                 
-                                return True
-                                
-                            else:
-                                
-                                return False
+                                if dlg_yn.ShowModal() == wx.ID_YES:
+                                    
+                                    return True
+                                    
+                                else:
+                                    
+                                    return False
+                                    
                                 
                             
                         
+                        do_it = self.CallBlockingToWx( wx_code )
+                        
                     
-                    do_it = self.CallBlockingToWx( wx_code )
+                
+                if do_it:
+                    
+                    self.DoIdleShutdownWork()
                     
                 
             
-            if do_it:
-                
-                self.DoIdleShutdownWork()
-                
+            HydrusController.HydrusController.ShutdownView( self )
             
-        
-        HydrusController.HydrusController.ShutdownView( self )
         
     
     def StartFileQuery( self, query_key, search_context ):
@@ -1035,7 +1067,8 @@ class Controller( HydrusController.HydrusController ):
             
             self.ShutdownModel()
             
-        except HydrusExceptions.PermissionException as e: pass
+        except HydrusExceptions.PermissionException: pass
+        except HydrusExceptions.ShutdownException: pass
         except:
             
             traceback.print_exc()

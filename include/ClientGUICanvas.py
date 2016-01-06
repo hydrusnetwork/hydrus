@@ -1319,7 +1319,7 @@ class CanvasWithDetails( Canvas ):
             
             for tag in tags_i_want_to_display:
                 
-                display_string = tag
+                display_string = HydrusTags.RenderTag( tag )
                 
                 if tag in pending:
                     

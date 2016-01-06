@@ -314,6 +314,50 @@ class DB( HydrusDB.HydrusDB ):
     
     def _AddToExpires( self, account_ids, timespan ): self._c.execute( 'UPDATE accounts SET expires = expires + ? WHERE account_id IN ' + HydrusData.SplayListForDB( account_ids ) + ';', ( timespan, ) )
     
+    def _Analyze( self, stale_time_delta, stop_time ):
+        
+        all_names = [ name for ( name, ) in self._c.execute( 'SELECT name FROM sqlite_master;' ) ]
+        
+        existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
+        
+        names_to_analyze = [ name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+        
+        random.shuffle( names_to_analyze )
+        
+        if len( names_to_analyze ) > 0:
+            
+            HydrusGlobals.server_busy = True
+            
+        
+        while len( names_to_analyze ) > 0:
+            
+            name = names_to_analyze.pop()
+            
+            started = HydrusData.GetNowPrecise()
+            
+            self._c.execute( 'ANALYZE ' + name + ';' )
+            
+            self._c.execute( 'REPLACE INTO analyze_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
+            
+            time_took = HydrusData.GetNowPrecise() - started
+            
+            HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+            
+            if HydrusData.TimeHasPassed( stop_time ):
+                
+                break
+                
+            
+        
+        self._c.execute( 'ANALYZE sqlite_master;' ) # this reloads the current stats into the query planner
+        
+        still_more_to_do = len( names_to_analyze ) > 0
+        
+        HydrusGlobals.server_busy = False
+        
+        return still_more_to_do
+        
+    
     def _ApproveFilePetition( self, service_id, account_id, hash_ids, reason_id ):
         
         self._ApproveFilePetitionOptimised( service_id, account_id, hash_ids )
@@ -536,7 +580,10 @@ class DB( HydrusDB.HydrusDB ):
         
         for dir in dirs:
             
-            if not os.path.exists( dir ): os.mkdir( dir )
+            if not os.path.exists( dir ):
+                
+                os.makedirs( dir )
+                
             
         
         dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR )
@@ -549,7 +596,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if not os.path.exists( new_dir ):
                     
-                    os.mkdir( new_dir )
+                    os.makedirs( new_dir )
                     
                 
             
@@ -557,7 +604,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'BEGIN IMMEDIATE' )
         
         self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-        self._c.execute( 'PRAGMA journal_mode=WAL;' )
+        self._c.execute( 'PRAGMA journal_mode = WAL;' )
         
         now = HydrusData.GetNow()
         
@@ -573,6 +620,8 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, title TEXT, account_type TEXT_YAML );' )
         self._c.execute( 'CREATE UNIQUE INDEX account_types_service_id_account_type_id_index ON account_types ( service_id, account_type_id );' )
+        
+        self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
         
         self._c.execute( 'CREATE TABLE bans ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, admin_account_id INTEGER, reason_id INTEGER, created INTEGER, expires INTEGER, PRIMARY KEY( service_id, account_id ) );' )
         self._c.execute( 'CREATE INDEX bans_expires ON bans ( expires );' )
@@ -1744,37 +1793,53 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'COMMIT' )
         
-        HydrusData.Print( 'backing up: vacuum' )
-        self._c.execute( 'VACUUM' )
+        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
         
-        HydrusData.Print( 'backing up: analyze' )
-        self._c.execute( 'ANALYZE' )
+        if HC.PLATFORM_WINDOWS:
+            
+            ideal_page_size = 4096
+            
+        else:
+            
+            ideal_page_size = 1024
+            
+        
+        ( page_size, ) = self._c.execute( 'PRAGMA page_size;' ).fetchone()
+        
+        if page_size != ideal_page_size:
+            
+            self._c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
+            
+        
+        HydrusData.Print( 'backing up: vacuum' )
+        
+        self._c.execute( 'VACUUM' )
         
         self._c.close()
         self._db.close()
         
-        self._InitDBCursor()
-        
-        self._c.execute( 'BEGIN IMMEDIATE' )
-        
         backup_path = os.path.join( HC.DB_DIR, 'server_backup' )
         
-        HydrusData.Print( 'backing up: deleting old backup' )
-        HydrusPaths.RecyclePath( backup_path )
-        
-        os.mkdir( backup_path )
+        if not os.path.exists( backup_path ):
+            
+            os.makedirs( backup_path )
+            
         
         HydrusData.Print( 'backing up: copying db file' )
         shutil.copy2( self._db_path, os.path.join( backup_path, self.DB_NAME + '.db' ) )
         
         HydrusData.Print( 'backing up: copying files' )
-        shutil.copytree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
+        HydrusPaths.MirrorTree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
         
         HydrusData.Print( 'backing up: copying thumbnails' )
-        shutil.copytree( HC.SERVER_THUMBNAILS_DIR, os.path.join( backup_path, 'server_thumbnails' ) )
+        HydrusPaths.MirrorTree( HC.SERVER_THUMBNAILS_DIR, os.path.join( backup_path, 'server_thumbnails' ) )
         
         HydrusData.Print( 'backing up: copying updates' )
-        shutil.copytree( HC.SERVER_UPDATES_DIR, os.path.join( backup_path, 'server_updates' ) )
+        HydrusPaths.MirrorTree( HC.SERVER_UPDATES_DIR, os.path.join( backup_path, 'server_updates' ) )
+        
+        self._InitDBCursor()
+        
+        self._c.execute( 'BEGIN IMMEDIATE' )
         
         HydrusData.Print( 'backing up: done!' )
         
@@ -1914,7 +1979,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if not os.path.exists( update_dir ):
                         
-                        os.mkdir( update_dir )
+                        os.makedirs( update_dir )
                         
                     
                     begin = 0
@@ -2356,7 +2421,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if not os.path.exists( new_dir ):
                         
-                        os.mkdir( new_dir )
+                        os.makedirs( new_dir )
                         
                     
                 
@@ -2473,7 +2538,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if not os.path.exists( dest_dir ):
                     
-                    os.mkdir( dest_dir )
+                    os.makedirs( dest_dir )
                     
                 
                 source_path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
@@ -2528,6 +2593,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 188:
+            
+            self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
+            
+        
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -2555,6 +2625,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if action == 'account': result = self._ModifyAccount( *args, **kwargs )
         elif action == 'account_types': result = self._ModifyAccountTypes( *args, **kwargs )
+        elif action == 'analyze': result = self._Analyze( *args, **kwargs )
         elif action == 'backup': result = self._MakeBackup( *args, **kwargs )
         elif action == 'check_data_usage': result = self._CheckDataUsage( *args, **kwargs )
         elif action == 'check_monthly_data': result = self._CheckMonthlyData( *args, **kwargs )

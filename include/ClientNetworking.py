@@ -2,8 +2,10 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusPaths
 import HydrusSerialisable
+import errno
 import httplib
 import os
+import socket
 import socks
 import threading
 import time
@@ -293,6 +295,66 @@ class HTTPConnection( object ):
         self._RefreshConnection()
         
     
+    def _GetResponse( self, method_string, path_and_query, request_headers, body, attempt_number = 1 ):
+        
+        try:
+            
+            self._connection.request( method_string, path_and_query, headers = request_headers, body = body )
+            
+            return self._connection.getresponse()
+            
+        except ( httplib.CannotSendRequest, httplib.BadStatusLine ):
+            
+            # for some reason, we can't send a request on the current connection, so let's make a new one and try again!
+            
+            time.sleep( 1 )
+            
+            if attempt_number <= 3:
+                
+                self._RefreshConnection()
+                
+                return self._GetResponse( method_string, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
+                
+            else:
+                
+                raise
+                
+            
+        except socket.error as e:
+            
+            if e.errno == errno.WSAEACCES:
+                
+                text = 'The hydrus client did not have permission to make a connection to ' + HydrusData.ToUnicode( self._host )
+                
+                if self._port is not None:
+                    
+                    text += ' on port ' + HydrusData.ToUnicode( self._port )
+                    
+                
+                text += '. This is usually due to a firewall stopping it.'
+                
+                raise HydrusExceptions.FirewallException( text )
+                
+            elif e.errno == errno.WSAECONNRESET:
+                
+                time.sleep( 5 )
+                
+                if attempt_number <= 3:
+                    
+                    self._RefreshConnection()
+                    
+                    return self._GetResponse( method_string, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
+                    
+                else:
+                    
+                    text = 'The hydrus client\'s connection to ' + HydrusData.ToUnicode( self._host ) + ' kept on being reset by the remote host, so the attempt was abandoned.'
+                    
+                    raise HydrusExceptions.NetworkException( text )
+                    
+                
+            
+        
+    
     def _ParseCookies( self, raw_cookies_string ):
         
         cookies = {}
@@ -502,22 +564,7 @@ class HTTPConnection( object ):
         
         request_headers = { str( k ) : str( v ) for ( k, v ) in request_headers.items() }
         
-        try:
-            
-            self._connection.request( method_string, path_and_query, headers = request_headers, body = body )
-            
-            response = self._connection.getresponse()
-            
-        except ( httplib.CannotSendRequest, httplib.BadStatusLine ):
-            
-            # for some reason, we can't send a request on the current connection, so let's make a new one and try again!
-            
-            self._RefreshConnection()
-            
-            self._connection.request( method_string, path_and_query, headers = request_headers, body = body )
-            
-            response = self._connection.getresponse()
-            
+        response = self._GetResponse( method_string, path_and_query, request_headers, body )
         
         if response.status == 200 and temp_path is not None:
             

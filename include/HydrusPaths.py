@@ -64,9 +64,11 @@ def ConvertPortablePathToAbsPath( portable_path ):
     
 def CopyAndMergeTree( source, dest ):
     
+    pauser = HydrusData.BigJobPauser()
+    
     if not os.path.exists( dest ):
         
-        os.mkdir( dest )
+        os.makedirs( dest )
         
     
     for ( root, dirnames, filenames ) in os.walk( source ):
@@ -75,18 +77,22 @@ def CopyAndMergeTree( source, dest ):
         
         for dirname in dirnames:
             
+            pauser.Pause()
+            
             source_path = os.path.join( root, dirname )
             dest_path = os.path.join( dest_root, dirname )
             
             if not os.path.exists( dest_path ):
                 
-                os.mkdir( dest_path )
+                os.makedirs( dest_path )
                 
             
             shutil.copystat( source_path, dest_path )
             
         
         for filename in filenames:
+            
+            pauser.Pause()
             
             source_path = os.path.join( root, filename )
             dest_path = os.path.join( dest_root, filename )
@@ -112,6 +118,10 @@ def DeletePath( path ):
             os.remove( path )
             
         
+    
+def GetPathSize( path ):
+    
+    return os.lstat( path )[6]
     
 def GetTempFile(): return tempfile.TemporaryFile()
 def GetTempFileQuick(): return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
@@ -174,6 +184,80 @@ def LaunchFile( path ):
     thread.daemon = True
     
     thread.start()
+    
+def MirrorTree( source, dest ):
+    
+    pauser = HydrusData.BigJobPauser()
+    
+    if not os.path.exists( dest ):
+        
+        os.makedirs( dest )
+        
+    
+    for ( root, dirnames, filenames ) in os.walk( source ):
+        
+        dest_root = root.replace( source, dest )
+        
+        surplus_dest_paths = { os.path.join( dest_root, dest_filename ) for dest_filename in os.listdir( dest_root ) }
+        
+        for dirname in dirnames:
+            
+            pauser.Pause()
+            
+            source_path = os.path.join( root, dirname )
+            dest_path = os.path.join( dest_root, dirname )
+            
+            surplus_dest_paths.discard( dest_path )
+            
+            if not os.path.exists( dest_path ):
+                
+                os.makedirs( dest_path )
+                
+            
+            shutil.copystat( source_path, dest_path )
+            
+        
+        for filename in filenames:
+            
+            pauser.Pause()
+            
+            source_path = os.path.join( root, filename )
+            
+            dest_path = os.path.join( dest_root, filename )
+            
+            surplus_dest_paths.discard( dest_path )
+            
+            if not PathsHaveSameSizeAndDate( source_path, dest_path ):
+                
+                shutil.copy2( source_path, dest_path )
+                
+            
+        
+        for dest_path in surplus_dest_paths:
+            
+            pauser.Pause()
+            
+            DeletePath( dest_path )
+            
+        
+    
+def PathsHaveSameSizeAndDate( path1, path2 ):
+    
+    if os.path.exists( path1 ) and os.path.exists( path2 ):
+        
+        path1_stat = os.lstat( path1 )
+        path2_stat = os.lstat( path2 )
+        
+        same_size = path1_stat[6] == path2_stat[6]
+        same_modified_time = path1_stat[8] == path2_stat[8]
+        
+        if same_size and same_modified_time:
+            
+            return True
+            
+        
+    
+    return False
     
 def ReadFileLikeAsBlocks( f ):
     

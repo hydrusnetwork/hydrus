@@ -3902,7 +3902,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gallery_identifiers = []
             
-            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_GIPHY, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR ]:
+            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR ]:
                 
                 gallery_identifiers.append( ClientDownloading.GalleryIdentifier( site_type ) )
                 
@@ -7127,7 +7127,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             site_types = []
             site_types.append( HC.SITE_TYPE_BOORU )
             site_types.append( HC.SITE_TYPE_DEVIANT_ART )
-            site_types.append( HC.SITE_TYPE_GIPHY )
             site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
             site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS )
             site_types.append( HC.SITE_TYPE_NEWGROUNDS )

@@ -1306,9 +1306,7 @@ class Service( HydrusData.HydrusYAMLBase ):
                         
                         if os.path.exists( path ):
                             
-                            info = os.lstat( path )
-                            
-                            size = info[6]
+                            HydrusPaths.GetPathSize( path )
                             
                             if size == 0:
                                 

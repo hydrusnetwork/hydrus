@@ -129,7 +129,7 @@ def GetExportPath():
         
         if not os.path.exists( path ):
             
-            os.mkdir( path )
+            os.makedirs( path )
             
         
     
@@ -499,9 +499,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     elif os.path.exists( dest_path ):
                         
-                        dest_info = os.lstat( dest_path )
-                        
-                        dest_size = dest_info[6]
+                        dest_size = HydrusPaths.GetPathSize( dest_path )
                         
                         if dest_size == size:
                             

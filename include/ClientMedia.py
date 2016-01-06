@@ -207,11 +207,12 @@ class Media( object ):
     def __init__( self ):
         
         self._id = HydrusData.GenerateKey()
+        self._id_hash = self._id.__hash__()
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
     
-    def __hash__( self ): return self._id.__hash__()
+    def __hash__( self ): return self._id_hash
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
@@ -231,6 +232,8 @@ class MediaList( object ):
         
         self._singleton_media = set( self._sorted_media )
         self._collected_media = set()
+        
+        self._RecalcHashes()
         
     
     def _CalculateCollectionKeysToMedias( self, collect_by, medias ):
@@ -276,15 +279,6 @@ class MediaList( object ):
     
     def _GetFirst( self ): return self._sorted_media[ 0 ]
     
-    def _GetHashes( self ):
-        
-        result = set()
-        
-        for media in self._sorted_media: result.update( media.GetHashes() )
-        
-        return result
-        
-    
     def _GetLast( self ): return self._sorted_media[ -1 ]
     
     def _GetMedia( self, hashes, discriminator = None ):
@@ -316,6 +310,14 @@ class MediaList( object ):
         else: return self._sorted_media[ previous_index ]
         
     
+    def _RecalcHashes( self ):
+        
+        self._hashes = set()
+        
+        for media in self._collected_media: self._hashes.update( media.GetHashes() )
+        for media in self._singleton_media: self._hashes.add( media.GetHash() )
+        
+    
     def _RemoveMedia( self, singleton_media, collected_media ):
         
         if type( singleton_media ) != set: singleton_media = set( singleton_media )
@@ -337,10 +339,20 @@ class MediaList( object ):
         
         if append:
             
+            for media in new_media:
+                
+                self._hashes.add( media.GetHash() )
+                
+            
             self._singleton_media.update( new_media )
             self._sorted_media.append_items( new_media )
             
         else:
+            
+            for media in new_media:
+                
+                self._hashes.update( media.GetHashes() )
+                
             
             if self._collect_by is not None:
                 
@@ -558,6 +570,8 @@ class MediaList( object ):
                     
                     self._RemoveMedia( affected_singleton_media, affected_collected_media )
                     
+                    self._RecalcHashes()
+                    
                 
             
         
@@ -586,7 +600,12 @@ class MediaList( object ):
     
     def ResetService( self, service_key ):
         
-        if service_key == self._file_service_key: self._RemoveMedia( self._singleton_media, self._collected_media )
+        if service_key == self._file_service_key:
+            
+            self._RemoveMedia( self._singleton_media, self._collected_media )
+            
+            self._RecalcHashes()
+            
         else:
             
             for media in self._collected_media: media.ResetService( service_key )
@@ -673,15 +692,16 @@ class ListeningMediaList( MediaList ):
         
         self._file_query_result.AddMediaResults( media_results )
         
-        existing_hashes = self._GetHashes()
-        
         new_media = []
         
         for media_result in media_results:
             
             hash = media_result.GetHash()
             
-            if hash in existing_hashes: continue
+            if hash in self._hashes:
+                
+                continue
+                
             
             new_media.append( self._GenerateMediaSingleton( media_result ) )
             
@@ -719,13 +739,7 @@ class MediaCollection( MediaList, Media ):
         self._RecalcInternals()
         
     
-    #def __hash__( self ): return frozenset( self._hashes ).__hash__()
-    
     def _RecalcInternals( self ):
-        
-        self._hashes = set()
-        
-        for media in self._sorted_media: self._hashes.update( media.GetHashes() )
         
         self._archive = True in ( media.HasArchive() for media in self._sorted_media )
         self._inbox = True in ( media.HasInbox() for media in self._sorted_media )
@@ -781,7 +795,10 @@ class MediaCollection( MediaList, Media ):
     
     def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
         
-        if has_location is None and discriminant is None and not_uploaded_to is None and not ordered: return self._hashes
+        if has_location is None and discriminant is None and not_uploaded_to is None and not ordered:
+            
+            return self._hashes
+            
         else:
             
             if ordered:
@@ -805,7 +822,10 @@ class MediaCollection( MediaList, Media ):
     
     def GetMime( self ): return HC.APPLICATION_HYDRUS_CLIENT_COLLECTION
     
-    def GetNumFiles( self ): return len( self._hashes )
+    def GetNumFiles( self ):
+        
+        return len( self._hashes )
+        
     
     def GetNumInbox( self ): return sum( ( media.GetNumInbox() for media in self._sorted_media ) )
     
@@ -894,32 +914,57 @@ class MediaSingleton( Media ):
     
     def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
         
-        if ordered:
-            
-            no_result = []
-            
-        else:
-            
-            no_result = set()
-            
-        
-        locations_manager = self._media_result.GetLocationsManager()
-        
         if discriminant is not None:
             
             inbox = self._media_result.GetInbox()
             
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal() ): return no_result
+            locations_manager = self._media_result.GetLocationsManager()
+            
+            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal() ):
+                
+                if ordered:
+                    
+                    return []
+                    
+                else:
+                    
+                    return set()
+                    
+                
             
         
         if has_location is not None:
             
-            if has_location not in locations_manager.GetCurrent(): return no_result
+            locations_manager = self._media_result.GetLocationsManager()
+            
+            if has_location not in locations_manager.GetCurrent():
+                
+                if ordered:
+                    
+                    return []
+                    
+                else:
+                    
+                    return set()
+                    
+                
             
         
         if not_uploaded_to is not None:
             
-            if not_uploaded_to in locations_manager.GetCurrentRemote(): return no_result
+            locations_manager = self._media_result.GetLocationsManager()
+            
+            if not_uploaded_to in locations_manager.GetCurrentRemote():
+                
+                if ordered:
+                    
+                    return []
+                    
+                else:
+                    
+                    return set()
+                    
+                
             
         
         if ordered:
@@ -1246,22 +1291,42 @@ class SortedList( object ):
         for item in self._sorted_list: yield item
         
     
-    def __len__( self ): return self._sorted_list.__len__()
+    def __len__( self ):
+        
+        return self._sorted_list.__len__()
+        
     
-    def _DirtyIndices( self ): self._items_to_indices = None
+    def _DirtyIndices( self ):
+        
+        self._items_to_indices = None
+        
     
-    def _RecalcIndices( self ): self._items_to_indices = { item : index for ( index, item ) in enumerate( self._sorted_list ) }
+    def _RecalcIndices( self ):
+        
+        self._items_to_indices = { item : index for ( index, item ) in enumerate( self._sorted_list ) }
+        
     
     def append_items( self, items ):
         
-        self._sorted_list.extend( items )
+        if self._items_to_indices is None:
+            
+            self._RecalcIndices()
+            
         
-        self._DirtyIndices()
+        for ( i, item ) in enumerate( items, start = len( self._sorted_list ) ):
+            
+            self._items_to_indices[ item ] = i
+            
+        
+        self._sorted_list.extend( items )
         
     
     def index( self, item ):
         
-        if self._items_to_indices is None: self._RecalcIndices()
+        if self._items_to_indices is None:
+            
+            self._RecalcIndices()
+            
         
         try:
             

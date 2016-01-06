@@ -147,9 +147,7 @@ def GetExtraHashesFromPath( path ):
     
 def GetFileInfo( path ):
     
-    info = os.lstat( path )
-    
-    size = info[6]
+    size = HydrusPaths.GetPathSize( path )
     
     if size == 0: raise HydrusExceptions.SizeException( 'File is of zero length!' )
     
@@ -171,11 +169,7 @@ def GetFileInfo( path ):
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
         
-    elif mime == HC.VIDEO_FLV:
-        
-        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( path )
-        
-    elif mime in ( HC.VIDEO_WMV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM ):
+    elif mime in ( HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM ):
         
         ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         

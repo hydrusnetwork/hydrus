@@ -14,3 +14,4 @@ server_busy = False
 
 shutdown_complete = False
 restart = False
+emergency_exit = False

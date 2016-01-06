@@ -597,29 +597,32 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _Exit( self, restart = False ):
         
-        if HC.options[ 'confirm_client_exit' ]:
+        if not HydrusGlobals.emergency_exit:
             
-            if restart:
+            if HC.options[ 'confirm_client_exit' ]:
                 
-                text = 'Are you sure you want to restart the client? (Will auto-yes in 15 seconds)'
+                if restart:
+                    
+                    text = 'Are you sure you want to restart the client? (Will auto-yes in 15 seconds)'
+                    
+                else:
+                    
+                    text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
+                    
                 
-            else:
-                
-                text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
-                
-            
-            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                
-                call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
-                
-                if dlg.ShowModal() == wx.ID_NO:
+                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                    
+                    call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
+                    
+                    if dlg.ShowModal() == wx.ID_NO:
+                        
+                        call_later.Stop()
+                        
+                        return
+                        
                     
                     call_later.Stop()
                     
-                    return
-                    
-                
-                call_later.Stop()
                 
             
         
@@ -842,7 +845,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu = wx.Menu()
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_booru' ), p( 'Booru' ), p( 'Open a new tab to download files from a booru.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_GIPHY ), p( 'Giphy' ), p( 'Open a new tab to download files from Giphy.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_DEVIANT_ART ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
             hf_submenu = wx.Menu()
             hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
@@ -1551,7 +1553,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     self._controller.pub( 'message', job_key )
                     
-                    if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
+                    if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.makedirs( HC.CLIENT_THUMBNAILS_DIR )
                     
                     for p in HydrusData.IterateHexPrefixes():
                         
@@ -1559,7 +1561,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         if not os.path.exists( dir ):
                             
-                            os.mkdir( dir )
+                            os.makedirs( dir )
                             
                         
                     
@@ -2102,6 +2104,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventExit( self, event ):
         
+        if event.CanVeto():
+            
+            event.Veto()
+            
+        else:
+            
+            HydrusGlobals.emergency_exit = True
+            
+        
         self._Exit()
         
     
@@ -2504,30 +2515,52 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def Shutdown( self ):
         
-        self._SaveGUISession( 'last session' )
-        
-        try:
+        if HydrusGlobals.emergency_exit:
             
-            self._message_manager.Hide()
+            self._SaveGUISession( 'last session' )
             
             self._message_manager.CleanBeforeDestroy()
             
-        except: pass
-        
-        self.Hide()
-        
-        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
-        
-        page = self._notebook.GetCurrentPage()
-        
-        if page is not None:
+            for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
             
-            ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+            page = self._notebook.GetCurrentPage()
             
-        
-        self._controller.Write( 'save_options', HC.options )
-        
-        wx.CallAfter( self.Destroy )
+            if page is not None:
+                
+                ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+                
+            
+            self._controller.Write( 'save_options', HC.options )
+            
+            self.Destroy()
+            
+        else:
+            
+            self._SaveGUISession( 'last session' )
+            
+            try:
+                
+                self._message_manager.Hide()
+                
+                self._message_manager.CleanBeforeDestroy()
+                
+            except: pass
+            
+            self.Hide()
+            
+            for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
+            
+            page = self._notebook.GetCurrentPage()
+            
+            if page is not None:
+                
+                ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+                
+            
+            self._controller.Write( 'save_options', HC.options )
+            
+            wx.CallAfter( self.Destroy )
+            
         
     
     def SyncToTagArchive( self, hta, adding, namespaces, service_key ):

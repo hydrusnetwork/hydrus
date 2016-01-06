@@ -1122,7 +1122,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if not os.path.exists( update_dir ):
                 
-                os.mkdir( update_dir )
+                os.makedirs( update_dir )
                 
             
             if 'first_timestamp' not in info: info[ 'first_timestamp' ] = None
@@ -1171,11 +1171,41 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
         
     
-    def _AnalyzeAfterUpdate( self ):
+    def _Analyze( self, stale_time_delta, stop_time ):
         
-        self._controller.pub( 'splash_set_status_text', 'analyzing db after update' )
+        all_names = [ name for ( name, ) in self._c.execute( 'SELECT name FROM sqlite_master;' ) ]
         
-        HydrusDB.HydrusDB._AnalyzeAfterUpdate( self )
+        existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
+        
+        names_to_analyze = [ name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+        
+        random.shuffle( names_to_analyze )
+        
+        while len( names_to_analyze ) > 0:
+            
+            name = names_to_analyze.pop()
+            
+            started = HydrusData.GetNowPrecise()
+            
+            self._c.execute( 'ANALYZE ' + name + ';' )
+            
+            self._c.execute( 'REPLACE INTO analyze_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
+            
+            time_took = HydrusData.GetNowPrecise() - started
+            
+            HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+            
+            if HydrusData.TimeHasPassed( stop_time ) or not self._controller.CurrentlyIdle():
+                
+                break
+                
+            
+        
+        self._c.execute( 'ANALYZE sqlite_master;' ) # this reloads the current stats into the query planner
+        
+        still_more_to_do = len( names_to_analyze ) > 0
+        
+        return still_more_to_do
         
     
     def _ArchiveFiles( self, hash_ids ):
@@ -1198,24 +1228,51 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Backup( self, path ):
         
-        deletee_filenames = os.listdir( path )
+        job_key = HydrusThreading.JobKey( cancellable = True )
         
-        for deletee_filename in deletee_filenames:
+        job_key.SetVariable( 'popup_title', 'backing up db' )
+        
+        self._controller.pub( 'message', job_key )
+        
+        job_key.SetVariable( 'popup_text_1', 'closing db' )
+        
+        self._c.execute( 'COMMIT' )
+        
+        self._c.close()
+        self._db.close()
+        
+        if not os.path.exists( path ):
             
-            deletee_path = os.path.join( path, deletee_filename )
-            
-            ClientData.DeletePath( deletee_path )
+            os.makedirs( path )
             
         
-        shutil.copy2( self._db_path, os.path.join( path, 'client.db' ) )
-        if os.path.exists( self._db_path + '-wal' ): shutil.copy2( self._db_path + '-wal', os.path.join( path, 'client.db-wal' ) )
+        job_key.SetVariable( 'popup_text_1', 'copying db file' )
         
-        shutil.copytree( HC.CLIENT_ARCHIVES_DIR, os.path.join( path, 'client_archives' ) ) 
-        shutil.copytree( HC.CLIENT_FILES_DIR, os.path.join( path, 'client_files' ) )
-        shutil.copytree( HC.CLIENT_THUMBNAILS_DIR, os.path.join( path, 'client_thumbnails' ) )
-        shutil.copytree( HC.CLIENT_UPDATES_DIR, os.path.join( path, 'client_updates' ) )
+        shutil.copy2( self._db_path, os.path.join( path, self.DB_NAME + '.db' ) )
         
-        HydrusData.ShowText( 'Database backup done!' )
+        job_key.SetVariable( 'popup_text_1', 'copying archives directory' )
+        
+        HydrusPaths.MirrorTree( HC.CLIENT_ARCHIVES_DIR, os.path.join( path, 'client_archives' ) ) 
+        
+        job_key.SetVariable( 'popup_text_1', 'copying files directory' )
+        
+        HydrusPaths.MirrorTree( HC.CLIENT_FILES_DIR, os.path.join( path, 'client_files' ) )
+        
+        job_key.SetVariable( 'popup_text_1', 'copying thumbnails directory' )
+        
+        HydrusPaths.MirrorTree( HC.CLIENT_THUMBNAILS_DIR, os.path.join( path, 'client_thumbnails' ) )
+        
+        job_key.SetVariable( 'popup_text_1', 'copying updates directory' )
+        
+        HydrusPaths.MirrorTree( HC.CLIENT_UPDATES_DIR, os.path.join( path, 'client_updates' ) )
+        
+        self._InitDBCursor()
+        
+        self._c.execute( 'BEGIN IMMEDIATE' )
+        
+        job_key.SetVariable( 'popup_text_1', 'done!' )
+        
+        job_key.Finish()
         
     
     def _CheckDBIntegrity( self ):
@@ -1412,24 +1469,29 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusGlobals.is_first_start = True
         
-        if not os.path.exists( HC.CLIENT_ARCHIVES_DIR ): os.mkdir( HC.CLIENT_ARCHIVES_DIR )
-        if not os.path.exists( HC.CLIENT_FILES_DIR ): os.mkdir( HC.CLIENT_FILES_DIR )
-        if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
-        if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
+        if not os.path.exists( HC.CLIENT_ARCHIVES_DIR ): os.makedirs( HC.CLIENT_ARCHIVES_DIR )
+        if not os.path.exists( HC.CLIENT_FILES_DIR ): os.makedirs( HC.CLIENT_FILES_DIR )
+        if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.makedirs( HC.CLIENT_THUMBNAILS_DIR )
+        if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.makedirs( HC.CLIENT_UPDATES_DIR )
         
         for prefix in HydrusData.IterateHexPrefixes():
             
             dir = os.path.join( HC.CLIENT_FILES_DIR, prefix )
             
-            if not os.path.exists( dir ): os.mkdir( dir )
+            if not os.path.exists( dir ): os.makedirs( dir )
             
             dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
             
-            if not os.path.exists( dir ): os.mkdir( dir )
+            if not os.path.exists( dir ): os.makedirs( dir )
             
         
         self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-        self._c.execute( 'PRAGMA journal_mode=WAL;' )
+        self._c.execute( 'PRAGMA journal_mode = WAL;' )
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            self._c.execute( 'PRAGMA page_size = 4096;' )
+            
         
         try: self._c.execute( 'BEGIN IMMEDIATE' )
         except Exception as e:
@@ -1441,6 +1503,8 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
         
         #
+        
+        self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
         
         self._c.execute( 'CREATE TABLE autocomplete_tags_cache ( file_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, tag_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY ( file_service_id, tag_service_id, namespace_id, tag_id ) );' )
         self._c.execute( 'CREATE INDEX autocomplete_tags_cache_tag_service_id_namespace_id_tag_id_index ON autocomplete_tags_cache ( tag_service_id, namespace_id, tag_id );' )
@@ -4236,6 +4300,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ProcessContentUpdatePackage( self, service_key, content_update_package, job_key, only_when_idle ):
         
+        pauser = HydrusData.BigJobPauser()
+        
         self.pub_after_commit( 'notify_new_pending' )
         self.pub_after_commit( 'notify_new_siblings' )
         self.pub_after_commit( 'notify_new_parents' )
@@ -4257,6 +4323,8 @@ class DB( HydrusDB.HydrusDB ):
         quit_early = False
         
         for content_update in content_update_package.IterateContentUpdates():
+            
+            pauser.Pause()
             
             options = self._controller.GetOptions()
             
@@ -4288,9 +4356,7 @@ class DB( HydrusDB.HydrusDB ):
             
             pending_content_updates.append( content_update )
             
-            content_update_weight = len( content_update.GetHashes() )
-            
-            pending_weight += content_update_weight
+            pending_weight += content_update.GetWeight()
             
             if pending_weight > 100:
                 
@@ -4992,7 +5058,7 @@ class DB( HydrusDB.HydrusDB ):
             
         elif not os.path.exists( full_dest ):
             
-            os.mkdir( full_dest )
+            os.makedirs( full_dest )
             
         
         portable_dest = HydrusPaths.ConvertAbsPathToPortablePath( dest )
@@ -5732,7 +5798,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if not os.path.exists( dest_dir ):
                     
-                    os.mkdir( dest_dir )
+                    os.makedirs( dest_dir )
                     
                 
                 source_path = os.path.join( HC.CLIENT_UPDATES_DIR, filename )
@@ -6165,6 +6231,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
                 
+            
+        
+        if version == 188:
+            
+            self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
             
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
@@ -6629,6 +6700,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                         
                         ( hta_path, hta ) = self._tag_archives[ archive_name ]
+                        
                         adding = True
                         
                         self._controller.pub( 'sync_to_tag_archive', hta_path, adding, namespaces, service_key )
@@ -6675,6 +6747,24 @@ class DB( HydrusDB.HydrusDB ):
         
         time.sleep( 1 )
         
+        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            ideal_page_size = 4096
+            
+        else:
+            
+            ideal_page_size = 1024
+            
+        
+        ( page_size, ) = self._c.execute( 'PRAGMA page_size;' ).fetchone()
+        
+        if page_size != ideal_page_size:
+            
+            self._c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
+            
+        
         try:
             
             self._c.execute( 'VACUUM' )
@@ -6698,8 +6788,6 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix + 'cleaning up' )
         
-        self._c.execute( 'ANALYZE' )
-        
         self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_VACUUM, HydrusData.GetNow() ) )
         
         self._c.close()
@@ -6717,6 +6805,7 @@ class DB( HydrusDB.HydrusDB ):
     def _Write( self, action, *args, **kwargs ):
         
         if action == '4chan_pass': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, '4chan_pass', *args, **kwargs )
+        elif action == 'analyze': result = self._Analyze( *args, **kwargs )
         elif action == 'backup': result = self._Backup( *args, **kwargs )
         elif action == 'content_update_package':result = self._ProcessContentUpdatePackage( *args, **kwargs )
         elif action == 'content_updates':result = self._ProcessContentUpdates( *args, **kwargs )
@@ -6770,26 +6859,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def RestoreBackup( self, path ):
         
-        deletee_filenames = os.listdir( HC.DB_DIR )
+        shutil.copy2( os.path.join( path, self.DB_NAME + '.db' ), self._db_path )
         
-        for deletee_filename in deletee_filenames:
-            
-            if deletee_filename.startswith( 'client' ):
-                
-                deletee_path = os.path.join( HC.DB_DIR, deletee_filename )
-                
-                ClientData.DeletePath( deletee_path )
-                
-            
-        
-        shutil.copy2( os.path.join( path, 'client.db' ), self._db_path )
-        
-        wal_path = os.path.join( path, 'client.db-wal' )
-        if os.path.exists( wal_path ): shutil.copy2( wal_path, self._db_path + '-wal' )
-        
-        shutil.copytree( os.path.join( path, 'client_archives' ), HC.CLIENT_ARCHIVES_DIR )
-        shutil.copytree( os.path.join( path, 'client_files' ), HC.CLIENT_FILES_DIR )
-        shutil.copytree( os.path.join( path, 'client_thumbnails' ), HC.CLIENT_THUMBNAILS_DIR )
-        shutil.copytree( os.path.join( path, 'client_updates' ), HC.CLIENT_UPDATES_DIR )
+        HydrusPaths.MirrorTree( os.path.join( path, 'client_archives' ), HC.CLIENT_ARCHIVES_DIR )
+        HydrusPaths.MirrorTree( os.path.join( path, 'client_files' ), HC.CLIENT_FILES_DIR )
+        HydrusPaths.MirrorTree( os.path.join( path, 'client_thumbnails' ), HC.CLIENT_THUMBNAILS_DIR )
+        HydrusPaths.MirrorTree( os.path.join( path, 'client_updates' ), HC.CLIENT_UPDATES_DIR )
         
     

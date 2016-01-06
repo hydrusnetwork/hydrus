@@ -1730,9 +1730,7 @@ class DialogInputLocalFiles( Dialog ):
                 break
                 
             
-            info = os.lstat( path )
-            
-            size = info[6]
+            size = HydrusPaths.GetPathSize( path )
             
             if size == 0:
                 
@@ -2792,7 +2790,6 @@ class DialogPageChooser( Dialog ):
         elif menu_keyword == 'gallery':
             
             entries.append( ( 'page_import_booru', None ) )
-            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_GIPHY ) )
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_DEVIANT_ART ) )
             entries.append( ( 'menu', 'hentai foundry' ) )
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )

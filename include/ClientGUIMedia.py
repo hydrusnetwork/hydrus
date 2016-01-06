@@ -382,7 +382,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _GetPrettyStatus( self ):
         
-        num_files = sum( [ media.GetNumFiles() for media in self._sorted_media ] )
+        num_files = len( self._hashes )
         
         num_selected = self._GetNumSelected()
         
@@ -655,6 +655,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HydrusGlobals.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
         
     
+    def _PublishSelectionIncrement( self, medias ):
+        
+        HydrusGlobals.client_controller.pub( 'increment_tags_selection', self._page_key, medias )
+        HydrusGlobals.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+        
+    
     def _RatingsFilter( self, service_key ):
         
         if service_key is None:
@@ -853,7 +859,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def AddMediaResults( self, page_key, media_results, append = True ):
         
-        if page_key == self._page_key: return ClientMedia.ListeningMediaList.AddMediaResults( self, media_results, append = append )
+        if page_key == self._page_key:
+            
+            return ClientMedia.ListeningMediaList.AddMediaResults( self, media_results, append = append )
+            
         
     
     def Archive( self, hashes ):
@@ -1604,7 +1613,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 self._FadeThumbnail( thumbnail )
                 
             
-            self._PublishSelectionChange()
+            if len( self._selected_media ) == 0:
+                
+                self._PublishSelectionIncrement( thumbnails )
+                
             
         
     

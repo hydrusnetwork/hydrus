@@ -20,7 +20,7 @@ class TestDaemons( unittest.TestCase ):
         
         try:
             
-            if not os.path.exists( test_dir ): os.mkdir( test_dir )
+            if not os.path.exists( test_dir ): os.makedirs( test_dir )
             
             with open( os.path.join( test_dir, '0' ), 'wb' ) as f: f.write( TestConstants.tinest_gif )
             with open( os.path.join( test_dir, '1' ), 'wb' ) as f: f.write( TestConstants.tinest_gif ) # previously imported
