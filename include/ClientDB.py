@@ -997,71 +997,75 @@ class DB( HydrusDB.HydrusDB ):
     READ_WRITE_ACTIONS = [ 'service_info', 'system_predicates' ]
     WRITE_SPECIAL_ACTIONS = [ 'vacuum' ]
     
+    def _AddFilesInfo( self, rows, overwrite = False ):
+        
+        if overwrite:
+            
+            insert_phrase = 'REPLACE INTO'
+            
+        else:
+            
+            insert_phrase = 'INSERT OR IGNORE INTO'
+            
+        
+        # hash_id, size, mime, width, height, duration, num_frames, num_words
+        self._c.executemany( insert_phrase + ' files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', rows )
+        
+    
     def _AddFiles( self, service_id, rows ):
         
-        successful_hash_ids = set()
+        hash_ids = { row[0] for row in rows }
         
-        num_deleted = 0
-        delta_size = 0
-        num_thumbnails = 0
-        num_inbox = 0
+        existing_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) }
         
-        for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in rows:
-            
-            result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
-            
-            if result is None:
-                
-                self._c.execute( 'INSERT OR IGNORE INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );', ( service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
-                
-                delta_size += size
-                
-                if mime in HC.MIMES_WITH_THUMBNAILS:
-                    
-                    num_thumbnails += 1
-                    
-                
-                successful_hash_ids.add( hash_id )
-                
-            
+        valid_hash_ids = hash_ids.difference( existing_hash_ids )
         
-        if len( successful_hash_ids ) > 0:
+        if len( valid_hash_ids ) > 0:
             
-            splayed_successful_hash_ids = HydrusData.SplayListForDB( successful_hash_ids )
+            self._c.executemany( 'INSERT OR IGNORE INTO current_files VALUES ( ?, ?, ? );', ( ( service_id, hash_id, timestamp ) for ( hash_id, timestamp ) in rows if hash_id in valid_hash_ids ) )
             
-            num_deleted = len( self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id IN ' + splayed_successful_hash_ids + ';', ( service_id, ) ).fetchall() )
+            splayed_valid_hash_ids = HydrusData.SplayListForDB( valid_hash_ids )
             
-            self._c.execute( 'DELETE FROM deleted_files WHERE service_id = ? AND hash_id IN ' + splayed_successful_hash_ids + ';', ( service_id, ) )
+            self._c.execute( 'DELETE FROM deleted_files WHERE service_id = ? AND hash_id IN ' + splayed_valid_hash_ids + ';', ( service_id, ) )
+            
+            num_deleted = self._GetRowCount()
+            
+            info = self._c.execute( 'SELECT size, mime FROM files_info WHERE hash_id IN ' + splayed_valid_hash_ids + ';' ).fetchall()
+            
+            num_files = len( valid_hash_ids )
+            delta_size = sum( ( size for ( size, mime ) in info ) )
+            num_thumbnails = sum( ( 1 for ( size, mime ) in info if mime in HC.MIMES_WITH_THUMBNAILS ) )
+            num_inbox = len( valid_hash_ids.intersection( self._inbox_hash_ids ) )
             
             service_info_updates = []
             
             service_info_updates.append( ( -num_deleted, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
             service_info_updates.append( ( delta_size, service_id, HC.SERVICE_INFO_TOTAL_SIZE ) )
-            service_info_updates.append( ( len( successful_hash_ids ), service_id, HC.SERVICE_INFO_NUM_FILES ) )
+            service_info_updates.append( ( num_files, service_id, HC.SERVICE_INFO_NUM_FILES ) )
             service_info_updates.append( ( num_thumbnails, service_id, HC.SERVICE_INFO_NUM_THUMBNAILS ) )
-            service_info_updates.append( ( len( successful_hash_ids.intersection( self._inbox_hash_ids ) ), service_id, HC.SERVICE_INFO_NUM_INBOX ) )
+            service_info_updates.append( ( num_inbox, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
             
             self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
             
-            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( successful_hash_ids ) + ';', ( service_id, ) )
+            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + splayed_valid_hash_ids + ';', ( service_id, ) )
             
             if num_thumbnails > 0:
                 
                 self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
                 
             
-            self._UpdateAutocompleteTagCacheFromFiles( service_id, successful_hash_ids, 1 )
+            self._UpdateAutocompleteTagCacheFromFiles( service_id, valid_hash_ids, 1 )
             
             if service_id == self._local_file_service_id:
                 
-                self._DeleteFiles( self._trash_service_id, successful_hash_ids, files_being_undeleted = True )
+                self._DeleteFiles( self._trash_service_id, valid_hash_ids, files_being_undeleted = True )
                 
             
             if service_id == self._trash_service_id:
                 
                 now = HydrusData.GetNow()
                 
-                self._c.executemany( 'INSERT OR IGNORE INTO file_trash ( hash_id, timestamp ) VALUES ( ?, ? );', ( ( hash_id, now ) for hash_id in successful_hash_ids ) )
+                self._c.executemany( 'INSERT OR IGNORE INTO file_trash ( hash_id, timestamp ) VALUES ( ?, ? );', ( ( hash_id, now ) for hash_id in valid_hash_ids ) )
                 
             
         
@@ -1218,7 +1222,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DELETE FROM file_inbox WHERE hash_id IN ' + splayed_hash_ids + ';' )
             
-            updates = self._c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ' GROUP BY service_id;' ).fetchall()
+            updates = self._c.execute( 'SELECT service_id, COUNT( * ) FROM current_files WHERE hash_id IN ' + splayed_hash_ids + ' GROUP BY service_id;' ).fetchall()
             
             self._c.executemany( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', [ ( count, service_id, HC.SERVICE_INFO_NUM_INBOX ) for ( service_id, count ) in updates ] )
             
@@ -1335,7 +1339,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.pub( 'message', job_key )
         
-        info = self._c.execute( 'SELECT hash_id, mime FROM files_info WHERE service_id IN ( ?, ? );', ( self._local_file_service_id, self._trash_service_id ) ).fetchall()
+        info = self._c.execute( 'SELECT hash_id, mime FROM current_files, files_info USING ( hash_id ) WHERE service_id IN ( ?, ? );', ( self._local_file_service_id, self._trash_service_id ) ).fetchall()
         
         missing_count = 0
         deletee_hash_ids = []
@@ -1486,7 +1490,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-        self._c.execute( 'PRAGMA journal_mode = WAL;' )
         
         if HC.PLATFORM_WINDOWS:
             
@@ -1517,6 +1520,9 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE VIRTUAL TABLE conversation_subjects USING fts4( subject );' )
         
+        self._c.execute( 'CREATE TABLE current_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+        self._c.execute( 'CREATE INDEX current_files_timestamp ON current_files ( timestamp );' )
+        
         self._c.execute( 'CREATE TABLE deleted_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
         
         self._c.execute( 'CREATE TABLE existing_tags ( namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
@@ -1524,8 +1530,13 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE file_inbox ( hash_id INTEGER PRIMARY KEY );' )
         
-        self._c.execute( 'CREATE TABLE files_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, size INTEGER, mime INTEGER, timestamp INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-        self._c.execute( 'CREATE INDEX files_info_hash_id ON files_info ( hash_id );' )
+        self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER );' )
+        self._c.execute( 'CREATE INDEX files_info_size ON files_info ( size );' )
+        self._c.execute( 'CREATE INDEX files_info_mime ON files_info ( mime );' )
+        self._c.execute( 'CREATE INDEX files_info_width ON files_info ( width );' )
+        self._c.execute( 'CREATE INDEX files_info_height ON files_info ( height );' )
+        self._c.execute( 'CREATE INDEX files_info_duration ON files_info ( duration );' )
+        self._c.execute( 'CREATE INDEX files_info_num_frames ON files_info ( num_frames );' )
         
         self._c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
         self._c.execute( 'CREATE INDEX file_transfers_hash_id ON file_transfers ( hash_id );' )
@@ -1533,7 +1544,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE file_trash ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER );' )
         self._c.execute( 'CREATE INDEX file_trash_timestamp ON file_trash ( timestamp );' )
         
-        self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ), FOREIGN KEY( service_id, hash_id ) REFERENCES files_info ON DELETE CASCADE );' )
+        self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ) );' )
         self._c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
         
         self._c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
@@ -1686,22 +1697,24 @@ class DB( HydrusDB.HydrusDB ):
         
         splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
-        rows = self._c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ).fetchall()
+        rows = self._c.execute( 'SELECT hash_id, timestamp FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ).fetchall()
         
-        hash_ids = { row[ 0 ] for row in rows }
+        valid_hash_ids = { row[ 0 ] for row in rows }
         
-        if len( hash_ids ) > 0:
+        if len( valid_hash_ids ) > 0:
             
-            total_size = sum( [ row[ 1 ] for row in rows ] )
-            num_files = len( rows )
-            num_thumbnails = len( [ 1 for row in rows if row[ 2 ] in HC.MIMES_WITH_THUMBNAILS ] )
-            num_inbox = len( hash_ids.intersection( self._inbox_hash_ids ) )
+            splayed_valid_hash_ids = HydrusData.SplayListForDB( valid_hash_ids )
             
-            splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
+            info = self._c.execute( 'SELECT size, mime FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ';' ).fetchall()
+            
+            num_files = len( valid_hash_ids )
+            delta_size = sum( ( size for ( size, mime ) in info ) )
+            num_thumbnails = sum( ( 1 for ( size, mime ) in info if mime in HC.MIMES_WITH_THUMBNAILS ) )
+            num_inbox = len( valid_hash_ids.intersection( self._inbox_hash_ids ) )
             
             service_info_updates = []
             
-            service_info_updates.append( ( -total_size, service_id, HC.SERVICE_INFO_TOTAL_SIZE ) )
+            service_info_updates.append( ( -delta_size, service_id, HC.SERVICE_INFO_TOTAL_SIZE ) )
             service_info_updates.append( ( -num_files, service_id, HC.SERVICE_INFO_NUM_FILES ) )
             service_info_updates.append( ( -num_thumbnails, service_id, HC.SERVICE_INFO_NUM_THUMBNAILS ) )
             service_info_updates.append( ( -num_inbox, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
@@ -1717,9 +1730,12 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
             
-            self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ' + str( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) + ';', ( service_id, ) )
+            if num_thumbnails > 0:
+                
+                self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ' + str( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) + ';', ( service_id, ) )
+                
             
-            self._c.execute( 'DELETE FROM files_info WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+            self._c.execute( 'DELETE FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
             self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
             
             self._UpdateAutocompleteTagCacheFromFiles( service_id, hash_ids, -1 )
@@ -1823,11 +1839,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        # perceptual_hashes and thumbs
-        
-        job_key.SetVariable( 'popup_text_1', prefix + 'deleting internal orphan information' )
-        
-        self._c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id NOT IN SELECT hash_id FROM files_info;' )
+        # thumbs
         
         job_key.SetVariable( 'popup_text_1', prefix + 'gathering thumbnail information' )
         
@@ -1837,7 +1849,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_id = self._GetHashId( hash )
             
-            result = self._c.execute( 'SELECT 1 FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            result = self._c.execute( 'SELECT 1 FROM current_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
             
             if result is None:
                 
@@ -1955,7 +1967,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        useful_thumbnail_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id != ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( self._trash_service_id, ) ) }
+        useful_thumbnail_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id != ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( self._trash_service_id, ) ) }
         
         deletable_thumbnail_hash_ids = hash_ids.difference( useful_thumbnail_hash_ids )
         
@@ -2256,9 +2268,9 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            table_phrase = 'mappings, files_info USING ( hash_id ) '
+            table_phrase = 'mappings, current_files USING ( hash_id ) '
             
-            predicates.append( 'files_info.service_id = ' + str( file_service_id ) )
+            predicates.append( 'current_files.service_id = ' + str( file_service_id ) )
             
         
         predicates_phrase = 'WHERE ' + ' AND '.join( predicates ) + ' AND '
@@ -2423,7 +2435,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                ( num_local, ) = self._c.execute( 'SELECT COUNT( * ) FROM files_info AS remote_files_info, files_info USING ( hash_id ) WHERE remote_files_info.service_id = ? AND files_info.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
+                ( num_local, ) = self._c.execute( 'SELECT COUNT( * ) FROM current_files AS remote_current_files, current_files USING ( hash_id ) WHERE remote_current_files.service_id = ? AND current_files.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
                 
                 num_not_local = num_everything - num_local
                 
@@ -2542,11 +2554,11 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            table_phrase = 'mappings, files_info USING ( hash_id )'
+            table_phrase = 'mappings, current_files USING ( hash_id )'
             
             file_service_id = self._GetServiceId( file_service_key )
             
-            predicates.append( 'files_info.service_id = ' + str( file_service_id ) )
+            predicates.append( 'current_files.service_id = ' + str( file_service_id ) )
             
         
         if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
@@ -2719,7 +2731,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 sql_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                 
-                query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
+                query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM current_files, files_info USING ( hash_id ) WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
                 
             else:
                 
@@ -2729,7 +2741,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
+                    query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings UNION SELECT hash_id FROM current_files;' ) }
                     
                 
                 if len( sql_predicates ) > 0:
@@ -2811,7 +2823,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_id = self._GetServiceId( service_key )
             
-            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
         for service_key in file_services_to_include_pending:
@@ -2825,7 +2837,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_id = self._GetServiceId( service_key )
             
-            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
         for service_key in file_services_to_exclude_pending:
@@ -2861,21 +2873,36 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_service_type == HC.LOCAL_FILE:
                 
-                if must_not_be_local: query_hash_ids = set()
+                if must_not_be_local:
+                    
+                    query_hash_ids = set()
+                    
                 
             else:
                 
-                local_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
+                local_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
                 
-                if must_be_local: query_hash_ids.intersection_update( local_hash_ids )
-                else: query_hash_ids.difference_update( local_hash_ids )
+                if must_be_local:
+                    
+                    query_hash_ids.intersection_update( local_hash_ids )
+                    
+                else:
+                    
+                    query_hash_ids.difference_update( local_hash_ids )
+                    
                 
             
         
         if must_be_inbox or must_be_archive:
             
-            if must_be_inbox: query_hash_ids.intersection_update( self._inbox_hash_ids )
-            elif must_be_archive: query_hash_ids.difference_update( self._inbox_hash_ids )
+            if must_be_inbox:
+                
+                query_hash_ids.intersection_update( self._inbox_hash_ids )
+                
+            elif must_be_archive:
+                
+                query_hash_ids.difference_update( self._inbox_hash_ids )
+                
             
         
         #
@@ -2997,11 +3024,11 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            table_phrase = 'mappings, files_info USING ( hash_id )'
+            table_phrase = 'mappings, current_files USING ( hash_id )'
             
             file_service_id = self._GetServiceId( file_service_key )
             
-            predicates.append( 'files_info.service_id = ' + str( file_service_id ) )
+            predicates.append( 'current_files.service_id = ' + str( file_service_id ) )
             
         
         if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
@@ -3051,11 +3078,11 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            table_phrase = 'mappings, files_info USING ( hash_id )'
+            table_phrase = 'mappings, current_files USING ( hash_id )'
             
             file_service_id = self._GetServiceId( file_service_key )
             
-            predicates.append( 'files_info.service_id = ' + str( file_service_id ) )
+            predicates.append( 'current_files.service_id = ' + str( file_service_id ) )
             
         
         if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
@@ -3130,7 +3157,7 @@ class DB( HydrusDB.HydrusDB ):
             return ( CC.STATUS_DELETED, None )
             
         
-        result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
+        result = self._c.execute( 'SELECT 1 FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
         
         if result is not None:
             
@@ -3228,35 +3255,25 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._GetServiceId( service_key )
         
+        splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
+        
         # get first detailed results
         
-        if service_key == CC.COMBINED_FILE_SERVICE_KEY:
+        hash_ids_to_info = { hash_id : ( size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._c.execute( 'SELECT * FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ';' ) }
+        
+        # this is the bit to improve later--where we'll fold individual file service timestamps into the locations manager
+        # but for now, we'll merge, preferring the local timestamp
+        
+        hash_ids_to_timestamps = { hash_id : timestamp for ( hash_id, timestamp ) in self._c.execute( 'SELECT hash_id, timestamp FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( self._local_file_service_id, ) ) }
+        
+        if len( hash_ids_to_timestamps ) < len( hash_ids ):
             
-            all_services_results = self._c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ).fetchall()
+            missing_hash_ids = { hash_id for hash_id in hash_ids if hash_id not in hash_ids_to_timestamps }
             
-            hash_ids_i_have_info_for = set()
+            hash_ids_to_timestamps.update( { hash_id : timestamp for ( hash_id, timestamp ) in self._c.execute( 'SELECT hash_id, timestamp FROM current_files WHERE hash_id IN ' + HydrusData.SplayListForDB( missing_hash_ids ) + ';' ) } )
             
-            results = []
-            
-            for result in all_services_results:
-                
-                hash_id = result[0]
-                
-                if hash_id not in hash_ids_i_have_info_for:
-                    
-                    hash_ids_i_have_info_for.add( hash_id )
-                    
-                    results.append( result )
-                    
-                
-            
-            results.extend( [ ( hash_id, None, HC.APPLICATION_UNKNOWN, None, None, None, None, None, None ) for hash_id in hash_ids if hash_id not in hash_ids_i_have_info_for ] )
-            
-        else: results = self._c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ).fetchall()
         
         # get tagged results
-        
-        splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
         hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
         
@@ -3264,9 +3281,12 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_to_petitioned_tags = HydrusData.BuildKeyToListDict( [ ( hash_id, ( service_id, ( HC.PETITIONED, HydrusTags.CombineTag( namespace, tag ) ) ) ) for ( hash_id, service_id, namespace, tag ) in self._c.execute( 'SELECT hash_id, service_id, namespace, tag FROM namespaces, ( tags, mapping_petitions USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
         
-        for ( hash_id, tag_data ) in hash_ids_to_petitioned_tags.items(): hash_ids_to_tags[ hash_id ].extend( tag_data )
+        for ( hash_id, tag_data ) in hash_ids_to_petitioned_tags.items():
+            
+            hash_ids_to_tags[ hash_id ].extend( tag_data )
+            
         
-        hash_ids_to_current_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
+        hash_ids_to_current_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM current_files WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
         hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
@@ -3276,15 +3296,13 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( [ ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._c.execute( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
         
-        # do current and pending remote ratings here
-        
         service_ids_to_service_keys = { service_id : service_key for ( service_id, service_key ) in self._c.execute( 'SELECT service_id, service_key FROM services;' ) }
         
         # build it
         
         media_results = []
         
-        for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in results:
+        for hash_id in hash_ids:
             
             hash = hash_ids_to_hashes[ hash_id ]
             
@@ -3322,6 +3340,24 @@ class DB( HydrusDB.HydrusDB ):
             remote_ratings = {}
             
             #
+            
+            if hash_id in hash_ids_to_info:
+                
+                ( size, mime, width, height, duration, num_frames, num_words ) = hash_ids_to_info[ hash_id ]
+                
+            else:
+                
+                ( size, mime, width, height, duration, num_frames, num_words ) = ( None, HC.APPLICATION_UNKNOWN, None, None, None, None, None )
+                
+            
+            if hash_id in hash_ids_to_timestamps:
+                
+                timestamp = hash_ids_to_timestamps[ hash_id ]
+                
+            else:
+                
+                timestamp = None
+                
             
             media_results.append( ClientMedia.MediaResult( ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_keys_cdpp, local_ratings, remote_ratings ) ) )
             
@@ -3758,15 +3794,15 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if info_type in ( HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES ): save_it = False
                     
-                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_TOTAL_SIZE: result = self._c.execute( 'SELECT SUM( size ) FROM files_info WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM current_files WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_TOTAL_SIZE: result = self._c.execute( 'SELECT SUM( size ) FROM current_files, files_info USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_DELETED_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM deleted_files WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PENDING_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM file_petitions where service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = self._c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = self._c.execute( 'SELECT COUNT( * ) FROM current_files, files_info USING ( hash_id ) WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL:
                         
-                        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
+                        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files, files_info USING ( hash_id ) WHERE mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
                         
                         thumbnails_i_should_have = self._GetHashes( hash_ids )
                         
@@ -3784,7 +3820,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         result = ( num_local, )
                         
-                    elif info_type == HC.SERVICE_INFO_NUM_INBOX: result = self._c.execute( 'SELECT COUNT( * ) FROM file_inbox, files_info USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_INBOX: result = self._c.execute( 'SELECT COUNT( * ) FROM file_inbox, current_files USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
                 elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
@@ -3998,7 +4034,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._GetServiceId( service_key )
         
-        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
+        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files, files_info USING ( hash_id ) WHERE mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
         
         hashes = set( self._GetHashes( hash_ids ) )
         
@@ -4177,7 +4213,9 @@ class DB( HydrusDB.HydrusDB ):
                 self._AddThumbnails( [ ( hash, thumbnail ) ] )
                 
             
-            self._AddFiles( self._local_file_service_id, [ ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) ] )
+            self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
+            
+            self._AddFiles( self._local_file_service_id, [ ( hash_id, timestamp ) ] )
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
             
@@ -4231,7 +4269,7 @@ class DB( HydrusDB.HydrusDB ):
             
             splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
             
-            updates = self._c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ' GROUP BY service_id;' ).fetchall()
+            updates = self._c.execute( 'SELECT service_id, COUNT( * ) FROM current_files WHERE hash_id IN ' + splayed_hash_ids + ' GROUP BY service_id;' ).fetchall()
             
             self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', [ ( count, service_id, HC.SERVICE_INFO_NUM_INBOX ) for ( service_id, count ) in updates ] )
             
@@ -4286,7 +4324,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ManageDBError( self, job, e ):
         
-        if type( e ) == MemoryError: HydrusData.ShowText( 'The client is running out of memory! Restart it ASAP!' )
+        if isinstance( e, MemoryError ):
+            
+            HydrusData.ShowText( 'The client is running out of memory! Restart it ASAP!' )
+            
         
         ( etype, value, tb ) = sys.exc_info()
         
@@ -4441,7 +4482,9 @@ class DB( HydrusDB.HydrusDB ):
                             
                             hash_id = self._GetHashId( hash )
                             
-                            self._AddFiles( service_id, [ ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) ] )
+                            self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ] )
+                            
+                            self._AddFiles( service_id, [ ( hash_id, timestamp ) ] )
                             
                         elif action == HC.CONTENT_UPDATE_PEND:
                             
@@ -5347,7 +5390,7 @@ class DB( HydrusDB.HydrusDB ):
         
         splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
-        rows = self._c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( self._trash_service_id, ) ).fetchall()
+        rows = self._c.execute( 'SELECT hash_id, timestamp FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( self._trash_service_id, ) ).fetchall()
         
         if len( rows ) > 0:
             
@@ -5373,32 +5416,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 136:
-            
-            result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( '', ) ).fetchone()
-            
-            if result is not None:
-                
-                ( tag_id, ) = result
-                
-                self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
-                self._c.execute( 'DELETE FROM mapping_petitions WHERE tag_id = ?;', ( tag_id, ) )
-                self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_id = ?;', ( tag_id, ) )
-                self._c.execute( 'DELETE FROM existing_tags WHERE tag_id = ?;', ( tag_id, ) )
-                self._DeleteServiceInfo()
-                
-            
-        
-        if version == 139:
-            
-            self._combined_tag_service_id = self._GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
-            self._local_file_service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
-            
-            self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id != ?;', ( self._combined_tag_service_id, ) )
-            self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE file_service_id != ?;', ( self._local_file_service_id, ) )
-            self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE current_count < ?;', ( 5, ) )
-            
         
         if version == 140:
             
@@ -5486,7 +5503,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for ( modifier, key, service_key, data ) in actions:
                     
-                    if type( service_key ) == ClientData.ClientServiceIdentifier: service_key = service_key.GetServiceKey()
+                    if isinstance( service_key, ClientData.ClientServiceIdentifier ): service_key = service_key.GetServiceKey()
                     
                     action = ( service_key, data )
                     
@@ -6089,7 +6106,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
                         
-                    elif type( name ) == int:
+                    elif isinstance( name, int ):
                         
                         site_type = name
                         
@@ -6236,6 +6253,44 @@ class DB( HydrusDB.HydrusDB ):
         if version == 188:
             
             self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
+            
+        
+        if version == 189:
+            
+            self._controller.pub( 'splash_set_status_text', 'updating file tables' )
+            
+            #
+            
+            self._c.execute( 'DROP INDEX file_petitions_hash_id_index;' )
+            
+            self._c.execute( 'ALTER TABLE file_petitions RENAME TO file_petitions_old;' )
+            
+            self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ) );' )
+            self._c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
+            
+            self._c.execute( 'INSERT INTO file_petitions SELECT * FROM file_petitions_old;' )
+            
+            self._c.execute( 'DROP TABLE file_petitions_old;' )
+            
+            #
+            
+            self._c.execute( 'ALTER TABLE files_info RENAME TO files_info_old;' )
+            
+            self._c.execute( 'CREATE TABLE current_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+            self._c.execute( 'CREATE INDEX current_files_timestamp ON current_files ( timestamp );' )
+            
+            self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER );' )
+            self._c.execute( 'CREATE INDEX files_info_size ON files_info ( size );' )
+            self._c.execute( 'CREATE INDEX files_info_mime ON files_info ( mime );' )
+            self._c.execute( 'CREATE INDEX files_info_width ON files_info ( width );' )
+            self._c.execute( 'CREATE INDEX files_info_height ON files_info ( height );' )
+            self._c.execute( 'CREATE INDEX files_info_duration ON files_info ( duration );' )
+            self._c.execute( 'CREATE INDEX files_info_num_frames ON files_info ( num_frames );' )
+            
+            self._c.execute( 'INSERT INTO current_files SELECT service_id, hash_id, timestamp FROM files_info_old;' )
+            self._c.execute( 'INSERT OR IGNORE INTO files_info SELECT hash_id, size, mime, width, height, duration, num_frames, num_words FROM files_info_old;' )
+            
+            self._c.execute( 'DROP TABLE files_info_old;' )
             
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
@@ -6455,10 +6510,8 @@ class DB( HydrusDB.HydrusDB ):
         for ( namespace_id, tag_id, hash_ids ) in pending_mappings_ids:
             
             num_raw_adds = InsertMappings( namespace_id, tag_id, hash_ids, HC.PENDING )
-            num_deleted_petitions = DeletePetitions( namespace_id, tag_id, hash_ids )
             
             change_in_num_pending_mappings += num_raw_adds
-            change_in_num_petitioned_mappings -= num_deleted_petitions
             
         
         for ( namespace_id, tag_id, hash_ids ) in pending_rescinded_mappings_ids:
@@ -6769,7 +6822,9 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'VACUUM' )
             
-        except sqlite3.OperationalError:
+        except sqlite3.OperationalError as e:
+            
+            HydrusData.ShowException( e )
             
             HC.options[ 'maintenance_vacuum_period' ] = None
             

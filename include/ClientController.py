@@ -45,6 +45,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._last_mouse_position = None
         self._menu_open = False
+        self._previously_idle = False
         
     
     def _InitDB( self ):
@@ -275,48 +276,68 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def CreateSplash( self ):
+        
+        try:
+            
+            self._splash = ClientGUI.FrameSplash( self )
+            
+        except:
+            
+            HydrusData.Print( 'There was an error trying to start the splash screen!' )
+            
+            HydrusData.Print( traceback.format_exc() )
+            
+            raise
+            
+        
+    
     def CurrentlyIdle( self ):
+        
+        if HydrusGlobals.force_idle_mode:
+            
+            return True
+            
         
         idle_normal = self._options[ 'idle_normal' ]
         idle_period = self._options[ 'idle_period' ]
         idle_mouse_period = self._options[ 'idle_mouse_period' ]
         
-        possibly_idle = False
-        definitely_not_idle = False
-        
         if idle_normal:
             
-            possibly_idle = True
+            currently_idle = True
             
-        
-        if idle_period is not None:
-            
-            if not HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + idle_period ):
+            if idle_period is not None:
                 
-                definitely_not_idle = True
-                
-            
-        
-        if idle_mouse_period is not None:
-            
-            if not HydrusData.TimeHasPassed( self._timestamps[ 'last_mouse_action' ] + idle_mouse_period ):
-                
-                definitely_not_idle = True
+                if not HydrusData.TimeHasPassed( self._timestamps[ 'last_user_action' ] + idle_period ):
+                    
+                    currently_idle = False
+                    
                 
             
-        
-        if definitely_not_idle:
-            
-            return False
-            
-        elif possibly_idle:
-            
-            return True
+            if idle_mouse_period is not None:
+                
+                if not HydrusData.TimeHasPassed( self._timestamps[ 'last_mouse_action' ] + idle_mouse_period ):
+                    
+                    currently_idle = False
+                    
+                
             
         else:
             
-            return False
+            currently_idle = False
             
+        
+        turning_idle = not self._previously_idle and currently_idle
+        
+        self._previously_idle = currently_idle
+        
+        if turning_idle:
+            
+            self.pub( 'wake_daemons' )
+            
+        
+        return currently_idle
         
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
@@ -324,6 +345,8 @@ class Controller( HydrusController.HydrusController ):
     def DoIdleShutdownWork( self ):
         
         stop_time = HydrusData.GetNow() + ( self._options[ 'idle_shutdown_max_minutes' ] * 60 )
+        
+        self._client_files_manager.Rebalance( partial = False, stop_time = stop_time )
         
         self.MaintainDB()
         
@@ -354,51 +377,53 @@ class Controller( HydrusController.HydrusController ):
             
             try:
                 
-                self._gui.TestAbleToClose()
+                self.CreateSplash()
                 
-            except HydrusExceptions.PermissionException:
+                idle_shutdown_action = self._options[ 'idle_shutdown' ]
                 
-                return
+                if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
+                    
+                    if self.ThereIsIdleShutdownWorkDue():
+                        
+                        if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
+                            
+                            text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( self._options[ 'idle_shutdown_max_minutes' ] ) + ' minutes\' maintenance work?'
+                            
+                            with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
+                                
+                                if dlg_yn.ShowModal() == wx.ID_YES:
+                                    
+                                    HydrusGlobals.do_idle_shutdown_work = True
+                                    
+                                
+                            
+                        else:
+                            
+                            HydrusGlobals.do_idle_shutdown_work = True
+                            
+                        
+                    
                 
-            
-            try:
+                exit_thread = threading.Thread( target = self.THREADExitEverything, name = 'Application Exit Thread' )
                 
-                self._splash = ClientGUI.FrameSplash( self )
+                exit_thread.start()
                 
-            except Exception as e:
+            except:
                 
-                HydrusData.Print( 'There was an error trying to start the splash screen!' )
+                self.pub( 'splash_destroy' )
                 
-                HydrusData.Print( traceback.format_exc() )
+                HydrusData.DebugPrint( traceback.format_exc() )
                 
-            
-            exit_thread = threading.Thread( target = self.THREADExitEverything, name = 'Application Exit Thread' )
-            
-            exit_thread.start()
+                HydrusGlobals.emergency_exit = True
+                
+                self.Exit()
+                
             
         
     
     def ForceIdle( self ):
         
-        if 'last_user_action' in self._timestamps:
-            
-            del self._timestamps[ 'last_user_action' ]
-            
-        
-        if 'last_mouse_action' in self._timestamps:
-            
-            del self._timestamps[ 'last_mouse_action' ]
-            
-        
-        self._last_mouse_position = None
-        
-        self.pub( 'wake_daemons' )
-        self.pub( 'refresh_status' )
-        
-    
-    def ForceUnbusy( self ):
-        
-        self._system_busy = False
+        HydrusGlobals.force_idle_mode = not HydrusGlobals.force_idle_mode
         
         self.pub( 'wake_daemons' )
         self.pub( 'refresh_status' )
@@ -835,18 +860,7 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.Print( 'booting controller...' )
         
-        try:
-            
-            self._splash = ClientGUI.FrameSplash( self )
-            
-        except:
-            
-            HydrusData.Print( 'There was an error trying to start the splash screen!' )
-            
-            HydrusData.Print( traceback.format_exc() )
-            
-            raise
-            
+        self.CreateSplash()
         
         boot_thread = threading.Thread( target = self.THREADBootEverything, name = 'Application Boot Thread' )
         
@@ -859,63 +873,19 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownView( self ):
         
-        if HydrusGlobals.emergency_exit:
-            
-            self._gui.Shutdown()
-            
-            HydrusController.HydrusController.ShutdownView( self )
-            
-        else:
-            
-            self.CallBlockingToWx( self._gui.Shutdown )
+        if not HydrusGlobals.emergency_exit:
             
             self.pub( 'splash_set_status_text', 'waiting for daemons to exit' )
             
             self._ShutdownDaemons()
             
-            idle_shutdown_action = self._options[ 'idle_shutdown' ]
-            
-            if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
+            if HydrusGlobals.do_idle_shutdown_work:
                 
-                self.pub( 'splash_set_status_text', 'running maintenance' )
-                
-                self.ResetIdleTimer()
-                
-                do_it = True
-                
-                if CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
-                    
-                    if self.ThereIsIdleShutdownWorkDue():
-                        
-                        def wx_code():
-                            
-                            text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( self._options[ 'idle_shutdown_max_minutes' ] ) + ' minutes\' maintenance work?'
-                            
-                            with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
-                                
-                                if dlg_yn.ShowModal() == wx.ID_YES:
-                                    
-                                    return True
-                                    
-                                else:
-                                    
-                                    return False
-                                    
-                                
-                            
-                        
-                        do_it = self.CallBlockingToWx( wx_code )
-                        
-                    
-                
-                if do_it:
-                    
-                    self.DoIdleShutdownWork()
-                    
+                self.DoIdleShutdownWork()
                 
             
-            HydrusController.HydrusController.ShutdownView( self )
-            
+        
+        HydrusController.HydrusController.ShutdownView( self )
         
     
     def StartFileQuery( self, query_key, search_context ):
@@ -924,7 +894,12 @@ class Controller( HydrusController.HydrusController ):
         
     
     def SystemBusy( self ):
-    
+        
+        if HydrusGlobals.force_idle_mode:
+            
+            return False
+            
+        
         max_cpu = self._options[ 'idle_cpu_max' ]
         
         if max_cpu is None:
@@ -1038,16 +1013,24 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.Print( e )
             
-        except:
+            HydrusGlobals.emergency_exit = True
+            
+            self.Exit()
+            
+        except Exception as e:
             
             text = 'A serious error occured while trying to start the program. Its traceback will be shown next. It should have also been written to client.log.'
             
-            traceback.print_exc()
-            
             HydrusData.DebugPrint( text )
             
-            wx.CallAfter( wx.MessageBox, text )
+            traceback.print_exc()
+            
             wx.CallAfter( wx.MessageBox, traceback.format_exc() )
+            wx.CallAfter( wx.MessageBox, text )
+            
+            HydrusGlobals.emergency_exit = True
+            
+            self.Exit()
             
         finally:
             
@@ -1073,7 +1056,7 @@ class Controller( HydrusController.HydrusController ):
             
             traceback.print_exc()
             
-            text = 'A serious error occured while trying to exit the program. Its traceback will be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
+            text = 'A serious error occured while trying to exit the program. Its traceback may be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
             
             HydrusData.DebugPrint( text )
             

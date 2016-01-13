@@ -314,25 +314,49 @@ class MediaList( object ):
         
         self._hashes = set()
         
-        for media in self._collected_media: self._hashes.update( media.GetHashes() )
-        for media in self._singleton_media: self._hashes.add( media.GetHash() )
+        for media in self._collected_media:
+            
+            self._hashes.update( media.GetHashes() )
+            
+        
+        for media in self._singleton_media:
+            
+            self._hashes.add( media.GetHash() )
+            
         
     
     def _RemoveMedia( self, singleton_media, collected_media ):
         
-        if type( singleton_media ) != set: singleton_media = set( singleton_media )
-        if type( collected_media ) != set: collected_media = set( collected_media )
+        if not isinstance( singleton_media, set ):
+            
+            singleton_media = set( singleton_media )
+            
+        
+        if not isinstance( collected_media, set ):
+            
+            collected_media = set( collected_media )
+            
         
         self._singleton_media.difference_update( singleton_media )
         self._collected_media.difference_update( collected_media )
         
         keys_to_remove = [ key for ( key, media ) in self._collect_map_singletons if media in singleton_media ]
-        for key in keys_to_remove: del self._collect_map_singletons[ key ]
+        
+        for key in keys_to_remove:
+            
+            del self._collect_map_singletons[ key ]
+            
         
         keys_to_remove = [ key for ( key, media ) in self._collect_map_collected if media in collected_media ]
-        for key in keys_to_remove: del self._collect_map_collected[ key ]
+        
+        for key in keys_to_remove:
+            
+            del self._collect_map_collected[ key ]
+            
         
         self._sorted_media.remove_items( singleton_media.union( collected_media ) )
+        
+        self._RecalcHashes()
         
     
     def AddMedia( self, new_media, append = True ):
@@ -570,8 +594,6 @@ class MediaList( object ):
                     
                     self._RemoveMedia( affected_singleton_media, affected_collected_media )
                     
-                    self._RecalcHashes()
-                    
                 
             
         
@@ -603,8 +625,6 @@ class MediaList( object ):
         if service_key == self._file_service_key:
             
             self._RemoveMedia( self._singleton_media, self._collected_media )
-            
-            self._RecalcHashes()
             
         else:
             
@@ -740,6 +760,8 @@ class MediaCollection( MediaList, Media ):
         
     
     def _RecalcInternals( self ):
+        
+        self._RecalcHashes()
         
         self._archive = True in ( media.HasArchive() for media in self._sorted_media )
         self._inbox = True in ( media.HasInbox() for media in self._sorted_media )

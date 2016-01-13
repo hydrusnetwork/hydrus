@@ -604,7 +604,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'BEGIN IMMEDIATE' )
         
         self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-        self._c.execute( 'PRAGMA journal_mode = WAL;' )
         
         now = HydrusData.GetNow()
         
@@ -2302,131 +2301,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateDB( self, version ):
         
-        if version == 131:
-            
-            accounts_info = self._c.execute( 'SELECT * FROM accounts;' ).fetchall()
-            account_map_info = self._c.execute( 'SELECT * FROM account_map;' ).fetchall()
-            account_types_info = self._c.execute( 'SELECT * FROM account_types;' ).fetchall()
-            account_type_map_info = self._c.execute( 'SELECT * FROM account_type_map;' ).fetchall()
-            
-            accounts_dict = { account_id : ( account_key, hashed_access_key ) for ( account_id, account_key, hashed_access_key ) in accounts_info }
-            account_types_dict = { account_type_id : ( title, account_type ) for ( account_type_id, title, account_type ) in account_types_info }
-            
-            #
-            
-            self._c.execute( 'DROP TABLE accounts;' )
-            self._c.execute( 'DROP TABLE account_map;' )
-            self._c.execute( 'DROP TABLE account_types;' )
-            self._c.execute( 'DROP TABLE account_type_map;' )
-            
-            self._c.execute( 'CREATE TABLE accounts( account_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_key BLOB_BYTES, hashed_access_key BLOB_BYTES, account_type_id INTEGER, created INTEGER, expires INTEGER, used_bytes INTEGER, used_requests INTEGER );' )
-            self._c.execute( 'CREATE UNIQUE INDEX accounts_account_key_index ON accounts ( account_key );' )
-            self._c.execute( 'CREATE UNIQUE INDEX accounts_hashed_access_key_index ON accounts ( hashed_access_key );' )
-            self._c.execute( 'CREATE UNIQUE INDEX accounts_service_id_account_id_index ON accounts ( service_id, account_id );' )
-            self._c.execute( 'CREATE INDEX accounts_service_id_account_type_id_index ON accounts ( service_id, account_type_id );' )
-            
-            self._c.execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, title TEXT, account_type TEXT_YAML );' )
-            self._c.execute( 'CREATE UNIQUE INDEX account_types_service_id_account_type_id_index ON account_types ( service_id, account_type_id );' )
-            
-            #
-            
-            account_log_text = ''
-            
-            existing_account_ids = set()
-            existing_account_type_ids = set()
-            
-            next_account_id = max( accounts_dict.keys() ) + 1
-            next_account_type_id = max( account_types_dict.keys() ) + 1
-            
-            account_tables = [ 'bans', 'contacts', 'file_petitions', 'mapping_petitions', 'mappings', 'messages', 'message_statuses', 'messaging_sessions', 'sessions', 'tag_parents', 'tag_siblings' ]
-            account_type_tables = [ 'accounts', 'registration_keys' ]
-            
-            service_dict = { service_id : options[ 'port' ] for ( service_id, options ) in self._c.execute( 'SELECT service_id, options FROM services;' ) }
-            
-            # have to do accounts first because account_types may update it!
-            
-            for ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) in account_map_info:
-                
-                ( account_key, hashed_access_key ) = accounts_dict[ account_id ]
-                
-                if account_id in existing_account_ids:
-                    
-                    account_key = HydrusData.GenerateKey()
-                    access_key = HydrusData.GenerateKey()
-                    
-                    account_log_text += 'The account at port ' + str( service_dict[ service_id ] ) + ' now uses access key: ' + access_key.encode( 'hex' ) + os.linesep
-                    
-                    hashed_access_key = hashlib.sha256( access_key ).digest()
-                    
-                    new_account_id = next_account_id
-                    
-                    next_account_id += 1
-                    
-                    for table_name in account_tables:
-                        
-                        self._c.execute( 'UPDATE ' + table_name + ' SET account_id = ? WHERE service_id = ? AND account_id = ?;', ( new_account_id, service_id, account_id ) )
-                        
-                    
-                    self._c.execute( 'UPDATE bans SET admin_account_id = ? WHERE service_id = ? AND admin_account_id = ?;', ( new_account_id, service_id, account_id ) )
-                    
-                    account_id = new_account_id
-                    
-                
-                existing_account_ids.add( account_id )
-                
-                self._c.execute( 'INSERT INTO accounts ( account_id, service_id, account_key, hashed_access_key, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );', ( account_id, service_id, sqlite3.Binary( account_key ), sqlite3.Binary( hashed_access_key ), account_type_id, created, expires, used_bytes, used_requests ) )
-                
-            
-            if len( account_log_text ) > 0:
-                
-                with open( os.path.join( HC.BASE_DIR, 'update to v132 new access keys.txt' ), 'wb' ) as f:
-                    
-                    f.write( HydrusData.ToByteString( account_log_text ) )
-                    
-                
-            
-            for ( service_id, account_type_id ) in account_type_map_info:
-                
-                ( title, account_type ) = account_types_dict[ account_type_id ]
-                
-                if account_type_id in existing_account_type_ids:
-                    
-                    new_account_type_id = next_account_type_id
-                    
-                    next_account_type_id += 1
-                    
-                    for table_name in account_type_tables:
-                        
-                        self._c.execute( 'UPDATE ' + table_name + ' SET account_type_id = ? WHERE service_id = ? AND account_type_id = ?;', ( new_account_type_id, service_id, account_type_id ) )
-                        
-                    
-                    account_type_id = new_account_type_id
-                    
-                
-                existing_account_type_ids.add( account_type_id )
-                
-                self._c.execute( 'INSERT INTO account_types ( account_type_id, service_id, title, account_type ) VALUES ( ?, ?, ?, ? );', ( account_type_id, service_id, title, account_type ) )
-                
-            
-        
-        if version == 132:
-            
-            dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR )
-            
-            for dir in dirs:
-                
-                for prefix in HydrusData.IterateHexPrefixes():
-                    
-                    new_dir = os.path.join( dir, prefix )
-                    
-                    if not os.path.exists( new_dir ):
-                        
-                        os.makedirs( new_dir )
-                        
-                    
-                
-            
-        
         if version == 155:
             
             results = self._c.execute( 'SELECT service_id, account_type_id, account_type FROM account_types;' ).fetchall()
@@ -2477,7 +2351,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     ( dump_type, dump_version, dump ) = json.loads( inefficient_string )
                     
-                    if type( dump ) not in ( unicode, str ):
+                    if not isinstance( dump, ( unicode, str ) ):
                         
                         continue
                         

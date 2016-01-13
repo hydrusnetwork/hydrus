@@ -300,7 +300,7 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         
         mimes = system_predicates[ 'mime' ]
         
-        if type( mimes ) == int:
+        if isinstance( mimes, int ):
             
             mimes = ( mimes, )
             

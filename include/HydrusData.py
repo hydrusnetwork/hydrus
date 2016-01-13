@@ -938,11 +938,11 @@ def TimeUntil( timestamp ):
     
 def ToByteString( text_producing_object ):
     
-    if type( text_producing_object ) == unicode:
+    if isinstance( text_producing_object, unicode ):
         
         return text_producing_object.encode( 'utf-8' )
         
-    elif type( text_producing_object ) == str:
+    elif isinstance( text_producing_object, str ):
         
         return text_producing_object
         
@@ -960,7 +960,7 @@ def ToByteString( text_producing_object ):
     
 def ToUnicode( text_producing_object ):
     
-    if type( text_producing_object ) in ( str, unicode, bs4.element.NavigableString ):
+    if isinstance( text_producing_object, ( str, unicode, bs4.element.NavigableString ) ):
         
         text = text_producing_object
         
@@ -976,7 +976,7 @@ def ToUnicode( text_producing_object ):
             
         
     
-    if type( text ) != unicode:
+    if not isinstance( text, unicode ):
         
         try:
             
@@ -1626,22 +1626,46 @@ class ContentUpdate( object ):
                 
                 hashes = set( ( hash, ) )
                 
-            elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ): hashes = self._row
-            elif self._action == HC.CONTENT_UPDATE_PETITION: ( hashes, reason ) = self._row
+            elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
+                
+                hashes = self._row
+                
+            elif self._action == HC.CONTENT_UPDATE_PETITION:
+                
+                ( hashes, reason ) = self._row
+                
             
         elif self._data_type == HC.CONTENT_TYPE_MAPPINGS:
             
-            if self._action == HC.CONTENT_UPDATE_ADVANCED: hashes = set()
-            elif self._action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = self._row
-            else: ( tag, hashes ) = self._row
+            if self._action == HC.CONTENT_UPDATE_ADVANCED:
+                
+                hashes = set()
+                
+            elif self._action == HC.CONTENT_UPDATE_PETITION:
+                
+                ( tag, hashes, reason ) = self._row
+                
+            else:
+                
+                ( tag, hashes ) = self._row
+                
             
-        elif self._data_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ): hashes = set()
+        elif self._data_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
+            
+            hashes = set()
+            
         elif self._data_type == HC.CONTENT_TYPE_RATINGS:
             
-            if self._action == HC.CONTENT_UPDATE_ADD: ( rating, hashes ) = self._row
+            if self._action == HC.CONTENT_UPDATE_ADD:
+                
+                ( rating, hashes ) = self._row
+                
             
         
-        if type( hashes ) != set: hashes = set( hashes )
+        if not isinstance( hashes, set ):
+            
+            hashes = set( hashes )
+            
         
         return hashes
         

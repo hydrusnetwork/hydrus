@@ -155,7 +155,7 @@ class AutoCompleteDropdown( wx.Panel ):
         # There's a big bug in wx where FRAME_FLOAT_ON_PARENT Frames don't get passed their mouse events if their parent is a Dialog jej
         # I think it is something to do with the initialisation order; if the frame is init'ed before the ShowModal call, but whatever.
         
-        if issubclass( type( tlp ), wx.Dialog ) or HC.options[ 'always_embed_autocompletes' ]: self._float_mode = False
+        if isinstance( tlp, wx.Dialog ) or HC.options[ 'always_embed_autocompletes' ]: self._float_mode = False
         else: self._float_mode = True
         
         self._text_ctrl = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
@@ -241,12 +241,15 @@ class AutoCompleteDropdown( wx.Panel ):
                     
                     parent = parent.GetParent()
                     
-                    if issubclass( type( parent ), wx.ScrolledWindow ):
+                    if isinstance( parent, wx.ScrolledWindow ):
                         
                         parent.Bind( wx.EVT_SCROLLWIN, self.EventMove )
                         
                     
-                except: break
+                except:
+                    
+                    break
+                    
                 
             
         
@@ -436,7 +439,11 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif self._intercept_key_events:
             
-            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
+            if event.KeyCode in ( ord( 'A' ), ord( 'a' ) ) and event.CmdDown():
+                
+                event.Skip()
+                
+            elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
                 
                 self._TakeResponsibilityForEnter()
                 
@@ -563,6 +570,14 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
     
+    def RefreshList( self ):
+        
+        self._cache_text = ''
+        self._current_namespace = ''
+        
+        self._UpdateList()
+        
+    
     def TIMEREventDropdownHide( self, event ):
         
         try:
@@ -638,7 +653,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
-    def _ChangeFileRepository( self, file_service_key ):
+    def _ChangeFileService( self, file_service_key ):
 
         self._file_service_key = file_service_key
         
@@ -648,8 +663,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._file_repo_button.SetLabel( name )
         
+        wx.CallAfter( self.RefreshList )
+        
     
-    def _ChangeTagRepository( self, tag_service_key ):
+    def _ChangeTagService( self, tag_service_key ):
 
         self._tag_service_key = tag_service_key
         
@@ -658,6 +675,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         name = tag_service.GetName()
         
         self._tag_repo_button.SetLabel( name )
+        
+        self._cache_text = ''
+        self._current_namespace = ''
+        
+        wx.CallAfter( self.RefreshList )
         
     
     def _InitDropDownList( self ): return ListBoxTagsAutocompleteDropdown( self._dropdown_window, self.BroadcastChoices, min_height = self._list_height )
@@ -689,7 +711,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_repository', service.GetServiceKey() ), service.GetName() )
+        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_service', service.GetServiceKey() ), service.GetName() )
         
         HydrusGlobals.client_controller.PopupMenu( self._file_repo_button, menu )
         
@@ -702,8 +724,14 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
             ( command, data ) = action
             
-            if command == 'change_file_repository': self._ChangeFileRepository( data )
-            elif command == 'change_tag_repository': self._ChangeTagRepository( data )
+            if command == 'change_file_service':
+                
+                self._ChangeFileService( data )
+                
+            elif command == 'change_tag_service':
+                
+                self._ChangeTagService( data )
+                
             else:
                 
                 event.Skip()
@@ -729,26 +757,28 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_tag_repository', service.GetServiceKey() ), service.GetName() )
+        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_tag_service', service.GetServiceKey() ), service.GetName() )
         
         HydrusGlobals.client_controller.PopupMenu( self._tag_repo_button, menu )
         
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, page_key, file_service_key, tag_service_key, media_callable = None, include_current = True, include_pending = True, synchronised = True, include_unusual_predicate_types = True ):
+    def __init__( self, parent, page_key, file_search_context, media_callable = None, synchronised = True, include_unusual_predicate_types = True ):
+        
+        file_service_key = file_search_context.GetFileServiceKey()
+        tag_service_key = file_search_context.GetTagServiceKey()
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
         
         self._media_callable = media_callable
         self._page_key = page_key
         
-        self._include_current = include_current
-        self._include_pending = include_pending
+        self._file_search_context = file_search_context
         
-        self._include_current_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_current', on_label = 'include current tags', off_label = 'exclude current tags', start_on = self._include_current )
+        self._include_current_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_current', on_label = 'include current tags', off_label = 'exclude current tags', start_on = file_search_context.IncludeCurrentTags() )
         self._include_current_tags.SetToolTipString( 'select whether to include current tags in the search' )
-        self._include_pending_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_pending', on_label = 'include pending tags', off_label = 'exclude pending tags', start_on = self._include_pending )
+        self._include_pending_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_pending', on_label = 'include pending tags', off_label = 'exclude pending tags', start_on = file_search_context.IncludePendingTags() )
         self._include_pending_tags.SetToolTipString( 'select whether to include pending tags in the search' )
         
         self._synchronised = OnOffButton( self._dropdown_window, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- tag counts may be inaccurate', start_on = synchronised )
@@ -807,18 +837,26 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._BroadcastChoices( { entry_predicate } )
         
     
-    def _ChangeFileRepository( self, file_service_key ):
+    def _ChangeFileService( self, file_service_key ):
         
-        AutoCompleteDropdownTags._ChangeFileRepository( self, file_service_key )
+        AutoCompleteDropdownTags._ChangeFileService( self, file_service_key )
         
-        HydrusGlobals.client_controller.pub( 'change_file_repository', self._page_key, self._file_service_key )
+        self._file_search_context.SetFileServiceKey( file_service_key )
+        
+        HydrusGlobals.client_controller.pub( 'change_file_service', self._page_key, file_service_key )
+        
+        HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
         
     
-    def _ChangeTagRepository( self, tag_service_key ):
+    def _ChangeTagService( self, tag_service_key ):
         
-        AutoCompleteDropdownTags._ChangeTagRepository( self, tag_service_key )
+        AutoCompleteDropdownTags._ChangeTagService( self, tag_service_key )
         
-        HydrusGlobals.client_controller.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
+        self._file_search_context.SetTagServiceKey( tag_service_key )
+        
+        HydrusGlobals.client_controller.pub( 'change_tag_service', self._page_key, tag_service_key )
+        
+        HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
         
     
     def _ParseSearchText( self ):
@@ -923,9 +961,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 if fetch_from_db:
                     
+                    include_current = self._file_search_context.IncludeCurrentTags()
+                    include_pending = self._file_search_context.IncludePendingTags()
+                    
                     if len( search_text ) < num_autocomplete_chars:
                         
-                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
+                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
                         
                         predicates = siblings_manager.CollapsePredicates( predicates )
                         
@@ -937,7 +978,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cache_text = search_text
                             
-                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
+                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
                             
                             self._cached_results = siblings_manager.CollapsePredicates( self._cached_results )
                             
@@ -962,22 +1003,36 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         else: tags_managers.append( m.GetTagsManager() )
                         
                     
-                    lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service_key ) ) for tags_manager in tags_managers ]
-                    lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service_key ) ) for tags_manager in tags_managers ]
-                    
-                    current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
-                    pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
-                    
-                    current_tags_flat = [ tag for tag in current_tags_flat_iterable if ClientSearch.SearchEntryMatchesTag( search_text, tag ) ]
-                    pending_tags_flat = [ tag for tag in pending_tags_flat_iterable if ClientSearch.SearchEntryMatchesTag( search_text, tag ) ]
-                    
-                    current_tags_to_count = collections.Counter( current_tags_flat )
-                    pending_tags_to_count = collections.Counter( pending_tags_flat )
-                    
                     tags_to_do = set()
                     
-                    if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
-                    if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
+                    current_tags_to_count = collections.Counter()
+                    pending_tags_to_count = collections.Counter()
+                    
+                    if self._file_search_context.IncludeCurrentTags():
+                        
+                        lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service_key ) ) for tags_manager in tags_managers ]
+                        
+                        current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
+                        
+                        current_tags_flat = ( tag for tag in current_tags_flat_iterable if ClientSearch.SearchEntryMatchesTag( search_text, tag ) )
+                        
+                        current_tags_to_count.update( current_tags_flat )
+                        
+                        tags_to_do.update( current_tags_to_count.keys() )
+                        
+                    
+                    if self._file_search_context.IncludePendingTags():
+                        
+                        lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service_key ) ) for tags_manager in tags_managers ]
+                        
+                        pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
+                        
+                        pending_tags_flat = ( tag for tag in pending_tags_flat_iterable if ClientSearch.SearchEntryMatchesTag( search_text, tag ) )
+                        
+                        pending_tags_to_count.update( pending_tags_flat )
+                        
+                        tags_to_do.update( pending_tags_to_count.keys() )
+                        
                     
                     predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
                     
@@ -1049,23 +1104,31 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def GetFileSearchContext( self ):
         
-        return ClientSearch.FileSearchContext( file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, include_current_tags = self._include_current, include_pending_tags = self._include_pending )
+        return self._file_search_context
         
     
     def IncludeCurrent( self, page_key, value ):
         
-        if page_key == self._page_key: self._include_current = value
+        if page_key == self._page_key:
+            
+            self._file_search_context.SetIncludeCurrentTags( value )
+            
         
-        self._cache_text = ''
-        self._current_namespace = ''
+        wx.CallAfter( self.RefreshList )
+        
+        HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
         
     
     def IncludePending( self, page_key, value ):
         
-        if page_key == self._page_key: self._include_pending = value
+        if page_key == self._page_key:
+            
+            self._file_search_context.SetIncludePendingTags( value )
+            
         
-        self._cache_text = ''
-        self._current_namespace = ''
+        wx.CallAfter( self.RefreshList )
+        
+        HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
         
     
     def SetSynchronisedWait( self, page_key ):
@@ -1974,7 +2037,7 @@ class ListBook( wx.Panel ):
     
     def AddPage( self, name, page, select = False ):
         
-        if type( page ) != tuple:
+        if not isinstance( page, tuple ):
             
             page.Hide()
             
@@ -2278,7 +2341,7 @@ class ListBox( wx.ScrolledWindow ):
         
         for term in self._selected_terms:
             
-            if type( term ) == ClientSearch.Predicate:
+            if isinstance( term, ClientSearch.Predicate ):
                 
                 predicate_type = term.GetType()
                 
@@ -2846,7 +2909,7 @@ class ListBoxTags( ListBox ):
                     
                     ( term, ) = self._selected_terms
                     
-                    if type( term ) == ClientSearch.Predicate:
+                    if isinstance( term, ClientSearch.Predicate ):
                         
                         if term.GetType() == HC.PREDICATE_TYPE_TAG:
                             
@@ -3824,7 +3887,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         self._TextsHaveChanged()
         
     
-    def ChangeTagRepository( self, service_key ):
+    def ChangeTagService( self, service_key ):
         
         self._tag_service_key = service_key
         
@@ -3964,7 +4027,7 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         
         HydrusGlobals.client_controller.sub( self, 'IncrementTagsByMediaPubsub', 'increment_tags_selection' )
         HydrusGlobals.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
-        HydrusGlobals.client_controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
+        HydrusGlobals.client_controller.sub( self, 'ChangeTagServicePubsub', 'change_tag_service' )
         
     
     def _Activate( self ):
@@ -3999,9 +4062,9 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
             
         
     
-    def ChangeTagRepositoryPubsub( self, page_key, service_key ):
+    def ChangeTagServicePubsub( self, page_key, service_key ):
         
-        if page_key == self._page_key: self.ChangeTagRepository( service_key )
+        if page_key == self._page_key: self.ChangeTagService( service_key )
         
     
     def IncrementTagsByMediaPubsub( self, page_key, media ):
@@ -5973,7 +6036,7 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         self.AddF( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
-    def ChangeTagRepository( self, service_key ): self._tags_box.ChangeTagRepository( service_key )
+    def ChangeTagService( self, service_key ): self._tags_box.ChangeTagService( service_key )
     
     def EventSort( self, event ):
         

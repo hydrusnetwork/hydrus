@@ -50,8 +50,14 @@ try:
             HydrusGlobals.view_shutdown = True
             HydrusGlobals.model_shutdown = True
             
-            try: controller.pubimmediate( 'wake_daemons' )
-            except: pass
+            try:
+                
+                controller.pubimmediate( 'wake_daemons' )
+                
+            except:
+                
+                HydrusData.Print( traceback.format_exc() )
+                
             
             reactor.callFromThread( reactor.stop )
             

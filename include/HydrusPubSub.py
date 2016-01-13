@@ -57,7 +57,7 @@ class HydrusPubSub( object ):
                                 
                             except Exception as e:
                                 
-                                if type( e ) not in self._binding_errors_to_ignore:
+                                if not isinstance( e, self._binding_errors_to_ignore ):
                                     
                                     raise
                                     

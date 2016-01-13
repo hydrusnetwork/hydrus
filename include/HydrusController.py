@@ -25,6 +25,8 @@ class HydrusController( object ):
         self._model_shutdown = False
         self._view_shutdown = False
         
+        self._db = None
+        
         self._pubsub = HydrusPubSub.HydrusPubSub( self, self.pubsub_binding_errors_to_ignore )
         
         self._currently_doing_pubsub = False
@@ -185,7 +187,10 @@ class HydrusController( object ):
         self._model_shutdown = True
         HydrusGlobals.model_shutdown = True
         
-        while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+        if self._db is not None:
+            
+            while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+            
         
     
     def ShutdownView( self ):

@@ -37,6 +37,7 @@ class TestClientDB( unittest.TestCase ):
         
         c = db.cursor()
         
+        c.execute( 'DELETE FROM current_files;' )
         c.execute( 'DELETE FROM files_info;' )
         c.execute( 'DELETE FROM mappings;' )
         
@@ -299,7 +300,10 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        self._write( 'import_file', path )
+        ( written_result, written_hash ) = self._write( 'import_file', path )
+        
+        self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
+        self.assertEqual( written_hash, hash )
         
         time.sleep( 1 )
         

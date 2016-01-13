@@ -543,7 +543,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 
                 thing = yaml.safe_load( file )
                 
-                if type( thing ) == ClientData.Booru:
+                if isinstance( thing, ClientData.Booru ):
                     
                     booru = thing
                     
@@ -1650,12 +1650,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._query_box, self._page_key, predicates )
         
-        file_service_key = file_search_context.GetFileServiceKey()
-        tag_service_key = file_search_context.GetTagServiceKey()
-        include_current = file_search_context.IncludeCurrentTags()
-        include_pending = file_search_context.IncludePendingTags()
-        
-        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_service_key = file_service_key, tag_service_key = tag_service_key, include_current = include_current, include_pending = include_pending )
+        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context )
         
         #
         
@@ -1945,7 +1940,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 thing = yaml.safe_load( file )
                 
-                if type( thing ) == dict:
+                if isinstance( thing, dict ):
                     
                     ( name, imageboards ) = thing.items()[0]
                     
@@ -1960,10 +1955,10 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     for imageboard in imageboards:
                         
-                        if type( imageboard ) == ClientData.Imageboard: page.UpdateImageboard( imageboard )
+                        if isinstance( imageboard, ClientData.Imageboard ): page.UpdateImageboard( imageboard )
                         
                     
-                elif type( thing ) == ClientData.Imageboard:
+                elif isinstance( thing, ClientData.Imageboard ):
                     
                     imageboard = thing
                     
@@ -3612,18 +3607,25 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._idle_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
+            self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
             self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
+            
+            self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
+            self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
+            
+            #
             
             self._idle_normal = wx.CheckBox( self._idle_panel )
             self._idle_normal.Bind( wx.EVT_CHECKBOX, self.EventIdleNormal )
             
             self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
             self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
-            self._idle_cpu_max = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 0, max = 99, unit = '%', none_phrase = 'ignore cpu usage' )
+            self._idle_cpu_max = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 5, max = 99, unit = '%', none_phrase = 'ignore cpu usage' )
             
-            self._idle_shutdown = ClientGUICommon.BetterChoice( self._idle_panel )
+            #
+            
+            self._idle_shutdown = ClientGUICommon.BetterChoice( self._shutdown_panel )
             
             for idle_id in ( CC.IDLE_NOT_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
                 
@@ -3632,9 +3634,13 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._idle_shutdown.Bind( wx.EVT_CHOICE, self.EventIdleShutdown )
             
-            self._idle_shutdown_max_minutes = wx.SpinCtrl( self._idle_panel, min = 1, max = 1440 )
+            self._idle_shutdown_max_minutes = wx.SpinCtrl( self._shutdown_panel, min = 1, max = 1440 )
+            
+            #
             
             self._maintenance_vacuum_period = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 1, max = 365, multiplier = 86400, none_phrase = 'do not automatically vacuum' )
+            
+            #
             
             self._processing_phase = wx.SpinCtrl( self._processing_panel, min = 0, max = 100000 )
             self._processing_phase.SetToolTipString( 'how long this client will delay processing updates after they are due. useful if you have multiple clients and do not want them to process at the same time' )
@@ -3645,6 +3651,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._idle_period.SetValue( HC.options[ 'idle_period' ] )
             self._idle_mouse_period.SetValue( HC.options[ 'idle_mouse_period' ] )
             self._idle_cpu_max.SetValue( HC.options[ 'idle_cpu_max' ] )
+            
             self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
             self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
             
@@ -3658,34 +3665,51 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run jobs when the client is not busy?: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run maintenance jobs when the client is idle and the system is not otherwise busy?: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_normal, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is busy if general browsing activity has occured in the past: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is idle if no general browsing activity has occured in the past: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_period, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is busy if the mouse has been moved in the past: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is idle if the mouse has not been moved in the past: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_mouse_period, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is busy if any CPU core has recent average usage above: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the system is busy if any CPU core has recent average usage above: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_cpu_max, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run jobs on shutdown?: ' ), CC.FLAGS_MIXED )
+            self._idle_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._shutdown_panel, label = 'Run jobs on shutdown?: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_shutdown, CC.FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Max number of minutes to run shutdown jobs: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._shutdown_panel, label = 'Max number of minutes to run shutdown jobs: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._idle_shutdown_max_minutes, CC.FLAGS_MIXED )
+            
+            self._shutdown_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
             
             text = 'CPU-heavy jobs like maintenance routines and repository synchronisation processing will stutter or lock up your gui, so they do not normally run when you are searching for and looking at files.'
             text += os.linesep * 2
-            text += 'You can set these jobs to run only when the client is not busy, or only during shutdown, or neither, or both.'
+            text += 'You can set them to run only when the client is idle, or only during shutdown, or neither, or both.'
+            text += os.linesep * 2
+            text += 'If the client switches from idle to not idle, it will try to abandon any jobs it is half way through.'
+            text += os.linesep * 2
+            text += 'If the client believes the system is busy, it will not start jobs.'
             
-            st = wx.StaticText( self._idle_panel, label = text )
+            st = wx.StaticText( self._jobs_panel, label = text )
             
-            st.Wrap( 500 )
+            st.Wrap( 550 )
             
-            self._idle_panel.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._idle_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._jobs_panel.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._jobs_panel.AddF( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._jobs_panel.AddF( self._shutdown_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3713,7 +3737,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -9219,7 +9243,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self._remove_tags = wx.Button( self, label = text )
             self._remove_tags.Bind( wx.EVT_BUTTON, self.EventRemoveTags )
             
-            self._tags_box.ChangeTagRepository( self._tag_service_key )
+            self._tags_box.ChangeTagService( self._tag_service_key )
             
             self.SetMedia( media )
             

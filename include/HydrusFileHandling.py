@@ -232,10 +232,10 @@ def GetMime( path ):
     
     if hsaudio_object.valid:
         
-        if type( hsaudio_object.original ) == hsaudiotag.mpeg.Mpeg: return HC.AUDIO_MP3
-        elif type( hsaudio_object.original ) == hsaudiotag.flac.FLAC: return HC.AUDIO_FLAC
-        elif type( hsaudio_object.original ) == hsaudiotag.ogg.Vorbis: return HC.AUDIO_OGG
-        elif type( hsaudio_object.original ) == hsaudiotag.wma.WMADecoder: return HC.AUDIO_WMA
+        if isinstance( hsaudio_object.original, hsaudiotag.mpeg.Mpeg ): return HC.AUDIO_MP3
+        elif isinstance( hsaudio_object.original, hsaudiotag.flac.FLAC ): return HC.AUDIO_FLAC
+        elif isinstance( hsaudio_object.original, hsaudiotag.ogg.Vorbis ): return HC.AUDIO_OGG
+        elif isinstance( hsaudio_object.original, hsaudiotag.wma.WMADecoder ): return HC.AUDIO_WMA
         
     
     return HC.APPLICATION_UNKNOWN

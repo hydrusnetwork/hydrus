@@ -221,14 +221,23 @@ class Dialog( wx.Dialog ):
         
         if parent is not None and position == 'topleft':
             
-            if issubclass( type( parent ), wx.TopLevelWindow ): parent_tlp = parent
-            else: parent_tlp = parent.GetTopLevelParent()
+            if isinstance( parent, wx.TopLevelWindow ):
+                
+                parent_tlp = parent
+                
+            else:
+                
+                parent_tlp = parent.GetTopLevelParent()
+                
             
             ( pos_x, pos_y ) = parent_tlp.GetPositionTuple()
             
             pos = ( pos_x + 50, pos_y + 100 )
             
-        else: pos = wx.DefaultPosition
+        else:
+            
+            pos = wx.DefaultPosition
+            
         
         if not HC.PLATFORM_LINUX and parent is not None:
             
@@ -4480,7 +4489,7 @@ class DialogShortcuts( Dialog ):
                         
                     else:
                         
-                        if type( service_key ) == ClientData.ClientServiceIdentifier: service_key = service_key.GetServiceKey()
+                        if isinstance( service_key, ClientData.ClientServiceIdentifier ): service_key = service_key.GetServiceKey()
                         
                         try:
                             

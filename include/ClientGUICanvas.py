@@ -3324,7 +3324,7 @@ class MediaContainer( wx.Window ):
     
     def Pause( self ):
         
-        if type( self._media_window ) == Animation:
+        if isinstance( self._media_window, Animation ):
             
             self._media_window.Pause()
             

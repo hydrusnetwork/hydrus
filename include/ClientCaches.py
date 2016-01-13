@@ -374,7 +374,7 @@ class ClientFilesManager( object ):
             
         
     
-    def Rebalance( self, partial = True ):
+    def Rebalance( self, partial = True, stop_time = None ):
         
         with self._lock:
             
@@ -392,6 +392,7 @@ class ClientFilesManager( object ):
                     
                 else:
                     
+                    self._controller.pub( 'splash_set_status_text', text )
                     HydrusData.ShowText( text )
                     
                 
@@ -402,6 +403,11 @@ class ClientFilesManager( object ):
                 if partial:
                     
                     break
+                    
+                
+                if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
+                    
+                    return
                     
                 
                 rebalance_tuple = self._GetRebalanceTuple()
@@ -421,6 +427,7 @@ class ClientFilesManager( object ):
                     
                 else:
                     
+                    self._controller.pub( 'splash_set_status_text', text )
                     HydrusData.ShowText( text )
                     
                 
@@ -440,6 +447,11 @@ class ClientFilesManager( object ):
                 if partial:
                     
                     break
+                    
+                
+                if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
+                    
+                    return
                     
                 
                 recover_tuple = self._GetRecoverTuple()

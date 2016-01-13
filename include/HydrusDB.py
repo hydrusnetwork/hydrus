@@ -127,7 +127,10 @@ class HydrusDB( object ):
         
         create_db = False
         
-        if not os.path.exists( self._db_path ): create_db = True
+        if not os.path.exists( self._db_path ):
+            
+            create_db = True
+            
         
         self._InitDBCursor()
         
@@ -155,9 +158,19 @@ class HydrusDB( object ):
         self._c.execute( 'DROP TABLE IF EXISTS ratings_aggregates;' )
         
         self._c.execute( 'PRAGMA cache_size = -50000;' )
-        self._c.execute( 'PRAGMA foreign_keys = ON;' )
-        self._c.execute( 'PRAGMA synchronous = 1;' )
         self._c.execute( 'PRAGMA journal_mode = WAL;' )
+        self._c.execute( 'PRAGMA synchronous = 1;' )
+        
+        try:
+            
+            self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
+            
+        except sqlite3.OperationalError:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
+            self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
+            
         
     
     def _ManageDBError( self, job, e ):

@@ -60,7 +60,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._statusbar = self.CreateStatusBar()
         self._statusbar.SetFieldsCount( 4 )
-        self._statusbar.SetStatusWidths( [ -1, 25, 25, 50 ] )
+        self._statusbar.SetStatusWidths( [ -1, 25, 90, 50 ] )
         
         self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
         
@@ -595,45 +595,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         wx.CallAfter( gc.collect )
         
     
-    def _Exit( self, restart = False ):
-        
-        if not HydrusGlobals.emergency_exit:
-            
-            if HC.options[ 'confirm_client_exit' ]:
-                
-                if restart:
-                    
-                    text = 'Are you sure you want to restart the client? (Will auto-yes in 15 seconds)'
-                    
-                else:
-                    
-                    text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
-                    
-                
-                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                    
-                    call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
-                    
-                    if dlg.ShowModal() == wx.ID_NO:
-                        
-                        call_later.Stop()
-                        
-                        return
-                        
-                    
-                    call_later.Stop()
-                    
-                
-            
-        
-        if restart:
-            
-            HydrusGlobals.restart = True
-            
-        
-        self._controller.Exit()
-        
-    
     def _FetchIP( self, service_key ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the file\'s hash.' ) as dlg:
@@ -1083,14 +1044,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'db_profile_mode' )
             pubsub_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pubsub_profile_mode' )
+            force_idle_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle_mode' )
             
             debug = wx.Menu()
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
             debug.AppendCheckItem( pubsub_profile_mode_id, p( '&PubSub Profile Mode' ) )
             debug.Check( pubsub_profile_mode_id, HydrusGlobals.pubsub_profile_mode )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle' ), p( 'Force Idle Mode' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_unbusy' ), p( 'Force Unbusy Mode' ) )
+            debug.AppendCheckItem( force_idle_mode_id, p( '&Force Idle Mode' ) )
+            debug.Check( force_idle_mode_id, HydrusGlobals.force_idle_mode )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
@@ -1252,6 +1214,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     def _ManageOptions( self ):
         
         with ClientGUIDialogsManage.DialogManageOptions( self ) as dlg: dlg.ShowModal()
+        
+        self._controller.pub( 'wake_daemons' )
+        self._controller.pub( 'refresh_status' )
         
     
     def _ManagePixivAccount( self ):
@@ -1514,7 +1479,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if self._controller.SystemBusy():
             
-            busy_status = 'busy'
+            busy_status = 'system busy'
             
         else:
             
@@ -2104,16 +2069,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventExit( self, event ):
         
-        if event.CanVeto():
-            
-            event.Veto()
-            
-        else:
+        if not event.CanVeto():
             
             HydrusGlobals.emergency_exit = True
             
         
-        self._Exit()
+        result = self.Exit()
+        
+        if not result:
+            
+            event.Veto()
+            
         
     
     def EventFocus( self, event ):
@@ -2160,9 +2126,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     count[ type( o ) ] += 1
                     
-                    if type( o ) == types.InstanceType: class_count[ o.__class__.__name__ ] += 1
-                    elif type( o ) == types.BuiltinFunctionType: class_count[ o.__name__ ] += 1
-                    elif type( o ) == types.BuiltinMethodType: class_count[ o.__name__ ] += 1
+                    if isinstance( o, types.InstanceType ): class_count[ o.__class__.__name__ ] += 1
+                    elif isinstance( o, types.BuiltinFunctionType ): class_count[ o.__name__ ] += 1
+                    elif isinstance( o, types.BuiltinMethodType ): class_count[ o.__name__ ] += 1
                     
                 
                 HydrusData.Print( 'gc:' )
@@ -2189,15 +2155,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'delete_orphans': self._DeleteOrphans()
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'delete_service_info': self._DeleteServiceInfo()
-            elif command == 'exit': self._Exit()
+            elif command == 'exit': self.Exit()
             elif command == 'fetch_ip': self._FetchIP( data )
-            elif command == 'force_idle':
+            elif command == 'force_idle_mode':
                 
                 self._controller.ForceIdle()
-                
-            elif command == 'force_unbusy':
-                
-                self._controller.ForceUnbusy()
                 
             elif command == '8chan_board': webbrowser.open( 'https://8ch.net/hydrus/index.html' )
             elif command == 'file_integrity': self._CheckFileIntegrity()
@@ -2262,7 +2224,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.RefreshQuery()
                 
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
-            elif command == 'restart': self._Exit( restart = True )
+            elif command == 'restart': self.Exit( restart = True )
             elif command == 'restore_database': self._controller.RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()
@@ -2331,6 +2293,87 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._RefreshStatusBar()
         
         event.Skip( True )
+        
+    
+    def Exit( self, restart = False ):
+        
+        if not HydrusGlobals.emergency_exit:
+            
+            if HC.options[ 'confirm_client_exit' ]:
+                
+                if restart:
+                    
+                    text = 'Are you sure you want to restart the client? (Will auto-yes in 15 seconds)'
+                    
+                else:
+                    
+                    text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
+                    
+                
+                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                    
+                    call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
+                    
+                    if dlg.ShowModal() == wx.ID_NO:
+                        
+                        call_later.Stop()
+                        
+                        return False
+                        
+                    
+                    call_later.Stop()
+                    
+                
+            
+            try:
+                
+                for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
+                    
+                    page.TestAbleToClose()
+                    
+                
+            except HydrusExceptions.PermissionException:
+                
+                return False
+                
+            
+        
+        if restart:
+            
+            HydrusGlobals.restart = True
+            
+        
+        self._SaveGUISession( 'last session' )
+        
+        self._message_manager.CleanBeforeDestroy()
+        
+        self._message_manager.Hide()
+        
+        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
+        
+        page = self._notebook.GetCurrentPage()
+        
+        if page is not None:
+            
+            ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+            
+        
+        self._controller.WriteSynchronous( 'save_options', HC.options )
+        
+        self.Hide()
+        
+        if HydrusGlobals.emergency_exit:
+            
+            self._controller.Exit()
+            
+        else:
+            
+            wx.CallAfter( self._controller.Exit )
+            
+        
+        self.Destroy()
+        
+        return True
         
     
     def GetCurrentPage( self ):
@@ -2513,65 +2556,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         FrameSeedCache( self._controller, seed_cache )
         
     
-    def Shutdown( self ):
-        
-        if HydrusGlobals.emergency_exit:
-            
-            self._SaveGUISession( 'last session' )
-            
-            self._message_manager.CleanBeforeDestroy()
-            
-            for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
-            
-            page = self._notebook.GetCurrentPage()
-            
-            if page is not None:
-                
-                ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
-                
-            
-            self._controller.Write( 'save_options', HC.options )
-            
-            self.Destroy()
-            
-        else:
-            
-            self._SaveGUISession( 'last session' )
-            
-            try:
-                
-                self._message_manager.Hide()
-                
-                self._message_manager.CleanBeforeDestroy()
-                
-            except: pass
-            
-            self.Hide()
-            
-            for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
-            
-            page = self._notebook.GetCurrentPage()
-            
-            if page is not None:
-                
-                ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
-                
-            
-            self._controller.Write( 'save_options', HC.options )
-            
-            wx.CallAfter( self.Destroy )
-            
-        
-    
     def SyncToTagArchive( self, hta, adding, namespaces, service_key ):
         
         self._controller.CallToThread( self._THREADSyncToTagArchive, hta, adding, namespaces, service_key )
         
     
-    def TestAbleToClose( self ):
-        
-        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.TestAbleToClose()
-        
     '''
 class FrameComposeMessage( ClientGUICommon.Frame ):
     

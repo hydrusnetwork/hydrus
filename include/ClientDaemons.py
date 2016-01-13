@@ -236,7 +236,7 @@ def DAEMONMaintainTrash( controller ):
     
 def DAEMONRebalanceClientFiles( controller ):
     
-    if controller.CurrentlyIdle() and not controller.SystemBusy():
+    if controller.CurrentlyIdle():
         
         controller.GetClientFilesManager().Rebalance()
         

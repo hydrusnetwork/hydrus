@@ -292,11 +292,31 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def IsComplete( self ): return self._search_complete
     def SetComplete( self ): self._search_complete = True
     
+    def SetFileServiceKey( self, file_service_key ):
+        
+        self._file_service_key = file_service_key
+        
+    
+    def SetIncludeCurrentTags( self, value ):
+        
+        self._include_current_tags = value
+        
+    
+    def SetIncludePendingTags( self, value ):
+        
+        self._include_pending_tags = value
+        
+    
     def SetPredicates( self, predicates ):
         
         self._predicates = predicates
         
         self._InitialiseTemporaryVariables()
+        
+    
+    def SetTagServiceKey( self, tag_service_key ):
+        
+        self._tag_service_key = tag_service_key
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
@@ -576,7 +596,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if counts is None: counts = {}
         
-        if type( value ) == list:
+        if isinstance( value, list ):
             
             value = tuple( value )
             
@@ -668,7 +688,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             self._value = serialisable_value
             
         
-        if type( self._value ) == list:
+        if isinstance( self._value, list ):
             
             self._value = tuple( self._value )
             
@@ -735,7 +755,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetType( self ): return self._predicate_type
+    def GetType( self ):
+        
+        return self._predicate_type
+        
     
     def GetUnicode( self, with_count = True ):
         

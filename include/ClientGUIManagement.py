@@ -128,10 +128,7 @@ def CreateManagementControllerQuery( file_service_key, file_search_context, sear
     
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'search_enabled', search_enabled )
-    
     management_controller.SetVariable( 'synchronised', True )
-    management_controller.SetVariable( 'include_current', True )
-    management_controller.SetVariable( 'include_pending', True )
     
     return management_controller
     
@@ -2544,14 +2541,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._current_predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._search_panel, self._page_key, initial_predicates )
             
-            file_service_key = self._management_controller.GetKey( 'file_service' )
-            tag_service_key = self._management_controller.GetKey( 'tag_service' )
-            
-            include_current = self._management_controller.GetVariable( 'include_current' )
-            include_pending = self._management_controller.GetVariable( 'include_pending' )
             synchronised = self._management_controller.GetVariable( 'synchronised' )
             
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_service_key, tag_service_key, self._page.GetMedia, include_current = include_current, include_pending = include_pending, synchronised = synchronised )            
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_callable = self._page.GetMedia, synchronised = synchronised )
             self._search_panel.AddF( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._search_panel.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -2567,16 +2559,16 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self.SetSizer( vbox )
         
-        if len( initial_predicates ) > 0 and not file_search_context.IsComplete(): wx.CallAfter( self._DoQuery )
+        if len( initial_predicates ) > 0 and not file_search_context.IsComplete():
+            
+            wx.CallAfter( self._DoQuery )
+            
         
         self._controller.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
-        self._controller.sub( self, 'ChangeFileRepositoryPubsub', 'change_file_repository' )
-        self._controller.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
-        self._controller.sub( self, 'IncludeCurrent', 'notify_include_current' )
-        self._controller.sub( self, 'IncludePending', 'notify_include_pending' )
         self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
         self._controller.sub( self, 'ShowQuery', 'file_query_done' )
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
+        self._controller.sub( self, 'ChangeFileServicePubsub', 'change_file_service' )
         
     
     def _DoQuery( self ):
@@ -2591,21 +2583,19 @@ class ManagementPanelQuery( ManagementPanel ):
             
             try:
                 
-                file_service_key = self._management_controller.GetKey( 'file_service' )
-                tag_service_key = self._management_controller.GetKey( 'tag_service' )
-            
-                include_current = self._management_controller.GetVariable( 'include_current' )
-                include_pending = self._management_controller.GetVariable( 'include_pending' )
+                file_search_context = self._searchbox.GetFileSearchContext()
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                search_context = ClientSearch.FileSearchContext( file_service_key, tag_service_key, include_current, include_pending, current_predicates )
+                file_search_context.SetPredicates( current_predicates )
                 
-                self._management_controller.SetVariable( 'file_search_context', search_context )
+                self._management_controller.SetVariable( 'file_search_context', file_search_context )
+                
+                file_service_key = file_search_context.GetFileServiceKey()
                 
                 if len( current_predicates ) > 0:
                     
-                    self._controller.StartFileQuery( self._query_key, search_context )
+                    self._controller.StartFileQuery( self._query_key, file_search_context )
                     
                     panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
                     
@@ -2643,23 +2633,11 @@ class ManagementPanelQuery( ManagementPanel ):
         if query_key == self._query_key: self._controller.pub( 'add_media_results', self._page_key, media_results, append = False )
         
     
-    def ChangeFileRepositoryPubsub( self, page_key, service_key ):
+    def ChangeFileServicePubsub( self, page_key, service_key ):
         
         if page_key == self._page_key:
             
             self._management_controller.SetKey( 'file_service', service_key )
-            
-            self._DoQuery()
-            
-        
-    
-    def ChangeTagRepositoryPubsub( self, page_key, service_key ):
-        
-        if page_key == self._page_key:
-            
-            self._management_controller.SetKey( 'tag_service', service_key )
-            
-            self._DoQuery()
             
         
     
@@ -2672,33 +2650,22 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def GetPredicates( self ):
         
-        if hasattr( self, '_current_predicates_box' ): return self._current_predicates_box.GetPredicates()
-        else: return []
-        
-    
-    def IncludeCurrent( self, page_key, value ):
-        
-        if page_key == self._page_key:
+        if self._search_enabled:
             
-            self._management_controller.SetVariable( 'include_current', value )
+            return self._current_predicates_box.GetPredicates()
             
-            self._DoQuery()
+        else:
             
-        
-    
-    def IncludePending( self, page_key, value ):
-        
-        if page_key == self._page_key:
-            
-            self._management_controller.SetVariable( 'include_pending', value )
-            
-            self._DoQuery()
+            return []
             
         
     
     def RefreshQuery( self, page_key ):
         
-        if page_key == self._page_key: self._DoQuery()
+        if page_key == self._page_key:
+            
+            self._DoQuery()
+            
         
     
     def SearchImmediately( self, page_key, value ):
