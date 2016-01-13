@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 190</h3></li>
+				<ul>
+					<li>fixed some hashing recalculation in collections that meant they reported no files in many cases</li>
+					<li>fixed some hashing recalculation when 'remove files' is called</li>
+					<li>improved the way the client db stores file information and service->file mappings</li>
+					<li>idle processing jobs will now explicitly wake up as soon as the client naturally switches from not idle to idle</li>
+					<li>the minimum allowed value for the 'max cpu %' control in the maintenance and processing options panel is now 5%</li>
+					<li>the maintenance and processing panel is rewritten and laid out a little clearer</li>
+					<li>'busy' is now 'system busy' on the status bar</li>
+					<li>force idle and force unbusy are now merged into a new 'force idle' that sticks until you explicitly turn it off</li>
+					<li>busy and idle states should now update immidiately after closing the manage options dialog</li>
+					<li>improved exit code event order to be less rude to the OS</li>
+					<li>improved exit code emergency event handling</li>
+					<li>fixed a typo that was not appropriately skipping the 'do you want to run shutdown jobs?' dialog</li>
+					<li>file storage folder rebalancing will now occur on shutdown maintenance</li>
+					<li>the client now closes down more reliably if the db fails to boot</li>
+					<li>the client now closes down more reliably if the gui fails to boot</li>
+					<li>if a client vacuum fails, it'll now also raise the exact error sqlite gave</li>
+					<li>fixed ctrl+a on the autocomplete dropdown (I think the Insert/IME support change broke it)</li>
+					<li>the ways the 'read' tag autocomplete control talks to other gui elements is improved</li>
+					<li>the tag autocompletes will now refresh their results lists on more internal variable changes</li>
+					<li>the query page management controller manages fewer redundant variables</li>
+					<li>updated sqlite for windows</li>
+					<li>the client and server dbs will attempt to change to TRUNCATE journal mode if WAL causes a read disk i/o error</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 189</h3></li>
 				<ul>
 					<li>split the big analyze db calls into individual table/index calls and moved them from update code to the normal maintenance routines</li>
