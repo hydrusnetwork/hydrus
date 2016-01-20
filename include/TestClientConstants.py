@@ -67,11 +67,11 @@ class TestManagers( unittest.TestCase ):
         repo_name = 'test tag repo'
         repo_info = { 'blah' : 5 }
         
-        repo = ClientData.Service( repo_key, repo_type, repo_name, repo_info )
+        repo = ClientData.GenerateService( repo_key, repo_type, repo_name, repo_info )
         
         other_key = HydrusData.GenerateKey()
         
-        other = ClientData.Service( other_key, HC.LOCAL_BOORU, 'booru', {} )
+        other = ClientData.GenerateService( other_key, HC.LOCAL_BOORU, 'booru', {} )
         
         services = []
         

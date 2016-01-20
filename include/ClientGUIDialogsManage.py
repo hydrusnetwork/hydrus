@@ -5852,7 +5852,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            manageable_service_types = HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_BOORU ]
+            manageable_service_types = HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_BOORU, HC.IPFS ]
             
             for service_type in manageable_service_types:
                 
@@ -5866,6 +5866,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 elif service_type == HC.SERVER_ADMIN: name = 'administrative services'
                 #elif service_type == HC.RATING_LIKE_REPOSITORY: name = 'like/dislike rating repositories'
                 #elif service_type == HC.RATING_NUMERICAL_REPOSITORY: name = 'numerical rating repositories'
+                elif service_type == HC.IPFS: name = 'ipfs daemons'
                 else: continue
                 
                 if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
@@ -6023,6 +6024,10 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                                         
                                     else: ( host, port ) = ( 'hostname', 45871 )
                                     
+                                
+                            elif service_type == HC.IPFS:
+                                
+                                ( host, port ) = ( '127.0.0.1', 5001 )
                                 
                             else:
                                 
@@ -6296,278 +6301,285 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             self._reset_downloading = False
             self._reset_processing = False
             
-            def InitialiseControls():
+            #
+            
+            if service_type not in HC.NONEDITABLE_SERVICES:
                 
-                if service_type not in HC.NONEDITABLE_SERVICES:
+                if service_type in HC.REMOTE_SERVICES: title = 'name and credentials'
+                else: title = 'name'
+                
+                self._credentials_panel = ClientGUICommon.StaticBox( self, title )
+                
+                self._service_name = wx.TextCtrl( self._credentials_panel )
+                
+                if service_type in HC.REMOTE_SERVICES:
                     
-                    if service_type in HC.REMOTE_SERVICES: title = 'name and credentials'
-                    else: title = 'name'
+                    host = info[ 'host' ]
+                    port = info[ 'port' ]
                     
-                    self._credentials_panel = ClientGUICommon.StaticBox( self, title )
+                    if 'access_key' in info: access_key = info[ 'access_key' ]
+                    else: access_key = None
                     
-                    self._service_name = wx.TextCtrl( self._credentials_panel )
+                    credentials = ClientData.Credentials( host, port, access_key )
                     
-                    if service_type in HC.REMOTE_SERVICES:
-                        
-                        host = info[ 'host' ]
-                        port = info[ 'port' ]
-                        
-                        if 'access_key' in info: access_key = info[ 'access_key' ]
-                        else: access_key = None
-                        
-                        credentials = ClientData.Credentials( host, port, access_key )
-                        
-                        self._service_credentials = wx.TextCtrl( self._credentials_panel, value = credentials.GetConnectionString() )
+                    self._service_credentials = wx.TextCtrl( self._credentials_panel, value = credentials.GetConnectionString() )
+                    
+                    if service_type in HC.RESTRICTED_SERVICES:
                         
                         self._check_service = wx.Button( self._credentials_panel, label = 'test credentials' )
                         self._check_service.Bind( wx.EVT_BUTTON, self.EventCheckService )
                         
-                    
-                
-                if service_type in HC.REPOSITORIES:
-                    
-                    self._repositories_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
-                    
-                    self._pause_synchronisation = wx.CheckBox( self._repositories_panel, label = 'pause synchronisation' )
-                    
-                    self._reset_processing_button = wx.Button( self._repositories_panel, label = 'reset processing cache on dialog ok' )
-                    self._reset_processing_button.Bind( wx.EVT_BUTTON, self.EventServiceResetProcessing )
-                    
-                    self._reset_downloading_button = wx.Button( self._repositories_panel, label = 'reset processing and download cache on dialog ok' )
-                    self._reset_downloading_button.Bind( wx.EVT_BUTTON, self.EventServiceResetDownload )
-                    
-                
-                if service_type in HC.RATINGS_SERVICES:
-                    
-                    self._local_rating_panel = ClientGUICommon.StaticBox( self, 'local rating configuration' )
-                    
-                    if service_type == HC.LOCAL_RATING_NUMERICAL:
+                    elif service_type == HC.IPFS:
                         
-                        num_stars = info[ 'num_stars' ]
+                        self._check_ipfs = wx.Button( self._credentials_panel, label = 'test credentials' )
+                        self._check_ipfs.Bind( wx.EVT_BUTTON, self.EventCheckIPFS )
                         
-                        self._num_stars = wx.SpinCtrl( self._local_rating_panel, min = 1, max = 20 )
-                        self._num_stars.SetValue( num_stars )
-                        
-                        allow_zero = info[ 'allow_zero' ]
-                        
-                        self._allow_zero = wx.CheckBox( self._local_rating_panel )
-                        self._allow_zero.SetValue( allow_zero )
-                        
-                    
-                    self._shape = ClientGUICommon.BetterChoice( self._local_rating_panel )
-                    
-                    self._shape.Append( 'circle', ClientRatings.CIRCLE )
-                    self._shape.Append( 'square', ClientRatings.SQUARE )
-                    self._shape.Append( 'star', ClientRatings.STAR )
-                    
-                    self._colour_ctrls = {}
-                    
-                    for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
-                        
-                        border_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
-                        fill_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
-                        
-                        border_ctrl.SetMaxSize( ( 20, -1 ) )
-                        fill_ctrl.SetMaxSize( ( 20, -1 ) )
-                        
-                        self._colour_ctrls[ colour_type ] = ( border_ctrl, fill_ctrl )
-                        
-                    
-                
-                if service_type in HC.TAG_SERVICES:
-                    
-                    self._archive_info = HydrusGlobals.client_controller.Read( 'tag_archive_info' )
-                    
-                    self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
-                    
-                    self._archive_sync = wx.ListBox( self._archive_panel, size = ( -1, 100 ) )
-                    
-                    self._archive_sync_add = wx.Button( self._archive_panel, label = 'add' )
-                    self._archive_sync_add.Bind( wx.EVT_BUTTON, self.EventArchiveAdd )
-                    
-                    self._archive_sync_edit = wx.Button( self._archive_panel, label = 'edit' )
-                    self._archive_sync_edit.Bind( wx.EVT_BUTTON, self.EventArchiveEdit )
-                    
-                    self._archive_sync_remove = wx.Button( self._archive_panel, label = 'remove' )
-                    self._archive_sync_remove.Bind( wx.EVT_BUTTON, self.EventArchiveRemove )
-                    
-                
-                if service_type == HC.LOCAL_BOORU:
-                    
-                    self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
-                    
-                    self._port = wx.SpinCtrl( self._booru_options_panel, min = 0, max = 65535 )
-                    
-                    self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
-                    
-                    self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'max monthly MB', multiplier = 1024 * 1024 )
                     
                 
             
-            def PopulateControls():
+            if service_type in HC.REPOSITORIES:
                 
-                if service_type not in HC.NONEDITABLE_SERVICES:
-                    
-                    self._service_name.SetValue( name )
-                    
+                self._repositories_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
                 
-                if service_type in HC.REPOSITORIES:
-                    
-                    self._pause_synchronisation.SetValue( info[ 'paused' ] )
-                    
+                self._pause_synchronisation = wx.CheckBox( self._repositories_panel, label = 'pause synchronisation' )
                 
-                if service_type in HC.TAG_SERVICES:
-                    
-                    for ( archive_name, namespaces ) in info[ 'tag_archive_sync' ].items():
-                        
-                        name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
-                        
-                        self._archive_sync.Append( name_to_display, ( archive_name, namespaces ) )
-                        
-                    
-                    self._UpdateArchiveButtons()
-                    
+                self._reset_processing_button = wx.Button( self._repositories_panel, label = 'reset processing cache on dialog ok' )
+                self._reset_processing_button.Bind( wx.EVT_BUTTON, self.EventServiceResetProcessing )
                 
-                if service_type in HC.RATINGS_SERVICES:
+                self._reset_downloading_button = wx.Button( self._repositories_panel, label = 'reset processing and download cache on dialog ok' )
+                self._reset_downloading_button.Bind( wx.EVT_BUTTON, self.EventServiceResetDownload )
+                
+            
+            if service_type in HC.RATINGS_SERVICES:
+                
+                self._local_rating_panel = ClientGUICommon.StaticBox( self, 'local rating configuration' )
+                
+                if service_type == HC.LOCAL_RATING_NUMERICAL:
                     
-                    self._shape.SelectClientData( info[ 'shape' ] )
+                    num_stars = info[ 'num_stars' ]
                     
-                    colours = info[ 'colours' ]
+                    self._num_stars = wx.SpinCtrl( self._local_rating_panel, min = 1, max = 20 )
+                    self._num_stars.SetValue( num_stars )
                     
-                    for colour_type in colours:
-                        
-                        ( border_rgb, fill_rgb ) = colours[ colour_type ]
-                        
-                        ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
-                        
-                        border_ctrl.SetColour( wx.Colour( *border_rgb ) )
-                        fill_ctrl.SetColour( wx.Colour( *fill_rgb ) )
-                        
+                    allow_zero = info[ 'allow_zero' ]
+                    
+                    self._allow_zero = wx.CheckBox( self._local_rating_panel )
+                    self._allow_zero.SetValue( allow_zero )
                     
                 
-                if service_type == HC.LOCAL_BOORU:
+                self._shape = ClientGUICommon.BetterChoice( self._local_rating_panel )
+                
+                self._shape.Append( 'circle', ClientRatings.CIRCLE )
+                self._shape.Append( 'square', ClientRatings.SQUARE )
+                self._shape.Append( 'star', ClientRatings.STAR )
+                
+                self._colour_ctrls = {}
+                
+                for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
                     
-                    self._port.SetValue( info[ 'port' ] )
-                    self._upnp.SetValue( info[ 'upnp' ] )
-                    self._max_monthly_data.SetValue( info[ 'max_monthly_data' ] )
+                    border_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
+                    fill_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
+                    
+                    border_ctrl.SetMaxSize( ( 20, -1 ) )
+                    fill_ctrl.SetMaxSize( ( 20, -1 ) )
+                    
+                    self._colour_ctrls[ colour_type ] = ( border_ctrl, fill_ctrl )
                     
                 
             
-            def ArrangeControls():
+            if service_type in HC.TAG_SERVICES:
                 
-                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+                self._archive_info = HydrusGlobals.client_controller.Read( 'tag_archive_info' )
                 
-                vbox = wx.BoxSizer( wx.VERTICAL )
+                self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
                 
-                if service_type not in HC.NONEDITABLE_SERVICES:
+                self._archive_sync = wx.ListBox( self._archive_panel, size = ( -1, 100 ) )
+                
+                self._archive_sync_add = wx.Button( self._archive_panel, label = 'add' )
+                self._archive_sync_add.Bind( wx.EVT_BUTTON, self.EventArchiveAdd )
+                
+                self._archive_sync_edit = wx.Button( self._archive_panel, label = 'edit' )
+                self._archive_sync_edit.Bind( wx.EVT_BUTTON, self.EventArchiveEdit )
+                
+                self._archive_sync_remove = wx.Button( self._archive_panel, label = 'remove' )
+                self._archive_sync_remove.Bind( wx.EVT_BUTTON, self.EventArchiveRemove )
+                
+            
+            if service_type == HC.LOCAL_BOORU:
+                
+                self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
+                
+                self._port = wx.SpinCtrl( self._booru_options_panel, min = 0, max = 65535 )
+                
+                self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
+                
+                self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'max monthly MB', multiplier = 1024 * 1024 )
+                
+            
+            #
+            
+            if service_type not in HC.NONEDITABLE_SERVICES:
+                
+                self._service_name.SetValue( name )
+                
+            
+            if service_type in HC.REPOSITORIES:
+                
+                self._pause_synchronisation.SetValue( info[ 'paused' ] )
+                
+            
+            if service_type in HC.TAG_SERVICES:
+                
+                for ( archive_name, namespaces ) in info[ 'tag_archive_sync' ].items():
                     
-                    gridbox = wx.FlexGridSizer( 0, 2 )
+                    name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
                     
-                    gridbox.AddGrowableCol( 1, 1 )
+                    self._archive_sync.Append( name_to_display, ( archive_name, namespaces ) )
                     
-                    gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'name' ), CC.FLAGS_MIXED )
-                    gridbox.AddF( self._service_name, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._UpdateArchiveButtons()
+                
+            
+            if service_type in HC.RATINGS_SERVICES:
+                
+                self._shape.SelectClientData( info[ 'shape' ] )
+                
+                colours = info[ 'colours' ]
+                
+                for colour_type in colours:
                     
-                    if service_type in HC.REMOTE_SERVICES:
-                        
-                        gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'credentials' ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._service_credentials, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    ( border_rgb, fill_rgb ) = colours[ colour_type ]
+                    
+                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
+                    
+                    border_ctrl.SetColour( wx.Colour( *border_rgb ) )
+                    fill_ctrl.SetColour( wx.Colour( *fill_rgb ) )
+                    
+                
+            
+            if service_type == HC.LOCAL_BOORU:
+                
+                self._port.SetValue( info[ 'port' ] )
+                self._upnp.SetValue( info[ 'upnp' ] )
+                self._max_monthly_data.SetValue( info[ 'max_monthly_data' ] )
+                
+            
+            #
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            if service_type not in HC.NONEDITABLE_SERVICES:
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'name' ), CC.FLAGS_MIXED )
+                gridbox.AddF( self._service_name, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                if service_type in HC.REMOTE_SERVICES:
+                    
+                    gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'credentials' ), CC.FLAGS_MIXED )
+                    gridbox.AddF( self._service_credentials, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    if service_type in HC.RESTRICTED_SERVICES:
                         
                         gridbox.AddF( ( 20, 20 ), CC.FLAGS_MIXED )
                         gridbox.AddF( self._check_service, CC.FLAGS_LONE_BUTTON )
                         
-                    
-                    self._credentials_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                    
-                    vbox.AddF( self._credentials_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    elif service_type == HC.IPFS:
+                        
+                        gridbox.AddF( ( 20, 20 ), CC.FLAGS_MIXED )
+                        gridbox.AddF( self._check_ipfs, CC.FLAGS_LONE_BUTTON )
+                        
                     
                 
-                if service_type in HC.REPOSITORIES:
+                self._credentials_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                vbox.AddF( self._credentials_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            if service_type in HC.REPOSITORIES:
+                
+                self._repositories_panel.AddF( self._pause_synchronisation, CC.FLAGS_MIXED )
+                self._repositories_panel.AddF( self._reset_processing_button, CC.FLAGS_LONE_BUTTON )
+                self._repositories_panel.AddF( self._reset_downloading_button, CC.FLAGS_LONE_BUTTON )
+                
+                vbox.AddF( self._repositories_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                if service_type == HC.LOCAL_RATING_NUMERICAL:
                     
-                    self._repositories_panel.AddF( self._pause_synchronisation, CC.FLAGS_MIXED )
-                    self._repositories_panel.AddF( self._reset_processing_button, CC.FLAGS_LONE_BUTTON )
-                    self._repositories_panel.AddF( self._reset_downloading_button, CC.FLAGS_LONE_BUTTON )
+                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'number of \'stars\'' ), CC.FLAGS_MIXED )
+                    gridbox.AddF( self._num_stars, CC.FLAGS_EXPAND_BOTH_WAYS )
                     
-                    vbox.AddF( self._repositories_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'allow a zero rating' ), CC.FLAGS_MIXED )
+                    gridbox.AddF( self._allow_zero, CC.FLAGS_EXPAND_BOTH_WAYS )
                     
                 
-                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                    
-                    gridbox = wx.FlexGridSizer( 0, 2 )
-                    
-                    gridbox.AddGrowableCol( 1, 1 )
-                    
-                    if service_type == HC.LOCAL_RATING_NUMERICAL:
-                        
-                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'number of \'stars\'' ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._num_stars, CC.FLAGS_EXPAND_BOTH_WAYS )
-                        
-                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'allow a zero rating' ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._allow_zero, CC.FLAGS_EXPAND_BOTH_WAYS )
-                        
-                    
-                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'shape' ), CC.FLAGS_MIXED )
-                    gridbox.AddF( self._shape, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
-                        
-                        ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
-                        
-                        hbox = wx.BoxSizer( wx.HORIZONTAL )
-                        
-                        hbox.AddF( border_ctrl, CC.FLAGS_MIXED )
-                        hbox.AddF( fill_ctrl, CC.FLAGS_MIXED )
-                        
-                        if colour_type == ClientRatings.LIKE: colour_text = 'liked'
-                        elif colour_type == ClientRatings.DISLIKE: colour_text = 'disliked'
-                        elif colour_type == ClientRatings.NULL: colour_text = 'not rated'
-                        elif colour_type == ClientRatings.MIXED: colour_text = 'a mixture of ratings'
-                        
-                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'border/fill for ' + colour_text ), CC.FLAGS_MIXED )
-                        gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                        
-                    
-                    self._local_rating_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                    
-                    vbox.AddF( self._local_rating_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
+                gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'shape' ), CC.FLAGS_MIXED )
+                gridbox.AddF( self._shape, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
-                if service_type in HC.TAG_SERVICES:
+                for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
+                    
+                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
                     
                     hbox = wx.BoxSizer( wx.HORIZONTAL )
                     
-                    hbox.AddF( self._archive_sync_add, CC.FLAGS_MIXED )
-                    hbox.AddF( self._archive_sync_edit, CC.FLAGS_MIXED )
-                    hbox.AddF( self._archive_sync_remove, CC.FLAGS_MIXED )
+                    hbox.AddF( border_ctrl, CC.FLAGS_MIXED )
+                    hbox.AddF( fill_ctrl, CC.FLAGS_MIXED )
                     
-                    self._archive_panel.AddF( self._archive_sync, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    self._archive_panel.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+                    if colour_type == ClientRatings.LIKE: colour_text = 'liked'
+                    elif colour_type == ClientRatings.DISLIKE: colour_text = 'disliked'
+                    elif colour_type == ClientRatings.NULL: colour_text = 'not rated'
+                    elif colour_type == ClientRatings.MIXED: colour_text = 'a mixture of ratings'
                     
-                    vbox.AddF( self._archive_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-                if service_type == HC.LOCAL_BOORU:
-                    
-                    hbox = wx.BoxSizer( wx.HORIZONTAL )
-                    
-                    hbox.AddF( wx.StaticText( self._booru_options_panel, label = 'port' ), CC.FLAGS_MIXED )
-                    hbox.AddF( self._port, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    self._booru_options_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                    self._booru_options_panel.AddF( self._upnp, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    self._booru_options_panel.AddF( self._max_monthly_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    vbox.AddF( self._booru_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'border/fill for ' + colour_text ), CC.FLAGS_MIXED )
+                    gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                     
                 
-                self.SetSizer( vbox )
+                self._local_rating_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                vbox.AddF( self._local_rating_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            InitialiseControls()
+            if service_type in HC.TAG_SERVICES:
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._archive_sync_add, CC.FLAGS_MIXED )
+                hbox.AddF( self._archive_sync_edit, CC.FLAGS_MIXED )
+                hbox.AddF( self._archive_sync_remove, CC.FLAGS_MIXED )
+                
+                self._archive_panel.AddF( self._archive_sync, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._archive_panel.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+                
+                vbox.AddF( self._archive_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
             
-            PopulateControls()
+            if service_type == HC.LOCAL_BOORU:
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( wx.StaticText( self._booru_options_panel, label = 'port' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._port, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._booru_options_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                self._booru_options_panel.AddF( self._upnp, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._booru_options_panel.AddF( self._max_monthly_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                vbox.AddF( self._booru_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
             
-            ArrangeControls()
+            self.SetSizer( vbox )
             
         
         def _GetArchiveNameToDisplay( self, archive_name, namespaces ):
@@ -6700,11 +6712,31 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             self._UpdateArchiveButtons()
             
         
+        def EventCheckIPFS( self, event ):
+            
+            ( service_key, service_type, name, info ) = self.GetInfo()
+            
+            service = ClientData.GenerateService( service_key, service_type, name, info )
+            
+            try:
+                
+                version = service.GetDaemonVersion()
+                
+                wx.MessageBox( 'Everything looks ok! Connected to IPFS Daemon with version: ' + version )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                wx.MessageBox( 'Could not connect!' )
+                
+            
+        
         def EventCheckService( self, event ):
             
             ( service_key, service_type, name, info ) = self.GetInfo()
             
-            service = ClientData.Service( service_key, service_type, name, info )
+            service = ClientData.GenerateService( service_key, service_type, name, info )
             
             try: root = service.Request( HC.GET, '' )
             except HydrusExceptions.WrongServiceTypeException:

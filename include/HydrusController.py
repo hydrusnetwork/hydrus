@@ -22,6 +22,11 @@ class HydrusController( object ):
         
         HydrusGlobals.controller = self
         
+        self._no_daemons = False
+        self._no_wal = False
+        
+        self._InitArgsBools()
+        
         self._model_shutdown = False
         self._view_shutdown = False
         
@@ -43,6 +48,29 @@ class HydrusController( object ):
         
         self._just_woke_from_sleep = False
         self._system_busy = False
+        
+    
+    def _InitArgsBools( self ):
+        
+        args = sys.argv[1:]
+        
+        for arg in args:
+            
+            while arg.startswith( '-' ):
+                
+                arg = arg[ 1: ]
+                
+            
+            if arg in ( 'no-daemon', 'no-daemons' ):
+                
+                self._no_daemons = True
+                
+            
+            if arg == 'no-wal':
+                
+                self._no_wal = True
+                
+            
         
     
     def _InitDB( self ):
@@ -144,9 +172,12 @@ class HydrusController( object ):
     
     def InitView( self ):
         
-        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SleepCheck', HydrusDaemons.DAEMONSleepCheck, period = 120 ) )
-        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
-        self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemory', HydrusDaemons.DAEMONMaintainMemory, period = 300 ) )
+        if not self._no_daemons:
+            
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SleepCheck', HydrusDaemons.DAEMONSleepCheck, period = 120 ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemory', HydrusDaemons.DAEMONMaintainMemory, period = 300 ) )
+            
         
     
     def MaintainDB( self ):

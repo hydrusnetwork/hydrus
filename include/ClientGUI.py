@@ -327,7 +327,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             info[ 'host' ] = host
             info[ 'port' ] = port
             
-            service = ClientData.Service( admin_service_key, service_type, name, info )
+            service = ClientData.GenerateService( admin_service_key, service_type, name, info )
             
             response = service.Request( HC.GET, 'init' )
             
@@ -829,6 +829,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             download_menu.AppendSeparator()
             download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+            
+            has_ipfs = len( [ service for service in services if service.GetServiceType() == HC.IPFS ] )
+            
+            if has_ipfs:
+                
+                download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_ipfs_download' ), p( '&A File From IPFS' ), p( 'Enter an IPFS multihash and attempt to import whatever is returned' ) )
+                
+            
             download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( 'New Download Page' ), download_menu )
@@ -1729,6 +1737,49 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if page is not None: page.SetSynchronisedWait()
         
     
+    def _StartIPFSDownload( self ):
+        
+        ipfs_services = self._controller.GetServicesManager().GetServices( ( HC.IPFS, ) )
+        
+        if len( ipfs_services ) > 0:
+            
+            if len( ipfs_services ) == 1:
+                
+                ( service, ) = ipfs_services
+                
+            else:
+                
+                names_to_services = { service.GetName() : service for service in ipfs_services }
+                
+                with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'Select which IPFS Daemon', names_to_services.keys() ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        name = dlg.GetString()
+                        
+                        service = names_to_services[ name ]
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'Enter multihash to download.' ) as dlg:
+                
+                result = dlg.ShowModal()
+                
+                if result == wx.ID_OK:
+                    
+                    multihash = dlg.GetValue()
+                    
+                    service.ImportFile( multihash )
+                    
+                
+            
+        
+    
     def _StartURLDownload( self ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter URL.' ) as dlg:
@@ -2238,6 +2289,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.ShowHideSplit()
                 
             elif command == 'site': webbrowser.open( 'https://hydrusnetwork.github.io/hydrus/' )
+            elif command == 'start_ipfs_download': self._StartIPFSDownload()
             elif command == 'start_url_download': self._StartURLDownload()
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
@@ -2672,6 +2724,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 elif service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
                 elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
                 elif service_type == HC.LOCAL_BOORU: name = 'booru'
+                elif service_type == HC.IPFS: name = 'ipfs'
                 else: continue
                 
                 listbook = ClientGUICommon.ListBook( parent_listbook )
@@ -2843,6 +2896,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._copy_account_key.Bind( wx.EVT_BUTTON, self.EventCopyAccountKey )
                 
             
+            if service_type == HC.IPFS:
+                
+                self._online_status = wx.StaticText( self, label = 'I will put some \'it is online/offline\' and version stuff here later.' )
+                
+            
             #
             
             self._DisplayService()
@@ -2949,6 +3007,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                 
                 vbox.AddF( repo_buttons_hbox, CC.FLAGS_BUTTON_SIZER )
+                
+            
+            if service_type == HC.IPFS:
+                
+                vbox.AddF( self._online_status, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             self.SetSizer( vbox )
@@ -3324,9 +3387,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 c_u_p_num_rows = content_update_package.GetNumRows()
                 c_u_p_total_weight_processed = 0
                 
-                pending_content_updates = []
-                pending_weight = 0
-                
                 update_speed_string = ''
                 
                 content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
@@ -3335,7 +3395,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
                 
-                for content_update in content_update_package.IterateContentUpdates():
+                for ( content_updates, weight ) in content_update_package.IterateContentUpdateChunks():
                     
                     ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                     
@@ -3346,42 +3406,23 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         return
                         
                     
-                    pending_content_updates.append( content_update )
+                    content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                     
-                    content_update_weight = len( content_update.GetHashes() )
+                    job_key.SetVariable( 'popup_text_1', content_update_index_string + 'committing' + update_speed_string )
                     
-                    pending_weight += content_update_weight
+                    job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
                     
-                    if pending_weight > 100:
-                        
-                        content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
-                        
-                        job_key.SetVariable( 'popup_text_1', content_update_index_string + 'committing' + update_speed_string )
-                        
-                        job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
-                        
-                        precise_timestamp = HydrusData.GetNowPrecise()
-                        
-                        self._controller.WriteSynchronous( 'content_updates', { self._service_key : pending_content_updates } )
-                        
-                        it_took = HydrusData.GetNowPrecise() - precise_timestamp
-                        
-                        rows_s = pending_weight / it_took
-                        
-                        update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s'
-                        
-                        c_u_p_total_weight_processed += pending_weight
-                        
-                        pending_content_updates = []
-                        pending_weight = 0
-                        
+                    precise_timestamp = HydrusData.GetNowPrecise()
                     
-                
-                if len( pending_content_updates ) > 0:
+                    self._controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
                     
-                    self._controller.WriteSynchronous( 'content_updates', { self._service_key : pending_content_updates } )
+                    it_took = HydrusData.GetNowPrecise() - precise_timestamp
                     
-                    c_u_p_total_weight_processed += pending_weight
+                    rows_s = weight / it_took
+                    
+                    update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s'
+                    
+                    c_u_p_total_weight_processed += weight
                     
                 
                 job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ConvertIntToPrettyString( c_u_p_num_rows ) + ' rows added.' )

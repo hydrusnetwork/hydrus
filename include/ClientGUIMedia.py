@@ -1572,10 +1572,10 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames ) = self._thumbnails_being_faded_in[ hash ]
             
-            wx.CallAfter( bmp.Destroy )
-            wx.CallAfter( alpha_bmp.Destroy )
-            
             del self._thumbnails_being_faded_in[ hash ]
+            
+            bmp.Destroy()
+            alpha_bmp.Destroy()
             
         
     
@@ -2482,13 +2482,15 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
             
-            all_info = self._thumbnails_being_faded_in.items()
+            hashes = list( self._thumbnails_being_faded_in.keys() )
             
-            random.shuffle( all_info )
+            random.shuffle( hashes )
             
             dcs = {}
             
-            for ( hash, ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered ) ) in all_info:
+            for hash in hashes:
+                
+                ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
                 
                 num_frames_rendered += 1
                 
@@ -2548,11 +2550,11 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     del self._thumbnails_being_faded_in[ hash ]
                     
-                    wx.CallAfter( original_bmp.Destroy )
-                    wx.CallAfter( alpha_bmp.Destroy )
+                    original_bmp.Destroy()
+                    alpha_bmp.Destroy()
                     
                 
-                if HydrusData.GetNowPrecise() - started > 0.016:
+                if HydrusData.TimeHasPassedPrecise( started + 0.016 ):
                     
                     break
                     
@@ -2564,9 +2566,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 time_this_took_in_ms = ( finished - started ) * 1000
                 
-                ms = max( 1, int( round( 16.7 - time_this_took_in_ms ) ) )
+                ms_to_wait = int( round( 16.7 - time_this_took_in_ms ) )
                 
-                self._timer_animation.Start( ms, wx.TIMER_ONE_SHOT )
+                ms_to_wait = max( 1, ms_to_wait )
+                
+                self._timer_animation.Start( ms_to_wait, wx.TIMER_ONE_SHOT )
                 
             
             self.Refresh()

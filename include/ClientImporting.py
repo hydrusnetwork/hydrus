@@ -1908,7 +1908,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._period = 86400 * 7
         self._get_tags_if_redundant = False
         
-
         if HC.options[ 'gallery_file_limit' ] is None:
             
             self._initial_file_limit = 200
@@ -1917,7 +1916,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._initial_file_limit = min( 200, HC.options[ 'gallery_file_limit' ] )
             
-        
         
         self._periodic_file_limit = None
         self._paused = False
@@ -1950,6 +1948,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         self._import_tag_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
         self._seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_seed_cache )
+        
+    
+    def _NoRecentErrors( self ):
+        
+        return HydrusData.TimeHasPassed( self._last_error + HC.UPDATE_DURATION )
         
     
     def _WorkOnFiles( self, job_key ):
@@ -2043,7 +2046,10 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, url = url )
                         
-                        successful_hashes.add( hash )
+                        if status == CC.STATUS_SUCCESSFUL:
+                            
+                            successful_hashes.add( hash )
+                            
                         
                     finally:
                         
@@ -2292,7 +2298,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         p1 = not self._paused
         p2 = not HydrusGlobals.view_shutdown
-        p3 = HydrusData.TimeHasPassed( self._last_error + HC.UPDATE_DURATION )
+        p3 = self._NoRecentErrors()
         p4 = self._SyncQueryCanDoWork()
         p5 = self._WorkOnFilesCanDoWork()
         
@@ -2312,6 +2318,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except Exception as e:
                 
+                HydrusData.ShowText( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
                 HydrusData.ShowException( e )
                 
                 self._last_error = HydrusData.GetNow()

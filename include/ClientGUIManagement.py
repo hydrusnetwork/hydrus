@@ -2440,20 +2440,26 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         if len( approved_contents ) > 0:
             
-            update = self._current_petition.GetApproval( approved_contents )
-            
-            self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
-            
-            self._controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+            for chunk_of_approved_contents in HydrusData.SplitListIntoChunks( approved_contents, 10 ):
+                
+                update = self._current_petition.GetApproval( chunk_of_approved_contents )
+                
+                self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
+                
+                self._controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+                
             
         
         if len( denied_contents ) > 0:
             
-            update = self._current_petition.GetDenial( denied_contents )
-            
-            self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
-            
-            self._controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+            for chunk_of_denied_contents in HydrusData.SplitListIntoChunks( denied_contents, 10 ):
+                
+                update = self._current_petition.GetDenial( chunk_of_denied_contents )
+                
+                self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
+                
+                self._controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
+                
             
         
         self._current_petition = None

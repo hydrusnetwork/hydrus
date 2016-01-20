@@ -222,6 +222,8 @@ class MediaList( object ):
         
         self._file_service_key = file_service_key
         
+        self._hashes = set()
+        
         self._sort_by = CC.SORT_BY_SMALLEST
         self._collect_by = None
         
@@ -737,8 +739,6 @@ class MediaCollection( MediaList, Media ):
         
         Media.__init__( self )
         MediaList.__init__( self, file_service_key, media_results )
-        
-        self._hashes = set()
         
         self._archive = True
         self._inbox = False
@@ -1293,7 +1293,10 @@ class SortedList( object ):
         
         do_sort = sort_function is not None
         
-        if sort_function is None: sort_function = lambda x: x
+        if sort_function is None:
+            
+            sort_function = lambda x: x
+            
         
         self._sort_function = sort_function
         
@@ -1301,12 +1304,21 @@ class SortedList( object ):
         
         self._items_to_indices = None
         
-        if do_sort: self.sort()
+        if do_sort:
+            
+            self.sort()
+            
         
     
-    def __contains__( self, item ): return self._items_to_indices.__contains__( item )
+    def __contains__( self, item ):
+        
+        return self._items_to_indices.__contains__( item )
+        
     
-    def __getitem__( self, value ): return self._sorted_list.__getitem__( value )
+    def __getitem__( self, value ):
+        
+        return self._sorted_list.__getitem__( value )
+        
     
     def __iter__( self ):
         
@@ -1377,14 +1389,20 @@ class SortedList( object ):
         
         deletee_indices.reverse()
         
-        for index in deletee_indices: del self._sorted_list[ index ]
+        for index in deletee_indices:
+            
+            del self._sorted_list[ index ]
+            
         
         self._DirtyIndices()
         
     
     def sort( self, f = None ):
         
-        if f is not None: self._sort_function = f
+        if f is not None:
+            
+            self._sort_function = f
+            
         
         self._sorted_list.sort( key = f )
         

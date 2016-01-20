@@ -12,6 +12,7 @@ import lxml # to force import for later bs4 stuff
 import os
 import pafy
 import re
+import requests
 import sys
 import threading
 import time
@@ -216,7 +217,7 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     job_key.SetVariable( 'popup_text_1', url_string + ' - initialising' )
     
-    def hook( gauge_range, gauge_value ):
+    def hook( gauge_value, gauge_range ):
         
         if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
         else: text = url_string + ' - ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range )
@@ -229,12 +230,51 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     try:
         
-        HydrusGlobals.client_controller.DoHTTP( HC.GET, url, temp_path = temp_path, report_hooks = [ hook ] )
+        response = requests.get( url, stream = True )
         
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
-        
-        ( result, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path )
+        if response.ok:
+            
+            if 'content-length' in response.headers:
+                
+                gauge_range = int( response.headers[ 'content-length' ] )
+                
+            else:
+                
+                gauge_range = None
+                
+            
+            gauge_value = 0
+            
+            with open( temp_path, 'wb' ) as f:
+                
+                for chunk in response.iter_content( chunk_size = 65536 ):
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        return
+                        
+                    
+                    f.write( chunk )
+                    
+                    gauge_value += len( chunk )
+                    
+                    hook( gauge_value, gauge_range )
+                    
+                
+            
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
+            
+            ( result, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path )
+            
+        else:
+            
+            job_key.Cancel()
+            
+            raise Exception( 'Sorry, http failed. This error will improve.' )
+            
         
     finally:
         

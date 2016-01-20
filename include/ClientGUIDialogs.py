@@ -1543,13 +1543,9 @@ class DialogInputLocalFiles( Dialog ):
                 
             else:
                 
-                paths = self._processing_queue.pop( 0 )
-                
                 self._currently_parsing = True
                 
-                self._job_key = HydrusThreading.JobKey()
-                
-                HydrusGlobals.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
+                paths = self._processing_queue.pop( 0 )
                 
                 self.SetGaugeInfo( None, None, '' )
                 
@@ -1559,10 +1555,17 @@ class DialogInputLocalFiles( Dialog ):
                 self._add_button.Disable()
                 self._tag_button.Disable()
                 
+                self._job_key = HydrusThreading.JobKey()
+                
+                HydrusGlobals.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
+                
             
         
     
-    def _TidyUp( self ): self._job_key.Cancel()
+    def _TidyUp( self ):
+        
+        self._job_key.Cancel()
+        
     
     def AddParsedPath( self, path, mime, size ):
         
@@ -1719,7 +1722,8 @@ class DialogInputLocalFiles( Dialog ):
         
         num_file_paths = len( file_paths )
         num_good_files = 0
-        num_odd_files = 0
+        num_empty_files = 0
+        num_uninteresting_mime_files = 0
         
         for ( i, path ) in enumerate( file_paths ):
             
@@ -1743,9 +1747,7 @@ class DialogInputLocalFiles( Dialog ):
             
             if size == 0:
                 
-                num_odd_files += 1
-                
-                HydrusData.ShowException( HydrusExceptions.SizeException( path + ' could not be imported because it is empty!' ) )
+                num_empty_files += 1
                 
                 continue
                 
@@ -1760,32 +1762,55 @@ class DialogInputLocalFiles( Dialog ):
                 
             else:
                 
-                num_odd_files += 1
-                
-                e = HydrusExceptions.MimeException( path + ' could not be imported because its mime is not supported.' )
-                
-                HydrusData.ShowException( e )
+                num_uninteresting_mime_files += 1
                 
                 continue
                 
             
         
-        if num_good_files > 0:
+        if num_good_files == 0:
             
-            if num_good_files == 1: message = '1 file was parsed successfully'
-            else: message = str( num_good_files ) + ' files were parsed successfully'
+            message = 'none of the files parsed successfully'
             
-            if num_odd_files > 0: message += ', but ' + str( num_odd_files ) + ' failed.'
-            else: message += '.'
+        elif num_good_files == 1:
+            
+            message = '1 file was parsed successfully'
             
         else:
             
-            message = str( num_odd_files ) + ' files could not be parsed.'
+            message = HydrusData.ConvertIntToPrettyString( num_good_files ) + ' files were parsed successfully'
             
         
-        wx.CallAfter( self.SetGaugeInfo, num_file_paths, num_file_paths, message )
+        if num_empty_files > 0 or num_uninteresting_mime_files > 0:
+            
+            if num_good_files == 0:
+                
+                message += ': '
+                
+            else:
+                
+                message += ', but '
+                
+            
+            bad_comments = []
+            
+            if num_empty_files > 0:
+                
+                bad_comments.append( HydrusData.ConvertIntToPrettyString( num_empty_files ) + ' were empty' )
+                
+            
+            if num_uninteresting_mime_files > 0:
+                
+                bad_comments.append( HydrusData.ConvertIntToPrettyString( num_uninteresting_mime_files ) + ' had unsupported mimes' )
+                
+            
+            message += ' and '.join( bad_comments )
+            
         
-        time.sleep( 1.5 )
+        message += '.'
+        
+        
+        wx.CallAfter( self.SetGaugeInfo, num_file_paths, num_file_paths, message )
         
         wx.CallAfter( self.DoneParsing )
         
@@ -3623,7 +3648,7 @@ class DialogRegisterService( Dialog ):
         
         info = { 'host' : host, 'port' : port }
         
-        service = ClientData.Service( service_key, self._service_type, name, info )
+        service = ClientData.GenerateService( service_key, self._service_type, name, info )
         
         response = service.Request( HC.GET, 'access_key', request_headers = { 'Hydrus-Key' : registration_key_encoded } )
         

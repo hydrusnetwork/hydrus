@@ -742,7 +742,10 @@ class HydrusSessionManager( object ):
             
             self._controller.Write( 'delete_hydrus_session_key', service_key )
             
-            if service_key in self._service_keys_to_sessions: del self._service_keys_to_sessions[ service_key ]
+            if service_key in self._service_keys_to_sessions:
+                
+                del self._service_keys_to_sessions[ service_key ]
+                
             
         
     
@@ -1011,14 +1014,16 @@ class ThumbnailCache( object ):
                         
                         os.remove( path )
                         
-                    except:
+                    except Exception as e:
+                        
+                        HydrusData.ShowException( e )
                         
                         raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. Furthermore, the faulty thumbnail file could not be deleted. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
                         
                     
                     try:
                         
-                        hydrus_bitmap = self._GetHydrusBitmapFromHardDrive( display_media, from_error = True )
+                        hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media, from_error = True )
                         
                     except Exception as e:
                         

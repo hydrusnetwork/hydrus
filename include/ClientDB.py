@@ -3663,7 +3663,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( service_key, service_type, name, info ) = self._c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
             
-            service = ClientData.Service( service_key, service_type, name, info )
+            service = ClientData.GenerateService( service_key, service_type, name, info )
             
             self._service_cache[ service_id ] = service
             
@@ -4341,14 +4341,22 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ProcessContentUpdatePackage( self, service_key, content_update_package, job_key, only_when_idle ):
         
+        ( previous_journal_mode, ) = self._c.execute( 'PRAGMA journal_mode;' ).fetchone()
+        
+        if previous_journal_mode == 'wal':
+            
+            self._c.execute( 'COMMIT;' )
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
+            self._c.execute( 'BEGIN IMMEDIATE;' )
+            
+        
         pauser = HydrusData.BigJobPauser()
         
         self.pub_after_commit( 'notify_new_pending' )
         self.pub_after_commit( 'notify_new_siblings' )
         self.pub_after_commit( 'notify_new_parents' )
-        
-        pending_content_updates = []
-        pending_weight = 0
         
         c_u_p_num_rows = content_update_package.GetNumRows()
         c_u_p_total_weight_processed = 0
@@ -4363,7 +4371,7 @@ class DB( HydrusDB.HydrusDB ):
         
         quit_early = False
         
-        for content_update in content_update_package.IterateContentUpdates():
+        for ( content_updates, weight ) in content_update_package.IterateContentUpdateChunks():
             
             pauser.Pause()
             
@@ -4390,46 +4398,36 @@ class DB( HydrusDB.HydrusDB ):
                 
                 job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing transaction' )
                 
-                time.sleep( 1 )
+                if previous_journal_mode == 'wal':
+                    
+                    self._c.execute( 'COMMIT;' )
+                    
+                    self._c.execute( 'PRAGMA journal_mode = WAL;' )
+                    
+                    self._c.execute( 'BEGIN IMMEDIATE;' )
+                    
                 
                 return ( False, c_u_p_total_weight_processed )
                 
             
-            pending_content_updates.append( content_update )
+            content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
             
-            pending_weight += content_update.GetWeight()
+            self._controller.pub( 'splash_set_status_text', content_update_index_string + 'writing' + update_speed_string )
+            job_key.SetVariable( 'popup_text_2', content_update_index_string + 'writing' + update_speed_string )
             
-            if pending_weight > 100:
-                
-                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
-                
-                self._controller.pub( 'splash_set_status_text', content_update_index_string + 'writing' + update_speed_string )
-                job_key.SetVariable( 'popup_text_2', content_update_index_string + 'writing' + update_speed_string )
-                
-                job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
-                
-                precise_timestamp = HydrusData.GetNowPrecise()
-                
-                self._ProcessContentUpdates( { service_key : pending_content_updates }, do_pubsubs = False )
-                
-                it_took = HydrusData.GetNowPrecise() - precise_timestamp
-                
-                rows_s = pending_weight / it_took
-                
-                update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s'
-                
-                c_u_p_total_weight_processed += pending_weight
-                
-                pending_content_updates = []
-                pending_weight = 0
-                
+            job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
             
-        
-        if len( pending_content_updates ) > 0:
+            precise_timestamp = HydrusData.GetNowPrecise()
             
-            self._ProcessContentUpdates( { service_key : pending_content_updates }, do_pubsubs = False )
+            self._ProcessContentUpdates( { service_key : content_updates }, do_pubsubs = False )
             
-            c_u_p_total_weight_processed += pending_weight
+            it_took = HydrusData.GetNowPrecise() - precise_timestamp
+            
+            rows_s = weight / it_took
+            
+            update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s'
+            
+            c_u_p_total_weight_processed += weight
             
         
         content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_num_rows, c_u_p_num_rows ) + ': '
@@ -4437,8 +4435,15 @@ class DB( HydrusDB.HydrusDB ):
         job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing transaction' )
         
         job_key.SetVariable( 'popup_gauge_2', ( c_u_p_num_rows, c_u_p_num_rows ) )
-        
-        time.sleep( 1 )
+
+        if previous_journal_mode == 'wal':
+            
+            self._c.execute( 'COMMIT;' )
+            
+            self._c.execute( 'PRAGMA journal_mode = WAL;' )
+            
+            self._c.execute( 'BEGIN IMMEDIATE;' )
+            
         
         return ( True, c_u_p_total_weight_processed )
         
@@ -6376,7 +6381,7 @@ class DB( HydrusDB.HydrusDB ):
             # when we commit a tag that is both deleted and pending, we merge two statuses into one!
             # in this case, we have to be careful about the counts (decrement twice, but only increment once), hence why this returns two numbers
             
-            pertinent_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, old_status ) ) ]
+            pertinent_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, old_status ) ) }
             
             existing_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, new_status ) ) }
             
@@ -6390,8 +6395,6 @@ class DB( HydrusDB.HydrusDB ):
             
             num_old_made_new = self._GetRowCount()
             
-            ClearAutocompleteTagCache( tag_service_id, namespace_id, tag_id )
-            
             return ( num_old_deleted + num_old_made_new, num_old_made_new )
             
         
@@ -6400,8 +6403,6 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, HC.PENDING ) )
             
             num_deleted = self._GetRowCount()
-            
-            ClearAutocompleteTagCache( tag_service_id, namespace_id, tag_id )
             
             return num_deleted
             
@@ -6426,8 +6427,6 @@ class DB( HydrusDB.HydrusDB ):
             
             num_rows_added = self._GetRowCount()
             
-            ClearAutocompleteTagCache( tag_service_id, namespace_id, tag_id )
-            
             return num_rows_added
             
         
@@ -6438,11 +6437,6 @@ class DB( HydrusDB.HydrusDB ):
             num_rows_added = self._GetRowCount()
             
             return num_rows_added
-            
-        
-        def ClearAutocompleteTagCache( tag_service_id, namespace_id, tag_id ):
-            
-            self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id IN ( ?, ? ) AND namespace_id = ? AND tag_id = ?;', ( tag_service_id, self._combined_tag_service_id, namespace_id, tag_id ) )
             
         
         change_in_num_mappings = 0
@@ -6468,6 +6462,18 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_lists = [ hash_ids for ( namespace_id, tag_id, hash_ids ) in all_removes ]
         hash_ids_being_removed = { hash_id for hash_id in itertools.chain.from_iterable( hash_ids_lists ) }
+        
+        all_changed_full_tag_ids = set()
+        
+        all_changed_full_tag_ids.update( ( namespace_id, tag_id ) for ( namespace_id, tag_id, hash_ids ) in all_adds )
+        all_changed_full_tag_ids.update( ( namespace_id, tag_id ) for ( namespace_id, tag_id, hash_ids ) in all_removes )
+        
+        all_changed_namespace_ids_to_tag_ids = HydrusData.BuildKeyToListDict( all_changed_full_tag_ids )
+        
+        for ( namespace_id, tag_ids ) in all_changed_namespace_ids_to_tag_ids.items():
+            
+            self._c.executemany( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id IN ( ?, ? ) AND namespace_id = ? AND tag_id = ?;', ( ( tag_service_id, self._combined_tag_service_id, namespace_id, tag_id ) for tag_id in tag_ids ) )
+            
         
         namespace_ids_to_search_for = namespace_ids_being_added.union( namespace_ids_being_removed )
         tag_ids_to_search_for = tag_ids_being_added.union( tag_ids_being_removed )
@@ -6730,6 +6736,10 @@ class DB( HydrusDB.HydrusDB ):
                     info_update[ 'account' ] = account
                     
                     self.pub_after_commit( 'permissions_are_stale' )
+                    
+                    session_manager = HydrusGlobals.client_controller.GetClientSessionManager()
+                    
+                    session_manager.DeleteSessionKey( service_key )
                     
                 
                 if service_type in HC.TAG_SERVICES:

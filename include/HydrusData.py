@@ -1362,8 +1362,14 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
             
             if for_client:
                 
-                if action == HC.CONTENT_UPDATE_PEND: new_action = HC.CONTENT_UPDATE_ADD
-                elif action == HC.CONTENT_UPDATE_PETITION: new_action = HC.CONTENT_UPDATE_DELETE
+                if action == HC.CONTENT_UPDATE_PEND:
+                    
+                    new_action = HC.CONTENT_UPDATE_ADD
+                    
+                elif action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    new_action = HC.CONTENT_UPDATE_DELETE
+                    
                 else: continue
                 
                 if data_type in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ) and action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
@@ -1379,7 +1385,10 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
                     munge_row = lambda ( tag, hashes, reason ): ( tag, hashes )
                     
                 
-            else: new_action = action
+            else:
+                
+                new_action = action
+                
             
             content_updates.extend( [ ContentUpdate( data_type, new_action, munge_row( row ) ) for row in self.GetContentDataIterator( data_type, action ) ] )
             
@@ -1782,7 +1791,10 @@ class JobDatabase( object ):
                 raise self._result
                 
             
-        else: return self._result
+        else:
+            
+            return self._result
+            
         
     
     def GetType( self ): return self._type
@@ -1923,25 +1935,36 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
         return num
         
     
-    def IterateContentUpdates( self, as_if_pending = False ):
+    def IterateContentUpdateChunks( self, chunk_weight = 100):
         
         data_types = [ HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ]
         actions = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ]
+        
+        content_updates = []
+        weight = 0
         
         for ( data_type, action ) in itertools.product( data_types, actions ):
             
             for row in self.GetContentDataIterator( data_type, action ):
                 
-                yieldee_action = action
+                content_update = ContentUpdate( data_type, action, row )
                 
-                if as_if_pending:
+                weight += content_update.GetWeight()
+                content_updates.append( content_update )
+                
+                if weight > chunk_weight:
                     
-                    if action == HC.CONTENT_UPDATE_ADD: yieldee_action = HC.CONTENT_UPDATE_PEND
-                    elif action == HC.CONTENT_UPDATE_DELETE: continue
+                    yield ( content_updates, weight )
+                    
+                    content_updates = []
+                    weight = 0
                     
                 
-                yield ContentUpdate( data_type, yieldee_action, row )
-                
+            
+        
+        if len( content_updates ) > 0:
+            
+            yield ( content_updates, weight )
             
         
     

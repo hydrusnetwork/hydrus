@@ -19,13 +19,15 @@ class HydrusDB( object ):
     READ_WRITE_ACTIONS = []
     WRITE_SPECIAL_ACTIONS = []
     
-    def __init__( self, controller ):
+    def __init__( self, controller, no_wal = False ):
         
         self._controller = controller
+        self._no_wal = no_wal
         
         self._local_shutdown = False
         self._loop_finished = False
         
+        self._no_wal_path = os.path.join( HC.DB_DIR, 'no-wal' )
         self._db_path = os.path.join( HC.DB_DIR, self.DB_NAME + '.db' )
         
         self._jobs = Queue.PriorityQueue()
@@ -149,27 +151,72 @@ class HydrusDB( object ):
     
     def _InitDBCursor( self ):
         
+        db_just_created = not os.path.exists( self._db_path )
+        
+        if os.path.exists( self._no_wal_path ):
+            
+            self._no_wal = True
+            
+        
         self._db = sqlite3.connect( self._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         
         self._db.create_function( 'hydrus_hamming', 2, HydrusData.GetHammingDistance )
         
         self._c = self._db.cursor()
         
-        self._c.execute( 'DROP TABLE IF EXISTS ratings_aggregates;' )
+        self._c.execute( 'PRAGMA cache_size = -20000;' )
+        self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
-        self._c.execute( 'PRAGMA cache_size = -50000;' )
-        self._c.execute( 'PRAGMA journal_mode = WAL;' )
-        self._c.execute( 'PRAGMA synchronous = 1;' )
-        
-        try:
-            
-            self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
-            
-        except sqlite3.OperationalError:
+        if self._no_wal:
             
             self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
             
+            self._c.execute( 'PRAGMA synchronous = 2;' )
+            
             self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
+            
+        else:
+            
+            self._c.execute( 'PRAGMA journal_mode = WAL;' )
+            
+            self._c.execute( 'PRAGMA synchronous = 1;' )
+            
+            try:
+                
+                self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
+                
+            except sqlite3.OperationalError:
+                
+                def create_no_wal_file():
+                    
+                    with open( self._no_wal_path, 'wb' ) as f:
+                        
+                        f.write( 'This file was created because the database failed to set WAL journalling. It will not reattempt WAL as long as this file exists.' )
+                        
+                    
+                
+                if db_just_created:
+                    
+                    del self._c
+                    del self._db
+                    
+                    os.remove( self._db_path )
+                    
+                    create_no_wal_file()
+                    
+                    self._InitDBCursor()
+                    
+                else:
+                    
+                    self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+                    
+                    self._c.execute( 'PRAGMA synchronous = 2;' )
+                    
+                    self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
+                    
+                    create_no_wal_file()
+                    
+                
             
         
     

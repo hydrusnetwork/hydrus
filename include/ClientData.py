@@ -183,6 +183,35 @@ def DeletePath( path ):
         HydrusPaths.DeletePath( path )
         
     
+def GenerateService( service_key, service_type, name, info ):
+    
+    if service_type in HC.REPOSITORIES:
+        
+        cl = ServiceRepository
+        
+    elif service_type in HC.RESTRICTED_SERVICES:
+        
+        cl = ServiceRestricted
+        
+    elif service_type == HC.IPFS:
+        
+        cl = ServiceIPFS
+        
+    elif service_type in HC.REMOTE_SERVICES:
+        
+        cl = ServiceRemote
+        
+    elif service_type == HC.LOCAL_BOORU:
+        
+        cl = ServiceLocalBooru
+        
+    else:
+        
+        cl = Service
+        
+    
+    return cl( service_key, service_type, name, info )
+    
 def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, collapse_siblings = False ):
     
     siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
@@ -858,13 +887,9 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS ] = ImportTagOptions
 
-class Service( HydrusData.HydrusYAMLBase ):
-    
-    yaml_tag = u'!Service'
+class Service( object ):
     
     def __init__( self, service_key, service_type, name, info ):
-        
-        HydrusData.HydrusYAMLBase.__init__( self )
         
         self._service_key = service_key
         self._service_type = service_type
@@ -878,148 +903,28 @@ class Service( HydrusData.HydrusYAMLBase ):
     
     def __hash__( self ): return self._service_key.__hash__()
     
-    def _RecordHydrusBandwidth( self, method, command, data_used ):
+    def _ProcessServiceUpdate( self, service_update ):
         
-        if ( self._service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS:
-            
-            HydrusGlobals.client_controller.pub( 'service_updates_delayed', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, data_used ) ] } )
-            
-        
-    
-    def _ReportSyncProcessingError( self, path, error_text ):
-        
-        text = 'While synchronising ' + self._name + ', the expected update file ' + path + ', ' + error_text + '.'
-        text += os.linesep * 2
-        text += 'The service has been indefinitely paused.'
-        text += os.linesep * 2
-        text += 'This is a serious error. Unless you know what went wrong, you should contact the developer.'
-        
-        HydrusData.ShowText( text )
-        
-        service_updates = [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_PAUSE ) ]
-        
-        service_keys_to_service_updates = { self._service_key : service_updates }
-        
-        self.ProcessServiceUpdates( service_keys_to_service_updates )
-        
-        HydrusGlobals.client_controller.Write( 'service_updates', service_keys_to_service_updates )
-        
-    
-    def CanDownload( self ):
-        
-        return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError()
-        
-    
-    def CanDownloadUpdate( self ):
-        
-        update_due = HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
-        
-        return self.CanDownload() and update_due and not self.IsPaused()
-        
-    
-    def CanProcessUpdate( self ):
-        
-        update_is_downloaded = self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
-        
-        it_is_time = HydrusData.TimeHasPassed( self._info[ 'next_processing_timestamp' ] + HC.UPDATE_DURATION + HC.options[ 'processing_phase' ] )
-        
-        return update_is_downloaded and it_is_time and not self.IsPaused()
-        
-    
-    def CanUpload( self ): return self._info[ 'account' ].HasPermission( HC.POST_DATA ) and not self.HasRecentError()
-    
-    def GetCredentials( self ):
-        
-        host = self._info[ 'host' ]
-        port = self._info[ 'port' ]
-        if 'access_key' in self._info: access_key = self._info[ 'access_key' ]
-        else: access_key = None
-        
-        credentials = Credentials( host, port, access_key )
-        
-        return credentials
+        pass
         
     
     def GetInfo( self, key = None ):
         
-        if key is None: return self._info
-        else: return self._info[ key ]
+        if key is None:
+            
+            return self._info
+            
+        else:
+            
+            return self._info[ key ]
+            
         
     
     def GetServiceKey( self ): return self._service_key
     
     def GetName( self ): return self._name
     
-    def GetRecentErrorPending( self ):
-        
-        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return HydrusData.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 600 )
-        else: return HydrusData.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 3600 * 4 )
-        
-    
     def GetServiceType( self ): return self._service_type
-    
-    def GetTimestamps( self ): return ( self._info[ 'first_timestamp' ], self._info[ 'next_download_timestamp' ], self._info[ 'next_processing_timestamp' ] )
-    
-    def GetUpdateStatus( self ):
-        
-        account = self._info[ 'account' ]
-        
-        now = HydrusData.GetNow()
-        first_timestamp = self._info[ 'first_timestamp' ]
-        next_download_timestamp = self._info[ 'next_download_timestamp' ]
-        next_processing_timestamp = self._info[ 'next_processing_timestamp' ]
-        
-        if first_timestamp is None:
-            
-            num_updates = 0
-            num_updates_downloaded = 0
-            num_updates_processed = 0
-            
-        else:
-            
-            num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
-            num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
-            num_updates_processed = max( 0, ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION )
-            
-        
-        downloaded_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_downloaded, num_updates )
-        processed_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_processed, num_updates )
-        
-        if self.IsPaused() or not self._info[ 'account' ].HasPermission( HC.GET_DATA ): status = 'updates on hold'
-        else:
-            
-            if self.CanDownloadUpdate(): status = 'downloaded up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
-            elif self.CanProcessUpdate(): status = 'processed up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_processing_timestamp' ] )
-            elif self.HasRecentError(): status = 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
-            else:
-                
-                if HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION ):
-                    
-                    status = 'next update will be downloaded soon'
-                    
-                else:
-                    
-                    status = 'fully synchronised - next update ' + HydrusData.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
-                    
-                
-            
-        
-        return downloaded_text + ' - ' + processed_text + ' - ' + status
-        
-    
-    def HasRecentError( self ):
-        
-        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return self._info[ 'last_error' ] + 900 > HydrusData.GetNow()
-        else: return self._info[ 'last_error' ] + 3600 * 4 > HydrusData.GetNow()
-        
-    
-    def IsInitialised( self ):
-        
-        if self._service_type == HC.SERVER_ADMIN: return 'access_key' in self._info
-        else: return True
-        
-    
-    def IsPaused( self ): return self._info[ 'paused' ]
     
     def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
@@ -1029,59 +934,160 @@ class Service( HydrusData.HydrusYAMLBase ):
                 
                 if service_key == self._service_key:
                     
-                    ( action, row ) = service_update.ToTuple()
-                    
-                    if action == HC.SERVICE_UPDATE_ERROR: self._info[ 'last_error' ] = HydrusData.GetNow()
-                    elif action == HC.SERVICE_UPDATE_RESET:
-                        
-                        self._info[ 'last_error' ] = 0
-                        
-                        if 'next_processing_timestamp' in self._info: self._info[ 'next_processing_timestamp' ] = 0
-                        
-                    elif action == HC.SERVICE_UPDATE_ACCOUNT:
-                        
-                        account = row
-                        
-                        self._info[ 'account' ] = account
-                        self._info[ 'last_error' ] = 0
-                        
-                    elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
-                        
-                        num_bytes = row
-                        
-                        if self._service_type == HC.LOCAL_BOORU:
-                            
-                            self._info[ 'used_monthly_data' ] += num_bytes
-                            self._info[ 'used_monthly_requests' ] += 1
-                            
-                        else: self._info[ 'account' ].RequestMade( num_bytes )
-                        
-                    elif action == HC.SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP:
-                        
-                        next_download_timestamp = row
-                        
-                        if next_download_timestamp > self._info[ 'next_download_timestamp' ]:
-                            
-                            if self._info[ 'first_timestamp' ] is None: self._info[ 'first_timestamp' ] = next_download_timestamp
-                            
-                            self._info[ 'next_download_timestamp' ] = next_download_timestamp
-                            
-                        
-                    elif action == HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP:
-                        
-                        next_processing_timestamp = row
-                        
-                        if next_processing_timestamp > self._info[ 'next_processing_timestamp' ]:
-                            
-                            self._info[ 'next_processing_timestamp' ] = next_processing_timestamp
-                            
-                        
-                    elif action == HC.SERVICE_UPDATE_PAUSE:
-                        
-                        self._info[ 'paused' ] = True
-                        
+                    self._ProcessServiceUpdate( service_update )
                     
                 
+            
+        
+    
+    def ToTuple( self ): return ( self._service_key, self._service_type, self._name, self._info )
+    
+class ServiceLocalBooru( Service ):
+    
+    def _ProcessServiceUpdate( self, service_update ):
+        
+        Service._ProcessServiceUpdate( self, service_update )
+        
+        ( action, row ) = service_update.ToTuple()
+        
+        if action == HC.SERVICE_UPDATE_REQUEST_MADE:
+            
+            num_bytes = row
+            
+            self._info[ 'used_monthly_data' ] += num_bytes
+            self._info[ 'used_monthly_requests' ] += 1
+            
+        
+    
+class ServiceRemote( Service ):
+    
+    def GetCredentials( self ):
+        
+        host = self._info[ 'host' ]
+        port = self._info[ 'port' ]
+        
+        credentials = Credentials( host, port )
+        
+        return credentials
+        
+    
+    def _GetErrorWaitPeriod( self ):
+        
+        return 3600 * 4
+        
+    
+    def _ProcessServiceUpdate( self, service_update ):
+        
+        Service._ProcessServiceUpdate( self, service_update )
+        
+        ( action, row ) = service_update.ToTuple()
+        
+        if action == HC.SERVICE_UPDATE_ERROR:
+            
+            self._info[ 'last_error' ] = HydrusData.GetNow()
+            
+        elif action == HC.SERVICE_UPDATE_RESET:
+            
+            self._info[ 'last_error' ] = 0
+            
+        
+    
+    def GetRecentErrorPending( self ):
+        
+        return HydrusData.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + self._GetErrorWaitPeriod() )
+        
+    
+    def HasRecentError( self ):
+        
+        return not HydrusData.TimeHasPassed( self._info[ 'last_error' ] + self._GetErrorWaitPeriod() )
+        
+    
+    def SetCredentials( self, credentials ):
+        
+        ( host, port ) = credentials.GetAddress()
+        
+        self._info[ 'host' ] = host
+        self._info[ 'port' ] = port
+        
+    
+class ServiceRestricted( ServiceRemote ):
+    
+    def _GetErrorWaitPeriod( self ):
+        
+        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ):
+            
+            return 900
+            
+        else:
+            
+            return ServiceRemote._GetErrorWaitPeriod( self )
+            
+        
+    
+    def _ProcessServiceUpdate( self, service_update ):
+        
+        ServiceRemote._ProcessServiceUpdate( self, service_update )
+        
+        ( action, row ) = service_update.ToTuple()
+        
+        if action == HC.SERVICE_UPDATE_ACCOUNT:
+            
+            account = row
+            
+            self._info[ 'account' ] = account
+            self._info[ 'last_error' ] = 0
+            
+        elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
+            
+            num_bytes = row
+            
+            self._info[ 'account' ].RequestMade( num_bytes )
+            
+        
+    
+    def _RecordHydrusBandwidth( self, method, command, data_used ):
+        
+        if ( self._service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS:
+            
+            HydrusGlobals.client_controller.pub( 'service_updates_delayed', { self._service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, data_used ) ] } )
+            
+        
+    
+    def CanDownload( self ):
+        
+        return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError()
+        
+    
+    def CanUpload( self ): return self._info[ 'account' ].HasPermission( HC.POST_DATA ) and not self.HasRecentError()
+    
+    def GetCredentials( self ):
+        
+        host = self._info[ 'host' ]
+        port = self._info[ 'port' ]
+        
+        if 'access_key' in self._info:
+            
+            access_key = self._info[ 'access_key' ]
+            
+        else:
+            
+            access_key = None
+            
+        
+        credentials = Credentials( host, port, access_key )
+        
+        return credentials
+        
+    
+    def IsInitialised( self ):
+        
+        if self._service_type == HC.SERVER_ADMIN:
+            
+            return 'access_key' in self._info
+            
+        else:
+            
+            return True
             
         
     
@@ -1147,8 +1153,14 @@ class Service( HydrusData.HydrusYAMLBase ):
                 request_headers[ 'Content-Type' ] = HC.mime_string_lookup[ content_type ]
                 
             
-            if query != '': path_and_query = path + '?' + query
-            else: path_and_query = path
+            if query != '':
+                
+                path_and_query = path + '?' + query
+                
+            else:
+                
+                path_and_query = path
+                
             
             ( host, port ) = credentials.GetAddress()
             
@@ -1158,13 +1170,25 @@ class Service( HydrusData.HydrusYAMLBase ):
             
             ClientNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
             
-            if method == HC.GET: data_used = size_of_response
-            elif method == HC.POST: data_used = len( body )
+            if method == HC.GET:
+                
+                data_used = size_of_response
+                
+            elif method == HC.POST:
+                
+                data_used = len( body )
+                
             
             self._RecordHydrusBandwidth( method, command, data_used )
             
-            if return_cookies: return ( response, cookies )
-            else: return response
+            if return_cookies:
+                
+                return ( response, cookies )
+                
+            else:
+                
+                return response
+                
             
         except Exception as e:
             
@@ -1199,12 +1223,142 @@ class Service( HydrusData.HydrusYAMLBase ):
     
     def SetCredentials( self, credentials ):
         
-        ( host, port ) = credentials.GetAddress()
+        ServiceRemote.SetCredentials( self, credentials )
         
-        self._info[ 'host' ] = host
-        self._info[ 'port' ] = port
+        if credentials.HasAccessKey():
+            
+            self._info[ 'access_key' ] = credentials.GetAccessKey()
+            
         
-        if credentials.HasAccessKey(): self._info[ 'access_key' ] = credentials.GetAccessKey()
+    
+class ServiceRepository( ServiceRestricted ):
+    
+    def _ProcessServiceUpdate( self, service_update ):
+        
+        ServiceRestricted._ProcessServiceUpdate( self, service_update )
+        
+        ( action, row ) = service_update.ToTuple()
+        
+        if action == HC.SERVICE_UPDATE_RESET:
+            
+            if 'next_processing_timestamp' in self._info:
+                
+                self._info[ 'next_processing_timestamp' ] = 0
+                
+            
+        elif action == HC.SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP:
+            
+            next_download_timestamp = row
+            
+            if next_download_timestamp > self._info[ 'next_download_timestamp' ]:
+                
+                if self._info[ 'first_timestamp' ] is None: self._info[ 'first_timestamp' ] = next_download_timestamp
+                
+                self._info[ 'next_download_timestamp' ] = next_download_timestamp
+                
+            
+        elif action == HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP:
+            
+            next_processing_timestamp = row
+            
+            if next_processing_timestamp > self._info[ 'next_processing_timestamp' ]:
+                
+                self._info[ 'next_processing_timestamp' ] = next_processing_timestamp
+                
+            
+        elif action == HC.SERVICE_UPDATE_PAUSE:
+            
+            self._info[ 'paused' ] = True
+            
+        
+    
+    def _ReportSyncProcessingError( self, path, error_text ):
+        
+        text = 'While synchronising ' + self._name + ', the expected update file ' + path + ', ' + error_text + '.'
+        text += os.linesep * 2
+        text += 'The service has been indefinitely paused.'
+        text += os.linesep * 2
+        text += 'This is a serious error. Unless you know what went wrong, you should contact the developer.'
+        
+        HydrusData.ShowText( text )
+        
+        service_updates = [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_PAUSE ) ]
+        
+        service_keys_to_service_updates = { self._service_key : service_updates }
+        
+        self.ProcessServiceUpdates( service_keys_to_service_updates )
+        
+        HydrusGlobals.client_controller.Write( 'service_updates', service_keys_to_service_updates )
+        
+    
+    def CanDownloadUpdate( self ):
+        
+        update_due = HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+        
+        return self.CanDownload() and update_due and not self.IsPaused()
+        
+    
+    def CanProcessUpdate( self ):
+        
+        update_is_downloaded = self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
+        
+        it_is_time = HydrusData.TimeHasPassed( self._info[ 'next_processing_timestamp' ] + HC.UPDATE_DURATION + HC.options[ 'processing_phase' ] )
+        
+        return update_is_downloaded and it_is_time and not self.IsPaused()
+        
+    
+    def GetTimestamps( self ): return ( self._info[ 'first_timestamp' ], self._info[ 'next_download_timestamp' ], self._info[ 'next_processing_timestamp' ] )
+    
+    def GetUpdateStatus( self ):
+        
+        account = self._info[ 'account' ]
+        
+        now = HydrusData.GetNow()
+        first_timestamp = self._info[ 'first_timestamp' ]
+        next_download_timestamp = self._info[ 'next_download_timestamp' ]
+        next_processing_timestamp = self._info[ 'next_processing_timestamp' ]
+        
+        if first_timestamp is None:
+            
+            num_updates = 0
+            num_updates_downloaded = 0
+            num_updates_processed = 0
+            
+        else:
+            
+            num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
+            num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
+            num_updates_processed = max( 0, ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION )
+            
+        
+        downloaded_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_downloaded, num_updates )
+        processed_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_processed, num_updates )
+        
+        if self.IsPaused() or not self._info[ 'account' ].HasPermission( HC.GET_DATA ): status = 'updates on hold'
+        else:
+            
+            if self.CanDownloadUpdate(): status = 'downloaded up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
+            elif self.CanProcessUpdate(): status = 'processed up to ' + HydrusData.ConvertTimestampToPrettySync( self._info[ 'next_processing_timestamp' ] )
+            elif self.HasRecentError(): status = 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
+            else:
+                
+                if HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION ):
+                    
+                    status = 'next update will be downloaded soon'
+                    
+                else:
+                    
+                    status = 'fully synchronised - next update ' + HydrusData.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+                    
+                
+            
+        
+        return downloaded_text + ' - ' + processed_text + ' - ' + status
+        
+    
+    def IsPaused( self ):
+        
+        return self._info[ 'paused' ]
         
     
     def Sync( self, only_when_idle = False, stop_time = None ):
@@ -1517,6 +1671,8 @@ class Service( HydrusData.HydrusYAMLBase ):
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     
+                    time.sleep( 1 )
+                    
                 
                 if options[ 'pause_repo_sync' ]:
                     
@@ -1665,7 +1821,55 @@ class Service( HydrusData.HydrusYAMLBase ):
             
         
     
-    def ToTuple( self ): return ( self._service_key, self._service_type, self._name, self._info )
+class ServiceIPFS( ServiceRemote ):
+    
+    def GetDaemonVersion( self ):
+        
+        credentials = self.GetCredentials()
+        
+        ( host, port ) = credentials.GetAddress()
+        
+        path = '/api/v0/version'
+        
+        url = 'http://' + host + ':' + str( port ) + path
+        
+        import requests
+        
+        response = requests.get( url )
+        
+        if response.ok:
+            
+            j = response.json()
+            
+            return j[ 'Version' ]
+            
+        else:
+            
+            raise Exception()
+            
+        
+    
+    def ImportFile( self, multihash ):
+        
+        method = HC.GET
+        
+        credentials = self.GetCredentials()
+        
+        ( host, port ) = credentials.GetAddress()
+        
+        path = '/api/v0/cat'
+        query = 'arg=' + multihash
+        
+        url = 'http://' + host + ':' + str( port ) + path + '?' + query
+        
+        url_string = multihash
+        
+        job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+        
+        HydrusGlobals.client_controller.pub( 'message', job_key )
+        
+        HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
+        
     
 class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
     

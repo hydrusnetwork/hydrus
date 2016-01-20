@@ -185,9 +185,13 @@ def GetFilePath( location, hash, mime = None ):
         path = GetExpectedFilePath( location, hash, mime )
         
     
-    if path is None or not os.path.exists( path ):
+    if path is None:
         
-        raise HydrusExceptions.NotFoundException( 'File not found!' )
+        raise HydrusExceptions.NotFoundException( 'File not found in directory ' + location + '!' )
+        
+    elif not os.path.exists( path ):
+        
+        raise HydrusExceptions.NotFoundException( 'File not found in path + ' + path + '!' )
         
     
     return path

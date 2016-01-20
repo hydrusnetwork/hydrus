@@ -107,7 +107,10 @@ class FileQueryResult( object ):
     
     def __iter__( self ):
         
-        for hash in self._hashes_ordered: yield self._hashes_to_media_results[ hash ]
+        for hash in self._hashes_ordered:
+            
+            yield self._hashes_to_media_results[ hash ]
+            
         
     
     def __len__( self ): return len( self._hashes_ordered )
@@ -133,7 +136,10 @@ class FileQueryResult( object ):
             
             hash = media_result.GetHash()
             
-            if hash in self._hashes: continue # this is actually important, as sometimes we don't want the media result overwritten
+            if hash in self._hashes:
+                
+                continue
+                
             
             self._hashes_to_media_results[ hash ] = media_result
             

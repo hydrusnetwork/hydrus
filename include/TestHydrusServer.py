@@ -32,9 +32,9 @@ class TestServer( unittest.TestCase ):
         
         services = []
         
-        self._file_service = ClientData.Service( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo', {} )
-        self._tag_service = ClientData.Service( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo', {} )
-        self._admin_service = ClientData.Service( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin', {} )
+        self._file_service = ClientData.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo', {} )
+        self._tag_service = ClientData.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo', {} )
+        self._admin_service = ClientData.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin', {} )
         
         services_manager = HydrusGlobals.test_controller.GetServicesManager()
         
