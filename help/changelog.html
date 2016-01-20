@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 191</h3></li>
+				<ul>
+					<li>added ipfs service type</li>
+					<li>added simple ipfs service gui to manage and review services windows</li>
+					<li>added simple ipfs download and import to pages menu</li>
+					<li>split confused service data object into a bunch of more flexible and readable subclasses</li>
+					<li>raw url downloads are now powered by 'requests' rather than my hacked http engine, and work a hell of a lot better. more to follow</li>
+					<li>raw url downloads now pause and cancel correctly</li>
+					<li>optimised some a/c cache clearing in mapping update processing</li>
+					<li>optimised content update object -> db yield logistics</li>
+					<li>added no-daemons command line switch to disable all daemons</li>
+					<li>added no-wal command line switch to disable WAL journalling for the db</li>
+					<li>if the db fails to read a new WAL-journalled db file it has just created, it will delete the file and attempt to recreate the db, never trying WAL again</li>
+					<li>changed the way the db writes big repo syncs to disk so that the job can be abandoned much more quickly</li>
+					<li>improved local file not found error to state the directory or exact path that was the problem</li>
+					<li>fixed some socket-level error reporting (I think timeout was part of this)</li>
+					<li>the petition approval and denial client-to-server network commit is broken up into smaller steps to reduce server lag and the overall likelihood of timeouts</li>
+					<li>subscriptions will no longer add files to their 'successful files' button when the file's url seemed new but it actually was previously deleted</li>
+					<li>subscriptions will now identify themselves with an additional popup message when they encounter critical errors during sync</li>
+					<li>editing a clientside service will force a reset of the appropriate session cache, so if you change access key, the account changes will be reflected immediately</li>
+					<li>the import files dialog will no longer spam error popups on uninteresting or empty files--its 'parsing complete' statement is more verbose instead</li>
+					<li>the 1.5s gap between parsing complete and the buttons being enabled is also removed. this was supposed to be helpful, to give you a moment to check the files were as expected, but in the end it was just annoying</li>
+					<li>fixed a typo in some thumbnail error catching and regeneration</li>
+					<li>improved my network code syncing, so linux and os x releases are cleared out of many old files</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 190</h3></li>
 				<ul>
 					<li>fixed some hashing recalculation in collections that meant they reported no files in many cases</li>
