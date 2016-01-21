@@ -34,8 +34,5 @@ local.properties
 *.launch
 
 ### Some rules to keep out installation-specific stuff that's generated when Hydrus is run from source
-temp/
-export/
 logs/
 crash.log
-db/
