@@ -60,6 +60,8 @@ class TestClientDB( unittest.TestCase ):
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )
         
+        del self._db
+        
     
     def test_4chan_pass( self ):
         
@@ -1201,7 +1203,7 @@ class TestServerDB( unittest.TestCase ):
     
     @classmethod
     def setUpClass( self ):
-        
+        '''
         self._old_db_dir = HC.DB_DIR
         self._old_server_files_dir = HC.SERVER_FILES_DIR
         self._old_server_thumbnails_dir = HC.SERVER_THUMBNAILS_DIR
@@ -1210,7 +1212,7 @@ class TestServerDB( unittest.TestCase ):
         
         HC.SERVER_FILES_DIR = os.path.join( HC.DB_DIR, 'server_files' )
         HC.SERVER_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'server_thumbnails' )
-        
+        '''
         self._db = ServerDB.DB( HydrusGlobals.test_controller )
         
         threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
@@ -1222,13 +1224,13 @@ class TestServerDB( unittest.TestCase ):
         self._db.Shutdown()
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )
-        
+        '''
         shutil.rmtree( HC.DB_DIR )
         
         HC.DB_DIR = self._old_db_dir
         HC.SERVER_FILES_DIR = self._old_server_files_dir
         HC.SERVER_THUMBNAILS_DIR = self._old_server_thumbnails_dir
-        
+        '''
     
     def _test_account_creation( self ):
         

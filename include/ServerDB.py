@@ -1946,6 +1946,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ModifyServices( self, account_key, edit_log ):
         
+        self._c.execute( 'COMMIT;' )
+        
+        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        self._c.execute( 'PRAGMA foreign_keys = ON;' )
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
+        
         account_id = self._GetAccountId( account_key )
         
         service_keys_to_access_keys = {}
@@ -2017,6 +2024,12 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_after_commit( 'action_service', service_key, 'restart' )
                 
             
+        
+        self._c.execute( 'COMMIT;' )
+        
+        self._InitDBCursor()
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
         
         return service_keys_to_access_keys
         

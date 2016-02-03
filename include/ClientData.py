@@ -1460,7 +1460,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         if os.path.exists( path ):
                             
-                            HydrusPaths.GetPathSize( path )
+                            size = HydrusPaths.GetPathSize( path )
                             
                             if size == 0:
                                 
@@ -1516,7 +1516,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                 else:
                     
-                    raise e
+                    raise
                     
                 
             

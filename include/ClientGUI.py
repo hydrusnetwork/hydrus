@@ -126,6 +126,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         # later waits until the mainloop is running, I think.
         # after seems to execute synchronously
         
+        client_files_manager = self._controller.GetClientFilesManager()
+        
+        wx.CallLater( 0.5, client_files_manager.TestLocations )
+        
         if HC.options[ 'default_gui_session' ] == 'just a blank page':
             
             wx.CallLater( 1, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )

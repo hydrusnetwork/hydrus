@@ -1894,7 +1894,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, name ):
         
@@ -1925,6 +1925,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._last_checked = 0
         self._last_error = 0
+        self._check_now = False
         self._seed_cache = SeedCache()
         
     
@@ -1936,12 +1937,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_tag_options = self._import_tag_options.GetSerialisableTuple()
         serialisable_seed_cache = self._seed_cache.GetSerialisableTuple()
         
-        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._last_error, serialisable_seed_cache )
+        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._check_now, self._last_error, serialisable_seed_cache )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._last_error, serialisable_seed_cache ) = serialisable_info
+        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._check_now, self._last_error, serialisable_seed_cache ) = serialisable_info
         
         self._gallery_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_identifier )
         self._gallery_stream_identifiers = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_stream_identifier ) for serialisable_gallery_stream_identifier in serialisable_gallery_stream_identifiers ]
@@ -1952,7 +1953,21 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _NoRecentErrors( self ):
         
-        return HydrusData.TimeHasPassed( self._last_error + HC.UPDATE_DURATION )
+        return HydrusData.TimeHasPassed( self._last_error + HC.UPDATE_DURATION ) or self._check_now
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, last_error, serialisable_seed_cache ) = old_serialisable_info
+            
+            check_now = False
+            
+            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, check_now, last_error, serialisable_seed_cache )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def _WorkOnFiles( self, job_key ):
@@ -2245,7 +2260,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _SyncQueryCanDoWork( self ):
         
-        return HydrusData.TimeHasPassed( self._last_checked + self._period )
+        return HydrusData.TimeHasPassed( self._last_checked + self._period ) or self._check_now
+        
+    
+    def CheckNow( self ):
+        
+        self._check_now = True
         
     
     def GetGalleryIdentifier( self ):
@@ -2322,6 +2342,10 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 HydrusData.ShowException( e )
                 
                 self._last_error = HydrusData.GetNow()
+                
+            finally:
+                
+                self._check_now = False
                 
             
             HydrusGlobals.client_controller.WriteSynchronous( 'serialisable', self )

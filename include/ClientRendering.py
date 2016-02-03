@@ -16,6 +16,8 @@ import wx
 
 def GenerateHydrusBitmap( path, compressed = True ):
     
+    numpy_image = None
+    
     try:
         
         numpy_image = ClientImageHandling.GenerateNumpyImage( path )
@@ -23,6 +25,11 @@ def GenerateHydrusBitmap( path, compressed = True ):
         return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
         
     except:
+        
+        if numpy_image is not None:
+            
+            del numpy_image
+            
         
         pil_image = HydrusImageHandling.GeneratePILImage( path )
         

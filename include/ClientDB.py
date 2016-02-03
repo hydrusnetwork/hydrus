@@ -832,7 +832,7 @@ class MessageDB( object ):
         
         files = []
         
-        client_files_manager = self._controller.GetClientFilesManager()        
+        client_files_manager = self._controller.GetClientFilesManager()
         
         for hash in attachment_hashes:
             
@@ -1362,6 +1362,8 @@ class DB( HydrusDB.HydrusDB ):
             
             try: path = client_files_manager.GetFilePath( hash, mime )
             except HydrusExceptions.NotFoundException:
+                
+                print( 'Could not find the file at ' + client_files_manager.GetExpectedFilePath( hash, mime ) + '!' )
                 
                 deletee_hash_ids.append( hash_id )
                 
@@ -5122,6 +5124,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ResetService( self, service_key, delete_updates = False ):
         
+        self._c.execute( 'COMMIT;' )
+        
+        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        self._c.execute( 'PRAGMA foreign_keys = ON;' )
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
+        
         service_id = self._GetServiceId( service_key )
         
         service = self._GetService( service_id )
@@ -5179,6 +5188,12 @@ class DB( HydrusDB.HydrusDB ):
         self.pub_after_commit( 'notify_new_services_gui' )
         
         job_key.SetVariable( 'popup_text_1', prefix + ': done!' )
+        
+        self._c.execute( 'COMMIT;' )
+        
+        self._InitDBCursor()
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
         
         job_key.Finish()
         
@@ -6103,6 +6118,8 @@ class DB( HydrusDB.HydrusDB ):
             
             new_options = ClientData.ClientOptions()
             
+            self._controller._new_options = new_options
+            
             for ( name, ato ) in old_options[ 'default_advanced_tag_options' ].items():
                 
                 try:
@@ -6568,6 +6585,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateServerServices( self, admin_service_key, original_services_info, edit_log, service_keys_to_access_keys ):
         
+        self._c.execute( 'COMMIT;' )
+        
+        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        self._c.execute( 'PRAGMA foreign_keys = ON;' )
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
+        
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
         
@@ -6672,8 +6696,21 @@ class DB( HydrusDB.HydrusDB ):
         
         self.pub_after_commit( 'notify_new_pending' )
         
+        self._c.execute( 'COMMIT;' )
+        
+        self._InitDBCursor()
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
+        
     
     def _UpdateServices( self, edit_log ):
+        
+        self._c.execute( 'COMMIT;' )
+        
+        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        self._c.execute( 'PRAGMA foreign_keys = ON;' )
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
         
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
@@ -6786,6 +6823,12 @@ class DB( HydrusDB.HydrusDB ):
         
         self.pub_after_commit( 'notify_new_pending' )
         
+        self._c.execute( 'COMMIT;' )
+        
+        self._InitDBCursor()
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
+        
     
     def _UpdateServiceInfo( self, service_id, update ):
         
@@ -6838,13 +6881,19 @@ class DB( HydrusDB.HydrusDB ):
             
             HC.options[ 'maintenance_vacuum_period' ] = None
             
+            size = HydrusPaths.GetPathSize( self._db_path )
+            
+            pretty_size = HydrusData.ConvertIntToBytes( size )
+            
             self._SaveOptions( HC.options )
             
-            text = 'An attempt to vacuum the database caused a serious error.'
+            text = 'An attempt to vacuum the database failed due to lack of disk space.'
             text += os.linesep * 2
-            text += 'This may be due to a limited size temporary directory or a more serious error.'
+            text += 'To perform a vacuum, both your system drive and the drive hydrus is installed on need at least ' + pretty_size + ' free space.'
             text += os.linesep * 2
-            text += 'For now, vacuuming has been disabled. Please run database->maintenance->check database integrity as soon as possible and contact the hydrus developer.'
+            text += 'For now, automatic vacuuming has been disabled. Please free up some space before you try again.'
+            text += os.linesep * 2
+            text += 'If you have plenty of free space on both drives, please contact the hydrus developer.'
             
             HydrusData.ShowText( text )
             

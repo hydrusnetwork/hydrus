@@ -7223,6 +7223,9 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._reset_cache_button = wx.Button( self._info_panel, label = '     reset url cache on dialog ok     ' )
             self._reset_cache_button.Bind( wx.EVT_BUTTON, self.EventResetCache )
             
+            self._check_now_button = wx.Button( self._info_panel, label = '     force sync on dialog ok     ' )
+            self._check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
+            
             self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
             
             self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
@@ -7272,6 +7275,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._info_panel.AddF( wx.StaticText( self._info_panel, label = seed_cache_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             self._info_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
             self._info_panel.AddF( self._reset_cache_button, CC.FLAGS_LONE_BUTTON )
+            self._info_panel.AddF( self._check_now_button, CC.FLAGS_LONE_BUTTON )
             
             #
             
@@ -7283,8 +7287,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
-            
-            self._reset_cache = False
             
             self.SetScrollRate( 0, 20 )
             
@@ -7393,11 +7395,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             self._paused.SetValue( paused )
             
-            self._reset_cache = False
-            
-            self._reset_cache_button.SetLabel( '     reset cache on dialog ok     ' )
-            self._reset_cache_button.Enable()
-            
             self._import_file_options.SetOptions( import_file_options )
             
             self._import_tag_options.SetOptions( import_tag_options )
@@ -7408,6 +7405,14 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._ConfigureImportTagOptions()
             
         
+        def EventCheckNow( self, event ):
+            
+            self._original_subscription.CheckNow()
+            
+            self._check_now_button.SetLabel( 'will check on dialog ok' )
+            self._check_now_button.Disable()
+            
+        
         def EventResetCache( self, event ):
             
             message = '''Resetting this subscription's cache will delete ''' + HydrusData.ConvertIntToPrettyString( self._original_subscription.GetSeedCache().GetSeedCount() ) + ''' remembered urls, meaning when the subscription next runs, it will try to download those all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
@@ -7416,7 +7421,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    self._reset_cache = True
+                    self._original_subscription.Reset()
                     
                     self._reset_cache_button.SetLabel( 'cache will be reset on dialog ok' )
                     self._reset_cache_button.Disable()
@@ -7455,11 +7460,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             import_tag_options = self._import_tag_options.GetOptions()
             
             self._original_subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options )
-            
-            if self._reset_cache:
-                
-                self._original_subscription.Reset()
-                
             
             return self._original_subscription
             

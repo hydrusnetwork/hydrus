@@ -1,6 +1,7 @@
 import ClientCaches
 import ClientData
 import ClientDaemons
+import ClientDefaults
 import ClientNetworking
 import hashlib
 import httplib
@@ -42,6 +43,12 @@ class Controller( HydrusController.HydrusController ):
         HydrusController.HydrusController.__init__( self )
         
         HydrusGlobals.client_controller = self
+        
+        # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
+        self._options = ClientDefaults.GetClientDefaultOptions()
+        self._new_options = ClientData.ClientOptions()
+        
+        HC.options = self._options
         
         self._last_mouse_position = None
         self._menu_open = False

@@ -48,20 +48,23 @@ class Controller( object ):
     
     def __init__( self ):
         
+        HC.DB_DIR = tempfile.mkdtemp()
+        
+        HC.CLIENT_ARCHIVES_DIR = os.path.join( HC.DB_DIR, 'client_archives' )
+        HC.CLIENT_FILES_DIR = os.path.join( HC.DB_DIR, 'client_files' )
+        HC.CLIENT_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'client_thumbnails' )
+        HC.CLIENT_UPDATES_DIR = os.path.join( HC.DB_DIR, 'client_updates' )
+        
+        HC.SERVER_FILES_DIR = os.path.join( HC.DB_DIR, 'server_files' )
+        HC.SERVER_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'server_thumbnails' )
+        HC.SERVER_UPDATES_DIR = os.path.join( HC.DB_DIR, 'server_updates' )
+        
         HydrusGlobals.controller = self
         HydrusGlobals.client_controller = self
         HydrusGlobals.server_controller = self
         HydrusGlobals.test_controller = self
+        
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
-        
-        self._old_db_dir = HC.DB_DIR
-        self._old_client_files_dir = HC.CLIENT_FILES_DIR
-        self._old_client_thumbnails_dir = HC.CLIENT_THUMBNAILS_DIR
-        
-        HC.DB_DIR = tempfile.mkdtemp()
-        
-        HC.CLIENT_FILES_DIR = os.path.join( HC.DB_DIR, 'client_files' )
-        HC.CLIENT_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'client_thumbnails' )
         
         self._new_options = ClientData.ClientOptions()
         
@@ -237,10 +240,6 @@ class Controller( object ):
         
         shutil.rmtree( HC.DB_DIR )
         
-        HC.DB_DIR = self._old_db_dir
-        HC.CLIENT_FILES_DIR = self._old_client_files_dir
-        HC.CLIENT_THUMBNAILS_DIR = self._old_client_thumbnails_dir
-        
     
     def ViewIsShutdown( self ):
         
@@ -279,6 +278,8 @@ if __name__ == '__main__':
     
     try:
         
+        original_db_dir = HC.DB_DIR
+        
         threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
         controller = Controller()
@@ -310,7 +311,10 @@ if __name__ == '__main__':
         
         controller.pubimmediate( 'wake_daemons' )
         
-        controller.TidyUp()
+        if HC.DB_DIR != original_db_dir:
+            
+            controller.TidyUp()
+            
         
         reactor.callFromThread( reactor.stop )
         

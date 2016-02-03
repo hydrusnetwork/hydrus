@@ -72,7 +72,20 @@ def EfficientlyThumbnailPILImage( pil_image, ( target_x, target_y ) ):
     
 def GeneratePILImage( path ):
     
-    pil_image = PILImage.open( path )
+    fp = open( path, 'rb' )
+    
+    try:
+        
+        pil_image = PILImage.open( fp )
+        
+    except:
+        
+        # pil doesn't clean up its open file on exception, jej
+        
+        fp.close()
+        
+        raise
+        
     
     if pil_image is None:
         

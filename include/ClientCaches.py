@@ -464,6 +464,22 @@ class ClientFilesManager( object ):
             
         
     
+    def TestLocations( self ):
+        
+        with self._lock:
+            
+            locations = set( self._prefixes_to_locations.values() )
+            
+            for location in locations:
+                
+                if not os.path.exists( location ):
+                    
+                    HydrusData.ShowText( 'The external location ' + location + ' does not exist! Please check your external storage options.' )
+                    
+                
+            
+        
+    
 class DataCache( object ):
     
     def __init__( self, controller, cache_size_key ):
@@ -1065,34 +1081,37 @@ class ThumbnailCache( object ):
     
     def Clear( self ):
         
-        self._data_cache.Clear()
-        
-        self._special_thumbs = {}
-        
-        names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video' ]
-        
-        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
-        
-        try:
+        with self._lock:
             
-            for name in names:
-                
-                path = os.path.join( HC.STATIC_DIR, name + '.png' )
-                
-                options = self._controller.GetOptions()
-                
-                thumbnail = HydrusFileHandling.GenerateThumbnail( path, options[ 'thumbnail_dimensions' ] )
-                
-                with open( temp_path, 'wb' ) as f: f.write( thumbnail )
-                
-                hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path )
-                
-                self._special_thumbs[ name ] = hydrus_bitmap
-                
+            self._data_cache.Clear()
             
-        finally:
+            self._special_thumbs = {}
             
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video' ]
+            
+            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            
+            try:
+                
+                for name in names:
+                    
+                    path = os.path.join( HC.STATIC_DIR, name + '.png' )
+                    
+                    options = self._controller.GetOptions()
+                    
+                    thumbnail = HydrusFileHandling.GenerateThumbnail( path, options[ 'thumbnail_dimensions' ] )
+                    
+                    with open( temp_path, 'wb' ) as f: f.write( thumbnail )
+                    
+                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path )
+                    
+                    self._special_thumbs[ name ] = hydrus_bitmap
+                    
+                
+            finally:
+                
+                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                
             
         
     
@@ -1120,6 +1139,7 @@ class ThumbnailCache( object ):
         elif mime == HC.APPLICATION_FLASH: return self._special_thumbs[ 'flash' ]
         elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
         else: return self._special_thumbs[ 'hydrus' ]
+        
         
     
     def HasThumbnailCached( self, media ):

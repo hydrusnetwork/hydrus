@@ -37,12 +37,26 @@ def GenerateNumpyImage( path ):
     
     numpy_image = cv2.imread( path, flags = -1 ) # flags = -1 loads alpha channel, if present
     
+    if numpy_image is None:
+        
+        raise Exception( 'CV could not understand this image!' )
+        
+    
     ( width, height, depth ) = numpy_image.shape
     
-    if width * height * depth != len( numpy_image.data ): raise Exception( 'CV could not understand this image; it was probably an unusual png!' )
+    if width * height * depth != len( numpy_image.data ):
+        
+        raise Exception( 'CV could not understand this image; it was probably an unusual png!' )
+        
     
-    if depth == 4: raise Exception( 'CV is bad at alpha!' )
-    else: numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
+    if depth == 4:
+        
+        raise Exception( 'CV is bad at alpha!' )
+        
+    else:
+        
+        numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
+        
     
     return numpy_image
     
