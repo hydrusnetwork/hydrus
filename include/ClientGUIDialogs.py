@@ -18,6 +18,7 @@ import ClientFiles
 import ClientGUICommon
 import ClientGUICollapsible
 import ClientGUIPredicates
+import ClientThreading
 import collections
 import gc
 import itertools
@@ -627,46 +628,6 @@ class DialogFinishFiltering( Dialog ):
         self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._commit.SetFocus )
-        
-    
-class DialogFirstStart( Dialog ):
-    
-    def __init__( self, parent ):
-        
-        Dialog.__init__( self, parent, 'First start', position = 'center' )
-        
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok!' )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        message1 = 'Hi, this looks like the first time you have started the hydrus client. Don\'t forget to check out the'
-        link = wx.HyperlinkCtrl( self, id = -1, label = 'help', url = 'file://' + HC.HELP_DIR + '/index.html' )
-        message2 = 'if you haven\'t already.'
-        message3 = 'When you close this dialog, the client will start its local http server. You will probably get a firewall warning.'
-        message4 = 'You can block it if you like, or you can allow it. It doesn\'t phone home, or expose your files to your network; it just provides another way to locally export your files.'
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.AddF( wx.StaticText( self, label = message1 ), CC.FLAGS_MIXED )
-        hbox.AddF( link, CC.FLAGS_MIXED )
-        hbox.AddF( wx.StaticText( self, label = message2 ), CC.FLAGS_MIXED )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        vbox.AddF( wx.StaticText( self, label = message3 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( wx.StaticText( self, label = message4 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        wx.CallAfter( self._ok.SetFocus )
         
     
 class DialogGenerateNewAccounts( Dialog ):
@@ -1513,7 +1474,7 @@ class DialogInputLocalFiles( Dialog ):
         self._current_paths = []
         self._current_paths_set = set()
         
-        self._job_key = HydrusThreading.JobKey()
+        self._job_key = ClientThreading.JobKey()
         
         if len( paths ) > 0: self._AddPathsToList( paths )
         
@@ -1555,7 +1516,7 @@ class DialogInputLocalFiles( Dialog ):
                 self._add_button.Disable()
                 self._tag_button.Disable()
                 
-                self._job_key = HydrusThreading.JobKey()
+                self._job_key = ClientThreading.JobKey()
                 
                 HydrusGlobals.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
                 
@@ -3991,7 +3952,7 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 url_string = title + ' ' + resolution + ' ' + extension
                 
-                job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+                job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
                 
                 HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
                 
@@ -4522,7 +4483,7 @@ class DialogShortcuts( Dialog ):
                             
                             pretty_service_key = service.GetName()
                             
-                        except HydrusExceptions.NotFoundException:
+                        except HydrusExceptions.DataMissing:
                             
                             pretty_service_key = 'service not found'
                             

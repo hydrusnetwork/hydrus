@@ -35,6 +35,9 @@ class HydrusDB( object ):
         
         self._currently_doing_job = False
         
+        self._db = None
+        self._c = None
+        
         if os.path.exists( self._db_path ):
             
             # open and close to clean up in case last session didn't close well
@@ -85,11 +88,17 @@ class HydrusDB( object ):
     
     def _CloseDBCursor( self ):
         
-        self._c.close()
-        self._db.close()
-        
-        del self._db
-        del self._c
+        if self._db is not None:
+            
+            self._c.close()
+            self._db.close()
+            
+            del self._c
+            del self._db
+            
+            self._db = None
+            self._c = None
+            
         
     
     def _CreateDB( self ):
@@ -151,6 +160,8 @@ class HydrusDB( object ):
     
     def _InitDBCursor( self ):
         
+        self._CloseDBCursor()
+        
         db_just_created = not os.path.exists( self._db_path )
         
         if os.path.exists( self._no_wal_path ):
@@ -164,7 +175,7 @@ class HydrusDB( object ):
         
         self._c = self._db.cursor()
         
-        self._c.execute( 'PRAGMA cache_size = -20000;' )
+        self._c.execute( 'PRAGMA cache_size = -50000;' )
         
         if self._no_wal:
             
@@ -184,7 +195,9 @@ class HydrusDB( object ):
                 
                 self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
                 
-            except sqlite3.OperationalError:
+            except sqlite3.OperationalError as e:
+                
+                traceback.print_exc()
                 
                 def create_no_wal_file():
                     

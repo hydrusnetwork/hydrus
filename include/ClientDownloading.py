@@ -273,7 +273,7 @@ def THREADDownloadURL( job_key, url, url_string ):
             
             job_key.Cancel()
             
-            raise Exception( 'Sorry, http failed. This error will improve.' )
+            raise HydrusExceptions.NetworkException( response.content )
             
         
     finally:
@@ -502,7 +502,7 @@ class GalleryBooru( Gallery ):
             
         except:
             
-            raise HydrusExceptions.NotFoundException( 'Attempted to find booru "' + booru_name + '", but it was missing from the database!' )
+            raise Exception( 'Attempted to find booru "' + booru_name + '", but it was missing from the database!' )
             
         
         self._gallery_advance_num = None
@@ -743,12 +743,12 @@ class GalleryBooru( Gallery ):
             
         except Exception as e:
             
-            raise HydrusExceptions.NotFoundException( 'Could not parse a download link for ' + url_base + '!' + os.linesep + HydrusData.ToUnicode( e ) )
+            raise HydrusExceptions.NetworkException( 'Could not parse a download link for ' + url_base + '!' + os.linesep + HydrusData.ToUnicode( e ) )
             
         
         if image_url is None:
             
-            raise HydrusExceptions.NotFoundException( 'Could not parse a download link for ' + url_base + '!' )
+            raise HydrusExceptions.NetworkException( 'Could not parse a download link for ' + url_base + '!' )
             
         
         image_url = urlparse.urljoin( url_base, image_url )

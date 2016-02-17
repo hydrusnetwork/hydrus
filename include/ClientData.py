@@ -3,10 +3,12 @@ import ClientDefaults
 import ClientDownloading
 import ClientFiles
 import ClientNetworking
+import ClientThreading
 import collections
 import datetime
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusFileHandling
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
@@ -14,11 +16,13 @@ import threading
 import traceback
 import os
 import random
+import requests
 import shutil
 import sqlite3
 import stat
 import sys
 import time
+import urllib
 import wx
 import yaml
 import HydrusData
@@ -35,7 +39,7 @@ def CatchExceptionClient( etype, value, tb ):
     
     try:
         
-        job_key = HydrusThreading.JobKey()
+        job_key = ClientThreading.JobKey()
         
         if etype == HydrusExceptions.ShutdownException:
             
@@ -254,7 +258,7 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, coll
     
 def ShowExceptionClient( e ):
     
-    job_key = HydrusThreading.JobKey()
+    job_key = ClientThreading.JobKey()
     
     if isinstance( e, HydrusExceptions.ShutdownException ):
         
@@ -311,7 +315,7 @@ def ShowExceptionClient( e ):
     
 def ShowTextClient( text ):
     
-    job_key = HydrusThreading.JobKey()
+    job_key = ClientThreading.JobKey()
     
     job_key.SetVariable( 'popup_text_1', HydrusData.ToUnicode( text ) )
     
@@ -395,8 +399,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
-        self._dictionary[ 'booleans' ][ 'waiting_politely_text' ] = False
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = True
+        self._dictionary[ 'booleans' ][ 'waiting_politely_text' ] = False
         
         self._dictionary[ 'noneable_integers' ] = {}
         
@@ -1363,7 +1367,7 @@ class ServiceRepository( ServiceRestricted ):
     
     def Sync( self, only_when_idle = False, stop_time = None ):
         
-        job_key = HydrusThreading.JobKey( pausable = False, cancellable = True )
+        job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
         
         ( i_paused, should_quit ) = job_key.WaitIfNeeded()
         
@@ -1833,8 +1837,6 @@ class ServiceIPFS( ServiceRemote ):
         
         url = 'http://' + host + ':' + str( port ) + path
         
-        import requests
-        
         response = requests.get( url )
         
         if response.ok:
@@ -1845,30 +1847,84 @@ class ServiceIPFS( ServiceRemote ):
             
         else:
             
-            raise Exception()
+            raise Exception( response.content )
             
         
     
     def ImportFile( self, multihash ):
         
-        method = HC.GET
+        credentials = self.GetCredentials()
+        
+        ( host, port ) = credentials.GetAddress()
+        
+        url = 'http://' + host + ':' + str( port ) + '/api/v0/cat/' + multihash
+        
+        url_string = multihash
+        
+        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+        
+        HydrusGlobals.client_controller.pub( 'message', job_key )
+        
+        HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
+        
+    
+    def PinFile( self, path ):
+        
+        mime = HydrusFileHandling.GetMime( path )
+        
+        mime_string = HC.mime_string_lookup[ mime ]
         
         credentials = self.GetCredentials()
         
         ( host, port ) = credentials.GetAddress()
         
-        path = '/api/v0/cat'
-        query = 'arg=' + multihash
+        url = 'http://' + host + ':' + str( port ) + '/api/v0/add'
         
-        url = 'http://' + host + ':' + str( port ) + path + '?' + query
+        files = { 'path' : ( path, open( path, 'rb' ), mime_string ) }
         
-        url_string = multihash
+        response = requests.put( url, files = files )
         
-        job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+        if response.ok:
+            
+            # responds with some json with name and key (ipfs hash)
+            # parse that multihash, wrap it into the content update
+            
+            pass # spin off a content update
+            
+        else:
+            
+            raise Exception( response.content )
+            
         
-        HydrusGlobals.client_controller.pub( 'message', job_key )
+    
+    def SyncPinned( self ):
         
-        HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
+        # query pin ls and update private cache with what we have
+        # add a button for this on review services, I think
+        
+        pass
+        
+    
+    def UnpinFile( self, multihash ):
+        
+        # will have to get multihash from db
+        
+        credentials = self.GetCredentials()
+        
+        ( host, port ) = credentials.GetAddress()
+        
+        url = 'http://' + host + ':' + str( port ) + '/api/v0/pin/rm/' + multihash
+        
+        response = requests.get( url )
+        
+        if response.ok:
+            
+            pass # spin off a content update
+            
+        else:
+            
+            raise Exception( response.content )
+            
         
     
 class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):

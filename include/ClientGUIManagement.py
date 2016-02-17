@@ -17,6 +17,7 @@ import ClientGUIMedia
 import ClientImporting
 import ClientMedia
 import ClientRendering
+import ClientThreading
 import json
 import multipart
 import os
@@ -893,7 +894,7 @@ class ManagementPanelDumper( ManagementPanel ):
             tags_manager = media.GetTagsManager()
             
             try: service = self._controller.GetServicesManager().GetService( service_key )
-            except HydrusExceptions.NotFoundException: continue
+            except HydrusExceptions.FileMissingException: continue
             
             service_key = service.GetServiceKey()
             
@@ -2537,7 +2538,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._search_enabled = self._management_controller.GetVariable( 'search_enabled' )
         
-        self._query_key = HydrusThreading.JobKey( cancellable = True )
+        self._query_key = ClientThreading.JobKey( cancellable = True )
         
         initial_predicates = file_search_context.GetPredicates()
         
@@ -2583,7 +2584,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._query_key.Cancel()
         
-        self._query_key = HydrusThreading.JobKey()
+        self._query_key = ClientThreading.JobKey()
         
         if self._management_controller.GetVariable( 'search_enabled' ) and self._management_controller.GetVariable( 'synchronised' ):
             

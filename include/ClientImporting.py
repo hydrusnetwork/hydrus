@@ -4,6 +4,7 @@ import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientFiles
+import ClientThreading
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -1077,7 +1078,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if self._open_popup and len( successful_hashes ) > 0:
                     
-                    job_key = HydrusThreading.JobKey()
+                    job_key = ClientThreading.JobKey()
                     
                     job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
                     job_key.SetVariable( 'popup_files', successful_hashes )
@@ -2324,7 +2325,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         if p1 and p2 and p3 and ( p4 or p5 ):
             
-            job_key = HydrusThreading.JobKey( pausable = False, cancellable = True )
+            job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
             
             try:
                 

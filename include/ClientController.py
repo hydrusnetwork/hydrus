@@ -3,6 +3,7 @@ import ClientData
 import ClientDaemons
 import ClientDefaults
 import ClientNetworking
+import ClientThreading
 import hashlib
 import httplib
 import HydrusConstants as HC
@@ -107,7 +108,7 @@ class Controller( HydrusController.HydrusController ):
             finally: job_key.Finish()
             
         
-        job_key = HydrusThreading.JobKey()
+        job_key = ClientThreading.JobKey()
         
         job_key.Begin()
         
@@ -304,6 +305,11 @@ class Controller( HydrusController.HydrusController ):
         if HydrusGlobals.force_idle_mode:
             
             return True
+            
+        
+        if not HydrusData.TimeHasPassed( self._timestamps[ 'boot' ] + 120 ):
+            
+            return False
             
         
         idle_normal = self._options[ 'idle_normal' ]
@@ -563,16 +569,17 @@ class Controller( HydrusController.HydrusController ):
         
         if not self._no_daemons:
             
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckMouseIdle', ClientDaemons.DAEMONCheckMouseIdle, period = 10 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ), pre_callable_wait = 0 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 60 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'RebalanceClientFiles', ClientDaemons.DAEMONRebalanceClientFiles, period = 3600 ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ), period = 4 * 3600 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 3600, init_wait = 120 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_callable_wait = 6 ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ) ) )
+            
+            self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 ) )
+            self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )
+            self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 60 ) )
+            self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'RebalanceClientFiles', ClientDaemons.DAEMONRebalanceClientFiles, period = 3600 ) )
+            self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ), period = 4 * 3600 ) )
+            self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_callable_wait = 6 ) )
             
             self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 ) )
             
@@ -654,7 +661,14 @@ class Controller( HydrusController.HydrusController ):
     
     def PageDeleted( self, page_key ):
         
-        return self._gui.PageDeleted( page_key )
+        try:
+            
+            return self._gui.PageDeleted( page_key )
+            
+        except wx.PyDeadObjectError:
+            
+            return True
+            
         
     
     def PageHidden( self, page_key ):
@@ -744,12 +758,15 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            if self._booru_service is None: StartServer()
+            if self._booru_service is None and port is not None: StartServer()
             else:
                 
                 deferred = defer.maybeDeferred( self._booru_service.stopListening )
                 
-                deferred.addCallback( StartServer )
+                if port is not None:
+                    
+                    deferred.addCallback( StartServer )
+                    
                 
             
         
@@ -804,12 +821,18 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            if self._local_service is None: StartServer()
+            if self._local_service is None and port is not None:
+                
+                StartServer()
+                
             else:
                 
                 deferred = defer.maybeDeferred( self._local_service.stopListening )
                 
-                deferred.addCallback( StartServer )
+                if port is not None:
+                    
+                    deferred.addCallback( StartServer )
+                    
                 
             
         

@@ -1131,7 +1131,10 @@ class DB( HydrusDB.HydrusDB ):
             
             ( account_id, ) = self._c.execute( 'SELECT account_id FROM contacts WHERE service_id = ? AND contact_key = ?;', ( service_id, sqlite3.Binary( contact_key ) ) ).fetchone()
             
-        except: raise HydrusExceptions.NotFoundException( 'Could not find that contact key!' )
+        except:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that contact key!' )
+            
         
         return account_id
         
@@ -1191,7 +1194,10 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT account_type_id FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + HydrusData.ToUnicode( title ) + ' in db for this service.' )
+        if result is None:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find account title ' + HydrusData.ToUnicode( title ) + ' in db for this service.' )
+            
         
         ( account_type_id, ) = result
         
@@ -1231,7 +1237,10 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, status ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException( 'No petitions!' )
+        if result is None:
+            
+            raise HydrusExceptions.NotFoundException( 'No petitions!' )
+            
         
         ( account_id, reason_id ) = result
         
@@ -1814,8 +1823,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'VACUUM' )
         
-        self._c.close()
-        self._db.close()
+        self._CloseDBCursor()
         
         backup_path = os.path.join( HC.DB_DIR, 'server_backup' )
         

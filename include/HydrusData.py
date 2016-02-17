@@ -140,7 +140,6 @@ def ConvertContentsToClientToServerContentUpdatePackage( action, contents, reaso
     
     return ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes )
     
-    
 def ConvertIntToBytes( size ):
     
     if size is None: return 'unknown size'
@@ -1629,7 +1628,11 @@ class ContentUpdate( object ):
         
         if self._data_type == HC.CONTENT_TYPE_FILES:
             
-            if self._action == HC.CONTENT_UPDATE_ADD:
+            if self._action == HC.CONTENT_UPDATE_ADVANCED:
+                
+                hashes = set()
+                
+            elif self._action == HC.CONTENT_UPDATE_ADD:
                 
                 hash = self._row[0]
                 

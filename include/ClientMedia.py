@@ -1368,7 +1368,7 @@ class SortedList( object ):
             
         except KeyError:
             
-            raise HydrusExceptions.NotFoundException()
+            raise HydrusExceptions.DataMissing()
             
         
         return result

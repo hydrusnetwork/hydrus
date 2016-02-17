@@ -1597,9 +1597,17 @@ class CanvasPanel( Canvas, wx.Window ):
             
             copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
             
-            if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ), 'image' )
+            if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None:
+                
+                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ), 'image' )
+                
+            
             copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ), 'path' )
-            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
+            
+            if HC.options[ 'local_port' ] is not None:
+                
+                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
+                
             
             share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
             
@@ -2639,9 +2647,17 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
         
-        if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ), 'image' )
+        if self._current_display_media.GetMime() in HC.IMAGES and self._current_display_media.GetDuration() is None:
+            
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ), 'image' )
+            
+        
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ), 'path' )
-        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
+        
+        if HC.options[ 'local_port' ] is not None:
+            
+            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
+            
         
         share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         

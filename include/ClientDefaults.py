@@ -221,7 +221,7 @@ def GetClientDefaultOptions():
     options[ 'tag_dialog_position' ] = ( False, None )
     options[ 'rating_dialog_position' ] = ( False, None )
     
-    options[ 'local_port' ] = HC.DEFAULT_LOCAL_FILE_PORT
+    options[ 'local_port' ] = None
     
     return options
     

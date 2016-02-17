@@ -4,6 +4,7 @@ import ClientFiles
 import ClientImporting
 import ClientMedia
 import ClientRatings
+import ClientThreading
 import collections
 import hashlib
 import httplib
@@ -1091,7 +1092,7 @@ class DB( HydrusDB.HydrusDB ):
                 if 'max_monthly_data' not in info: info[ 'max_monthly_data' ] = None
                 if 'used_monthly_requests' not in info: info[ 'used_monthly_requests' ] = 0
                 if 'current_data_month' not in info: info[ 'current_data_month' ] = ( current_year, current_month )
-                if 'port' not in info: info[ 'port' ] = HC.DEFAULT_LOCAL_BOORU_PORT
+                if 'port' not in info: info[ 'port' ] = None
                 if 'upnp' not in info: info[ 'upnp' ] = None
                 
             
@@ -1232,7 +1233,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Backup( self, path ):
         
-        job_key = HydrusThreading.JobKey( cancellable = True )
+        job_key = ClientThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_title', 'backing up db' )
         
@@ -1242,8 +1243,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'COMMIT' )
         
-        self._c.close()
-        self._db.close()
+        self._CloseDBCursor()
         
         if not os.path.exists( path ):
             
@@ -1283,7 +1283,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix_string = 'checking db integrity: '
         
-        job_key = HydrusThreading.JobKey( cancellable = True )
+        job_key = ClientThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_title', prefix_string + 'preparing' )
         
@@ -1333,7 +1333,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix_string = 'checking file integrity: '
         
-        job_key = HydrusThreading.JobKey( cancellable = True )
+        job_key = ClientThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
@@ -1360,8 +1360,11 @@ class DB( HydrusDB.HydrusDB ):
             
             hash = self._GetHash( hash_id )
             
-            try: path = client_files_manager.GetFilePath( hash, mime )
-            except HydrusExceptions.NotFoundException:
+            try:
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+            except HydrusExceptions.FileMissingException:
                 
                 print( 'Could not find the file at ' + client_files_manager.GetExpectedFilePath( hash, mime ) + '!' )
                 
@@ -1467,7 +1470,10 @@ class DB( HydrusDB.HydrusDB ):
             
             self.pub_after_commit( 'clipboard', 'paths', paths )
             
-            if len( error_messages ) > 0: raise Exception( 'Some of the file copies failed with the following error message(s):' + os.linesep + os.linesep.join( error_messages ) )
+            if len( error_messages ) > 0:
+                
+                raise Exception( 'Some of the file copies failed with the following error message(s):' + os.linesep + os.linesep.join( error_messages ) )
+                
             
         
     
@@ -1481,10 +1487,6 @@ class DB( HydrusDB.HydrusDB ):
         if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.makedirs( HC.CLIENT_UPDATES_DIR )
         
         for prefix in HydrusData.IterateHexPrefixes():
-            
-            dir = os.path.join( HC.CLIENT_FILES_DIR, prefix )
-            
-            if not os.path.exists( dir ): os.makedirs( dir )
             
             dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
             
@@ -1793,7 +1795,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix = 'database maintenance - delete orphans: '
         
-        job_key = HydrusThreading.JobKey( cancellable = True )
+        job_key = ClientThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_text_1', prefix + 'gathering file information' )
         
@@ -1826,8 +1828,14 @@ class DB( HydrusDB.HydrusDB ):
             
             if hash in deletee_hashes:
                 
-                try: path = client_files_manager.GetFilePath( hash )
-                except HydrusExceptions.NotFoundException: continue
+                try:
+                    
+                    path = client_files_manager.GetFilePath( hash )
+                    
+                except HydrusExceptions.FileMissingException:
+                    
+                    continue
+                    
                 
                 try:
                     
@@ -1962,8 +1970,14 @@ class DB( HydrusDB.HydrusDB ):
             
             for hash in file_hashes:
                 
-                try: path = client_files_manager.GetFilePath( hash )
-                except HydrusExceptions.NotFoundException: continue
+                try:
+                    
+                    path = client_files_manager.GetFilePath( hash )
+                    
+                except HydrusExceptions.FileMissingException:
+                    
+                    continue
+                    
                 
                 deletee_paths.add( path )
                 
@@ -2034,7 +2048,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix_string = 'exporting to tag archive: '
         
-        job_key = HydrusThreading.JobKey( cancellable = True )
+        job_key = ClientThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
         
@@ -2046,7 +2060,10 @@ class DB( HydrusDB.HydrusDB ):
         
         hta = HydrusTagArchive.HydrusTagArchive( path )
         
-        if hta_exists and hta.GetHashType() != hash_type: raise Exception( 'This tag archive does not use the expected hash type, so it cannot be exported to!' )
+        if hta_exists and hta.GetHashType() != hash_type:
+            
+            raise Exception( 'This tag archive does not use the expected hash type, so it cannot be exported to!' )
+            
         
         hta.SetHashType( hash_type )
         
@@ -2483,7 +2500,10 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
-        if result is None: raise Exception( 'File hash error in database' )
+        if result is None:
+            
+            raise HydrusExceptions.DataMissing( 'File hash error in database' )
+            
         
         ( hash, ) = result
         
@@ -3378,7 +3398,10 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT mime FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException()
+        if result is None:
+            
+            raise HydrusExceptions.FileMissingException( 'Did not have mime information for that file!' )
+            
         
         ( mime, ) = result
         
@@ -3395,7 +3418,10 @@ class DB( HydrusDB.HydrusDB ):
             
             namespace_id = self._c.lastrowid
             
-        else: ( namespace_id, ) = result
+        else:
+            
+            ( namespace_id, ) = result
+            
         
         return namespace_id
         
@@ -3440,7 +3466,10 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT tag FROM tags WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
         
-        if result is None: raise Exception( 'Tag error in database' )
+        if result is None:
+            
+            raise HydrusExceptions.DataMissing( 'Tag error in database' )
+            
         
         ( tag, ) = result
         
@@ -3452,7 +3481,10 @@ class DB( HydrusDB.HydrusDB ):
             
             result = self._c.execute( 'SELECT namespace FROM namespaces WHERE namespace_id = ?;', ( namespace_id, ) ).fetchone()
             
-            if result is None: raise Exception( 'Namespace error in database' )
+            if result is None:
+                
+                raise HydrusExceptions.DataMissing( 'Namespace error in database' )
+                
             
             ( namespace, ) = result
             
@@ -3636,7 +3668,10 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT reason FROM reasons WHERE reason_id = ?;', ( reason_id, ) ).fetchone()
         
-        if result is None: raise Exception( 'Reason error in database' )
+        if result is None:
+            
+            raise HydrusExceptions.DataMissing( 'Reason error in database' )
+            
         
         ( reason, ) = result
         
@@ -3707,7 +3742,10 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException( 'Service id error in database' )
+        if result is None:
+            
+            raise HydrusExceptions.DataMissing( 'Service id error in database' )
+            
         
         ( service_id, ) = result
         
@@ -4099,7 +4137,10 @@ class DB( HydrusDB.HydrusDB ):
                     elif dump_name == 'pixiv_account': result = ( '', '' )
                     
                 
-                if result is None: raise Exception( dump_name + ' was not found!' )
+                if result is None:
+                    
+                    raise HydrusExceptions.DataMissing( dump_name + ' was not found!' )
+                    
                 
             else: ( result, ) = result
             
@@ -4354,8 +4395,6 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'BEGIN IMMEDIATE;' )
             
         
-        pauser = HydrusData.BigJobPauser()
-        
         self.pub_after_commit( 'notify_new_pending' )
         self.pub_after_commit( 'notify_new_siblings' )
         self.pub_after_commit( 'notify_new_parents' )
@@ -4374,8 +4413,6 @@ class DB( HydrusDB.HydrusDB ):
         quit_early = False
         
         for ( content_updates, weight ) in content_update_package.IterateContentUpdateChunks():
-            
-            pauser.Pause()
             
             options = self._controller.GetOptions()
             
@@ -4459,8 +4496,14 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
-            try: service_id = self._GetServiceId( service_key )
-            except  HydrusExceptions.NotFoundException: continue
+            try:
+                
+                service_id = self._GetServiceId( service_key )
+                
+            except:
+                
+                continue
+                
             
             service = self._GetService( service_id )
             
@@ -4483,7 +4526,18 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if data_type == HC.CONTENT_TYPE_FILES:
                         
-                        if action == HC.CONTENT_UPDATE_ADD:
+                        if action == HC.CONTENT_UPDATE_ADVANCED:
+                            
+                            ( sub_action, sub_row ) = row
+                            
+                            if sub_action == 'delete_deleted':
+                                
+                                self._c.execute( 'DELETE FROM deleted_files WHERE service_id = ?;', ( service_id, ) )
+                                
+                            
+                            self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
+                            
+                        elif action == HC.CONTENT_UPDATE_ADD:
                             
                             ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) = row
                             
@@ -4931,8 +4985,14 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
-            try: service_id = self._GetServiceId( service_key )
-            except HydrusExceptions.NotFoundException: continue
+            try:
+                
+                service_id = self._GetServiceId( service_key )
+                
+            except HydrusExceptions.DataMissing:
+                
+                continue
+                
             
             if service_id in self._service_cache: del self._service_cache[ service_id ]
             
@@ -4981,7 +5041,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             text = name + ' at ' + time.ctime( timestamp ) + ':' + os.linesep * 2 + post
                             
-                            job_key = HydrusThreading.JobKey()
+                            job_key = ClientThreading.JobKey()
                             
                             job_key.SetVariable( 'popup_text_1', text )
                             
@@ -5139,7 +5199,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix = 'resetting ' + name
         
-        job_key = HydrusThreading.JobKey()
+        job_key = ClientThreading.JobKey()
         
         job_key.SetVariable( 'popup_text_1', prefix + ': deleting from main service table' )
         
@@ -5214,7 +5274,7 @@ class DB( HydrusDB.HydrusDB ):
             
             prefix = 'deleting old resized thumbnails: '
             
-            job_key = HydrusThreading.JobKey()
+            job_key = ClientThreading.JobKey()
             
             job_key.SetVariable( 'popup_text_1', prefix + 'initialising' )
             
@@ -6315,6 +6375,14 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'DROP TABLE files_info_old;' )
             
         
+        if version == 192:
+            
+            if os.path.exists( self._no_wal_path ):
+                
+                os.remove( self._no_wal_path )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6845,7 +6913,7 @@ class DB( HydrusDB.HydrusDB ):
         
         prefix = 'database maintenance - vacuum: '
         
-        job_key = HydrusThreading.JobKey()
+        job_key = ClientThreading.JobKey()
         
         job_key.SetVariable( 'popup_text_1', prefix + 'vacuuming' )
         
@@ -6903,9 +6971,6 @@ class DB( HydrusDB.HydrusDB ):
         job_key.SetVariable( 'popup_text_1', prefix + 'cleaning up' )
         
         self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_VACUUM, HydrusData.GetNow() ) )
-        
-        self._c.close()
-        self._db.close()
         
         self._InitDBCursor()
         

@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 193</h3></li>
+				<ul>
+					<li>the client's local server and local booru can be turned off from their respective management panels, and from now on, the client will initialise with them this way.</li>
+					<li>if the local server or the local booru are not running, their copy/share commands won't appear in right-click menus</li>
+					<li>the welcome dialog is now a simpler popup message</li>
+					<li>incidence sorted tag lists are now sub-sorted by a-z lexicographic</li>
+					<li>pasting many tags that have siblings to the manage tags dialog will ask you if you want to always preference the sibling, saving time</li>
+					<li>added a 'clear deleted file records' button to the local file service on the review services window</li>
+					<li>idle mode now cannot naturally engage within the first two minutes since client boot</li>
+					<li>the autocomplete search logic will not count namespace characters in the autocomplete character threshold, so typing 'character:a' will not typically trigger a (very laggy) full search</li>
+					<li>putting a '*' anywhere in an autocomplete search_text will force a full search, ignoring the a/c character threshold</li>
+					<li>moved some specific 'give gui time to catch up' pause code to the generalised pause/cancel code that a lot of stuff uses, so big jobs should generally be a bit more polite</li>
+					<li>split the daemon class into two--one for big jobs that remains polite, and another for small jobs that triggers regardless of what else is going on. this should increase responsivity for a number of scenarios</li>
+					<li>fixed some bad wal failure detection and hence no-wal file creation on some instances of db cursor reinit (usually after service modification). because of now many superfluous no-wal files, existing no-wal files will be deleted on db update</li>
+					<li>some external storage location errors are improved</li>
+					<li>some internal and external storage location init is improved.</li>
+					<li>if an error is detected in the external storage location manager, it will not attempt to rebalance again until the client is rebooted</li>
+					<li>improved some upnp error catching</li>
+					<li>cleaned up some misc shutdown thread-gui interaction error spam</li>
+					<li>did some prep work on a future rewrite of daemon jobs pipeline</li>
+					<li>split up some mixed file/data/404 'stuff was missing' exception code</li>
+				</ul>
 				<li><h3>version 192</h3></li>
 				<ul>
 					<li>added a 'check on ok' button to the manage subscriptions dialog's subscription panel</li>

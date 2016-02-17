@@ -187,11 +187,11 @@ def GetFilePath( location, hash, mime = None ):
     
     if path is None:
         
-        raise HydrusExceptions.NotFoundException( 'File not found in directory ' + location + '!' )
+        raise HydrusExceptions.FileMissingException( 'File not found in directory ' + location + '!' )
         
     elif not os.path.exists( path ):
         
-        raise HydrusExceptions.NotFoundException( 'File not found in path + ' + path + '!' )
+        raise HydrusExceptions.FileMissingException( 'File not found in path + ' + path + '!' )
         
     
     return path
@@ -222,9 +222,9 @@ def GetThumbnailPath( hash, full_size = True ):
                 
                 file_path = client_files_manager.GetFilePath( hash )
                 
-            except HydrusExceptions.NotFoundException:
+            except HydrusExceptions.FileMissingException:
                 
-                raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
+                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
                 
             
             try:
@@ -235,7 +235,7 @@ def GetThumbnailPath( hash, full_size = True ):
                 
                 HydrusData.ShowException( e )
                 
-                raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
+                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
                 
             
             try:
@@ -249,7 +249,7 @@ def GetThumbnailPath( hash, full_size = True ):
                 
                 HydrusData.ShowException( e )
                 
-                raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
                 
             
             HydrusData.ShowText( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok.' )
@@ -270,7 +270,7 @@ def GetThumbnailPath( hash, full_size = True ):
                     
                 except:
                     
-                    raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+                    raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
                     
                 
                 full_size_path = GetThumbnailPath( hash, True )

@@ -1,5 +1,6 @@
 import ClientDownloading
 import ClientFiles
+import ClientThreading
 import collections
 import hashlib
 import httplib
@@ -82,7 +83,7 @@ def DAEMONDownloadFiles( controller ):
         
         successful_hashes = set()
         
-        job_key = HydrusThreading.JobKey()
+        job_key = ClientThreading.JobKey()
         
         job_key.SetVariable( 'popup_text_1', 'initialising downloader' )
         
@@ -103,8 +104,14 @@ def DAEMONDownloadFiles( controller ):
                 if service_key == CC.LOCAL_FILE_SERVICE_KEY: break
                 elif service_key == CC.TRASH_SERVICE_KEY: continue
                 
-                try: file_repository = controller.GetServicesManager().GetService( service_key )
-                except HydrusExceptions.NotFoundException: continue
+                try:
+                    
+                    file_repository = controller.GetServicesManager().GetService( service_key )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 if file_repository.CanDownload(): 
                     

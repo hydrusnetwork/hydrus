@@ -4345,7 +4345,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._local_port = wx.SpinCtrl( self, min = 0, max = 65535 )
+            self._local_port = ClientGUICommon.NoneableSpinCtrl( self, 'local server port', none_phrase = 'do not run local server', min = 1, max = 65535 )
             
             #
             
@@ -4355,12 +4355,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self, label = 'local server port: ' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._local_port, CC.FLAGS_MIXED )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._local_port, CC.FLAGS_MIXED )
             
             self.SetSizer( vbox )
             
@@ -6409,7 +6404,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
                 
-                self._port = wx.SpinCtrl( self._booru_options_panel, min = 0, max = 65535 )
+                self._port = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'booru local port', none_phrase = 'do not run local booru service', min = 1, max = 65535 )
                 
                 self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
                 
@@ -6567,12 +6562,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_type == HC.LOCAL_BOORU:
                 
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self._booru_options_panel, label = 'port' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._port, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                self._booru_options_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                self._booru_options_panel.AddF( self._port, CC.FLAGS_EXPAND_BOTH_WAYS )
                 self._booru_options_panel.AddF( self._upnp, CC.FLAGS_EXPAND_BOTH_WAYS )
                 self._booru_options_panel.AddF( self._max_monthly_data, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
@@ -9310,12 +9300,15 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 forced_reason = 'admin'
                 
             
+            force_siblings = False
+            
             tag_managers = [ m.GetTagsManager() for m in self._media ]
             
             num_files = len( self._media )
             
             sets_of_choices = []
             
+            potential_num_sibling_count = 0
             potential_num_reasons_needed = 0
             
             for tag in tags:
@@ -9344,6 +9337,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                             
                             choices.append( ( 'add ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - num_sibling_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
                             
+                            potential_num_sibling_count += 1
+                            
                         
                     
                     if not only_add:
@@ -9370,6 +9365,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                             if num_sibling_current + num_sibling_pending < num_files:
                                 
                                 choices.append( ( 'pend ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_sibling_current + num_sibling_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, sibling_tag ) ) )
+                                
+                                potential_num_sibling_count += 1
                                 
                             
                         
@@ -9422,7 +9419,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 message += os.linesep * 2
                 message += 'To save you time, would you like to use the same reason for all the petitions?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message ) as yn_dlg:
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Many petitions found' ) as yn_dlg:
                     
                     if yn_dlg.ShowModal() == wx.ID_YES:
                         
@@ -9439,6 +9436,21 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                 
             
+            if potential_num_sibling_count > 1:
+                
+                message = 'You are about to add more than one tag that has siblings.'
+                message += os.linesep * 2
+                message += 'To save you time, would you like to always choose those siblings, when they exist?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Many siblings found' ) as yn_dlg:
+                    
+                    if yn_dlg.ShowModal() == wx.ID_YES:
+                        
+                        force_siblings = True
+                        
+                    
+                
+            
             for choices in sets_of_choices:
                 
                 if len( choices ) == 1:
@@ -9447,17 +9459,32 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                 else:
                     
-                    intro = 'What would you like to do?'
-                    
-                    with ClientGUIDialogs.DialogButtonChoice( self, intro, choices ) as dlg:
+                    if force_siblings and True in ( '(preferred sibling)' in text_gumpf for ( text_gumpf, choice ) in choices ):
                         
-                        if dlg.ShowModal() == wx.ID_OK:
+                        for ( text_gumpf, choice ) in choices:
                             
-                            choice = dlg.GetData()
+                            if '(preferred sibling)' in text_gumpf:
+                                
+                                break
+                                
                             
-                        else:
+                        
+                    else:
+                        
+                        intro = 'What would you like to do?'
+                        
+                        with ClientGUIDialogs.DialogButtonChoice( self, intro, choices ) as dlg:
                             
-                            continue
+                            result = dlg.ShowModal()
+                            
+                            if result == wx.ID_OK:
+                                
+                                choice = dlg.GetData()
+                                
+                            else:
+                                
+                                break
+                                
                             
                         
                     

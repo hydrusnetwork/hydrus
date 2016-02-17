@@ -964,7 +964,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     include_current = self._file_search_context.IncludeCurrentTags()
                     include_pending = self._file_search_context.IncludePendingTags()
                     
-                    if len( search_text ) < num_autocomplete_chars:
+                    if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
                         
                         predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
                         
@@ -1274,7 +1274,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             half_complete_tag = search_text
             
-            if len( search_text ) < num_autocomplete_chars:
+            if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
                 
                 predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
                 
@@ -3867,18 +3867,23 @@ class ListBoxTagsSelection( ListBoxTags ):
             if self._show_pending: tags_to_count.update( self._pending_tags_to_count )
             if self._show_petitioned: tags_to_count.update( self._petitioned_tags_to_count )
             
-            def key( a ):
-                
-                return tags_to_count[ self._strings_to_terms[ a ] ]
-                
-            
             if self._sort == CC.SORT_BY_INCIDENCE_ASC:
+        
+                def key( a ):
+                    
+                    return ( tags_to_count[ self._strings_to_terms[ a ] ], a )
+                    
                 
                 reverse = False
                 
             elif self._sort == CC.SORT_BY_INCIDENCE_DESC:
                 
-                reverse = True
+                def key( a ):
+                    
+                    return ( - tags_to_count[ self._strings_to_terms[ a ] ], a )
+                    
+                
+                reverse = False
                 
             
         
@@ -5692,7 +5697,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             if comparison_data == data: return index
             
         
-        raise HydrusExceptions.NotFoundException( 'Data not found!' )
+        raise HydrusExceptions.DataMissing( 'Data not found!' )
         
     
     def HasClientData( self, data, column_index = None ):
@@ -5703,7 +5708,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
             return True
             
-        except HydrusExceptions.NotFoundException:
+        except HydrusExceptions.DataMissing:
             
             return False
             

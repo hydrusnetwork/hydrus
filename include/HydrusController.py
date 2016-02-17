@@ -175,8 +175,9 @@ class HydrusController( object ):
         if not self._no_daemons:
             
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SleepCheck', HydrusDaemons.DAEMONSleepCheck, period = 120 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemory', HydrusDaemons.DAEMONMaintainMemory, period = 300 ) )
+            
+            self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
             
         
     

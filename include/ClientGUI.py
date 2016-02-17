@@ -13,6 +13,7 @@ import ClientGUIPages
 import ClientDownloading
 import ClientMedia
 import ClientSearch
+import ClientThreading
 import gc
 import HydrusData
 import HydrusExceptions
@@ -1523,7 +1524,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 def THREADRegenerateThumbnails():
                     
-                    job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+                    job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
                     
                     job_key.SetVariable( 'popup_title', 'regenerating thumbnails' )
                     job_key.SetVariable( 'popup_text_1', 'creating directories' )
@@ -1796,7 +1797,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 url_string = url
                 
-                job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+                job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
                 
                 self._controller.pub( 'message', job_key )
                 
@@ -1866,7 +1867,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _THREADSyncToTagArchive( self, hta_path, adding, namespaces, service_key ):
         
-        job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         
         try:
             
@@ -1981,7 +1982,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+            job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
             
             job_key.SetVariable( 'popup_title', 'uploading pending to ' + service_name )
             
@@ -2119,7 +2120,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def DoFirstStart( self ):
         
-        with ClientGUIDialogs.DialogFirstStart( self ) as dlg: dlg.ShowModal()
+        message = 'Hi, this looks like the first time you have started the hydrus client.'
+        message += os.linesep * 2
+        message += 'Don\'t forget to check out the help if you haven\'t already.'
+        message += os.linesep * 2
+        message += 'You can right-click popup messages like this to dismiss them.'
+        
+        HydrusData.ShowText( message )
         
     
     def EventExit( self, event ):
@@ -2885,6 +2892,12 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
                 
             
+            if self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                
+                self._delete_local_deleted = wx.Button( self, label = 'clear deleted file record' )
+                self._delete_local_deleted.Bind( wx.EVT_BUTTON, self.EventDeleteLocalDeleted )
+                
+            
             if service_type == HC.SERVER_ADMIN:
                 
                 self._init = wx.Button( self, label = 'initialise server' )
@@ -2990,10 +3003,15 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 vbox.AddF( self._booru_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
             
-            if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ]:
+            if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ] or self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
                 
                 repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
+                
+                if self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                    
+                    repo_buttons_hbox.AddF( self._delete_local_deleted, CC.FLAGS_MIXED )
+                    
+                
                 if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
                     repo_buttons_hbox.AddF( self._service_wide_update, CC.FLAGS_MIXED )
@@ -3375,11 +3393,36 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
         
+        def EventDeleteLocalDeleted( self, event ):
+            
+            message = 'This will clear the client\'s memory of which files it has locally deleted, which affects \'exclude already deleted files\' import tests.'
+            message += os.linesep * 2
+            message += 'It will freeze the gui while it works.'
+            message += os.linesep * 2
+            message += 'If you do not know what this does, click \'forget it\'.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_add:
+                
+                result = dlg_add.ShowModal()
+                
+                if result == wx.ID_YES:
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', None ) )
+                    
+                    service_keys_to_content_updates = { self._service_key : [ content_update ] }
+                    
+                    HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                    
+                    self._DisplayService()
+                    
+                
+            
+        
         def EventImmediateSync( self, event ):
             
             def do_it():
             
-                job_key = HydrusThreading.JobKey( pausable = True, cancellable = True )
+                job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
                 
                 job_key.SetVariable( 'popup_title', self._service.GetName() + ': immediate sync' )
                 job_key.SetVariable( 'popup_text_1', 'downloading' )

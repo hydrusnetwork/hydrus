@@ -1217,7 +1217,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             thumbnail_index = self._sorted_media.index( thumbnail )
             
-        except HydrusExceptions.NotFoundException:
+        except HydrusExceptions.DataMissing:
             
             # probably means a collect happened during an ongoing waterfall or whatever
             
@@ -1585,7 +1585,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             index = self._sorted_media.index( thumbnail )
             
-        except HydrusExceptions.NotFoundException:
+        except HydrusExceptions.DataMissing:
             
             return False
             
@@ -1967,6 +1967,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
                 
+                local_booru_service = [ service for service in services if service.GetServiceType() == HC.LOCAL_BOORU ][0]
+                
+                local_booru_is_running = local_booru_service.GetInfo()[ 'port' ] is not None
+                
                 i_can_post_ratings = len( local_ratings_services ) > 0
                 
                 focussed_is_local = CC.LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent()
@@ -2299,9 +2303,17 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if focussed_is_local:
                     
-                    if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ) , 'image' )
+                    if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None:
+                        
+                        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ) , 'image' )
+                        
+                    
                     copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ) , 'path' )
-                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ) , 'local url' )
+                    
+                    if HC.options[ 'local_port' ] is not None:
+                        
+                        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ) , 'local url' )
+                        
                     
                 
                 share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
@@ -2321,7 +2333,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                share_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'share_on_local_booru' ), 'on local booru' )
+                if local_booru_is_running:
+                    
+                    share_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'share_on_local_booru' ), 'on local booru' )
+                    
                 
                 #
                 

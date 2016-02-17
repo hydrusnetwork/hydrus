@@ -193,6 +193,8 @@ class ClientFilesManager( object ):
         
         self._prefixes_to_locations = {}
         
+        self._bad_error_occured = False
+        
         self._Reinit()
         
     
@@ -320,6 +322,27 @@ class ClientFilesManager( object ):
         
         self._prefixes_to_locations = self._controller.Read( 'client_files_locations' )
         
+        for ( prefix, location ) in self._prefixes_to_locations.items():
+            
+            if os.path.exists( location ):
+                
+                dir = os.path.join( location, prefix )
+                
+                if not os.path.exists( dir ):
+                    
+                    HydrusData.DebugPrint( 'The location ' + dir + ' was not found, so it was created.' )
+                    
+                    os.makedirs( dir )
+                    
+                
+            else:
+                
+                self._bad_error_occured = True
+                
+                HydrusData.DebugPrint( 'The location ' + location + ' was not found during file manager init. A graphical error should follow.' )
+                
+            
+        
     
     def GetExpectedFilePath( self, hash, mime ):
         
@@ -375,6 +398,11 @@ class ClientFilesManager( object ):
         
     
     def Rebalance( self, partial = True, stop_time = None ):
+        
+        if self._bad_error_occured:
+            
+            return
+            
         
         with self._lock:
             
@@ -474,7 +502,9 @@ class ClientFilesManager( object ):
                 
                 if not os.path.exists( location ):
                     
-                    HydrusData.ShowText( 'The external location ' + location + ' does not exist! Please check your external storage options.' )
+                    self._bad_error_occured = True
+                    
+                    HydrusData.ShowText( 'The external location ' + location + ' does not exist! Please check your external storage options and restart the client.' )
                     
                 
             
@@ -988,7 +1018,7 @@ class ThumbnailCache( object ):
                 
                 path = ClientFiles.GetThumbnailPath( hash, False )
                 
-            except HydrusExceptions.NotFoundException as e:
+            except HydrusExceptions.FileMissingException as e:
                 
                 HydrusData.ShowException( e )
                 
@@ -1034,7 +1064,7 @@ class ThumbnailCache( object ):
                         
                         HydrusData.ShowException( e )
                         
-                        raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. Furthermore, the faulty thumbnail file could not be deleted. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+                        raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. Furthermore, the faulty thumbnail file could not be deleted. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
                         
                     
                     try:
@@ -1045,7 +1075,7 @@ class ThumbnailCache( object ):
                         
                         HydrusData.ShowException( e )
                         
-                        raise HydrusExceptions.NotFoundException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. It was deleted, but it could not be regenerated for the other above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
+                        raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. It was deleted, but it could not be regenerated for the other above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
                         
                     
                     HydrusData.ShowText( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render for the above reason. It was deleted and regenerated. This event could indicate hard drive corruption. Please check everything is ok.' )
@@ -1248,7 +1278,7 @@ class ServicesManager( object ):
         with self._lock:
             
             try: return self._keys_to_services[ service_key ]
-            except KeyError: raise HydrusExceptions.NotFoundException( 'That service was not found!' )
+            except KeyError: raise Exception( 'That service was not found!' )
             
         
     
@@ -1767,7 +1797,7 @@ class UndoManager( object ):
                 ( data_type, action, row ) = content_update.ToTuple()
                 
                 if data_type == HC.CONTENT_TYPE_FILES:
-                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION ): continue
+                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ): continue
                 elif data_type == HC.CONTENT_TYPE_MAPPINGS:
                     
                     if action in ( HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ): continue
