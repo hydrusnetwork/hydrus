@@ -8,6 +8,19 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 194</h3></li>
+				<ul>
+					<li>ipfs pins and unpins can now be queued up like file repository pending and petitioned, through the regular thumbnail right-click menu, which also reports some/all ipfs pinned selection status</li>
+					<li>this ipfs action queue is similarly summarised and commited at the normal service 'pending' menu</li>
+					<li>ipfs's 'pinned', 'to pin', and 'to unpin' statuses are displayed on thumbnails with ipfs-specific icons</li>
+					<li>you can copy the focussed file's ipfs multihash or all the selected files' ipfs multihashes from the thumbnail menu's share->copy->ipfs multihash</li>
+					<li>added a .txt tag parser to the 'path tagging' import dialog--it will parse the same sort of txt files the export dialog produces</li>
+					<li>the client's new 'requests' network code is harmonised, generally improved, and now produces hydrus-compatible exceptions</li>
+					<li>updated help re the local server and boorus now defaulting to off</li>
+					<li>db can now remember service-specific filenames (e.g. ipfs multihashes)</li>
+					<li>cleaned up some overly complicated and confused thumbnail menu code</li>
+					<li>the pending menu now specifies what it is about to do more plainly</li>
+				</ul>
 				<li><h3>version 193</h3></li>
 				<ul>
 					<li>the client's local server and local booru can be turned off from their respective management panels, and from now on, the client will initialise with them this way.</li>
