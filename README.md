@@ -8,7 +8,10 @@ This github repository is currently a weekly sync with my home dev environment, 
 
 The program can do quite a lot! Please check out the help inside the release or [here](http://hydrusnetwork.github.io/hydrus/help).
 
-* [Homepage](http://hydrusnetwork.github.io/hydrus/)
+* [homepage](http://hydrusnetwork.github.io/hydrus/)
+* [8chan board](https://8ch.net/hydrus/index.html)
+* [twitter](https://twitter.com/hydrusnetwork)
+* [tumblr](http://hydrus.tumblr.com/)
 
 ## Attribution
 

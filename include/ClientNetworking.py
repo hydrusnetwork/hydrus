@@ -5,6 +5,7 @@ import HydrusSerialisable
 import errno
 import httplib
 import os
+import requests
 import socket
 import socks
 import threading
@@ -108,6 +109,73 @@ def ConvertHydrusGETArgsToQuery( request_args ):
     query = '&'.join( [ key + '=' + HydrusData.ToByteString( value ) for ( key, value ) in request_args.items() ] )
     
     return query
+    
+def RequestsGet( url, stream = False ):
+    
+    response = requests.get( url, stream = stream )
+    
+    RequestsCheckResponse( response )
+    
+    return response
+    
+def RequestsPost( url, data = None, files = None ):
+    
+    response = requests.post( url, data = data, files = files )
+    
+    RequestsCheckResponse( response )
+    
+    return response
+    
+def RequestsCheckResponse( response ):
+    
+    if not response.ok:
+        
+        error_text = response.content
+        
+        if len( error_text ) > 1024:
+            
+            large_chunk = error_text[:4096]
+            
+            smaller_chunk = large_chunk[:256]
+            
+            HydrusData.DebugPrint( large_chunk )
+            
+            error_text = 'The server\'s error text was too long to display. The first part follows, while a larger chunk has been written to the log.'
+            error_text += os.linesep
+            error_text += smaller_chunk
+            
+        
+        if response.status_code == 304:
+            
+            eclass = HydrusExceptions.NotModifiedException
+            
+        elif response.status_code == 401:
+            
+            eclass = HydrusExceptions.PermissionException
+            
+        elif response.status_code == 403:
+            
+            eclass = HydrusExceptions.ForbiddenException
+            
+        elif response.status_code == 404:
+            
+            eclass = HydrusExceptions.NotFoundException
+            
+        elif response.status_code == 419:
+            
+            eclass = HydrusExceptions.SessionException
+            
+        elif response.status_code == 426:
+            
+            eclass = HydrusExceptions.NetworkVersionException
+            
+        else:
+            
+            eclass = HydrusExceptions.NetworkException
+            
+        
+        raise eclass( error_text )
+        
     
 def ParseURL( url ):
     

@@ -1837,18 +1837,11 @@ class ServiceIPFS( ServiceRemote ):
         
         url = 'http://' + host + ':' + str( port ) + path
         
-        response = requests.get( url )
+        response = ClientNetworking.RequestsGet( url )
         
-        if response.ok:
-            
-            j = response.json()
-            
-            return j[ 'Version' ]
-            
-        else:
-            
-            raise Exception( response.content )
-            
+        j = response.json()
+        
+        return j[ 'Version' ]
         
     
     def ImportFile( self, multihash ):
@@ -1868,9 +1861,7 @@ class ServiceIPFS( ServiceRemote ):
         HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
         
     
-    def PinFile( self, path ):
-        
-        mime = HydrusFileHandling.GetMime( path )
+    def PinFile( self, hash, mime ):
         
         mime_string = HC.mime_string_lookup[ mime ]
         
@@ -1880,34 +1871,22 @@ class ServiceIPFS( ServiceRemote ):
         
         url = 'http://' + host + ':' + str( port ) + '/api/v0/add'
         
-        files = { 'path' : ( path, open( path, 'rb' ), mime_string ) }
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
         
-        response = requests.put( url, files = files )
+        path = client_files_manager.GetFilePath( hash, mime )
         
-        if response.ok:
-            
-            # responds with some json with name and key (ipfs hash)
-            # parse that multihash, wrap it into the content update
-            
-            pass # spin off a content update
-            
-        else:
-            
-            raise Exception( response.content )
-            
+        files = { 'path' : ( hash.encode( 'hex' ), open( path, 'rb' ), mime_string ) }
         
-    
-    def SyncPinned( self ):
+        response = ClientNetworking.RequestsPost( url, files = files )
         
-        # query pin ls and update private cache with what we have
-        # add a button for this on review services, I think
+        j = response.json()
         
-        pass
+        multihash = j[ 'Hash' ]
+        
+        return multihash
         
     
     def UnpinFile( self, multihash ):
-        
-        # will have to get multihash from db
         
         credentials = self.GetCredentials()
         
@@ -1915,16 +1894,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = 'http://' + host + ':' + str( port ) + '/api/v0/pin/rm/' + multihash
         
-        response = requests.get( url )
-        
-        if response.ok:
-            
-            pass # spin off a content update
-            
-        else:
-            
-            raise Exception( response.content )
-            
+        ClientNetworking.RequestsGet( url )
         
     
 class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):

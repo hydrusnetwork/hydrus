@@ -31,18 +31,18 @@ import HydrusGlobals
 
 ID_TIMER_ANIMATION = wx.NewId()
 
-def AddFileServiceKeysToMenu( menu, file_service_keys, phrase, action ):
+def AddServiceKeysToMenu( menu, service_keys, phrase, action ):
     
     services_manager = HydrusGlobals.client_controller.GetServicesManager()
     
-    if len( file_service_keys ) == 1:
+    if len( service_keys ) == 1:
         
-        ( file_service_key, ) = file_service_keys
+        ( service_key, ) = service_keys
         
         if action == CC.ID_NULL: id = CC.ID_NULL
-        else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action, file_service_key )
+        else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action, service_key )
         
-        file_service = services_manager.GetService( file_service_key )
+        file_service = services_manager.GetService( service_key )
         
         menu.Append( id, phrase + ' ' + file_service.GetName() )
         
@@ -50,12 +50,12 @@ def AddFileServiceKeysToMenu( menu, file_service_keys, phrase, action ):
         
         submenu = wx.Menu()
         
-        for file_service_key in file_service_keys: 
+        for service_key in service_keys: 
             
             if action == CC.ID_NULL: id = CC.ID_NULL
-            else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action, file_service_key )
+            else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action, service_key )
             
-            file_service = services_manager.GetService( file_service_key )
+            file_service = services_manager.GetService( service_key )
             
             submenu.Append( id, file_service.GetName() )
             
@@ -197,6 +197,42 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         path = client_files_manager.GetFilePath( display_media.GetHash(), display_media.GetMime() )
         
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', path )
+        
+    
+    def _CopyServiceFilenameToClipboard( self, service_key ):
+        
+        display_media = self._focussed_media.GetDisplayMedia()
+        
+        hash = display_media.GetHash()
+        
+        ( filename, ) = HydrusGlobals.client_controller.Read( 'service_filenames', service_key, { hash } )
+        
+        HydrusGlobals.client_controller.pub( 'clipboard', 'text', filename )
+        
+    
+    def _CopyServiceFilenamesToClipboard( self, service_key ):
+        
+        hashes = self._GetSelectedHashes( has_location = service_key )
+        
+        if len( hashes ) > 0:
+            
+            filenames = HydrusGlobals.client_controller.Read( 'service_filenames', service_key, hashes )
+            
+            if len( filenames ) > 0:
+                
+                copy_string = os.linesep.join( filenames )
+                
+                HydrusGlobals.client_controller.pub( 'clipboard', 'text', copy_string )
+                
+            else:
+                
+                HydrusData.ShowText( 'Could not find any service filenames for that selection!' )
+                
+            
+        else:
+            
+            HydrusData.ShowText( 'Could not find any files with the requested service!' )
+            
         
     
     def _CustomFilter( self, shortcuts_name = None ):
@@ -619,30 +655,49 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _PetitionFiles( self, file_service_key ):
+    def _PetitionFiles( self, remote_service_key ):
         
         hashes = self._GetSelectedHashes()
         
         if hashes is not None and len( hashes ) > 0:
             
-            file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( file_service_key )
+            remote_service = HydrusGlobals.client_controller.GetServicesManager().GetService( remote_service_key )
             
-            if len( hashes ) == 1: message = 'Enter a reason for this file to be removed from ' + file_service.GetName() + '.'
-            else: message = 'Enter a reason for these ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files to be removed from ' + file_service.GetName() + '.'
+            service_type = remote_service.GetServiceType()
             
-            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+            if service_type == HC.FILE_REPOSITORY:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if len( hashes ) == 1:
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, dlg.GetValue() ) )
+                    message = 'Enter a reason for this file to be removed from ' + remote_service.GetName() + '.'
                     
-                    service_keys_to_content_updates = { file_service_key : ( content_update, ) }
+                else:
                     
-                    HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                    message = 'Enter a reason for these ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files to be removed from ' + remote_service.GetName() + '.'
                     
                 
-            
-            self.SetFocus()
+                with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, dlg.GetValue() ) )
+                        
+                        service_keys_to_content_updates = { remote_service_key : ( content_update, ) }
+                        
+                        HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                        
+                    
+                
+                self.SetFocus()
+                
+            elif service_type == HC.IPFS:
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'ipfs' ) )
+                
+                service_keys_to_content_updates = { remote_service_key : ( content_update, ) }
+                
+                HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                
             
         
     
@@ -1717,6 +1772,9 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'copy_hash': self._CopyHashToClipboard( data )
             elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
             elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
+            elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
+            elif command == 'copy_service_filename': self._CopyServiceFilenameToClipboard( data )
+            elif command == 'copy_service_filenames': self._CopyServiceFilenamesToClipboard( data )
             elif command == 'copy_path': self._CopyPathToClipboard()
             elif command == 'ctrl-space':
                 
@@ -1959,11 +2017,17 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 multiple_selected = num_selected > 1
                 
-                services = HydrusGlobals.client_controller.GetServicesManager().GetServices()
+                services_manager = HydrusGlobals.client_controller.GetServicesManager()
+                
+                services = services_manager.GetServices()
+                
+                service_keys_to_names = { service.GetServiceKey() : service.GetName() for service in services }
                 
                 tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
                 
                 file_repositories = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
+                
+                ipfs_services = [ service for service in services if service.GetServiceType() == HC.IPFS ]
                 
                 local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
                 
@@ -1975,12 +2039,16 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 focussed_is_local = CC.LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent()
                 
+                file_service_keys = { repository.GetServiceKey() for repository in file_repositories }
                 downloadable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) or repository.GetInfo( 'account' ).IsUnknownAccount() }
                 uploadable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) or repository.GetInfo( 'account' ).IsUnknownAccount() }
                 petition_resolvable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) }
                 petitionable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_service_keys
                 user_manageable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS ) }
                 admin_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) }
+                ipfs_service_keys = { service.GetServiceKey() for service in ipfs_services }
+                
+                focussed_is_ipfs = True in ( service_key in ipfs_service_keys for service_key in self._focussed_media.GetLocationsManager().GetCurrentRemote() )
                 
                 if multiple_selected:
                     
@@ -1997,6 +2065,13 @@ class MediaPanelThumbnails( MediaPanel ):
                     rescind_petition_phrase = 'rescind selected petitions for'
                     remote_delete_phrase = 'delete all possible selected from'
                     modify_account_phrase = 'modify the accounts that uploaded selected to'
+                    
+                    pinned_phrase = 'selected pinned to'
+                    
+                    pin_phrase = 'pin all to'
+                    rescind_pin_phrase = 'rescind pin to'
+                    unpin_phrase = 'unpin all from'
+                    rescind_unpin_phrase = 'rescind unpin from'
                     
                     manage_tags_phrase = 'selected files\' tags'
                     manage_ratings_phrase = 'selected files\' ratings'
@@ -2027,6 +2102,13 @@ class MediaPanelThumbnails( MediaPanel ):
                     remote_delete_phrase = 'delete from'
                     modify_account_phrase = 'modify the account that uploaded this to'
                     
+                    pinned_phrase = 'pinned to'
+                    
+                    pin_phrase = 'pin to'
+                    rescind_pin_phrase = 'rescind pin to'
+                    unpin_phrase = 'unpin from'
+                    rescind_unpin_phrase = 'rescind unpin from'
+                    
                     manage_tags_phrase = 'file\'s tags'
                     manage_ratings_phrase = 'file\'s ratings'
                     
@@ -2045,76 +2127,111 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 def MassUnion( lists ): return { item for item in itertools.chain.from_iterable( lists ) }
                 
-                all_current_file_service_keys = [ locations_manager.GetCurrentRemote() for locations_manager in selected_locations_managers ]
+                groups_of_current_remote_service_keys = [ locations_manager.GetCurrentRemote() for locations_manager in selected_locations_managers ]
+                groups_of_pending_remote_service_keys = [ locations_manager.GetPendingRemote() for locations_manager in selected_locations_managers ]
+                groups_of_petitioned_remote_service_keys = [ locations_manager.GetPetitionedRemote() for locations_manager in selected_locations_managers ]
+                groups_of_deleted_remote_service_keys = [ locations_manager.GetDeletedRemote() for locations_manager in selected_locations_managers ]
                 
-                current_file_service_keys = HydrusData.IntelligentMassIntersect( all_current_file_service_keys )
+                current_remote_service_keys = MassUnion( groups_of_current_remote_service_keys )
+                pending_remote_service_keys = MassUnion( groups_of_pending_remote_service_keys )
+                petitioned_remote_service_keys = MassUnion( groups_of_petitioned_remote_service_keys )
+                deleted_remote_service_keys = MassUnion( groups_of_deleted_remote_service_keys )
                 
-                some_current_file_service_keys = MassUnion( all_current_file_service_keys ) - current_file_service_keys
+                common_current_remote_service_keys = HydrusData.IntelligentMassIntersect( groups_of_current_remote_service_keys )
+                common_pending_remote_service_keys = HydrusData.IntelligentMassIntersect( groups_of_pending_remote_service_keys )
+                common_petitioned_remote_service_keys = HydrusData.IntelligentMassIntersect( groups_of_petitioned_remote_service_keys )
+                common_deleted_remote_service_keys = HydrusData.IntelligentMassIntersect( groups_of_deleted_remote_service_keys )
                 
-                all_pending_file_service_keys = [ locations_manager.GetPendingRemote() for locations_manager in selected_locations_managers ]
+                disparate_current_remote_service_keys = current_remote_service_keys - common_current_remote_service_keys
+                disparate_pending_remote_service_keys = pending_remote_service_keys - common_pending_remote_service_keys
+                disparate_petitioned_remote_service_keys = petitioned_remote_service_keys - common_petitioned_remote_service_keys
+                disparate_deleted_remote_service_keys = deleted_remote_service_keys - common_deleted_remote_service_keys
                 
                 some_downloading = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetPending() for locations_manager in selected_locations_managers )
                 
-                pending_file_service_keys = HydrusData.IntelligentMassIntersect( all_pending_file_service_keys )
+                pending_file_service_keys = pending_remote_service_keys.intersection( file_service_keys )
+                petitioned_file_service_keys = petitioned_remote_service_keys.intersection( file_service_keys )
                 
-                some_pending_file_service_keys = MassUnion( all_pending_file_service_keys ) - pending_file_service_keys
+                common_current_file_service_keys = common_current_remote_service_keys.intersection( file_service_keys )
+                common_pending_file_service_keys = common_pending_remote_service_keys.intersection( file_service_keys )
+                common_petitioned_file_service_keys = common_petitioned_remote_service_keys.intersection( file_service_keys )
+                common_deleted_file_service_keys = common_deleted_remote_service_keys.intersection( file_service_keys )
                 
-                selection_uploaded_file_service_keys = some_pending_file_service_keys.union( pending_file_service_keys )
+                disparate_current_file_service_keys = disparate_current_remote_service_keys.intersection( file_service_keys )
+                disparate_pending_file_service_keys = disparate_pending_remote_service_keys.intersection( file_service_keys )
+                disparate_petitioned_file_service_keys = disparate_petitioned_remote_service_keys.intersection( file_service_keys )
+                disparate_deleted_file_service_keys = disparate_deleted_remote_service_keys.intersection( file_service_keys )
                 
-                all_petitioned_file_service_keys = [ locations_manager.GetPetitionedRemote() for locations_manager in selected_locations_managers ]
+                pending_ipfs_service_keys = pending_remote_service_keys.intersection( ipfs_service_keys )
+                petitioned_ipfs_service_keys = petitioned_remote_service_keys.intersection( ipfs_service_keys )
                 
-                petitioned_file_service_keys = HydrusData.IntelligentMassIntersect( all_petitioned_file_service_keys )
+                common_current_ipfs_service_keys = common_current_remote_service_keys.intersection( ipfs_service_keys )
+                common_pending_ipfs_service_keys = common_pending_file_service_keys.intersection( ipfs_service_keys )
+                common_petitioned_ipfs_service_keys = common_petitioned_remote_service_keys.intersection( ipfs_service_keys )
                 
-                some_petitioned_file_service_keys = MassUnion( all_petitioned_file_service_keys ) - petitioned_file_service_keys
-                
-                selection_petitioned_file_service_keys = some_petitioned_file_service_keys.union( petitioned_file_service_keys )
-                
-                all_deleted_file_service_keys = [ locations_manager.GetDeletedRemote() for locations_manager in selected_locations_managers ]
-                
-                deleted_file_service_keys = HydrusData.IntelligentMassIntersect( all_deleted_file_service_keys )
-                
-                some_deleted_file_service_keys = MassUnion( all_deleted_file_service_keys ) - deleted_file_service_keys
+                disparate_current_ipfs_service_keys = disparate_current_remote_service_keys.intersection( ipfs_service_keys )
+                disparate_pending_ipfs_service_keys = disparate_pending_remote_service_keys.intersection( ipfs_service_keys )
+                disparate_petitioned_ipfs_service_keys = disparate_petitioned_remote_service_keys.intersection( ipfs_service_keys )
                 
                 # valid commands for the files
                 
-                selection_uploadable_file_service_keys = set()
+                uploadable_file_service_keys = set()
                 
-                selection_downloadable_file_service_keys = set()
+                downloadable_file_service_keys = set()
                 
-                selection_petitionable_file_service_keys = set()
+                petitionable_file_service_keys = set()
+                
+                deletable_file_service_keys = set()
+                
+                modifyable_file_service_keys = set()
+                
+                pinnable_ipfs_service_keys = set()
+                
+                unpinnable_ipfs_service_keys = set()
                 
                 for locations_manager in selected_locations_managers:
                     
+                    # FILE REPOS
+                    
                     # we can upload (set pending) to a repo_id when we have permission, a file is local, not current, not pending, and either ( not deleted or admin )
                     
-                    if locations_manager.HasLocal(): selection_uploadable_file_service_keys.update( uploadable_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - admin_file_service_keys ) )
+                    if locations_manager.HasLocal():
+                        
+                        uploadable_file_service_keys.update( uploadable_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - admin_file_service_keys ) )
+                        
                     
                     # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
                     
-                    if not CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() and not locations_manager.HasDownloading(): selection_downloadable_file_service_keys.update( downloadable_file_service_keys & locations_manager.GetCurrentRemote() )
+                    if not CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() and not locations_manager.HasDownloading():
+                        
+                        downloadable_file_service_keys.update( downloadable_file_service_keys & locations_manager.GetCurrentRemote() )
+                        
                     
                     # we can petition when we have permission and a file is current
                     # we can re-petition an already petitioned file
                     
-                    selection_petitionable_file_service_keys.update( petitionable_file_service_keys & locations_manager.GetCurrentRemote() )
-                    
-                
-                selection_deletable_file_service_keys = set()
-                
-                for locations_manager in selected_locations_managers:
+                    petitionable_file_service_keys.update( petitionable_file_service_keys & locations_manager.GetCurrentRemote() )
                     
                     # we can delete remote when we have permission and a file is current and it is not already petitioned
                     
-                    selection_deletable_file_service_keys.update( ( petition_resolvable_file_service_keys & locations_manager.GetCurrentRemote() ) - locations_manager.GetPetitionedRemote() )
-                    
-                
-                selection_modifyable_file_service_keys = set()
-                
-                for locations_manager in selected_locations_managers:
+                    deletable_file_service_keys.update( ( petition_resolvable_file_service_keys & locations_manager.GetCurrentRemote() ) - locations_manager.GetPetitionedRemote() )
                     
                     # we can modify users when we have permission and the file is current or deleted
                     
-                    selection_modifyable_file_service_keys.update( user_manageable_file_service_keys & ( locations_manager.GetCurrentRemote() | locations_manager.GetDeletedRemote() ) )
+                    modifyable_file_service_keys.update( user_manageable_file_service_keys & ( locations_manager.GetCurrentRemote() | locations_manager.GetDeletedRemote() ) )
+                    
+                    # IPFS
+                    
+                    # we can pin if a file is local, not current, not pending
+                    
+                    if locations_manager.HasLocal():
+                        
+                        pinnable_ipfs_service_keys.update( ipfs_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() )
+                        
+                    
+                    # we can unpin a file if it is current and not petitioned
+                    
+                    unpinnable_ipfs_service_keys.update( ( ipfs_service_keys & locations_manager.GetCurrentRemote() ) - locations_manager.GetPetitionedRemote() )
                     
                 
                 # do the actual menu
@@ -2126,57 +2243,81 @@ class MediaPanelThumbnails( MediaPanel ):
                     menu.Append( CC.ID_NULL, thumbnail.GetPrettyAge() )
                     
                 
-                if len( some_current_file_service_keys ) > 0: AddFileServiceKeysToMenu( menu, some_current_file_service_keys, 'some uploaded to', CC.ID_NULL )
+                if len( disparate_current_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_current_file_service_keys, 'some uploaded to', CC.ID_NULL )
                 
-                if len( current_file_service_keys ) > 0: AddFileServiceKeysToMenu( menu, current_file_service_keys, uploaded_phrase, CC.ID_NULL )
+                if len( common_current_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_current_file_service_keys, uploaded_phrase, CC.ID_NULL )
                 
-                if len( some_pending_file_service_keys ) > 0: AddFileServiceKeysToMenu( menu, some_pending_file_service_keys, 'some pending to', CC.ID_NULL )
+                if len( disparate_pending_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_pending_file_service_keys, 'some pending to', CC.ID_NULL )
                 
-                if len( pending_file_service_keys ) > 0: AddFileServiceKeysToMenu( menu, pending_file_service_keys, pending_phrase, CC.ID_NULL )
+                if len( common_pending_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_pending_file_service_keys, pending_phrase, CC.ID_NULL )
                 
-                if len( some_petitioned_file_service_keys ) > 0: AddFileServiceKeysToMenu( menu, some_petitioned_file_service_keys, 'some petitioned from', CC.ID_NULL )
+                if len( disparate_petitioned_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_petitioned_file_service_keys, 'some petitioned from', CC.ID_NULL )
                 
-                if len( petitioned_file_service_keys ) > 0: AddFileServiceKeysToMenu( menu, petitioned_file_service_keys, petitioned_phrase, CC.ID_NULL )
+                if len( common_petitioned_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_petitioned_file_service_keys, petitioned_phrase, CC.ID_NULL )
                 
-                if len( some_deleted_file_service_keys ) > 0: AddFileServiceKeysToMenu( menu, some_deleted_file_service_keys, 'some deleted from', CC.ID_NULL )
+                if len( disparate_deleted_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_deleted_file_service_keys, 'some deleted from', CC.ID_NULL )
                 
-                if len( deleted_file_service_keys ) > 0: AddFileServiceKeysToMenu( menu, deleted_file_service_keys, deleted_phrase, CC.ID_NULL )
+                if len( common_deleted_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_deleted_file_service_keys, deleted_phrase, CC.ID_NULL )
+                
+                if len( disparate_current_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_current_ipfs_service_keys, 'some pinned to', CC.ID_NULL )
+                
+                if len( common_current_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, common_current_ipfs_service_keys, pinned_phrase, CC.ID_NULL )
+                
+                if len( disparate_pending_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_pending_ipfs_service_keys, 'some to be pinned to', CC.ID_NULL )
+                
+                if len( common_pending_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, common_pending_ipfs_service_keys, pending_phrase, CC.ID_NULL )
+                
+                if len( disparate_petitioned_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_petitioned_ipfs_service_keys, 'some to be unpinned from', CC.ID_NULL )
+                
+                if len( common_petitioned_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, common_petitioned_ipfs_service_keys, unpin_phrase, CC.ID_NULL )
                 
                 menu.AppendSeparator()
                 
                 #
                 
-                len_interesting_file_service_keys = 0
+                len_interesting_remote_service_keys = 0
                 
-                len_interesting_file_service_keys += len( selection_downloadable_file_service_keys )
-                len_interesting_file_service_keys += len( selection_uploadable_file_service_keys )
-                len_interesting_file_service_keys += len( selection_uploaded_file_service_keys )
-                len_interesting_file_service_keys += len( selection_petitionable_file_service_keys )
-                len_interesting_file_service_keys += len( selection_petitioned_file_service_keys )
-                len_interesting_file_service_keys += len( selection_deletable_file_service_keys )
-                len_interesting_file_service_keys += len( selection_modifyable_file_service_keys )
+                len_interesting_remote_service_keys += len( downloadable_file_service_keys )
+                len_interesting_remote_service_keys += len( uploadable_file_service_keys )
+                len_interesting_remote_service_keys += len( pending_file_service_keys )
+                len_interesting_remote_service_keys += len( petitionable_file_service_keys )
+                len_interesting_remote_service_keys += len( petitioned_file_service_keys )
+                len_interesting_remote_service_keys += len( deletable_file_service_keys )
+                len_interesting_remote_service_keys += len( modifyable_file_service_keys )
+                len_interesting_remote_service_keys += len( pinnable_ipfs_service_keys )
+                len_interesting_remote_service_keys += len( pending_ipfs_service_keys )
+                len_interesting_remote_service_keys += len( unpinnable_ipfs_service_keys )
+                len_interesting_remote_service_keys += len( petitioned_ipfs_service_keys )
                 
-                if len_interesting_file_service_keys > 0:
+                if len_interesting_remote_service_keys > 0:
                     
-                    file_repo_menu = wx.Menu()
+                    remote_action_menu = wx.Menu()
                     
-                    if len( selection_downloadable_file_service_keys ) > 0: file_repo_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'download' ), download_phrase )
+                    if len( downloadable_file_service_keys ) > 0: remote_action_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'download' ), download_phrase )
                     
-                    if some_downloading: file_repo_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'rescind_download' ), rescind_download_phrase )
+                    if some_downloading: remote_action_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'rescind_download' ), rescind_download_phrase )
                     
-                    if len( selection_uploadable_file_service_keys ) > 0: AddFileServiceKeysToMenu( file_repo_menu, selection_uploadable_file_service_keys, upload_phrase, 'upload' )
+                    if len( uploadable_file_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, uploadable_file_service_keys, upload_phrase, 'upload' )
                     
-                    if len( selection_uploaded_file_service_keys ) > 0: AddFileServiceKeysToMenu( file_repo_menu, selection_uploaded_file_service_keys, rescind_upload_phrase, 'rescind_upload' )
+                    if len( pending_file_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'rescind_upload' )
                     
-                    if len( selection_petitionable_file_service_keys ) > 0: AddFileServiceKeysToMenu( file_repo_menu, selection_petitionable_file_service_keys, petition_phrase, 'petition' )
+                    if len( petitionable_file_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, petitionable_file_service_keys, petition_phrase, 'petition' )
                     
-                    if len( selection_petitioned_file_service_keys ) > 0: AddFileServiceKeysToMenu( file_repo_menu, selection_petitioned_file_service_keys, rescind_petition_phrase, 'rescind_petition' )
+                    if len( petitioned_file_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'rescind_petition' )
                     
-                    if len( selection_deletable_file_service_keys ) > 0: AddFileServiceKeysToMenu( file_repo_menu, selection_deletable_file_service_keys, remote_delete_phrase, 'delete' )
+                    if len( deletable_file_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'delete' )
                     
-                    if len( selection_modifyable_file_service_keys ) > 0: AddFileServiceKeysToMenu( file_repo_menu, selection_modifyable_file_service_keys, modify_account_phrase, 'modify_account' )
+                    if len( modifyable_file_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'modify_account' )
                     
-                    menu.AppendMenu( CC.ID_NULL, 'file repositories', file_repo_menu )
+                    if len( pinnable_ipfs_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'upload' )
+                    
+                    if len( pending_ipfs_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'rescind_upload' )
+                    
+                    if len( unpinnable_ipfs_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'petition' )
+                    
+                    if len( petitioned_ipfs_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'rescind_petition' )
+                    
+                    menu.AppendMenu( CC.ID_NULL, 'remote services', remote_action_menu )
                     
                 
                 #
@@ -2299,6 +2440,23 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha256' ) , 'sha256 hash' )
                     if multiple_selected: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hashes', 'sha256' ) , 'sha256 hashes' )
+                    
+                
+                for ipfs_service_key in self._focussed_media.GetLocationsManager().GetCurrentRemote().intersection( ipfs_service_keys ):
+                    
+                    name = service_keys_to_names[ ipfs_service_key ]
+                    
+                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_service_filename', ipfs_service_key ) , name + ' multihash' )
+                    
+                
+                if multiple_selected:
+                    
+                    for ipfs_service_key in disparate_current_ipfs_service_keys.union( common_current_ipfs_service_keys ):
+                        
+                        name = service_keys_to_names[ ipfs_service_key ]
+                        
+                        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_service_filenames', ipfs_service_key ) , name + ' multihashes' )
+                        
                     
                 
                 if focussed_is_local:
@@ -2879,29 +3037,66 @@ class Thumbnail( Selectable ):
         
         # repo icons
         
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
         repo_icon_x = 0
         
-        num_current = len( locations_manager.GetCurrentRemote() )
-        num_pending = len( locations_manager.GetPendingRemote() )
-        num_petitioned = len( locations_manager.GetPetitionedRemote() )
+        current = locations_manager.GetCurrentRemote()
+        pending = locations_manager.GetPendingRemote()
+        petitioned = locations_manager.GetPetitionedRemote()
         
-        if num_current > num_petitioned:
+        current_to_display = current.difference( petitioned )
+        
+        #
+        
+        service_types = [ services_manager.GetService( service_key ).GetServiceType() for service_key in current_to_display ]
+        
+        if HC.FILE_REPOSITORY in service_types:
             
             dc.DrawBitmap( CC.GlobalBMPs.file_repository, repo_icon_x, 0 )
             
             repo_icon_x += 20
             
         
-        if num_pending > 0:
+        if HC.IPFS in service_types:
+            
+            dc.DrawBitmap( CC.GlobalBMPs.ipfs, repo_icon_x, 0 )
+            
+            repo_icon_x += 20
+            
+        
+        #
+        
+        service_types = [ services_manager.GetService( service_key ).GetServiceType() for service_key in pending ]
+        
+        if HC.FILE_REPOSITORY in service_types:
             
             dc.DrawBitmap( CC.GlobalBMPs.file_repository_pending, repo_icon_x, 0 )
             
             repo_icon_x += 20
             
         
-        if num_petitioned > 0:
+        if HC.IPFS in service_types:
+            
+            dc.DrawBitmap( CC.GlobalBMPs.ipfs_pending, repo_icon_x, 0 )
+            
+            repo_icon_x += 20
+            
+        
+        #
+        
+        service_types = [ services_manager.GetService( service_key ).GetServiceType() for service_key in petitioned ]
+        
+        if HC.FILE_REPOSITORY in service_types:
             
             dc.DrawBitmap( CC.GlobalBMPs.file_repository_petitioned, repo_icon_x, 0 )
+            
+            repo_icon_x += 20
+            
+        
+        if HC.IPFS in service_types:
+            
+            dc.DrawBitmap( CC.GlobalBMPs.ipfs_petitioned, repo_icon_x, 0 )
             
             repo_icon_x += 20
             

@@ -230,51 +230,48 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     try:
         
-        response = requests.get( url, stream = True )
+        response = ClientNetworking.RequestsGet( url, stream = True )
         
-        if response.ok:
+        if 'content-length' in response.headers:
             
-            if 'content-length' in response.headers:
-                
-                gauge_range = int( response.headers[ 'content-length' ] )
-                
-            else:
-                
-                gauge_range = None
-                
-            
-            gauge_value = 0
-            
-            with open( temp_path, 'wb' ) as f:
-                
-                for chunk in response.iter_content( chunk_size = 65536 ):
-                    
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        return
-                        
-                    
-                    f.write( chunk )
-                    
-                    gauge_value += len( chunk )
-                    
-                    hook( gauge_value, gauge_range )
-                    
-                
-            
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
-            
-            ( result, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path )
+            gauge_range = int( response.headers[ 'content-length' ] )
             
         else:
             
-            job_key.Cancel()
+            gauge_range = None
             
-            raise HydrusExceptions.NetworkException( response.content )
+        
+        gauge_value = 0
+        
+        with open( temp_path, 'wb' ) as f:
             
+            for chunk in response.iter_content( chunk_size = 65536 ):
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                if should_quit:
+                    
+                    return
+                    
+                
+                f.write( chunk )
+                
+                gauge_value += len( chunk )
+                
+                hook( gauge_value, gauge_range )
+                
+            
+        
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
+        
+        ( result, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path )
+        
+    except HydrusExceptions.NetworkException:
+        
+        job_key.Cancel()
+        
+        raise
         
     finally:
         

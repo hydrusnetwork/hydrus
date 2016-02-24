@@ -92,46 +92,6 @@ class LocationsManager( object ):
         return self._deleted - self.LOCAL_LOCATIONS
         
     
-    def GetFileRepositoryStrings( self ):
-    
-        current = self.GetCurrentRemote()
-        pending = self.GetPendingRemote()
-        petitioned = self.GetPetitionedRemote()
-        
-        file_repo_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
-        
-        file_repo_services = list( file_repo_services )
-        
-        cmp_func = lambda a, b: cmp( a.GetName(), b.GetName() )
-        
-        file_repo_services.sort( cmp = cmp_func )
-        
-        file_repo_service_keys_and_names = [ ( file_repo_service.GetServiceKey(), file_repo_service.GetName() ) for file_repo_service in file_repo_services ]
-        
-        file_repo_strings = []
-        
-        for ( service_key, name ) in file_repo_service_keys_and_names:
-            
-            if service_key in pending:
-                
-                file_repo_strings.append( name + ' (+)' )
-                
-            elif service_key in current:
-                
-                if service_key in petitioned:
-                    
-                    file_repo_strings.append( name + ' (-)' )
-                    
-                else:
-                    
-                    file_repo_strings.append( name )
-                    
-                
-            
-        
-        return file_repo_strings
-        
-    
     def GetPending( self ): return self._pending
     def GetPendingRemote( self ):
         
@@ -142,6 +102,50 @@ class LocationsManager( object ):
     def GetPetitionedRemote( self ):
         
         return self._petitioned - self.LOCAL_LOCATIONS
+        
+    
+    def GetRemoteLocationStrings( self ):
+    
+        current = self.GetCurrentRemote()
+        pending = self.GetPendingRemote()
+        petitioned = self.GetPetitionedRemote()
+        
+        remote_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) )
+        
+        remote_services = list( remote_services )
+        
+        def key( s ):
+            
+            return s.GetName()
+            
+        
+        remote_services.sort( key = key )
+        
+        remote_service_strings = []
+        
+        for remote_service in remote_services:
+            
+            name = remote_service.GetName()
+            service_key = remote_service.GetServiceKey()
+            
+            if service_key in pending:
+                
+                remote_service_strings.append( name + ' (+)' )
+                
+            elif service_key in current:
+                
+                if service_key in petitioned:
+                    
+                    remote_service_strings.append( name + ' (-)' )
+                    
+                else:
+                    
+                    remote_service_strings.append( name )
+                    
+                
+            
+        
+        return remote_service_strings
         
     
     def HasDownloading( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._pending
@@ -1241,7 +1245,7 @@ class MediaResult( object ):
         service_type = service.GetServiceType()
         
         if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( service_key, content_update )
-        elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
+        elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.IPFS ):
             
             if service_type == HC.LOCAL_FILE:
                 

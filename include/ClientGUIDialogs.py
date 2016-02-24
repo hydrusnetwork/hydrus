@@ -2087,56 +2087,45 @@ class DialogInputShortcut( Dialog ):
     
     def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, action = 'new_page' ):
         
-        self._action = action
-        
-        def InitialiseControls():
-            
-            self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
-            
-            self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally' ] )
-            
-            self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-    
-        def PopulateControls():
-            
-            self._actions.SetSelection( self._actions.FindString( action ) )
-            
-        
-        def ArrangeControls():
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._shortcut, CC.FLAGS_MIXED )
-            hbox.AddF( self._actions, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'configure shortcut' )
         
-        InitialiseControls()
+        self._action = action
         
-        PopulateControls()
+        self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
         
-        ArrangeControls()
+        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally' ] )
+        
+        self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._actions.SetSelection( self._actions.FindString( action ) )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._shortcut, CC.FLAGS_MIXED )
+        hbox.AddF( self._actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -2915,80 +2904,69 @@ class DialogPathsToTags( Dialog ):
     
     def __init__( self, parent, paths ):
         
-        def InitialiseControls():
-            
-            self._tag_repositories = ClientGUICommon.ListBook( self )
-            self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
-            
-            self._add_button = wx.Button( self, id = wx.ID_OK, label = 'Import Files' )
-            self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Back to File Selection' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
-            
-            for service in services:
-                
-                account = service.GetInfo( 'account' )
-                
-                if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    name = service.GetName()
-                    
-                    self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, paths ), {} )
-                    
-                
-            
-            page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, paths )
-            
-            name = CC.LOCAL_TAG_SERVICE_KEY
-            
-            self._tag_repositories.AddPage( name, page )
-            
-            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-            
-            default_tag_repository = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
-            
-            self._tag_repositories.Select( default_tag_repository.GetName() )
-            
-        
-        def ArrangeControls():
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._add_button, CC.FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( width, height ) = self.GetMinSize()
-            
-            width = max( width, 930 )
-            height = max( height, 680 )
-            
-            self.SetInitialSize( ( width, height ) )
-            
-        
         Dialog.__init__( self, parent, 'path tagging' )
         
         self._paths = paths
         
-        InitialiseControls()
+        self._tag_repositories = ClientGUICommon.ListBook( self )
+        self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
         
-        PopulateControls()
+        self._add_button = wx.Button( self, id = wx.ID_OK, label = 'Import Files' )
+        self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
         
-        ArrangeControls()
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Back to File Selection' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+        
+        for service in services:
+            
+            account = service.GetInfo( 'account' )
+            
+            if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
+                
+                service_key = service.GetServiceKey()
+                
+                name = service.GetName()
+                
+                self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, paths ), {} )
+                
+            
+        
+        page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, paths )
+        
+        name = CC.LOCAL_TAG_SERVICE_KEY
+        
+        self._tag_repositories.AddPage( name, page )
+        
+        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        
+        default_tag_repository = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
+        
+        self._tag_repositories.Select( default_tag_repository.GetName() )
+        
+        #
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._add_button, CC.FLAGS_SMALL_INDENT )
+        buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( width, height ) = self.GetMinSize()
+        
+        width = max( width, 930 )
+        height = max( height, 680 )
+        
+        self.SetInitialSize( ( width, height ) )
         
         interested_actions = [ 'set_search_focus' ]
         
@@ -3048,183 +3026,203 @@ class DialogPathsToTags( Dialog ):
         
         def __init__( self, parent, service_key, paths ):
             
-            def InitialiseControls():
-                
-                self._paths_list = ClientGUICommon.SaneListCtrl( self, 250, [ ( '#', 50 ), ( 'path', 400 ), ( 'tags', -1 ) ] )
-                
-                self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-                self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
-                
-                #
-                
-                self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
-                
-                self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces )
-                
-                self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
-                self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
-                self._add_quick_namespace_button.SetMinSize( ( 20, -1 ) )
-                
-                self._edit_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'edit' )
-                self._edit_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventEditQuickNamespace )
-                self._edit_quick_namespace_button.SetMinSize( ( 20, -1 ) )
-                
-                self._delete_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'delete' )
-                self._delete_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventDeleteQuickNamespace )
-                self._delete_quick_namespace_button.SetMinSize( ( 20, -1 ) )
-                
-                #
-                
-                self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
-                
-                self._regexes = wx.ListBox( self._regexes_panel )
-                self._regexes.Bind( wx.EVT_LISTBOX_DCLICK, self.EventRemoveRegex )
-                
-                self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
-                self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
-                
-                self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
-                
-                self._regex_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
-                
-                #
-                
-                self._num_panel = ClientGUICommon.StaticBox( self, '#' )
-                
-                self._num_base = wx.SpinCtrl( self._num_panel, min = -10000000, max = 10000000, size = ( 60, -1 ) )
-                self._num_base.SetValue( 1 )
-                self._num_base.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
-                
-                self._num_step = wx.SpinCtrl( self._num_panel, min = -1000000, max = 1000000, size = ( 60, -1 ) )
-                self._num_step.SetValue( 1 )
-                self._num_step.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
-                
-                self._num_namespace = wx.TextCtrl( self._num_panel, size = ( 100, -1 ) )
-                self._num_namespace.Bind( wx.EVT_TEXT, self.EventNumNamespaceChanged )
-                
-                #
-                
-                self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
-                
-                self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagsRemoved )
-                
-                expand_parents = True
-                
-                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-                
-                #
-                
-                self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for selected files' )
-                
-                self._paths_to_single_tags = collections.defaultdict( set )
-                
-                self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagsRemoved )
-                
-                expand_parents = True
-                
-                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-                
-            
-            def PopulateControls():
-                
-                num_base = self._num_base.GetValue()
-                num_step = self._num_step.GetValue()
-                
-                for ( num, path ) in enumerate( self._paths ):
-                    
-                    processed_num = num_base + num * num_step
-                    
-                    pretty_num = HydrusData.ConvertIntToPrettyString( processed_num )
-                    
-                    tags = self._GetTags( num, path )
-                    
-                    tags_string = ', '.join( tags )
-                    
-                    self._paths_list.Append( ( pretty_num, path, tags_string ), ( ( num, processed_num ), path, tags ) )
-                    
-                
-                self._single_tag_box.Disable()
-                
-            
-            def ArrangeControls():
-                
-                button_box = wx.BoxSizer( wx.HORIZONTAL )
-                
-                button_box.AddF( self._add_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-                button_box.AddF( self._edit_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-                button_box.AddF( self._delete_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                self._quick_namespaces_panel.AddF( self._quick_namespaces_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._quick_namespaces_panel.AddF( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
-                #
-                
-                self._regexes_panel.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._regexes_panel.AddF( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._regexes_panel.AddF( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
-                self._regexes_panel.AddF( self._regex_link, CC.FLAGS_LONE_BUTTON )
-                
-                #
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self._num_panel, label = '# base/step: ' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._num_base, CC.FLAGS_MIXED )
-                hbox.AddF( self._num_step, CC.FLAGS_MIXED )
-                
-                self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( wx.StaticText( self._num_panel, label = '# namespace: ' ), CC.FLAGS_MIXED )
-                hbox.AddF( self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
-                second_vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                second_vbox.AddF( self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                second_vbox.AddF( self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                #
-                
-                self._tags_panel.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._tags_panel.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                self._single_tags_panel.AddF( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._single_tags_panel.AddF( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                hbox.AddF( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                self.SetSizer( vbox )
-                
-            
             wx.Panel.__init__( self, parent )
             
             self._service_key = service_key
             self._paths = paths
             
-            InitialiseControls()
+            self._load_from_txt_files = False
             
-            PopulateControls()
+            self._paths_list = ClientGUICommon.SaneListCtrl( self, 250, [ ( '#', 50 ), ( 'path', 400 ), ( 'tags', -1 ) ] )
             
-            ArrangeControls()
+            self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+            self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            
+            #
+            
+            self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
+            
+            self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces )
+            
+            self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
+            self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
+            self._add_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+            
+            self._edit_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'edit' )
+            self._edit_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventEditQuickNamespace )
+            self._edit_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+            
+            self._delete_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'delete' )
+            self._delete_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventDeleteQuickNamespace )
+            self._delete_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+            
+            #
+            
+            self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
+            
+            self._regexes = wx.ListBox( self._regexes_panel )
+            self._regexes.Bind( wx.EVT_LISTBOX_DCLICK, self.EventRemoveRegex )
+            
+            self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
+            self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
+            
+            self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
+            
+            self._regex_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+            
+            #
+            
+            self._num_panel = ClientGUICommon.StaticBox( self, '#' )
+            
+            self._num_base = wx.SpinCtrl( self._num_panel, min = -10000000, max = 10000000, size = ( 60, -1 ) )
+            self._num_base.SetValue( 1 )
+            self._num_base.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
+            
+            self._num_step = wx.SpinCtrl( self._num_panel, min = -1000000, max = 1000000, size = ( 60, -1 ) )
+            self._num_step.SetValue( 1 )
+            self._num_step.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
+            
+            self._num_namespace = wx.TextCtrl( self._num_panel, size = ( 100, -1 ) )
+            self._num_namespace.Bind( wx.EVT_TEXT, self.EventNumNamespaceChanged )
+            
+            #
+            
+            self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
+            
+            self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagsRemoved )
+            
+            expand_parents = True
+            
+            self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            
+            #
+            
+            self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for selected files' )
+            
+            self._paths_to_single_tags = collections.defaultdict( set )
+            
+            self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagsRemoved )
+            
+            expand_parents = True
+            
+            self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            
+            self._load_from_txt_files_checkbox = wx.CheckBox( self, label = 'try to load tags from neighbouring .txt files' )
+            self._load_from_txt_files_checkbox.SetToolTipString( 'This looks for a [path].txt file, and will try to load line-separated tags from it. Look at thumbnail->share->export->files\'s txt file checkbox for an example.' )
+            self._load_from_txt_files_checkbox.Bind( wx.EVT_CHECKBOX, self.EventLoadFromTextFiles )
+            
+            #
+            
+            num_base = self._num_base.GetValue()
+            num_step = self._num_step.GetValue()
+            
+            for ( num, path ) in enumerate( self._paths ):
+                
+                processed_num = num_base + num * num_step
+                
+                pretty_num = HydrusData.ConvertIntToPrettyString( processed_num )
+                
+                tags = self._GetTags( num, path )
+                
+                tags_string = ', '.join( tags )
+                
+                self._paths_list.Append( ( pretty_num, path, tags_string ), ( ( num, processed_num ), path, tags ) )
+                
+            
+            self._single_tag_box.Disable()
+            
+            #
+            
+            button_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            button_box.AddF( self._add_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            button_box.AddF( self._edit_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            button_box.AddF( self._delete_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._quick_namespaces_panel.AddF( self._quick_namespaces_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._quick_namespaces_panel.AddF( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            self._regexes_panel.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._regexes_panel.AddF( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._regexes_panel.AddF( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
+            self._regexes_panel.AddF( self._regex_link, CC.FLAGS_LONE_BUTTON )
+            
+            #
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self._num_panel, label = '# base/step: ' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._num_base, CC.FLAGS_MIXED )
+            hbox.AddF( self._num_step, CC.FLAGS_MIXED )
+            
+            self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self._num_panel, label = '# namespace: ' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            second_vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            second_vbox.AddF( self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            second_vbox.AddF( self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            self._tags_panel.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._tags_panel.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._single_tags_panel.AddF( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._single_tags_panel.AddF( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.AddF( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._load_from_txt_files_checkbox, CC.FLAGS_LONE_BUTTON )
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            self.SetSizer( vbox )
             
         
         
         def _GetTags( self, num, path ):
             
             tags = []
+            
+            if self._load_from_txt_files:
+                
+                txt_path = path + '.txt'
+                
+                if os.path.exists( txt_path ):
+                    
+                    with open( txt_path, 'rb' ) as f:
+                        
+                        txt_tags_string = f.read()
+                        
+                    
+                    try:
+                        
+                        txt_tags = [ HydrusData.ToUnicode( tag ) for tag in txt_tags_string.split( os.linesep ) ]
+                        
+                        tags.extend( txt_tags )
+                        
+                    except:
+                        
+                        HydrusData.Print( 'Could not parse the tags from ' + txt_path + '!' )
+                        
+                    
+                
             
             tags.extend( self._tags.GetTags() )
             
@@ -3441,6 +3439,13 @@ class DialogPathsToTags( Dialog ):
             else: self._single_tag_box.Disable()
             
             self._single_tags.SetTags( single_tags )
+            
+        
+        def EventLoadFromTextFiles( self, event ):
+            
+            self._load_from_txt_files = self._load_from_txt_files_checkbox.IsChecked()
+            
+            self._RefreshFileList()
             
         
         def EventNumNamespaceChanged( self, event ): self._RefreshFileList()

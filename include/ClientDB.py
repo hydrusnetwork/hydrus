@@ -1622,6 +1622,8 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE INDEX remote_ratings_rating_index ON remote_ratings ( rating );' )
         self._c.execute( 'CREATE INDEX remote_ratings_score_index ON remote_ratings ( score );' )
         
+        self._c.execute( 'CREATE TABLE service_filenames ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, filename TEXT, PRIMARY KEY( service_id, hash_id ) );' )
+        
         self._c.execute( 'CREATE TABLE service_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, info_type INTEGER, info INTEGER, PRIMARY KEY ( service_id, info_type ) );' )
         
         self._c.execute( 'CREATE TABLE shutdown_timestamps ( shutdown_type INTEGER PRIMARY KEY, timestamp INTEGER );' )
@@ -1925,7 +1927,7 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
             self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
             
-        elif service.GetServiceType() == HC.FILE_REPOSITORY:
+        elif service.GetServiceType() in ( HC.FILE_REPOSITORY, HC.IPFS ):
             
             self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
             self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ?;', ( service_id, ) )
@@ -3503,7 +3505,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetNumsPending( self ):
         
-        services = self._GetServices( ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY ) )
+        services = self._GetServices( ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY, HC.IPFS ) )
         
         pendings = {}
         
@@ -3514,7 +3516,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_id = self._GetServiceId( service_key )
             
-            if service_type == HC.FILE_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES }
+            if service_type in ( HC.FILE_REPOSITORY, HC.IPFS ): info_types = { HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES }
             elif service_type == HC.TAG_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_PENDING_MAPPINGS, HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS }
             
             pendings[ service_key ] = self._GetServiceInfoSpecific( service_id, service_type, info_types )
@@ -3648,6 +3650,32 @@ class DB( HydrusDB.HydrusDB ):
                 content_data_dict[ HC.CONTENT_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
                 
             
+        elif service_type == HC.IPFS:
+            
+            result = self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            if result is not None:
+                
+                ( hash_id, ) = result
+                
+                ( media_result, ) = self._GetMediaResults( CC.LOCAL_FILE_SERVICE_KEY, ( hash_id, ) )
+                
+                return media_result
+                
+            
+            result = self._c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            if result is not None:
+                
+                ( hash_id, ) = result
+                
+                hash = self._GetHash( hash_id )
+                
+                multihash = self._GetServiceFilename( service_id, hash_id )
+                
+                return ( hash, multihash )
+                
+            
         
         
         if len( content_data_dict ) > 0:
@@ -3729,6 +3757,32 @@ class DB( HydrusDB.HydrusDB ):
         return service
         
     
+    def _GetServiceFilename( self, service_id, hash_id ):
+        
+        result = self._c.execute( 'SELECT filename FROM service_filenames WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
+        
+        if result is None:
+            
+            raise HydrusExceptions.DataMissing( 'Service filename not found!' )
+            
+        
+        ( filename, ) = result
+        
+        return filename
+        
+    
+    def _GetServiceFilenames( self, service_key, hashes ):
+        
+        service_id = self._GetServiceId( service_key )
+        hash_ids = self._GetHashIds( hashes )
+        
+        result = [ filename for ( filename, ) in self._c.execute( 'SELECT filename FROM service_filenames WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ]
+        
+        result.sort()
+        
+        return result
+        
+    
     def _GetServices( self, limited_types = HC.ALL_SERVICES ):
         
         service_ids = [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE service_type IN ' + HydrusData.SplayListForDB( limited_types ) + ';' ) ]
@@ -3769,6 +3823,10 @@ class DB( HydrusDB.HydrusDB ):
         elif service_type == HC.FILE_REPOSITORY:
             
             info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES, HC.SERVICE_INFO_NUM_THUMBNAILS, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL }
+            
+        elif service_type == HC.IPFS:
+            
+            info_types = { HC.SERVICE_INFO_NUM_FILES }
             
         elif service_type == HC.LOCAL_TAG:
             
@@ -3830,7 +3888,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 save_it = True
                 
-                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
+                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY, HC.IPFS ):
                     
                     if info_type in ( HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES ): save_it = False
                     
@@ -4522,7 +4580,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( data_type, action, row ) = content_update.ToTuple()
                 
-                if service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
+                if service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.IPFS ):
                     
                     if data_type == HC.CONTENT_TYPE_FILES:
                         
@@ -4539,11 +4597,24 @@ class DB( HydrusDB.HydrusDB ):
                             
                         elif action == HC.CONTENT_UPDATE_ADD:
                             
-                            ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) = row
-                            
-                            hash_id = self._GetHashId( hash )
-                            
-                            self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ] )
+                            if service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
+                                
+                                ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) = row
+                                
+                                hash_id = self._GetHashId( hash )
+                                
+                                self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ] )
+                                
+                            elif service_type == HC.IPFS:
+                                
+                                ( hash, multihash ) = row
+                                
+                                hash_id = self._GetHashId( hash )
+                                
+                                self._SetServiceFilename( service_id, hash_id, multihash )
+                                
+                                timestamp = HydrusData.GetNow()
+                                
                             
                             self._AddFiles( service_id, [ ( hash_id, timestamp ) ] )
                             
@@ -5129,6 +5200,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
         elif action == 'serialisable_named': result = self._GetJSONDumpNamed( *args, **kwargs )
         elif action == 'serialisable_names': result = self._GetJSONDumpNames( *args, **kwargs )
+        elif action == 'service_filenames': result = self._GetServiceFilenames( *args, **kwargs )
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
@@ -5352,6 +5424,11 @@ class DB( HydrusDB.HydrusDB ):
         options[ 'password' ] = password
         
         self._SaveOptions( options )
+        
+    
+    def _SetServiceFilename( self, service_id, hash_id, filename ):
+        
+        self._c.execute( 'REPLACE INTO service_filenames ( service_id, hash_id, filename ) VALUES ( ?, ?, ? );', ( service_id, hash_id, filename ) )
         
     
     def _SetTagCensorship( self, info ):
@@ -6381,6 +6458,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 os.remove( self._no_wal_path )
                 
+            
+        
+        if version == 193:
+            
+            self._c.execute( 'CREATE TABLE service_filenames ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, filename TEXT, PRIMARY KEY( service_id, hash_id ) );' )
             
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )

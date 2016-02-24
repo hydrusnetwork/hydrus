@@ -53,7 +53,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 193
+SOFTWARE_VERSION = 194
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -275,6 +275,8 @@ UNDETERMINED_WM = 19
 VIDEO_MKV = 20
 VIDEO_WEBM = 21
 APPLICATION_JSON = 22
+VIDEO_APNG = 23
+UNDETERMINED_PNG = 24
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -325,6 +327,7 @@ mime_enum_lookup[ 'audio/ogg' ] = AUDIO_OGG
 mime_enum_lookup[ 'audio/flac' ] = AUDIO_FLAC
 mime_enum_lookup[ 'audio/x-ms-wma' ] = AUDIO_WMA
 mime_enum_lookup[ 'text/html' ] = TEXT_HTML
+mime_enum_lookup[ 'video/png' ] = VIDEO_APNG
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
 mime_enum_lookup[ 'video/mp4' ] = VIDEO_MP4
 mime_enum_lookup[ 'video/x-ms-wmv' ] = VIDEO_WMV
@@ -356,6 +359,7 @@ mime_string_lookup[ AUDIO_FLAC ] = 'audio/flac'
 mime_string_lookup[ AUDIO_WMA ] = 'audio/x-ms-wma'
 mime_string_lookup[ AUDIO ] = 'audio'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
+mime_string_lookup[ VIDEO_APNG ] = 'video/png'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
 mime_string_lookup[ VIDEO_MP4 ] = 'video/mp4'
 mime_string_lookup[ VIDEO_WMV ] = 'video/x-ms-wmv'
@@ -385,6 +389,7 @@ mime_ext_lookup[ AUDIO_OGG ] = '.ogg'
 mime_ext_lookup[ AUDIO_FLAC ] = '.flac'
 mime_ext_lookup[ AUDIO_WMA ] = '.wma'
 mime_ext_lookup[ TEXT_HTML ] = '.html'
+mime_ext_lookup[ VIDEO_APNG ] = '.png'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'
 mime_ext_lookup[ VIDEO_MP4 ] = '.mp4'
 mime_ext_lookup[ VIDEO_WMV ] = '.wmv'

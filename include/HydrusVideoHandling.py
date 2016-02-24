@@ -88,7 +88,14 @@ def GetMatroskaOrWebMProperties( path ):
     
 def HasVideoStream( path ):
     
-    info = Hydrusffmpeg_parse_infos( path )
+    try:
+        
+        info = Hydrusffmpeg_parse_infos( path )
+        
+    except IOError as e:
+        HydrusData.ShowException( e )
+        return False
+        
     
     return info[ 'video_found' ]
     

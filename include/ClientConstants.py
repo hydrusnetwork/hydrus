@@ -362,6 +362,9 @@ class GlobalBMPs( object ):
         GlobalBMPs.file_repository = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'file_repository_small.png' ) )
         GlobalBMPs.file_repository_pending = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'file_repository_pending_small.png' ) )
         GlobalBMPs.file_repository_petitioned = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'file_repository_petitioned_small.png' ) )
+        GlobalBMPs.ipfs = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'ipfs_small.png' ) )
+        GlobalBMPs.ipfs_pending = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'ipfs_pending_small.png' ) )
+        GlobalBMPs.ipfs_petitioned = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'ipfs_petitioned_small.png' ) )
         
         GlobalBMPs.collection = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'collection.png' ) )
         GlobalBMPs.inbox = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'inbox.png' ) )

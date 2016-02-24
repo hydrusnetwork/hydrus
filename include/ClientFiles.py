@@ -439,7 +439,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if HydrusData.TimeHasPassed( self._last_checked + self._period ):
             
-            folder_path = self._name
+            folder_path = HydrusData.ToUnicode( self._name )
             
             if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                 
@@ -477,7 +477,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 terms = ParseExportPhrase( self._phrase )
                 
-                previous_filenames = set( os.listdir( HydrusData.ToUnicode( folder_path ) ) )
+                previous_filenames = set( os.listdir( folder_path ) )
                 
                 sync_filenames = set()
                 

@@ -72,14 +72,12 @@ def GetLocalIP(): return socket.gethostbyname( socket.gethostname() )
 def AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = 3600 ):
     
     cmd = [ upnpc_path, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
-    HydrusData.DebugPrint( cmd )
+    
     p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
     p.wait()
     
     ( output, error ) = p.communicate()
-    
-    HydrusData.DebugPrint( output )
     
     if output is not None and 'failed with code' in output:
         

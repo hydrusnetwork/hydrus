@@ -1388,13 +1388,13 @@ class CanvasWithDetails( Canvas ):
             
             # repo strings
             
-            file_repo_strings = self._current_media.GetLocationsManager().GetFileRepositoryStrings()
+            remote_strings = self._current_media.GetLocationsManager().GetRemoteLocationStrings()
             
-            for file_repo_string in file_repo_strings:
+            for remote_string in remote_strings:
                 
-                ( text_width, text_height ) = dc.GetTextExtent( file_repo_string )
+                ( text_width, text_height ) = dc.GetTextExtent( remote_string )
                 
-                dc.DrawText( file_repo_string, client_width - text_width - 3, current_y )
+                dc.DrawText( remote_string, client_width - text_width - 3, current_y )
                 
                 current_y += text_height + 4
                 

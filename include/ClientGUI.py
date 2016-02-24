@@ -888,10 +888,26 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 if service_type == HC.TAG_REPOSITORY:
                     
+                    pending_phrase = 'mappings to upload'
+                    petitioned_phrase = 'mappings to petition'
+                    
+                elif service_type == HC.FILE_REPOSITORY:
+                    
+                    pending_phrase = 'files to upload'
+                    petitioned_phrase = 'files to petition'
+                    
+                elif service_type == HC.IPFS:
+                    
+                    pending_phrase = 'files to pin'
+                    petitioned_phrase = 'files to unpin'
+                    
+                
+                if service_type == HC.TAG_REPOSITORY:
+                    
                     num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS ]
                     num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ]
                     
-                elif service_type == HC.FILE_REPOSITORY:
+                elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
                     
                     num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_FILES ]
                     num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ]
@@ -901,10 +917,24 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     submenu = wx.Menu()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'upload_pending', service_key ), p( '&Upload' ), p( 'Upload ' + name + '\'s Pending and Petitions.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_pending', service_key ), p( '&Forget' ), p( 'Clear ' + name + '\'s Pending and Petitions.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'upload_pending', service_key ), p( '&Commit' ), p( 'Upload ' + name + '\'s pending content.' ) )
+                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_pending', service_key ), p( '&Forget' ), p( 'Clear ' + name + '\'s pending content.' ) )
                     
-                    menu.AppendMenu( CC.ID_NULL, p( name + ' Pending (' + HydrusData.ConvertValueRangeToPrettyString( num_pending, num_petitioned ) + ')' ), submenu )
+                    submessages = []
+                    
+                    if num_pending > 0:
+                        
+                        submessages.append( HydrusData.ConvertIntToPrettyString( num_pending ) + ' ' + pending_phrase )
+                        
+                    
+                    if num_petitioned > 0:
+                        
+                        submessages.append( HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' ' + petitioned_phrase )
+                        
+                    
+                    message = name + ': ' + ', '.join( submessages )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( message ), submenu )
                     
                 
                 total_num_pending += num_pending + num_petitioned
@@ -2019,36 +2049,63 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 try:
                     
-                    if isinstance( result, ClientMedia.MediaResult ):
+                    if service_type in HC.REPOSITORIES:
                         
-                        media_result = result
+                        if isinstance( result, ClientMedia.MediaResult ):
+                            
+                            media_result = result
+                            
+                            client_files_manager = self._controller.GetClientFilesManager()
+                            
+                            hash = media_result.GetHash()
+                            mime = media_result.GetMime()
+                            
+                            path = client_files_manager.GetFilePath( hash, mime )
+                            
+                            with open( path, 'rb' ) as f: file = f.read()
+                            
+                            service.Request( HC.POST, 'file', { 'file' : file } )
+                            
+                            ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
+                            
+                            timestamp = HydrusData.GetNow()
+                            
+                            content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
+                            
+                            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                            
+                        else:
+                            
+                            content_update_package = result
+                            
+                            service.Request( HC.POST, 'content_update_package', { 'update' : content_update_package } )
+                            
+                            content_updates = content_update_package.GetContentUpdates( for_client = True )
+                            
                         
-                        client_files_manager = self._controller.GetClientFilesManager()
+                    elif service_type == HC.IPFS:
                         
-                        hash = media_result.GetHash()
-                        mime = media_result.GetMime()
-                        
-                        path = client_files_manager.GetFilePath( hash, mime )
-                        
-                        with open( path, 'rb' ) as f: file = f.read()
-                        
-                        service.Request( HC.POST, 'file', { 'file' : file } )
-                        
-                        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
-                        
-                        timestamp = HydrusData.GetNow()
-                        
-                        content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
-                        
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
-                        
-                    else:
-                        
-                        content_update_package = result
-                        
-                        service.Request( HC.POST, 'content_update_package', { 'update' : content_update_package } )
-                        
-                        content_updates = content_update_package.GetContentUpdates( for_client = True )
+                        if isinstance( result, ClientMedia.MediaResult ):
+                            
+                            media_result = result
+                            
+                            hash = media_result.GetHash()
+                            mime = media_result.GetMime()
+                            
+                            multihash = service.PinFile( hash, mime )
+                            
+                            content_update_row = ( hash, multihash )
+                            
+                            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                            
+                        else:
+                            
+                            ( hash, multihash ) = result
+                            
+                            service.UnpinFile( multihash )
+                            
+                            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]
+                            
                         
                     
                     self._controller.WriteSynchronous( 'content_updates', { service_key : content_updates } )

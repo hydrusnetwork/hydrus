@@ -591,17 +591,17 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
                 self._icon_panel.Hide()
                 
             
-            file_repo_strings = self._current_media.GetLocationsManager().GetFileRepositoryStrings()
+            remote_strings = self._current_media.GetLocationsManager().GetRemoteLocationStrings()
             
-            if len( file_repo_strings ) == 0:
+            if len( remote_strings ) == 0:
                 
                 self._file_repos.Hide()
                 
             else:
                 
-                file_repo_string = os.linesep.join( file_repo_strings )
+                remote_string = os.linesep.join( remote_strings )
                 
-                self._file_repos.SetLabel( file_repo_string )
+                self._file_repos.SetLabel( remote_string )
                 
                 self._file_repos.Show()
                 

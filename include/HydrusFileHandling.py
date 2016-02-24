@@ -27,7 +27,7 @@ header_and_mime = [
     ( 0, '\xff\xd8', HC.IMAGE_JPEG ),
     ( 0, 'GIF87a', HC.IMAGE_GIF ),
     ( 0, 'GIF89a', HC.IMAGE_GIF ),
-    ( 0, '\x89PNG', HC.IMAGE_PNG ),
+    ( 0, '\x89PNG', HC.UNDETERMINED_PNG ),
     ( 0, 'BM', HC.IMAGE_BMP ),
     ( 0, 'CWS', HC.APPLICATION_FLASH ),
     ( 0, 'FWS', HC.APPLICATION_FLASH ),
@@ -216,7 +216,25 @@ def GetMime( path ):
                 
                 # we'll catch and verify wma later
                 
-            else: return mime
+            elif mime == HC.UNDETERMINED_PNG:
+                
+                return HC.IMAGE_PNG
+                
+                # atm (Feb 2016), ffmpeg doesn't report duration for apngs, so can't do this just yet.
+                #
+                #if HydrusVideoHandling.HasVideoStream( path ):
+                #    
+                #    return HC.VIDEO_APNG
+                #    
+                #else:
+                #    
+                #    return HC.IMAGE_PNG
+                #    
+                
+            else:
+                
+                return mime
+                
             
         
     
