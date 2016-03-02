@@ -2160,7 +2160,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
             elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self.EventBack( event )
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
-            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
+            elif modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self.EventDelete( event )
             elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
                 with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
             elif not event.ShiftDown() and key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
@@ -2461,8 +2461,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             
             ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
             
-            if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self._Delete()
-            elif modifier == wx.ACCEL_SHIFT and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self._Undelete()
+            if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
+            elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): wx.CallAfter( self._PausePlaySlideshow )
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()

@@ -147,7 +147,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         self._sign.SetSelection( 0 )
         self._current_pending.SetSelection( 0 )
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.IPFS ) )
         
         for service in services: self._file_service_key.Append( service.GetName(), service.GetServiceKey() )
         self._file_service_key.SetSelection( 0 )

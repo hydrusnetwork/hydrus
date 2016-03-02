@@ -181,6 +181,24 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', hex_hashes )
         
     
+    def _CopyKnownURLsToClipboard( self ):
+        
+        hash = self._focussed_media.GetDisplayMedia().GetHash()
+        
+        known_urls = HydrusGlobals.client_controller.Read( 'known_urls', hash )
+        
+        if len( known_urls ) == 0:
+            
+            HydrusData.ShowText( 'No known urls!' )
+            
+        else:
+            
+            text = os.linesep.join( known_urls )
+            
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
     def _CopyLocalUrlToClipboard( self ):
         
         local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' )
@@ -207,16 +225,34 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         ( filename, ) = HydrusGlobals.client_controller.Read( 'service_filenames', service_key, { hash } )
         
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        
+        if service.GetServiceType() == HC.IPFS:
+            
+            multihash_prefix = service.GetInfo( 'multihash_prefix' )
+            
+            filename = multihash_prefix + filename
+            
+        
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', filename )
         
     
     def _CopyServiceFilenamesToClipboard( self, service_key ):
         
+        prefix = ''
+        
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        
+        if service.GetServiceType() == HC.IPFS:
+            
+            prefix = service.GetInfo( 'multihash_prefix' )
+            
+        
         hashes = self._GetSelectedHashes( has_location = service_key )
         
         if len( hashes ) > 0:
             
-            filenames = HydrusGlobals.client_controller.Read( 'service_filenames', service_key, hashes )
+            filenames = [ prefix + filename for filename in HydrusGlobals.client_controller.Read( 'service_filenames', service_key, hashes ) ]
             
             if len( filenames ) > 0:
                 
@@ -1771,6 +1807,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL ) )
             elif command == 'copy_hash': self._CopyHashToClipboard( data )
             elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
+            elif command == 'copy_known_urls': self._CopyKnownURLsToClipboard()
             elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
             elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
             elif command == 'copy_service_filename': self._CopyServiceFilenameToClipboard( data )
@@ -2040,12 +2077,12 @@ class MediaPanelThumbnails( MediaPanel ):
                 focussed_is_local = CC.LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent()
                 
                 file_service_keys = { repository.GetServiceKey() for repository in file_repositories }
-                downloadable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) or repository.GetInfo( 'account' ).IsUnknownAccount() }
-                uploadable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) or repository.GetInfo( 'account' ).IsUnknownAccount() }
-                petition_resolvable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) }
-                petitionable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_service_keys
-                user_manageable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS ) }
-                admin_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) }
+                download_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) or repository.GetInfo( 'account' ).IsUnknownAccount() }
+                upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) or repository.GetInfo( 'account' ).IsUnknownAccount() }
+                petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) }
+                petition_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolve_permission_file_service_keys
+                user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS ) }
+                admin_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) }
                 ipfs_service_keys = { service.GetServiceKey() for service in ipfs_services }
                 
                 focussed_is_ipfs = True in ( service_key in ipfs_service_keys for service_key in self._focussed_media.GetLocationsManager().GetCurrentRemote() )
@@ -2197,28 +2234,28 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if locations_manager.HasLocal():
                         
-                        uploadable_file_service_keys.update( uploadable_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - admin_file_service_keys ) )
+                        uploadable_file_service_keys.update( upload_permission_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - admin_permission_file_service_keys ) )
                         
                     
                     # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
                     
                     if not CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() and not locations_manager.HasDownloading():
                         
-                        downloadable_file_service_keys.update( downloadable_file_service_keys & locations_manager.GetCurrentRemote() )
+                        downloadable_file_service_keys.update( download_permission_file_service_keys & locations_manager.GetCurrentRemote() )
                         
                     
                     # we can petition when we have permission and a file is current
                     # we can re-petition an already petitioned file
                     
-                    petitionable_file_service_keys.update( petitionable_file_service_keys & locations_manager.GetCurrentRemote() )
+                    petitionable_file_service_keys.update( petition_permission_file_service_keys & locations_manager.GetCurrentRemote() )
                     
                     # we can delete remote when we have permission and a file is current and it is not already petitioned
                     
-                    deletable_file_service_keys.update( ( petition_resolvable_file_service_keys & locations_manager.GetCurrentRemote() ) - locations_manager.GetPetitionedRemote() )
+                    deletable_file_service_keys.update( ( petition_resolve_permission_file_service_keys & locations_manager.GetCurrentRemote() ) - locations_manager.GetPetitionedRemote() )
                     
                     # we can modify users when we have permission and the file is current or deleted
                     
-                    modifyable_file_service_keys.update( user_manageable_file_service_keys & ( locations_manager.GetCurrentRemote() | locations_manager.GetDeletedRemote() ) )
+                    modifyable_file_service_keys.update( user_manage_permission_file_service_keys & ( locations_manager.GetCurrentRemote() | locations_manager.GetDeletedRemote() ) )
                     
                     # IPFS
                     
@@ -2474,6 +2511,8 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                     
                 
+                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_known_urls' ), 'known urls (prototype)' )
+                
                 share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
                 
                 #
@@ -2599,6 +2638,12 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_CTRL, ord( 'c' ), ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'copy_files' )  ),
         ( wx.ACCEL_CTRL, wx.WXK_SPACE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'ctrl-space' )  )
         ]
+        
+        if HC.PLATFORM_OSX:
+            
+            entries.append( ( wx.ACCEL_NORMAL, wx.WXK_BACK, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete' ) ) )
+            entries.append( ( wx.ACCEL_SHIFT, wx.WXK_BACK, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'undelete' ) ) )
+            
         
         for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action not in ( 'previous', 'next' ) 	] )
         

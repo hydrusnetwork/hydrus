@@ -2260,7 +2260,10 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( half_complete_tag ) > 0 or len( tag ) > 0:
             
-            for ( namespace_id, tag_ids ) in HydrusData.BuildKeyToListDict( results ).items(): cache_results.extend( self._c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ? AND namespace_id = ? AND tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ';', ( tag_service_id, file_service_id, namespace_id ) ).fetchall() )
+            for ( namespace_id, tag_ids ) in HydrusData.BuildKeyToListDict( results ).items():
+                
+                cache_results.extend( self._c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ? AND namespace_id = ? AND tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ';', ( tag_service_id, file_service_id, namespace_id ) ).fetchall() )
+                
             
         else: cache_results = self._c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ?', ( tag_service_id, file_service_id ) ).fetchall()
         
@@ -3257,6 +3260,15 @@ class DB( HydrusDB.HydrusDB ):
         names = [ name for ( name, ) in self._c.execute( 'SELECT dump_name FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) ) ]
         
         return names
+        
+    
+    def _GetKnownURLs( self, hash ):
+        
+        hash_id = self._GetHashId( hash )
+        
+        urls = [ url for ( url, ) in self._c.execute( 'SELECT url FROM urls WHERE hash_id = ?;', ( hash_id, ) ) ]
+        
+        return urls
         
     
     def _GetMD5Status( self, md5 ):
@@ -4444,7 +4456,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( previous_journal_mode, ) = self._c.execute( 'PRAGMA journal_mode;' ).fetchone()
         
-        if previous_journal_mode == 'wal':
+        if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
             
             self._c.execute( 'COMMIT;' )
             
@@ -4495,7 +4507,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 job_key.SetVariable( 'popup_text_2', content_update_index_string + 'committing transaction' )
                 
-                if previous_journal_mode == 'wal':
+                if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
                     
                     self._c.execute( 'COMMIT;' )
                     
@@ -4533,7 +4545,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_gauge_2', ( c_u_p_num_rows, c_u_p_num_rows ) )
 
-        if previous_journal_mode == 'wal':
+        if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
             
             self._c.execute( 'COMMIT;' )
             
@@ -5197,6 +5209,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+        elif action == 'known_urls': result = self._GetKnownURLs( *args, **kwargs )
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
         elif action == 'serialisable_named': result = self._GetJSONDumpNamed( *args, **kwargs )
         elif action == 'serialisable_names': result = self._GetJSONDumpNames( *args, **kwargs )
@@ -5258,7 +5271,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'COMMIT;' )
         
-        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        if not self._fast_big_transaction_wal:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
+        
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
         self._c.execute( 'BEGIN IMMEDIATE;' )
@@ -6465,6 +6482,29 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'CREATE TABLE service_filenames ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, filename TEXT, PRIMARY KEY( service_id, hash_id ) );' )
             
         
+        if version == 194:
+            
+            service_data = self._c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ( ?, ? );', ( HC.FILE_REPOSITORY, HC.TAG_REPOSITORY ) ).fetchall()
+            
+            for ( service_id, info ) in service_data:
+                
+                info[ 'next_processing_timestamp' ] = 0
+                
+                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
+            
+            #
+            
+            service_data = self._c.execute( 'SELECT service_id, info FROM services WHERE service_type = ?;', ( HC.IPFS, ) ).fetchall()
+            
+            for ( service_id, info ) in service_data:
+                
+                info[ 'multihash_prefix' ] = ''
+                
+                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6737,7 +6777,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'COMMIT;' )
         
-        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        if not self._fast_big_transaction_wal:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
+        
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
         self._c.execute( 'BEGIN IMMEDIATE;' )
@@ -6857,7 +6901,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'COMMIT;' )
         
-        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        if not self._fast_big_transaction_wal:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
+        
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
         self._c.execute( 'BEGIN IMMEDIATE;' )
@@ -7003,7 +7051,10 @@ class DB( HydrusDB.HydrusDB ):
         
         time.sleep( 1 )
         
-        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        if not self._fast_big_transaction_wal:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
         
         if HC.PLATFORM_WINDOWS:
             
@@ -7018,6 +7069,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if page_size != ideal_page_size:
             
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
             self._c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
             
         

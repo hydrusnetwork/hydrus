@@ -473,7 +473,7 @@ class Controller( HydrusController.HydrusController ):
     
     def InitModel( self ):
         
-        self.pub( 'splash_set_status_text', 'booting db...' )
+        self.pub( 'splash_set_title_text', 'booting db...' )
         
         self._http = ClientNetworking.HTTPConnectionManager()
         
@@ -544,7 +544,7 @@ class Controller( HydrusController.HydrusController ):
             self.CallBlockingToWx( wx_code_password )
             
         
-        self.pub( 'splash_set_status_text', 'booting gui...' )
+        self.pub( 'splash_set_title_text', 'booting gui...' )
         
         def wx_code_gui():
             

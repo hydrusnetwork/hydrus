@@ -169,8 +169,8 @@ def GetImageboardThreadURLs( thread_url ):
         
         # 8chan
         # /v/res/406061.html
-        # http://8chan.co/v/res/406061.json
-        # http://8chan.co/v/src/ for images
+        # http://8ch.net/v/res/406061.json
+        # http://8ch.net/v/src/ for images
         
         if is_4chan:
             

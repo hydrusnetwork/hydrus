@@ -56,6 +56,15 @@ collection_string_lookup[ COLLECT_BY_SV ] = 'collect by series-volume'
 collection_string_lookup[ COLLECT_BY_SVC ] = 'collect by series-volume-chapter'
 collection_string_lookup[ NO_COLLECTIONS ] = 'no collections'
 
+if HC.PLATFORM_OSX:
+    
+    DELETE_KEYS = ( wx.WXK_BACK, wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE )
+    
+else:
+    
+    DELETE_KEYS = ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE )
+    
+
 DISCRIMINANT_INBOX = 0
 DISCRIMINANT_LOCAL = 1
 DISCRIMINANT_NOT_LOCAL = 2

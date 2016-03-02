@@ -1599,29 +1599,28 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for subindex in range( subindex_count ):
                     
-                    if only_when_idle:
+                    should_break = False
+                    
+                    if only_when_idle and not HydrusGlobals.client_controller.CurrentlyIdle():
                         
-                        if not HydrusGlobals.client_controller.CurrentlyIdle():
-                            
-                            break
-                            
+                        should_break = True
                         
-                    else:
+                    
+                    if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
                         
-                        if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
-                            
-                            break
-                            
+                        should_break = True
                         
                     
                     if options[ 'pause_repo_sync' ]:
                         
-                        break
+                        should_break = True
                         
                     
                     ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                     
-                    if should_quit:
+                    if should_quit or should_break:
+                        
+                        processing_went_ok = False
                         
                         break
                         

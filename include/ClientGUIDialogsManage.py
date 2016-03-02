@@ -5811,121 +5811,110 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._edit_log = []
-            
-            self._notebook = wx.Notebook( self )
-            self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
-            self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._notebook )
-            
-            self._local_listbook = ClientGUICommon.ListBook( self._notebook )
-            self._local_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._local_listbook )
-            
-            self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
-            self._remote_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._remote_listbook )
-            
-            self._add = wx.Button( self, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            self._add.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._remove = wx.Button( self, label = 'remove' )
-            self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-            self._remove.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            self._export = wx.Button( self, label = 'export' )
-            self._export.Bind( wx.EVT_BUTTON, self.EventExport )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            manageable_service_types = HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_BOORU, HC.IPFS ]
-            
-            for service_type in manageable_service_types:
-                
-                if service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
-                elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
-                elif service_type == HC.LOCAL_BOORU: name = 'booru'
-                elif service_type == HC.LOCAL_TAG: name = 'local tags'
-                elif service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
-                elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
-                #elif service_type == HC.MESSAGE_DEPOT: name = 'message repositories'
-                elif service_type == HC.SERVER_ADMIN: name = 'administrative services'
-                #elif service_type == HC.RATING_LIKE_REPOSITORY: name = 'like/dislike rating repositories'
-                #elif service_type == HC.RATING_NUMERICAL_REPOSITORY: name = 'numerical rating repositories'
-                elif service_type == HC.IPFS: name = 'ipfs daemons'
-                else: continue
-                
-                if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
-                else: parent_listbook = self._remote_listbook
-                
-                listbook = ClientGUICommon.ListBook( parent_listbook )
-                listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-                
-                self._service_types_to_listbooks[ service_type ] = listbook
-                self._listbooks_to_service_types[ listbook ] = service_type
-                
-                parent_listbook.AddPage( name, listbook )
-                
-                services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( service_type, ) )
-                
-                for service in services:
-                    
-                    service_key = service.GetServiceKey()
-                    name = service.GetName()
-                    info = service.GetInfo()
-                    
-                    listbook.AddPageArgs( name, self._Panel, ( listbook, service_key, service_type, name, info ), {} )
-                    
-                
-            
-            wx.CallAfter( self._local_listbook.Layout )
-            wx.CallAfter( self._remote_listbook.Layout )
-            
-        
-        def ArrangeControls():
-            
-            add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
-            
-            ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
-            ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            self._notebook.AddPage( self._local_listbook, 'local' )
-            self._notebook.AddPage( self._remote_listbook, 'remote' )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-        
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage services' )
         
         self._service_types_to_listbooks = {}
         self._listbooks_to_service_types = {}
         
-        InitialiseControls()
+        self._edit_log = []
         
-        PopulateControls()
+        self._notebook = wx.Notebook( self )
+        self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+        self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+        self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._notebook )
         
-        ArrangeControls()
+        self._local_listbook = ClientGUICommon.ListBook( self._notebook )
+        self._local_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._local_listbook )
+        
+        self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
+        self._remote_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._remote_listbook )
+        
+        self._add = wx.Button( self, label = 'add' )
+        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+        self._add.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._remove = wx.Button( self, label = 'remove' )
+        self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+        self._remove.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        self._export = wx.Button( self, label = 'export' )
+        self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        manageable_service_types = HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_BOORU, HC.IPFS ]
+        
+        for service_type in manageable_service_types:
+            
+            if service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
+            elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
+            elif service_type == HC.LOCAL_BOORU: name = 'booru'
+            elif service_type == HC.LOCAL_TAG: name = 'local tags'
+            elif service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
+            elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
+            #elif service_type == HC.MESSAGE_DEPOT: name = 'message repositories'
+            elif service_type == HC.SERVER_ADMIN: name = 'administrative services'
+            #elif service_type == HC.RATING_LIKE_REPOSITORY: name = 'like/dislike rating repositories'
+            #elif service_type == HC.RATING_NUMERICAL_REPOSITORY: name = 'numerical rating repositories'
+            elif service_type == HC.IPFS: name = 'ipfs daemons'
+            else: continue
+            
+            if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
+            else: parent_listbook = self._remote_listbook
+            
+            listbook = ClientGUICommon.ListBook( parent_listbook )
+            listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
+            self._service_types_to_listbooks[ service_type ] = listbook
+            self._listbooks_to_service_types[ listbook ] = service_type
+            
+            parent_listbook.AddPage( name, listbook )
+            
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( service_type, ) )
+            
+            for service in services:
+                
+                service_key = service.GetServiceKey()
+                name = service.GetName()
+                info = service.GetInfo()
+                
+                listbook.AddPageArgs( name, self._Panel, ( listbook, service_key, service_type, name, info ), {} )
+                
+            
+        
+        wx.CallAfter( self._local_listbook.Layout )
+        wx.CallAfter( self._remote_listbook.Layout )
+        
+        #
+        
+        add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+        
+        ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
+        ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        self._notebook.AddPage( self._local_listbook, 'local' )
+        self._notebook.AddPage( self._remote_listbook, 'remote' )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
+        vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
         
         ( x, y ) = self.GetEffectiveMinSize()
         
@@ -6031,6 +6020,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                             
                             info[ 'host' ] = host
                             info[ 'port' ] = port
+                            
+                        
+                        if service_type == HC.IPFS:
+                            
+                            info[ 'multihash_prefix' ] = ''
                             
                         
                         if service_type in HC.REPOSITORIES:
@@ -6332,6 +6326,23 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                 
             
+            if service_type == HC.IPFS:
+                
+                self._ipfs_panel = ClientGUICommon.StaticBox( self, 'ipfs settings' )
+                
+                self._multihash_prefix = wx.TextCtrl( self._ipfs_panel, value = info[ 'multihash_prefix' ] )
+                
+                tts = 'When you tell the client to copy the ipfs multihash to your clipboard, it will prefix it with this.'
+                tts += os.linesep * 2
+                tts += 'Use this if you would really like to copy a full gateway url with that action. For instance, you could put here:'
+                tts += os.linesep * 2
+                tts += 'http://127.0.0.1:8080/ipfs/'
+                tts += os.linesep
+                tts += 'http://ipfs.io/ipfs/'
+                
+                self._multihash_prefix.SetToolTipString( tts )
+                
+            
             if service_type in HC.REPOSITORIES:
                 
                 self._repositories_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
@@ -6494,6 +6505,20 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 self._credentials_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
                 vbox.AddF( self._credentials_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            if service_type == HC.IPFS:
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                gridbox.AddF( wx.StaticText( self._ipfs_panel, label = 'multihash prefix' ), CC.FLAGS_MIXED )
+                gridbox.AddF( self._multihash_prefix, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._ipfs_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                vbox.AddF( self._ipfs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             if service_type in HC.REPOSITORIES:
@@ -6806,6 +6831,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 info[ 'host' ] = host
                 info[ 'port' ] = port
+                
+            
+            if service_type == HC.IPFS:
+                
+                info[ 'multihash_prefix' ] = self._multihash_prefix.GetValue()
                 
             
             if service_type in HC.REPOSITORIES:

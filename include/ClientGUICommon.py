@@ -654,7 +654,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
     
     def _ChangeFileService( self, file_service_key ):
-
+        
+        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and self._tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            self._ChangeTagService( CC.LOCAL_TAG_SERVICE_KEY )
+            
+        
         self._file_service_key = file_service_key
         
         file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
@@ -667,7 +672,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
     
     def _ChangeTagService( self, tag_service_key ):
-
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            
+            self._ChangeFileService( CC.LOCAL_FILE_SERVICE_KEY )
+            
+        
         self._tag_service_key = tag_service_key
         
         tag_service = tag_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._tag_service_key )
@@ -928,7 +938,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                 else:
                     
-                    if self._cache_text == self._current_namespace + ':' and half_complete_tag != '': must_do_a_search = True
+                    if self._cache_text == self._current_namespace + ':' and half_complete_tag != '':
+                        
+                        must_do_a_search = True
+                        
                     
                 
             else:
@@ -1050,7 +1063,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 if self._current_namespace != '':
                     
-                    if '*' not in self._current_namespace:
+                    if '*' not in self._current_namespace and half_complete_tag == '':
                         
                         matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
                         
@@ -2599,7 +2612,7 @@ class ListBox( wx.ScrolledWindow ):
         
         key_code = event.GetKeyCode()
         
-        if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) or ( self.delete_key_activates and key_code in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ) ):
+        if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) or ( self.delete_key_activates and key_code in CC.DELETE_KEYS ):
             
             self._Activate()
             
@@ -3521,7 +3534,7 @@ class ListBoxTagsStrings( ListBoxTags ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ):
+        if event.KeyCode in CC.DELETE_KEYS:
             
             self._Activate()
             
@@ -5624,7 +5637,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ):
+        if event.KeyCode in CC.DELETE_KEYS:
             
             if self._delete_key_callback is not None: self._delete_key_callback()
             

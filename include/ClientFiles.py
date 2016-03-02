@@ -26,7 +26,10 @@ def GenerateExportFilename( media, terms ):
         
         tags_manager = media.GetTagsManager()
         
-        if term_type == 'string': filename += term
+        if term_type == 'string':
+            
+            filename += term
+            
         elif term_type == 'namespace':
             
             tags = tags_manager.GetNamespaceSlice( ( term, ), collapse_siblings = True )
@@ -447,11 +450,14 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 query_hash_ids = list( query_hash_ids )
                 
-                random.shuffle( query_hash_ids )
-                
                 limit = self._file_search_context.GetSystemPredicates().GetLimit()
                 
-                if limit is not None: query_hash_ids = query_hash_ids[ : limit ]
+                if limit is not None:
+                    
+                    random.shuffle( query_hash_ids )
+                    
+                    query_hash_ids = query_hash_ids[ : limit ]
+                    
                 
                 media_results = []
                 
@@ -461,7 +467,10 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 while i < len( query_hash_ids ):
                     
-                    if HC.options[ 'pause_export_folders_sync' ]: return
+                    if HC.options[ 'pause_export_folders_sync' ]:
+                        
+                        return
+                        
                     
                     if i == 0: ( last_i, i ) = ( 0, base )
                     else: ( last_i, i ) = ( i, i + base )
@@ -482,6 +491,8 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 sync_filenames = set()
                 
                 client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                
+                num_copied = 0
                 
                 for media_result in media_results:
                     
@@ -515,11 +526,18 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         shutil.copy2( source_path, dest_path )
                         
+                        num_copied += 1
+                        
                         try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
                         except: pass
                         
                     
                     sync_filenames.add( filename )
+                    
+                
+                if num_copied > 0:
+                    
+                    HydrusData.Print( 'Export folder ' + self._name + ' exported ' + HydrusData.ConvertIntToPrettyString( num_copied ) + ' files.' )
                     
                 
                 if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
@@ -531,6 +549,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         deletee_path = os.path.join( folder_path, deletee_filename )
                         
                         ClientData.DeletePath( deletee_path )
+                        
+                    
+                    if len( deletee_filenames ) > 0:
+                        
+                        HydrusData.Print( 'Export folder ' + self._name + ' deleted ' + HydrusData.ConvertIntToPrettyString( len( deletee_filenames ) ) + ' files.' )
                         
                     
                 

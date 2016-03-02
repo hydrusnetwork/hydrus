@@ -1801,7 +1801,10 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'COMMIT' )
         
-        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        if not self._fast_big_transaction_wal:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
         
         if HC.PLATFORM_WINDOWS:
             
@@ -1956,7 +1959,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'COMMIT;' )
         
-        self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        if not self._fast_big_transaction_wal:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
+        
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
         self._c.execute( 'BEGIN IMMEDIATE;' )

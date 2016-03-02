@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 195</h3></li>
+				<ul>
+					<li>wrote up a v1.0 ipfs help page</li>
+					<li>added ipfs services to 'system:file service'</li>
+					<li>added a 'multihash prefix' option to ipfs services in 'services->manage services'--it will prefix thu given text to multihashes copied to the clipboard (e.g. you could use 'http://127.0.0.1:8080/ipfs/')</li>
+					<li>fixed a bad repo sync processing bug that was incorrectly assuming packages were completely processed when they often were not</li>
+					<li>all repos will have their processing timestamps reset on update, forcing a (fast) reprocess of everything they have to cover the previously missed content</li>
+					<li>fixed 8chan OP image parsing, which was sometimes failing due to absent md5s in the json</li>
+					<li>widened the splash screen a little more so repo sync text can fit a bit better</li>
+					<li>a couple of splash status texts are shuffled around</li>
+					<li>updated to sqlite 3.11.0 for windows</li>
+					<li>if sqlite3 reports at least version 3.11.0, the db will stick to WAL for large transactions (lke vacuum and content processing), since these are fast now</li>
+					<li>'namespace:*anything*' will now only appear if the a/c input has no 'subtag' component., e.g. 'character:'</li>
+					<li>import and export folders now print simple summaries to the log if they do some work</li>
+					<li>tidied up the 'pages' menu</li>
+					<li>the various hardcoded 'delete' key events are now also triggered by a backspace on os x</li>
+					<li>added a rough 'copy known urls' to the regular thumbnail menu. this is prototype, let me know how you would like this information managed and displayed in future</li>
+					<li>in prep for the new cache layer, the autocomplete dropdowns (and hence search domains of all contexts) no longer support 'all known files' cross referenced with 'all known tags'</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 194</h3></li>
 				<ul>
 					<li>ipfs pins and unpins can now be queued up like file repository pending and petitioned, through the regular thumbnail right-click menu, which also reports some/all ipfs pinned selection status</li>

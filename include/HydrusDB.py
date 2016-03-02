@@ -1,5 +1,6 @@
 import cProfile
 import cStringIO
+import distutils.version
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -23,6 +24,15 @@ class HydrusDB( object ):
         
         self._controller = controller
         self._no_wal = no_wal
+        
+        if distutils.version.LooseVersion( sqlite3.sqlite_version ) < distutils.version.LooseVersion( '3.11.0'):
+            
+            self._fast_big_transaction_wal = False
+            
+        else:
+            
+            self._fast_big_transaction_wal = True
+            
         
         self._local_shutdown = False
         self._loop_finished = False

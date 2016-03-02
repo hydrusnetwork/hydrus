@@ -832,19 +832,22 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             download_menu.AppendMenu( CC.ID_NULL, p( '&New Gallery Download Page' ), submenu )
             
-            download_menu.AppendSeparator()
-            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+            menu.AppendMenu( CC.ID_NULL, p( 'New Download Page' ), download_menu )
+            
+            download_popup_menu = wx.Menu()
+            
+            download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
             
             has_ipfs = len( [ service for service in services if service.GetServiceType() == HC.IPFS ] )
             
             if has_ipfs:
                 
-                download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_ipfs_download' ), p( '&A File From IPFS' ), p( 'Enter an IPFS multihash and attempt to import whatever is returned' ) )
+                download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_ipfs_download' ), p( '&A File From IPFS' ), p( 'Enter an IPFS multihash and attempt to import whatever is returned' ) )
                 
             
-            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
+            download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
             
-            menu.AppendMenu( CC.ID_NULL, p( 'New Download Page' ), download_menu )
+            menu.AppendMenu( CC.ID_NULL, p( 'New Download Popup' ), download_popup_menu )
             
             #
             
@@ -3695,7 +3698,7 @@ class FrameSeedCache( ClientGUICommon.Frame ):
     
 class FrameSplash( ClientGUICommon.Frame ):
     
-    WIDTH = 300
+    WIDTH = 420
     HEIGHT = 250
     
     def __init__( self, controller ):

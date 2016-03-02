@@ -1076,14 +1076,19 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                 
-                if self._open_popup and len( successful_hashes ) > 0:
+                if len( successful_hashes ) > 0:
                     
-                    job_key = ClientThreading.JobKey()
+                    HydrusData.Print( 'Import folder ' + self._name + ' imported ' + HydrusData.ConvertIntToPrettyString( len( successful_hashes ) ) + ' files.' )
                     
-                    job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
-                    job_key.SetVariable( 'popup_files', successful_hashes )
-                    
-                    HydrusGlobals.client_controller.pub( 'message', job_key )
+                    if self._open_popup:
+                        
+                        job_key = ClientThreading.JobKey()
+                        
+                        job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
+                        job_key.SetVariable( 'popup_files', successful_hashes )
+                        
+                        HydrusGlobals.client_controller.pub( 'message', job_key )
+                        
                     
                 
                 self._ActionPaths()
@@ -2477,11 +2482,18 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             tags = [ 'filename:' + file_original_filename ]
             
-            file_md5_base64 = self._urls_to_md5_base64[ file_url ]
-            
-            file_md5 = file_md5_base64.decode( 'base64' )
-            
-            ( status, hash ) = HydrusGlobals.client_controller.Read( 'md5_status', file_md5 )
+            if file_url in self._urls_to_md5_base64:
+                
+                file_md5_base64 = self._urls_to_md5_base64[ file_url ]
+                
+                file_md5 = file_md5_base64.decode( 'base64' )
+                
+                ( status, hash ) = HydrusGlobals.client_controller.Read( 'md5_status', file_md5 )
+                
+            else:
+                
+                status = CC.STATUS_NEW
+                
             
             if status == CC.STATUS_DELETED:
                 
@@ -2607,14 +2619,22 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 for post in posts_list:
                     
-                    if 'md5' not in post:
+                    if 'filename' not in post:
                         
                         continue
                         
                     
-                    file_url = file_base + str( post[ 'tim' ] ) + post[ 'ext' ]
-                    file_md5_base64 = post[ 'md5' ]
                     file_original_filename = post[ 'filename' ] + post[ 'ext' ]
+                    file_url = file_base + str( post[ 'tim' ] ) + post[ 'ext' ]
+                    
+                    if 'md5' in post:
+                        
+                        file_md5_base64 = post[ 'md5' ]
+                        
+                    else:
+                        
+                        file_md5_base64 = None
+                        
                     
                     file_infos.append( ( file_url, file_md5_base64, file_original_filename ) )
                     
@@ -2622,14 +2642,22 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         
                         for extra_file in post[ 'extra_files' ]:
                             
-                            if 'md5' not in extra_file:
+                            if 'filename' not in extra_file:
                                 
                                 continue
                                 
                             
-                            file_url = file_base + str( extra_file[ 'tim' ] ) + extra_file[ 'ext' ]
-                            file_md5_base64 = extra_file[ 'md5' ]
                             file_original_filename = extra_file[ 'filename' ] + extra_file[ 'ext' ]
+                            file_url = file_base + str( extra_file[ 'tim' ] ) + extra_file[ 'ext' ]
+                            
+                            if 'md5' in extra_file:
+                                
+                                file_md5_base64 = extra_file[ 'md5' ]
+                                
+                            else:
+                                
+                                file_md5_base64 = None
+                                
                             
                             file_infos.append( ( file_url, file_md5_base64, file_original_filename ) )
                             
@@ -2647,7 +2675,11 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         self._urls_cache.AddSeed( file_url )
                         
                         self._urls_to_filenames[ file_url ] = file_original_filename
-                        self._urls_to_md5_base64[ file_url ] = file_md5_base64
+                        
+                        if file_md5_base64 is not None:
+                            
+                            self._urls_to_md5_base64[ file_url ] = file_md5_base64
+                            
                         
                     
                 
