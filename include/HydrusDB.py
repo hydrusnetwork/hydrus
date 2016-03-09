@@ -19,10 +19,12 @@ class HydrusDB( object ):
     DB_NAME = 'hydrus'
     READ_WRITE_ACTIONS = []
     WRITE_SPECIAL_ACTIONS = []
+    UPDATE_WAIT = 2
     
-    def __init__( self, controller, no_wal = False ):
+    def __init__( self, controller, db_path, no_wal = False ):
         
         self._controller = controller
+        self._db_path = db_path
         self._no_wal = no_wal
         
         if distutils.version.LooseVersion( sqlite3.sqlite_version ) < distutils.version.LooseVersion( '3.11.0'):
@@ -36,9 +38,6 @@ class HydrusDB( object ):
         
         self._local_shutdown = False
         self._loop_finished = False
-        
-        self._no_wal_path = os.path.join( HC.DB_DIR, 'no-wal' )
-        self._db_path = os.path.join( HC.DB_DIR, self.DB_NAME + '.db' )
         
         self._jobs = Queue.PriorityQueue()
         self._pubsubs = []
@@ -64,7 +63,7 @@ class HydrusDB( object ):
         
         while version < HC.SOFTWARE_VERSION:
             
-            time.sleep( 2 )
+            time.sleep( self.UPDATE_WAIT )
             
             try: self._c.execute( 'BEGIN IMMEDIATE' )
             except Exception as e:
@@ -124,21 +123,6 @@ class HydrusDB( object ):
         else: return row_count
         
     
-    def _GetSiteId( self, name ):
-        
-        result = self._c.execute( 'SELECT site_id FROM imageboard_sites WHERE name = ?;', ( name, ) ).fetchone()
-        
-        if result is None:
-            
-            self._c.execute( 'INSERT INTO imageboard_sites ( name ) VALUES ( ? );', ( name, ) )
-            
-            site_id = self._c.lastrowid
-            
-        else: ( site_id, ) = result
-        
-        return site_id
-        
-    
     def _InitCaches( self ):
         
         raise NotImplementedError()
@@ -174,11 +158,6 @@ class HydrusDB( object ):
         
         db_just_created = not os.path.exists( self._db_path )
         
-        if os.path.exists( self._no_wal_path ):
-            
-            self._no_wal = True
-            
-        
         self._db = sqlite3.connect( self._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         
         self._db.create_function( 'hydrus_hamming', 2, HydrusData.GetHammingDistance )
@@ -211,10 +190,9 @@ class HydrusDB( object ):
                 
                 def create_no_wal_file():
                     
-                    with open( self._no_wal_path, 'wb' ) as f:
-                        
-                        f.write( 'This file was created because the database failed to set WAL journalling. It will not reattempt WAL as long as this file exists.' )
-                        
+                    HydrusGlobals.controller.CreateNoWALFile()
+                    
+                    self._no_wal = True
                     
                 
                 if db_just_created:

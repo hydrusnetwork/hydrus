@@ -58,7 +58,9 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ClientDB.DB( self, no_wal = self._no_wal )
+        db_path = os.path.join( HC.DB_DIR, 'client.db' )
+        
+        return ClientDB.DB( self, db_path, no_wal = self._no_wal )
         
     
     def BackupDatabase( self ):

@@ -1273,12 +1273,28 @@ class ServicesManager( object ):
         self._controller.sub( self, 'RefreshServices', 'notify_new_services_data' )
         
     
+    def FilterValidServiceKeys( self, service_keys ):
+        
+        with self._lock:
+            
+            filtered_service_keys = [ service_key for service_key in service_keys if service_key in self._keys_to_services ]
+            
+            return filtered_service_keys
+            
+        
+    
     def GetService( self, service_key ):
         
         with self._lock:
             
-            try: return self._keys_to_services[ service_key ]
-            except KeyError: raise Exception( 'That service was not found!' )
+            try:
+                
+                return self._keys_to_services[ service_key ]
+                
+            except KeyError:
+                
+                raise HydrusExceptions.DataMissing( 'That service was not found!' )
+                
             
         
     
@@ -1575,13 +1591,31 @@ class TagSiblingsManager( object ):
         self._controller.pub( 'new_siblings_gui' )
         
     
-    def GetAutocompleteSiblings( self, half_complete_tag ):
+    def GetAutocompleteSiblings( self, search_text, exact_match = False ):
         
         with self._lock:
             
-            key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if ClientSearch.SearchEntryMatchesTag( half_complete_tag, key, search_siblings = False ) }
-            
-            value_based_matching_values = { value for value in self._siblings.values() if ClientSearch.SearchEntryMatchesTag( half_complete_tag, value, search_siblings = False ) }
+            if exact_match:
+                
+                key_based_matching_values = set()
+                
+                if search_text in self._siblings:
+                    
+                    key_based_matching_values = { self._siblings[ search_text ] }
+                    
+                else:
+                    
+                    key_based_matching_values = set()
+                    
+                
+                value_based_matching_values = { value for value in self._siblings.values() if value == search_text }
+                
+            else:
+                
+                key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if ClientSearch.SearchEntryMatchesTag( search_text, key, search_siblings = False ) }
+                
+                value_based_matching_values = { value for value in self._siblings.values() if ClientSearch.SearchEntryMatchesTag( search_text, value, search_siblings = False ) }
+                
             
             matching_values = key_based_matching_values.union( value_based_matching_values )
             

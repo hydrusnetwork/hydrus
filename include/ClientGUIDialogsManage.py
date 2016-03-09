@@ -2708,7 +2708,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._import_folder = import_folder
         
-        ( name, path, mimes, import_file_options, import_tag_options, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
+        ( name, path, mimes, import_file_options, import_tag_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
         
         self._panel = wx.ScrolledWindow( self )
         
@@ -2761,8 +2761,24 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._location_failed = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
         
         self._import_file_options = ClientGUIOptionsPanels.OptionsPanelImportFiles( self._file_box )
-        self._import_tag_options = ClientGUIOptionsPanels.OptionsPanelTags( self._file_box )
+        
+        #
+        
+        self._tag_box = ClientGUICommon.StaticBox( self._panel, 'tag options' )
+        
+        self._import_tag_options = ClientGUIOptionsPanels.OptionsPanelTags( self._tag_box )
         self._import_tag_options.SetNamespaces( [] )
+        
+        self._txt_parse_st = wx.StaticText( self._tag_box, label = '' )
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        self._txt_parse_tag_service_keys = services_manager.FilterValidServiceKeys( txt_parse_tag_service_keys )
+        
+        self._RefreshTxtParseText()
+        
+        self._txt_parse_button = wx.Button( self._tag_box, label = 'edit .txt parsing' )
+        self._txt_parse_button.Bind( wx.EVT_BUTTON, self.EventEditTxtParsing )
         
         #
         
@@ -2865,7 +2881,12 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._file_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._file_box.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        self._tag_box.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._tag_box.AddF( self._txt_parse_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._tag_box.AddF( self._txt_parse_button, CC.FLAGS_MIXED )
         
         #
         
@@ -2878,6 +2899,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         vbox.AddF( self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._panel.SetSizer( vbox )
         
@@ -2943,9 +2965,60 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             
         
     
+    def _RefreshTxtParseText( self ):
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        services = [ services_manager.GetService( service_key ) for service_key in self._txt_parse_tag_service_keys ]
+        
+        service_names = [ service.GetName() for service in services ]
+        
+        if len( service_names ) > 0:
+            
+            service_names.sort()
+            
+            text = 'Loading tags from neighbouring .txt files for ' + ', '.join( service_names ) + '.'
+            
+        else:
+            
+            text = 'Not loading tags from neighbouring .txt files for any tag services.'
+            
+        
+        self._txt_parse_st.SetLabel( text )
+        
+    
     def EventCheckLocations( self, event ):
         
         self._CheckLocations()
+        
+    
+    def EventEditTxtParsing( self, event ):
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        tag_services = services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+        
+        names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in tag_services }
+        
+        service_keys_to_names = { service_key : name for ( name, service_key ) in names_to_service_keys.items() }
+        
+        tag_service_names = names_to_service_keys.keys()
+        
+        tag_service_names.sort()
+        
+        selected_names = [ service_keys_to_names[ service_key ] for service_key in self._txt_parse_tag_service_keys ]
+        
+        with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'select tag services', tag_service_names, selected_names ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                selected_names = dlg.GetChecked()
+                
+                self._txt_parse_tag_service_keys = [ names_to_service_keys[ name ] for name in selected_names ]
+                
+                self._RefreshTxtParseText()
+                
+            
         
     
     def EventOK( self, event ):
@@ -3035,7 +3108,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         paused = self._paused.GetValue()
         
-        self._import_folder.SetTuple( name, path, mimes, import_file_options, import_tag_options, actions, action_locations, period, open_popup, paused )
+        self._import_folder.SetTuple( name, path, mimes, import_file_options, import_tag_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused )
         
         return self._import_folder
         

@@ -2971,7 +2971,7 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
             
             try:
                 
-                ClientDownloading.GetImageboardThreadURLs( thread_url )
+                ( thread_url, host, board, thread_id ) = ClientDownloading.ParseImageboardThreadURL( thread_url )
                 
             except Exception as e:
                 

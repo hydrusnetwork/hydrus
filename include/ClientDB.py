@@ -1,4 +1,5 @@
 import ClientData
+import ClientDBACCache
 import ClientDefaults
 import ClientFiles
 import ClientImporting
@@ -1258,6 +1259,10 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusPaths.MirrorTree( HC.CLIENT_ARCHIVES_DIR, os.path.join( path, 'client_archives' ) ) 
         
+        job_key.SetVariable( 'popup_text_1', 'copying cache directory' )
+        
+        HydrusPaths.MirrorTree( HC.CLIENT_CACHE_DIR, os.path.join( path, 'client_cache' ) ) 
+        
         job_key.SetVariable( 'popup_text_1', 'copying files directory' )
         
         HydrusPaths.MirrorTree( HC.CLIENT_FILES_DIR, os.path.join( path, 'client_files' ) )
@@ -1441,9 +1446,6 @@ class DB( HydrusDB.HydrusDB ):
         self._tag_archives = {}
         
     
-    
-    def _ClearCombinedAutocompleteTags( self ): self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
-    
     def _CopyFiles( self, hashes ):
         
         client_files_manager = self._controller.GetClientFilesManager()
@@ -1482,6 +1484,7 @@ class DB( HydrusDB.HydrusDB ):
         HydrusGlobals.is_first_start = True
         
         if not os.path.exists( HC.CLIENT_ARCHIVES_DIR ): os.makedirs( HC.CLIENT_ARCHIVES_DIR )
+        if not os.path.exists( HC.CLIENT_CACHE_DIR ): os.makedirs( HC.CLIENT_CACHE_DIR )
         if not os.path.exists( HC.CLIENT_FILES_DIR ): os.makedirs( HC.CLIENT_FILES_DIR )
         if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.makedirs( HC.CLIENT_THUMBNAILS_DIR )
         if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.makedirs( HC.CLIENT_UPDATES_DIR )
@@ -2120,199 +2123,84 @@ class DB( HydrusDB.HydrusDB ):
         job_key.Finish()
         
     
-    def _GetAutocompletePredicates( self, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, tag = '', half_complete_tag = '', include_current = True, include_pending = True, add_namespaceless = False ):
+    def _GenerateACCache( self, file_service_id, tag_service_id ):
         
-        tag_service_id = self._GetServiceId( tag_service_key )
-        file_service_id = self._GetServiceId( file_service_key )
+        db_filename = 'ac_cache_' + str( file_service_id ) + '_' + str( tag_service_id ) + '.db'
         
-        # precache search
+        db_path = os.path.join( HC.CLIENT_CACHE_DIR, db_filename )
         
-        there_was_a_namespace = False
+        # create the db
+        # begin?
+        # for every hash_id in the domain, add it
+        # for every current mapping in the domain, add it
+        # for every pending mapping in the domain, add it
+        # commit?
         
-        if len( half_complete_tag ) > 0:
+    
+    def _GetAutocompleteCounts( self, tag_service_id, file_service_id, mapping_ids, there_was_a_namespace, add_namespaceless ):
+        
+        if tag_service_id == self._combined_tag_service_id:
             
-            normal_characters = set( 'abcdefghijklmnopqrstuvwxyz0123456789' )
-            
-            half_complete_tag_can_be_matched = True
-            
-            for character in half_complete_tag:
-                
-                if character not in normal_characters:
-                    
-                    half_complete_tag_can_be_matched = False
-                    
-                    break
-                    
-                
-            
-            def GetPossibleWildcardNamespaceIds( wildcard_namespace ):
-                
-                wildcard_namespace = wildcard_namespace.replace( '*', '%' )
-                
-                return [ namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( wildcard_namespace, ) ) ]
-                
-            
-            def GetPossibleTagIds( h_c_t ):
-                
-                # the issue is that the tokenizer for fts4 doesn't like weird characters
-                # a search for '[s' actually only does 's'
-                # so, let's do the old and slower LIKE instead of MATCH in weird cases
-                
-                # note that queries with '*' are passed to LIKE, because MATCH only supports appended wildcards 'gun*', and not complex stuff like '*gun*'
-                
-                if half_complete_tag_can_be_matched: return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + h_c_t + '*"', ) ) ]
-                else:
-                    
-                    possible_tag_ids_half_complete_tag = h_c_t
-                    
-                    if '*' in possible_tag_ids_half_complete_tag:
-                        
-                        possible_tag_ids_half_complete_tag = possible_tag_ids_half_complete_tag.replace( '*', '%' )
-                        
-                    else: possible_tag_ids_half_complete_tag += '%'
-                    
-                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ? OR tag LIKE ?;', ( possible_tag_ids_half_complete_tag, '% ' + possible_tag_ids_half_complete_tag ) ) ]
-                    
-                
-            
-            if ':' in half_complete_tag:
-                
-                there_was_a_namespace = True
-                
-                ( namespace, half_complete_tag ) = half_complete_tag.split( ':', 1 )
-                
-                if half_complete_tag == '': return []
-                else:
-                    
-                    if '*' in namespace:
-                        
-                        possible_namespace_ids = GetPossibleWildcardNamespaceIds( namespace )
-                        
-                        predicates_phrase_1 = 'namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids )
-                        
-                    else:
-                        
-                        
-                        result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
-                        
-                        if result is None: return []
-                        else:
-                            
-                            ( namespace_id, ) = result
-                            
-                            predicates_phrase_1 = 'namespace_id = ' + str( namespace_id )
-                            
-                        
-                    
-                    possible_tag_ids = GetPossibleTagIds( half_complete_tag )
-                    
-                    predicates_phrase = predicates_phrase_1 + ' AND tag_id IN ' + HydrusData.SplayListForDB( possible_tag_ids )
-                    
-                
-            else:
-                
-                possible_tag_ids = GetPossibleTagIds( half_complete_tag )
-                
-                predicates_phrase = 'tag_id IN ' + HydrusData.SplayListForDB( possible_tag_ids )
-                
-            
-        elif len( tag ) > 0:
-            
-            try:
-                
-                ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
-                
-                if ':' in tag: predicates_phrase = 'namespace_id = ' + str( namespace_id ) + ' AND tag_id = ' + str( tag_id )
-                else: predicates_phrase = 'tag_id = ' + str( tag_id )
-                
-            except: predicates_phrase = '1 = 1'
+            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
             
         else:
             
-            predicates_phrase = '1 = 1'
+            search_tag_service_ids = [ tag_service_id ]
             
-        
-        results = { result for result in self._c.execute( 'SELECT namespace_id, tag_id FROM existing_tags WHERE ' + predicates_phrase + ';' ) }
-        
-        # now fetch siblings, add to results set
-        
-        siblings_manager = self._controller.GetManager( 'tag_siblings' )
-        
-        if len( half_complete_tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
-        elif len( tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAllSiblings( tag )
-        else: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( '' )
-        
-        sibling_results = []
-        
-        for sibling_tag in all_associated_sibling_tags:
-            
-            try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( sibling_tag )
-            except HydrusExceptions.SizeException: continue
-            
-            sibling_results.append( ( namespace_id, tag_id ) )
-            
-        
-        results.update( sibling_results )
-        
-        # fetch what we can from cache
         
         cache_results = []
         
-        if len( half_complete_tag ) > 0 or len( tag ) > 0:
+        for search_tag_service_id in search_tag_service_ids:
             
-            for ( namespace_id, tag_ids ) in HydrusData.BuildKeyToListDict( results ).items():
+            sub_cache_results = []
+            
+            for ( namespace_id, tag_ids ) in HydrusData.BuildKeyToListDict( mapping_ids ).items():
                 
-                cache_results.extend( self._c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ? AND namespace_id = ? AND tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ';', ( tag_service_id, file_service_id, namespace_id ) ).fetchall() )
+                sub_cache_results.extend( self._c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ? AND namespace_id = ? AND tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ';', ( search_tag_service_id, file_service_id, namespace_id ) ).fetchall() )
                 
             
-        else: cache_results = self._c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ?', ( tag_service_id, file_service_id ) ).fetchall()
-        
-        results_hit = { ( namespace_id, tag_id ) for ( namespace_id, tag_id, current_count, pending_count ) in cache_results }
-        
-        results_missed = results.difference( results_hit )
-        
-        zero = lambda: 0
-        
-        predicates = [ 'status = ?', 'namespace_id = ?']
-        
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            mapping_ids_hit = { ( namespace_id, tag_id ) for ( namespace_id, tag_id, current_count, pending_count ) in sub_cache_results }
             
-            count_phrase = 'SELECT tag_id, COUNT( DISTINCT hash_id ) FROM '
+            mapping_ids_missed = mapping_ids.difference( mapping_ids_hit )
             
-        else:
+            zero = lambda: 0
+            
+            predicates = [ 'status = ?', 'namespace_id = ?']
             
             count_phrase = 'SELECT tag_id, COUNT( * ) FROM '
             
-            predicates.append( 'mappings.service_id = ' + str( tag_service_id ) )
+            predicates.append( 'mappings.service_id = ' + str( search_tag_service_id ) )
             
-        
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-            
-            table_phrase = 'mappings '
-            
-        else:
-            
-            table_phrase = 'mappings, current_files USING ( hash_id ) '
-            
-            predicates.append( 'current_files.service_id = ' + str( file_service_id ) )
-            
-        
-        predicates_phrase = 'WHERE ' + ' AND '.join( predicates ) + ' AND '
-        
-        for ( namespace_id, tag_ids ) in HydrusData.BuildKeyToListDict( results_missed ).items():
-            
-            current_counts = collections.defaultdict( zero )
-            pending_counts = collections.defaultdict( zero )
-            
-            for sub_tag_ids in HydrusData.SplitListIntoChunks( tag_ids, 50 ):
+            if file_service_id == self._combined_file_service_id:
                 
-                current_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HydrusData.SplayListForDB( sub_tag_ids ) + ' GROUP BY tag_id;', ( HC.CURRENT, namespace_id ) ) } )
-                pending_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HydrusData.SplayListForDB( sub_tag_ids ) + ' GROUP BY tag_id;', ( HC.PENDING, namespace_id ) ) } )
+                table_phrase = 'mappings '
+                
+            else:
+                
+                table_phrase = 'mappings, current_files USING ( hash_id ) '
+                
+                predicates.append( 'current_files.service_id = ' + str( file_service_id ) )
                 
             
-            self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', ( ( file_service_id, tag_service_id, namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ) )
+            predicates_phrase = 'WHERE ' + ' AND '.join( predicates ) + ' AND '
             
-            cache_results.extend( ( ( namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ) )
+            for ( namespace_id, tag_ids ) in HydrusData.BuildKeyToListDict( mapping_ids_missed ).items():
+                
+                current_counts = collections.defaultdict( zero )
+                pending_counts = collections.defaultdict( zero )
+                
+                for sub_tag_ids in HydrusData.SplitListIntoChunks( tag_ids, 50 ):
+                    
+                    current_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HydrusData.SplayListForDB( sub_tag_ids ) + ' GROUP BY tag_id;', ( HC.CURRENT, namespace_id ) ) } )
+                    pending_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HydrusData.SplayListForDB( sub_tag_ids ) + ' GROUP BY tag_id;', ( HC.PENDING, namespace_id ) ) } )
+                    
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', ( ( file_service_id, search_tag_service_id, namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ) )
+                
+                sub_cache_results.extend( ( ( namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ) )
+                
+            
+            cache_results.extend( sub_cache_results )
             
         
         #
@@ -2361,6 +2249,151 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+        
+        return ( current_ids_to_count, pending_ids_to_count )
+        
+    
+    def _GetAutocompleteMappingIds( self, search_text, exact_match ):
+        
+        if exact_match:
+            
+            if not self._TagExists( search_text ):
+                
+                return set()
+                
+            
+            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( search_text )
+            
+            if ':' in search_text:
+                
+                predicates_phrase = 'namespace_id = ' + str( namespace_id ) + ' AND tag_id = ' + str( tag_id )
+                
+            else:
+                
+                predicates_phrase = 'tag_id = ' + str( tag_id )
+                
+            
+        else:
+            
+            normal_characters = set( 'abcdefghijklmnopqrstuvwxyz0123456789' )
+            
+            search_text_can_be_matched = True
+            
+            for character in search_text:
+                
+                if character not in normal_characters:
+                    
+                    search_text_can_be_matched = False
+                    
+                    break
+                    
+                
+            
+            def GetPossibleTagIds( half_complete_tag ):
+                
+                # the issue is that the tokenizer for fts4 doesn't like weird characters
+                # a search for '[s' actually only does 's'
+                # so, let's do the old and slower LIKE instead of MATCH in weird cases
+                
+                # note that queries with '*' are also passed to LIKE, because MATCH only supports appended wildcards 'gun*', and not complex stuff like '*gun*'
+                
+                if search_text_can_be_matched:
+                    
+                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + half_complete_tag + '*"', ) ) ]
+                    
+                else:
+                    
+                    possible_tag_ids_half_complete_tag = half_complete_tag
+                    
+                    if '*' in possible_tag_ids_half_complete_tag:
+                        
+                        possible_tag_ids_half_complete_tag = possible_tag_ids_half_complete_tag.replace( '*', '%' )
+                        
+                    else:
+                        
+                        possible_tag_ids_half_complete_tag += '%'
+                        
+                    
+                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ? OR tag LIKE ?;', ( possible_tag_ids_half_complete_tag, '% ' + possible_tag_ids_half_complete_tag ) ) ]
+                    
+                
+            
+            if ':' in search_text:
+                
+                ( namespace, half_complete_tag ) = search_text.split( ':', 1 )
+                
+                if half_complete_tag == '':
+                    
+                    return set()
+                    
+                else:
+                    
+                    if '*' in namespace:
+                        
+                        wildcard_namespace = namespace.replace( '*', '%' )
+                
+                        possible_namespace_ids = [ namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( wildcard_namespace, ) ) ]
+                        
+                        predicates_phrase_1 = 'namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids )
+                        
+                    else:
+                        
+                        result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
+                        
+                        if result is None:
+                            
+                            return set()
+                            
+                        else:
+                            
+                            ( namespace_id, ) = result
+                            
+                            predicates_phrase_1 = 'namespace_id = ' + str( namespace_id )
+                            
+                        
+                    
+                    possible_tag_ids = GetPossibleTagIds( half_complete_tag )
+                    
+                    predicates_phrase = predicates_phrase_1 + ' AND tag_id IN ' + HydrusData.SplayListForDB( possible_tag_ids )
+                    
+                
+            else:
+                
+                possible_tag_ids = GetPossibleTagIds( search_text )
+                
+                predicates_phrase = 'tag_id IN ' + HydrusData.SplayListForDB( possible_tag_ids )
+                
+            
+        
+        mapping_ids = { mapping_id for mapping_id in self._c.execute( 'SELECT namespace_id, tag_id FROM existing_tags WHERE ' + predicates_phrase + ';' ) }
+        
+        # now fetch siblings, add to mapping_ids set
+        
+        siblings_manager = self._controller.GetManager( 'tag_siblings' )
+        
+        all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( search_text, exact_match )
+        
+        for sibling_tag in all_associated_sibling_tags:
+            
+            try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( sibling_tag )
+            except HydrusExceptions.SizeException: continue
+            
+            mapping_ids.add( ( namespace_id, tag_id ) )
+            
+        
+        return mapping_ids
+        
+    
+    def _GetAutocompletePredicates( self, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, include_current = True, include_pending = True, add_namespaceless = False ):
+        
+        mapping_ids = self._GetAutocompleteMappingIds( search_text, exact_match )
+        
+        tag_service_id = self._GetServiceId( tag_service_key )
+        file_service_id = self._GetServiceId( file_service_key )
+        
+        there_was_a_namespace = ':' in search_text
+        
+        ( current_ids_to_count, pending_ids_to_count ) = self._GetAutocompleteCounts( tag_service_id, file_service_id, mapping_ids, there_was_a_namespace, add_namespaceless )
         
         #
         
@@ -3070,6 +3103,11 @@ class DB( HydrusDB.HydrusDB ):
         
         for tag in tags:
             
+            if not self._TagExists( tag ):
+                
+                continue
+                
+            
             try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
             except HydrusExceptions.SizeException: continue
             
@@ -3452,7 +3490,10 @@ class DB( HydrusDB.HydrusDB ):
             
             namespace_id = self._GetNamespaceId( namespace )
             
-        else: namespace_id = 1
+        else:
+            
+            namespace_id = 1
+            
         
         result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
         
@@ -4570,7 +4611,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_id = self._GetServiceId( service_key )
                 
-            except:
+            except HydrusExceptions.DataMissing:
                 
                 continue
                 
@@ -5298,13 +5339,6 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_id in self._service_cache: del self._service_cache[ service_id ]
         
-        if service_type == HC.TAG_REPOSITORY:
-            
-            job_key.SetVariable( 'popup_text_1', prefix + ': recomputing combined tags' )
-            
-            self._ClearCombinedAutocompleteTags()
-            
-        
         if service_type in HC.REPOSITORIES:
             
             job_key.SetVariable( 'popup_text_1', prefix + ': deleting downloaded updates' )
@@ -5560,6 +5594,32 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _TagExists( self, tag ):
+        
+        if ':' in tag:
+            
+            ( namespace, tag ) = tag.split( ':', 1 )
+            
+            result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
+            
+            if result is None:
+                
+                return False
+                
+            
+        
+        result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
+        
+        if result is None:
+            
+            return False
+            
+        else:
+            
+            return True
+            
+        
+    
     def _UndeleteFiles( self, hash_ids ):
         
         splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
@@ -5581,10 +5641,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'UPDATE autocomplete_tags_cache SET current_count = current_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags ] )
         self._c.executemany( 'UPDATE autocomplete_tags_cache SET pending_count = pending_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in pending_tags ] )
-        
-        dirty_tags = { ( namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags + pending_tags }
-        
-        self._c.executemany( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', ( ( self._combined_tag_service_id, namespace_id, tag_id ) for ( namespace_id, tag_id ) in dirty_tags ) )
         
     
     def _UpdateDB( self, version ):
@@ -6471,9 +6527,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 192:
             
-            if os.path.exists( self._no_wal_path ):
+            no_wal_path = os.path.join( HC.DB_DIR, 'no-wal' )
+            
+            if os.path.exists( no_wal_path ):
                 
-                os.remove( self._no_wal_path )
+                os.remove( no_wal_path )
                 
             
         
@@ -6502,6 +6560,38 @@ class DB( HydrusDB.HydrusDB ):
                 info[ 'multihash_prefix' ] = ''
                 
                 self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
+            
+        
+        if version == 195:
+            
+            self._controller.pub( 'splash_set_status_text', 'clearing out surplus autocomplete entries' )
+            
+            combined_tag_service_id = self._GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
+            
+            self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( combined_tag_service_id, ) )
+            
+            #
+            
+            self._controller.pub( 'splash_set_status_text', 'clearing out existing tags orphans' )
+            
+            self._c.execute( 'DELETE FROM existing_tags;' )
+            
+            self._c.execute( 'INSERT OR IGNORE INTO existing_tags SELECT DISTINCT namespace_id, tag_id FROM mappings;' )
+            self._c.execute( 'INSERT OR IGNORE INTO existing_tags SELECT DISTINCT child_namespace_id, child_tag_id FROM tag_parents;' )
+            self._c.execute( 'INSERT OR IGNORE INTO existing_tags SELECT DISTINCT parent_namespace_id, parent_tag_id FROM tag_parents;' )
+            self._c.execute( 'INSERT OR IGNORE INTO existing_tags SELECT DISTINCT old_namespace_id, old_tag_id FROM tag_siblings;' )
+            self._c.execute( 'INSERT OR IGNORE INTO existing_tags SELECT DISTINCT new_namespace_id, new_tag_id FROM tag_siblings;' )
+            
+            #
+            
+            self._controller.pub( 'splash_set_status_text', 'clearing out orphan autocomplete entries' )
+            
+            namespace_ids = [ namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces;' ) ]
+            
+            for namespace_id in namespace_ids:
+                
+                self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE namespace_id = ? AND tag_id NOT IN ( SELECT tag_id FROM existing_tags WHERE namespace_id = ? );', ( namespace_id, namespace_id ) )
                 
             
         
@@ -6679,7 +6769,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( namespace_id, tag_ids ) in all_changed_namespace_ids_to_tag_ids.items():
             
-            self._c.executemany( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id IN ( ?, ? ) AND namespace_id = ? AND tag_id = ?;', ( ( tag_service_id, self._combined_tag_service_id, namespace_id, tag_id ) for tag_id in tag_ids ) )
+            self._c.executemany( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', ( ( tag_service_id, namespace_id, tag_id ) for tag_id in tag_ids ) )
             
         
         namespace_ids_to_search_for = namespace_ids_being_added.union( namespace_ids_being_removed )
@@ -6821,8 +6911,6 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        clear_combined_autocomplete = False
-        
         for ( action, data ) in edit_log:
             
             if action == HC.ADD:
@@ -6866,8 +6954,6 @@ class DB( HydrusDB.HydrusDB ):
                         ClientData.DeletePath( update_dir )
                         
                     
-                    if service_type == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
-                    
                 
             elif action == HC.EDIT:
                 
@@ -6885,8 +6971,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-        
-        if clear_combined_autocomplete: self._ClearCombinedAutocompleteTags()
         
         self.pub_after_commit( 'notify_new_pending' )
         
@@ -6912,8 +6996,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
-        
-        clear_combined_autocomplete = False
         
         for entry in edit_log:
             
@@ -6951,8 +7033,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                     ClientData.DeletePath( update_dir )
                     
-                
-                if service_type == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
                 
             elif action == HC.EDIT:
                 
@@ -7016,8 +7096,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-        
-        if clear_combined_autocomplete: self._ClearCombinedAutocompleteTags()
         
         self.pub_after_commit( 'notify_new_pending' )
         
@@ -7175,6 +7253,7 @@ class DB( HydrusDB.HydrusDB ):
         shutil.copy2( os.path.join( path, self.DB_NAME + '.db' ), self._db_path )
         
         HydrusPaths.MirrorTree( os.path.join( path, 'client_archives' ), HC.CLIENT_ARCHIVES_DIR )
+        HydrusPaths.MirrorTree( os.path.join( path, 'client_cache' ), HC.CLIENT_CACHE_DIR )
         HydrusPaths.MirrorTree( os.path.join( path, 'client_files' ), HC.CLIENT_FILES_DIR )
         HydrusPaths.MirrorTree( os.path.join( path, 'client_thumbnails' ), HC.CLIENT_THUMBNAILS_DIR )
         HydrusPaths.MirrorTree( os.path.join( path, 'client_updates' ), HC.CLIENT_UPDATES_DIR )

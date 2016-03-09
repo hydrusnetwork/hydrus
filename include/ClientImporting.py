@@ -807,9 +807,9 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, name, path = '', import_file_options = None, import_tag_options = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
+    def __init__( self, name, path = '', import_file_options = None, import_tag_options = None, txt_parse_tag_service_keys = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
         
         if mimes is None:
             
@@ -826,6 +826,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             new_options = HydrusGlobals.client_controller.GetNewOptions()
             
             import_tag_options = new_options.GetDefaultImportTagOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT ) )
+            
+        
+        if txt_parse_tag_service_keys is None:
+            
+            txt_parse_tag_service_keys = []
             
         
         if actions is None:
@@ -849,6 +854,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._mimes = mimes
         self._import_file_options = import_file_options
         self._import_tag_options = import_tag_options
+        self._txt_parse_tag_service_keys = txt_parse_tag_service_keys
         self._actions = actions
         self._action_locations = action_locations
         self._period = period
@@ -881,6 +887,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         if os.path.exists( path ):
                             
                             ClientData.DeletePath( path )
+                            
+                        
+                        txt_path = path + '.txt'
+                        
+                        if os.path.exists( txt_path ):
+                            
+                            ClientData.DeletePath( txt_path )
                             
                         
                         self._path_cache.RemoveSeed( path )
@@ -928,6 +941,24 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             shutil.move( path, dest_path )
                             
                         
+                        txt_path = path + '.txt'
+                        
+                        if os.path.exists( txt_path ):
+                            
+                            dest_dir = self._action_locations[ status ]
+                            
+                            txt_filename = os.path.basename( txt_path )
+                            
+                            txt_dest_path = os.path.join( dest_dir, txt_filename )
+                            
+                            while os.path.exists( txt_dest_path ):
+                                
+                                txt_dest_path += str( random.choice( range( 10 ) ) )
+                                
+                            
+                            shutil.move( txt_path, txt_dest_path )
+                            
+                        
                         self._path_cache.RemoveSeed( path )
                         
                     except Exception as e:
@@ -955,24 +986,26 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_import_file_options = self._import_file_options.GetSerialisableTuple()
         serialisable_import_tag_options = self._import_tag_options.GetSerialisableTuple()
+        serialisable_txt_parse_tag_service_keys = [ service_key.encode( 'hex' ) for service_key in self._txt_parse_tag_service_keys ]
         serialisable_path_cache = self._path_cache.GetSerialisableTuple()
         
         # json turns int dict keys to strings
         action_pairs = self._actions.items()
         action_location_pairs = self._action_locations.items()
         
-        return ( self._path, self._mimes, serialisable_import_file_options, serialisable_import_tag_options, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused )
+        return ( self._path, self._mimes, serialisable_import_file_options, serialisable_import_tag_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._mimes, serialisable_import_file_options, serialisable_import_tag_options, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused ) = serialisable_info
+        ( self._path, self._mimes, serialisable_import_file_options, serialisable_import_tag_options, serialisable_txt_parse_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused ) = serialisable_info
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
         
         self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_file_options )
         self._import_tag_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_tag_options )
+        self._txt_parse_tag_service_keys = [ service_key.decode( 'hex' ) for service_key in serialisable_txt_parse_service_keys ]
         self._path_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_cache )
         
     
@@ -998,6 +1031,17 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            ( path, mimes, serialisable_import_file_options, serialisable_import_tag_options, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused ) = old_serialisable_info
+            
+            serialisable_txt_parse_tag_service_keys = []
+            
+            new_serialisable_info = ( path, mimes, serialisable_import_file_options, serialisable_import_tag_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused )
+            
+            return ( 3, new_serialisable_info )
+            
+        
     
     def DoWork( self ):
         
@@ -1017,6 +1061,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 all_paths = ClientFiles.GetAllPaths( raw_paths )
                 
                 for path in all_paths:
+                    
+                    if path.endswith( '.txt' ):
+                        
+                        continue
+                        
                     
                     if not self._path_cache.HasSeed( path ):
                         
@@ -1052,6 +1101,36 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                 if len( service_keys_to_content_updates ) > 0:
                                     
                                     HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                                    
+                                
+                                txt_path = path + '.txt'
+                                
+                                if len( self._txt_parse_tag_service_keys ) > 0 and os.path.exists( txt_path ):
+                                    
+                                    try:
+                                        
+                                        with open( txt_path, 'rb' ) as f:
+                                            
+                                            raw_data = f.read()
+                                            
+                                        
+                                        tags = raw_data.split( os.linesep )
+                                        
+                                        service_keys_to_tags = { service_key : tags for service_key in self._txt_parse_tag_service_keys }
+                                        
+                                        service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+                                        
+                                        if len( service_keys_to_content_updates ) > 0:
+                                            
+                                            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                                            
+                                        
+                                    except Exception as e:
+                                        
+                                        HydrusData.ShowText( 'Trying to load tags from the .txt file "' + txt_path + '" in the import folder "' + self._name + '" threw an error!' )
+                                        
+                                        HydrusData.ShowException( e )
+                                        
                                     
                                 
                             
@@ -1112,10 +1191,10 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._mimes, self._import_file_options, self._import_tag_options, self._actions, self._action_locations, self._period, self._open_popup, self._paused )
+        return ( self._name, self._path, self._mimes, self._import_file_options, self._import_tag_options, self._txt_parse_tag_service_keys, self._actions, self._action_locations, self._period, self._open_popup, self._paused )
         
     
-    def SetTuple( self, name, path, mimes, import_file_options, import_tag_options, actions, action_locations, period, open_popup, paused ):
+    def SetTuple( self, name, path, mimes, import_file_options, import_tag_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ):
         
         if path != self._path:
             
@@ -1132,6 +1211,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._mimes = mimes
         self._import_file_options = import_file_options
         self._import_tag_options = import_tag_options
+        self._txt_parse_tag_service_keys = txt_parse_tag_service_keys
         self._actions = actions
         self._action_locations = action_locations
         self._period = period

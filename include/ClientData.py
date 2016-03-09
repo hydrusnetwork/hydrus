@@ -1849,7 +1849,27 @@ class ServiceIPFS( ServiceRemote ):
         
         ( host, port ) = credentials.GetAddress()
         
-        url = 'http://' + host + ':' + str( port ) + '/api/v0/cat/' + multihash
+        api_url = 'http://' + host + ':' + str( port ) + '/api/v0/'
+        
+        links_url = api_url + 'object/links/' + multihash
+        
+        response = ClientNetworking.RequestsGet( links_url )
+        
+        links_json = response.json()
+        
+        for link in links_json[ 'Links' ]:
+            
+            if link[ 'Name' ] != '':
+                
+                HydrusData.ShowText( multihash + ' appears to be a directory or other non-single file ipfs object, and cannot yet be downloaded.' )
+                
+                return
+                
+            
+        
+        #
+        
+        url = api_url + 'cat/' + multihash
         
         url_string = multihash
         

@@ -198,7 +198,9 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ServerDB.DB( self, no_wal = self._no_wal )
+        db_path = os.path.join( HC.DB_DIR, 'server.db' )
+        
+        return ServerDB.DB( self, db_path, no_wal = self._no_wal )
         
     
     def ActionService( self, service_key, action ):

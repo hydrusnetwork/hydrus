@@ -48,7 +48,9 @@ class TestClientDB( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._db = ClientDB.DB( HydrusGlobals.test_controller )
+        db_path = os.path.join( HC.DB_DIR, 'client.db' )
+        
+        self._db = ClientDB.DB( HydrusGlobals.test_controller, db_path )
         
         threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
         
@@ -84,11 +86,11 @@ class TestClientDB( unittest.TestCase ):
         
         self._clear_db()
         
-        result = self._read( 'autocomplete_predicates', half_complete_tag = 'c' )
+        result = self._read( 'autocomplete_predicates', search_text = 'c' )
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'autocomplete_predicates', half_complete_tag = 'series:' )
+        result = self._read( 'autocomplete_predicates', search_text = 'series:' )
         
         self.assertEqual( result, [] )
         
@@ -116,7 +118,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', half_complete_tag = 'c', add_namespaceless = True )
+        result = self._read( 'autocomplete_predicates', search_text = 'c', add_namespaceless = True )
         
         preds = set()
         
@@ -129,7 +131,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', half_complete_tag = 'c', add_namespaceless = False )
+        result = self._read( 'autocomplete_predicates', search_text = 'c', add_namespaceless = False )
         
         preds = set()
         
@@ -142,13 +144,13 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', half_complete_tag = 'ser' )
+        result = self._read( 'autocomplete_predicates', search_text = 'ser' )
         
         self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'autocomplete_predicates', half_complete_tag = 'series:c' )
+        result = self._read( 'autocomplete_predicates', search_text = 'series:c' )
         
         pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } )
         
@@ -160,7 +162,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag = 'car' )
+        result = self._read( 'autocomplete_predicates', search_text = 'car', exact_match = True )
         
         pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } )
         
@@ -172,7 +174,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag = 'c' )
+        result = self._read( 'autocomplete_predicates', search_text = 'c', exact_match = True )
         
         self.assertEqual( result, [] )
         
@@ -1203,17 +1205,10 @@ class TestServerDB( unittest.TestCase ):
     
     @classmethod
     def setUpClass( self ):
-        '''
-        self._old_db_dir = HC.DB_DIR
-        self._old_server_files_dir = HC.SERVER_FILES_DIR
-        self._old_server_thumbnails_dir = HC.SERVER_THUMBNAILS_DIR
         
-        HC.DB_DIR = tempfile.mkdtemp()
+        db_path = os.path.join( HC.DB_DIR, 'server.db' )
         
-        HC.SERVER_FILES_DIR = os.path.join( HC.DB_DIR, 'server_files' )
-        HC.SERVER_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'server_thumbnails' )
-        '''
-        self._db = ServerDB.DB( HydrusGlobals.test_controller )
+        self._db = ServerDB.DB( HydrusGlobals.test_controller, db_path )
         
         threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
         
@@ -1224,13 +1219,7 @@ class TestServerDB( unittest.TestCase ):
         self._db.Shutdown()
         
         while not self._db.LoopIsFinished(): time.sleep( 0.1 )
-        '''
-        shutil.rmtree( HC.DB_DIR )
         
-        HC.DB_DIR = self._old_db_dir
-        HC.SERVER_FILES_DIR = self._old_server_files_dir
-        HC.SERVER_THUMBNAILS_DIR = self._old_server_thumbnails_dir
-        '''
     
     def _test_account_creation( self ):
         

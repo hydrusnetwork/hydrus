@@ -2506,6 +2506,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ImportFiles( self, paths ):
         
+        paths = [ HydrusData.ToUnicode( path ) for path in paths ]
+        
         self._ImportFiles( paths )
         
     

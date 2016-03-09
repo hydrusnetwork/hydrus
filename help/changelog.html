@@ -8,11 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 196</h3></li>
+				<ul>
+					<li>fixed the 8chan thread watcher for boards that host content on media.8ch.net</li>
+					<li>improved the thread watcher url check logic so it won't lag with the new fix</li>
+					<li>cleaned up the ac generation code a little</li>
+					<li>'all known tags' ac counts are now summed from all the known tag services rather than calculated directly (a <= indictor for when these cases overlap will be forthcoming). this speeds up file add/delete, service reset, a/c fetch time, and general tag processing, and reduces the size of the db</li>
+					<li>ac generation code now deals with 'is the entry text an exact match or not?' better</li>
+					<li>ac generation code will now no longer produce non-exact-match siblings on an exact match search</li>
+					<li>ac generation code will no longer save half complete search text into the db as new tags</li>
+					<li>on update, the a/c cache and its helper table 'existing tags' will be cleaned of a lot of orphans, which may take a few minutes</li>
+					<li>fixed some bad unicode path parsing when importing files in some OSes, I think!</li>
+					<li>fixed some bad read autocomplete sibling substitution</li>
+					<li>fixed a bug where autocomplete predicate lists would not update if the new list was merely a reorder (which can happen in some unusual sibling cases)</li>
+					<li>fixed the tumblr parser for the subtly new API</li>
+					<li>import folders now support loading tags from neighbouring .txt files--check the dialog to set up which tag services you would like to import to</li>
+					<li>the ipfs file downloader now queries DAG object links, determines if the given multihash is a directory or other complicated object, and if so politely dumps out (handling of directory downloads is forthcoming)</li>
+					<li>some db code is cleaned up</li>
+					<li>prepared db code for some future subclasses</li>
+					<li>wrote most of the new ac cache db</li>
+					<li>misc cleanup</li>
+					<li>added some browser addon links to the ipfs help</li>
+				</ul>
 				<li><h3>version 195</h3></li>
 				<ul>
 					<li>wrote up a v1.0 ipfs help page</li>
 					<li>added ipfs services to 'system:file service'</li>
-					<li>added a 'multihash prefix' option to ipfs services in 'services->manage services'--it will prefix thu given text to multihashes copied to the clipboard (e.g. you could use 'http://127.0.0.1:8080/ipfs/')</li>
+					<li>added a 'multihash prefix' option to ipfs services in 'services->manage services'--it will prefix the given text to multihashes copied to the clipboard (e.g. you could use 'http://127.0.0.1:8080/ipfs/')</li>
 					<li>fixed a bad repo sync processing bug that was incorrectly assuming packages were completely processed when they often were not</li>
 					<li>all repos will have their processing timestamps reset on update, forcing a (fast) reprocess of everything they have to cover the previously missed content</li>
 					<li>fixed 8chan OP image parsing, which was sometimes failing due to absent md5s in the json</li>

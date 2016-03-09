@@ -133,67 +133,68 @@ def GetGallery( gallery_identifier ):
         return GalleryTumblr()
         
     
+_8CHAN_BOARDS_TO_MEDIA_HOSTS = {}
+
 def GetImageboardThreadURLs( thread_url ):
     
-    try:
-        
-        if '#' in thread_url:
-            
-            ( thread_url, post_anchor_gumpf ) = thread_url.split( '#', 1 )
-            
-        
-        parse_result = urlparse.urlparse( thread_url )
-        
-        host = parse_result.hostname
-        
-        request = parse_result.path
-        
-        if host is None or request is None: raise Exception()
-        
-    except: raise Exception ( 'Could not understand that url!' )
+    ( thread_url, host, board, thread_id ) = ParseImageboardThreadURL( thread_url )
     
     is_4chan = '4chan.org' in host
-    is_8chan = '8chan.co' in host or '8ch.net' in host
+    is_8chan = '8ch.net' in host
     
-    if not ( is_4chan or is_8chan ):
+    # 4chan
+    # http://a.4cdn.org/asp/thread/382059.json
+    # http://i.4cdn.org/asp/ for images
+    
+    # 8chan
+    # http://8ch.net/v/res/406061.json
+    # http://8ch.net/v/src/ for images, or media.8ch.net
+    
+    if is_4chan:
         
-        raise Exception( 'This only works for 4chan and 8chan right now!' )
+        json_url = 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
+        file_base = 'http://i.4cdn.org/' + board + '/'
+        
+    elif is_8chan:
+        
+        json_url = 'http://8ch.net/' + board + '/res/' + thread_id + '.json'
+        
+        if board not in _8CHAN_BOARDS_TO_MEDIA_HOSTS:
+            
+            try:
+                
+                response = ClientNetworking.RequestsGet( thread_url )
+                
+                thread_html = response.content
+                
+                soup = GetSoup( thread_html )
+                
+                file_infos = soup.find_all( 'p', class_ = "fileinfo" )
+                
+                example_file_url = file_infos[0].find( 'a' )[ 'href' ]
+                
+                parse_result = urlparse.urlparse( example_file_url )
+                
+                hostname = parse_result.hostname
+                
+                if hostname is None:
+                    
+                    hostname = '8ch.net'
+                    
+                
+                _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ] = hostname
+                
+            except Exception as e:
+                
+                _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ] = 'media.8ch.net'
+                
+            
+        
+        media_host = _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ]
+        
+        file_base = 'http://' + media_host + '/' + board + '/src/'
         
     
-    try:
-        
-        # 4chan
-        # /asp/thread/382059/post-your-favourite-martial-arts-video-if-martin
-        # http://a.4cdn.org/asp/thread/382059.json
-        # http://i.4cdn.org/asp/ for images
-        
-        # 8chan
-        # /v/res/406061.html
-        # http://8ch.net/v/res/406061.json
-        # http://8ch.net/v/src/ for images
-        
-        if is_4chan:
-            
-            ( board, rest_of_request ) = request[1:].split( '/thread/', 1 )
-            
-            if '/' in rest_of_request: ( thread_id, gumpf ) = rest_of_request.split( '/' )
-            else: thread_id = rest_of_request
-            
-            json_url = 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
-            file_base = 'http://i.4cdn.org/' + board + '/'
-            
-        elif is_8chan:
-            
-            ( board, rest_of_request ) = request[1:].split( '/res/', 1 )
-            
-            json_url = thread_url[:-4] + 'json'
-            file_base = 'http://8ch.net/' + board + '/src/'
-            
-        
-    except:
-        
-        raise Exception( 'Could not understand the board or thread id!' )
-        
     
     return ( json_url, file_base )
     
@@ -341,6 +342,71 @@ def Parse4chanPostScreen( html ):
             
         except: return ( 'error', 'unknown error' )
         
+    
+def ParseImageboardThreadURL( thread_url ):
+    
+    try:
+        
+        if '#' in thread_url:
+            
+            ( thread_url, post_anchor_gumpf ) = thread_url.split( '#', 1 )
+            
+        
+        parse_result = urlparse.urlparse( thread_url )
+        
+        host = parse_result.hostname
+        
+        request = parse_result.path
+        
+        if host is None or request is None:
+            
+            raise Exception()
+            
+        
+    except: raise Exception ( 'Could not understand that url!' )
+    
+    is_4chan = '4chan.org' in host
+    is_8chan = '8ch.net' in host
+    
+    if not ( is_4chan or is_8chan ):
+        
+        raise Exception( 'This only works for 4chan and 8chan right now!' )
+        
+    
+    try:
+        
+        # 4chan
+        # /asp/thread/382059/post-your-favourite-martial-arts-video-if-martin
+        
+        # 8chan
+        # /v/res/406061.html
+        
+        if is_4chan:
+            
+            ( board, rest_of_request ) = request[1:].split( '/thread/', 1 )
+            
+            if '/' in rest_of_request:
+                
+                ( thread_id, gumpf ) = rest_of_request.split( '/' )
+                
+            else:
+                
+                thread_id = rest_of_request
+                
+            
+        elif is_8chan:
+            
+            ( board, rest_of_request ) = request[1:].split( '/res/', 1 )
+            
+            thread_id = rest_of_request[:-5]
+            
+        
+    except Exception as e:
+        
+        raise Exception( 'Could not understand the board or thread id!' )
+        
+    
+    return ( thread_url, host, board, thread_id )
     
 def ParsePageForURLs( html, starting_url ):
     
@@ -1488,7 +1554,7 @@ class GalleryTumblr( Gallery ):
         
         definitely_no_more_pages = False
         
-        processed_raw_json = data.split( 'var tumblr_api_read = ' )[1][:-2] # -2 takes a couple newline chars off at the end
+        processed_raw_json = data.split( 'var tumblr_api_read = ' )[1][:-1] # -1 takes a js ';' off the end
         
         json_object = json.loads( processed_raw_json )
         

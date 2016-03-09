@@ -8,6 +8,7 @@ import HydrusExceptions
 import HydrusGlobals
 import HydrusPubSub
 import HydrusThreading
+import os
 import random
 import sys
 import threading
@@ -26,6 +27,13 @@ class HydrusController( object ):
         self._no_wal = False
         
         self._InitArgsBools()
+        
+        self._no_wal_path = os.path.join( HC.DB_DIR, 'no-wal' )
+        
+        if os.path.exists( self._no_wal_path ):
+            
+            self._no_wal = True
+            
         
         self._model_shutdown = False
         self._view_shutdown = False
@@ -138,6 +146,14 @@ class HydrusController( object ):
     def ClearCaches( self ):
         
         for cache in self._caches.values(): cache.Clear()
+        
+    
+    def CreateNoWALFile( self ):
+        
+        with open( self._no_wal_path, 'wb' ) as f:
+            
+            f.write( 'This file was created because the database failed to set WAL journalling. It will not reattempt WAL as long as this file exists.' )
+            
         
     
     def CurrentlyIdle( self ): return True

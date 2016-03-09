@@ -892,12 +892,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         sibling = siblings_manager.GetSibling( search_text )
         
-        if sibling is not None:
+        if sibling is None:
             
-            search_text = sibling
+            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
             
-        
-        entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
+        else:
+            
+            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, sibling, inclusive = inclusive )
+            
         
         return ( inclusive, search_text, entry_predicate )
         
@@ -979,7 +981,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
                         
-                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
+                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
                         
                         predicates = siblings_manager.CollapsePredicates( predicates )
                         
@@ -991,7 +993,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cache_text = search_text
                             
-                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
+                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
                             
                             self._cached_results = siblings_manager.CollapsePredicates( self._cached_results )
                             
@@ -1289,7 +1291,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
                 
-                predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
+                predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, add_namespaceless = False )
                 
                 predicates = ClientSearch.SortPredicates( predicates )
                 
@@ -1299,7 +1301,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._cache_text = half_complete_tag
                     
-                    self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, add_namespaceless = False )
+                    self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, add_namespaceless = False )
                     
                     self._cached_results = ClientSearch.SortPredicates( self._cached_results )
                     
@@ -3220,16 +3222,10 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
         
         if len( predicates ) == len( self._predicates ):
             
-            p_list_1 = list( predicates )
-            p_list_2 = list( self._predicates )
-            
-            p_list_1.sort()
-            p_list_2.sort()
-            
-            for index in range( len( p_list_1 ) ):
+            for index in range( len( predicates ) ):
                 
-                p_1 = p_list_1[ index ]
-                p_2 = p_list_2[ index ]
+                p_1 = predicates[ index ]
+                p_2 = self._predicates[ index ]
                 
                 if p_1 != p_2 or p_1.GetCount() != p_2.GetCount():
                     
