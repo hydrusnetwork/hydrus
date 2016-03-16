@@ -760,7 +760,13 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            if self._booru_service is None and port is not None: StartServer()
+            if self._booru_service is None:
+                
+                if port is not None:
+                    
+                    StartServer()
+                    
+                
             else:
                 
                 deferred = defer.maybeDeferred( self._booru_service.stopListening )
@@ -823,9 +829,12 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            if self._local_service is None and port is not None:
+            if self._local_service is None:
                 
-                StartServer()
+                if port is not None:
+                    
+                    StartServer()
+                    
                 
             else:
                 

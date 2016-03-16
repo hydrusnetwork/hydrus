@@ -1612,9 +1612,11 @@ class TagSiblingsManager( object ):
                 
             else:
                 
-                key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if ClientSearch.SearchEntryMatchesTag( search_text, key, search_siblings = False ) }
+                matching_keys = ClientSearch.FilterTagsBySearchEntry( search_text, self._siblings.keys(), search_siblings = False )
                 
-                value_based_matching_values = { value for value in self._siblings.values() if ClientSearch.SearchEntryMatchesTag( search_text, value, search_siblings = False ) }
+                key_based_matching_values = { self._siblings[ key ] for key in matching_keys }
+                
+                value_based_matching_values = ClientSearch.FilterTagsBySearchEntry( search_text, self._siblings.values(), search_siblings = False )
                 
             
             matching_values = key_based_matching_values.union( value_based_matching_values )

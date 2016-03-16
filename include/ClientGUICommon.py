@@ -1029,7 +1029,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
                         
-                        current_tags_flat = ( tag for tag in current_tags_flat_iterable if ClientSearch.SearchEntryMatchesTag( search_text, tag ) )
+                        current_tags_flat = ClientSearch.FilterTagsBySearchEntry( search_text, current_tags_flat_iterable )
                         
                         current_tags_to_count.update( current_tags_flat )
                         
@@ -1042,7 +1042,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
                         
-                        pending_tags_flat = ( tag for tag in pending_tags_flat_iterable if ClientSearch.SearchEntryMatchesTag( search_text, tag ) )
+                        pending_tags_flat = ClientSearch.FilterTagsBySearchEntry( search_text, pending_tags_flat_iterable )
                         
                         pending_tags_to_count.update( pending_tags_flat )
                         
@@ -3926,6 +3926,9 @@ class ListBoxTagsSelection( ListBoxTags ):
         
     
     def IncrementTagsByMedia( self, media ):
+        
+        media = set( media )
+        media = media.difference( self._last_media )
         
         ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( media, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
         

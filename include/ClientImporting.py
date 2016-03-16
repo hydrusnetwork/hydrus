@@ -1111,10 +1111,10 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                         
                                         with open( txt_path, 'rb' ) as f:
                                             
-                                            raw_data = f.read()
+                                            txt_tags_string = f.read()
                                             
                                         
-                                        tags = raw_data.split( os.linesep )
+                                        txt_tags = [ HydrusData.ToUnicode( tag ) for tag in txt_tags_string.split( os.linesep ) ]
                                         
                                         service_keys_to_tags = { service_key : tags for service_key in self._txt_parse_tag_service_keys }
                                         

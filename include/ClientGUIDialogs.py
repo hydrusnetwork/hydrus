@@ -348,7 +348,7 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         #
         
-        services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
+        services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
         
         for service in services:
             
@@ -849,7 +849,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             service_type = service.GetServiceType()
             
-            if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): choice = self._tag_service_keys
+            if service_type in HC.TAG_SERVICES: choice = self._tag_service_keys
             elif service_type == HC.LOCAL_RATING_LIKE: choice = self._ratings_like_service_keys
             elif service_type == HC.LOCAL_RATING_NUMERICAL: choice = self._ratings_numerical_service_keys
             
@@ -869,7 +869,7 @@ class DialogInputCustomFilterAction( Dialog ):
             service_name = self._service.GetName()
             service_type = self._service.GetServiceType()
             
-            if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+            if service_type in HC.TAG_SERVICES:
                 
                 self._tag_service_keys.SetStringSelection( service_name )
                 
@@ -4450,83 +4450,70 @@ class DialogShortcuts( Dialog ):
         
         def __init__( self, parent, shortcuts ):
             
-            def InitialiseControls():
-                
-                self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ], delete_key_callback = self.RemoveShortcuts )
-                
-                self._add = wx.Button( self, label = 'add' )
-                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-                self._add.SetForegroundColour( ( 0, 128, 0 ) )
-                
-                self._edit = wx.Button( self, label = 'edit' )
-                self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-                
-                self._remove = wx.Button( self, label = 'remove' )
-                self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-                self._remove.SetForegroundColour( ( 128, 0, 0 ) )
-                
-            
-            def PopulateControls():
-                
-                for ( ( modifier, key ), action ) in self._original_shortcuts.IterateKeyboardShortcuts():
-                    
-                    ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
-                    
-                    ( service_key, data ) = action
-                    
-                    if service_key is None:
-                        
-                        pretty_service_key = ''
-                        
-                    else:
-                        
-                        if isinstance( service_key, ClientData.ClientServiceIdentifier ): service_key = service_key.GetServiceKey()
-                        
-                        try:
-                            
-                            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-                            
-                            pretty_service_key = service.GetName()
-                            
-                        except HydrusExceptions.DataMissing:
-                            
-                            pretty_service_key = 'service not found'
-                            
-                        
-                    
-                    pretty_data = data
-                    
-                    self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_service_key, pretty_data ), ( modifier, key, service_key, data ) )
-                    
-                
-                self._SortListCtrl()
-                
-            
-            def ArrangeControls():
-                
-                action_buttons = wx.BoxSizer( wx.HORIZONTAL )
-                
-                action_buttons.AddF( self._add, CC.FLAGS_MIXED )
-                action_buttons.AddF( self._edit, CC.FLAGS_MIXED )
-                action_buttons.AddF( self._remove, CC.FLAGS_MIXED )
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( action_buttons, CC.FLAGS_BUTTON_SIZER )
-                
-                self.SetSizer( vbox )
-                
-            
             wx.Panel.__init__( self, parent )
             
             self._original_shortcuts = shortcuts
             
-            InitialiseControls()
+            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ], delete_key_callback = self.RemoveShortcuts )
             
-            PopulateControls()
+            self._add = wx.Button( self, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            self._add.SetForegroundColour( ( 0, 128, 0 ) )
             
-            ArrangeControls()
+            self._edit = wx.Button( self, label = 'edit' )
+            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+            
+            self._remove = wx.Button( self, label = 'remove' )
+            self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+            self._remove.SetForegroundColour( ( 128, 0, 0 ) )
+            
+            #
+            
+            for ( ( modifier, key ), action ) in self._original_shortcuts.IterateKeyboardShortcuts():
+                
+                ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
+                
+                ( service_key, data ) = action
+                
+                if service_key is None:
+                    
+                    pretty_service_key = ''
+                    
+                else:
+                    
+                    try:
+                        
+                        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                        
+                        pretty_service_key = service.GetName()
+                        
+                    except HydrusExceptions.DataMissing:
+                        
+                        pretty_service_key = 'service not found'
+                        
+                    
+                
+                pretty_data = data
+                
+                self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_service_key, pretty_data ), ( modifier, key, service_key, data ) )
+                
+            
+            self._SortListCtrl()
+            
+            #
+            
+            action_buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            action_buttons.AddF( self._add, CC.FLAGS_MIXED )
+            action_buttons.AddF( self._edit, CC.FLAGS_MIXED )
+            action_buttons.AddF( self._remove, CC.FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( action_buttons, CC.FLAGS_BUTTON_SIZER )
+            
+            self.SetSizer( vbox )
             
         
         def _SortListCtrl( self ): self._shortcuts.SortListItems( 3 )

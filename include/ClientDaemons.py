@@ -287,7 +287,13 @@ def DAEMONSynchroniseAccounts( controller ):
                 
                 do_notify = True
                 
-            except Exception as e:
+            except HydrusExceptions.NetworkException as e:
+                
+                HydrusData.Print( 'Failed to refresh account for ' + service.GetName() + ':' )
+                
+                HydrusData.Print( e )
+                
+            except Exception:
                 
                 HydrusData.Print( 'Failed to refresh account for ' + service.GetName() + ':' )
                 

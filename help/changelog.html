@@ -8,12 +8,37 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 197</h3></li>
+				<ul>
+					<li>on client boot, autocomplete caches for specific file/tag service cross-references are now initialised and populated. progress is shown on the splash window</li>
+					<li>on client boot, surplus autocomplete caches are deleted</li>
+					<li>on service add, new autocomplete caches are created</li>
+					<li>on file add/delete, autocomplete caches are updated</li>
+					<li>on mappings pend/add/rescind pend/delete, autocomplete caches are updated</li>
+					<li>the new autocomplete caches are consulted for all non-'all known tags' queries</li>
+					<li>the old autocomplete cache no longer stores counts for specific file services, and the remaining associated maintenance calls are deleted</li>
+					<li>databases now start their own mainloops</li>
+					<li>databases now wait for their mainloops to finish prepping any large caches before they return to the controller</li>
+					<li>the client database waits for autocomplete caches to finish before it finishes its own mainloop</li>
+					<li>the padding around flash and the animation bar are included more accurately in some media zoom calculations, which should eliminate some general zoom jankiness and accidental 100% flash zoom coincidences that filled up the whole canvas</li>
+					<li>fixed some clientside server boot error spam when local server or booru had no port set</li>
+					<li>account refreshes that fail due to a network error will spam less to the log</li>
+					<li>fixed .txt unicode tag parsing from import folders, which was not decoding at the correct step</li>
+					<li>administrator immediate repository syncs now sync thumbnail downloads if needed</li>
+					<li>service thumbnail sync will no longer superfluously check the presence of thumbnails whose files are local</li>
+					<li>if a tag entered into the manage tags dialog has a sibling that already exists for all files, then a new 'ignore, as the sibling already exists' choice will appear</li>
+					<li>fixed an overcounting bug in 'selection tags' when importing and adding tags at the same time</li>
+					<li>fixed a typo in repository sync status text that was overcounting total number of updates by one</li>
+					<li>fixed youtube downloader, which broke with the new library on my new dev machine</li>
+					<li>the way that tags and predicates are filtered against a tag autocomplete text entry is now much faster</li>
+					<li>bumped up the default content update chunk threshold from 100 rows to 5,000, which seems to be speeding up processing significantly, with a cost to recovery latency--see how it works for you</li>
+				</ul>
 				<li><h3>version 196</h3></li>
 				<ul>
 					<li>fixed the 8chan thread watcher for boards that host content on media.8ch.net</li>
 					<li>improved the thread watcher url check logic so it won't lag with the new fix</li>
 					<li>cleaned up the ac generation code a little</li>
-					<li>'all known tags' ac counts are now summed from all the known tag services rather than calculated directly (a <= indictor for when these cases overlap will be forthcoming). this speeds up file add/delete, service reset, a/c fetch time, and general tag processing, and reduces the size of the db</li>
+					<li>'all known tags' ac counts are now summed from all the known tag services rather than calculated directly (a <= indicator for when these cases overlap will be forthcoming). this speeds up file add/delete, service reset, a/c fetch time, and general tag processing, and reduces the size of the db</li>
 					<li>ac generation code now deals with 'is the entry text an exact match or not?' better</li>
 					<li>ac generation code will now no longer produce non-exact-match siblings on an exact match search</li>
 					<li>ac generation code will no longer save half complete search text into the db as new tags</li>

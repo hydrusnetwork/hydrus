@@ -204,7 +204,7 @@ def GetSoup( html ):
     
 def GetYoutubeFormats( youtube_url ):
     
-    try: p = pafy.Pafy( youtube_url )
+    try: p = pafy.new( youtube_url )
     except Exception as e:
         
         raise Exception( 'Could not fetch video info from youtube!' + os.linesep + HydrusData.ToUnicode( e ) )

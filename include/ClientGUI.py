@@ -1142,7 +1142,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 paths = [ HydrusData.ToUnicode( path ) for path in dlg.GetPaths() ]
                 
-                services = self._controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+                services = self._controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
                 
                 service_keys = [ service.GetServiceKey() for service in services ]
                 
@@ -2872,7 +2872,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         self._thumbnails_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                         
                     
-                elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                elif service_type in HC.TAG_SERVICES:
                     
                     self._tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
@@ -2948,7 +2948,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._booru_delete.Bind( wx.EVT_BUTTON, self.EventBooruDelete )
                 
             
-            if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+            if service_type in HC.TAG_SERVICES:
                 
                 self._service_wide_update = wx.Button( self, label = 'perform a service-wide operation' )
                 self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
@@ -3004,7 +3004,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         self._info_panel.AddF( self._thumbnails_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                         
                     
-                elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                elif service_type in HC.TAG_SERVICES:
                     
                     self._info_panel.AddF( self._tags_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
@@ -3074,7 +3074,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     repo_buttons_hbox.AddF( self._delete_local_deleted, CC.FLAGS_MIXED )
                     
                 
-                if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                if service_type in HC.TAG_SERVICES:
                     
                     repo_buttons_hbox.AddF( self._service_wide_update, CC.FLAGS_MIXED )
                     
@@ -3281,7 +3281,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         self._DisplayNumThumbs()
                         
                     
-                elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                elif service_type in HC.TAG_SERVICES:
                     
                     num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                     num_namespaces = service_info[ HC.SERVICE_INFO_NUM_NAMESPACES ]
@@ -3483,7 +3483,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         def EventImmediateSync( self, event ):
             
             def do_it():
-            
+                
                 job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
                 
                 job_key.SetVariable( 'popup_title', self._service.GetName() + ': immediate sync' )
@@ -3534,8 +3534,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     c_u_p_total_weight_processed += weight
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ConvertIntToPrettyString( c_u_p_num_rows ) + ' rows added.' )
                 job_key.DeleteVariable( 'popup_gauge_1' )
+                
+                self._service.SyncThumbnails( job_key )
+                
+                job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ConvertIntToPrettyString( c_u_p_num_rows ) + ' rows added.' )
                 
                 job_key.Finish()
                 

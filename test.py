@@ -60,7 +60,7 @@ class Controller( object ):
         HC.SERVER_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'server_thumbnails' )
         HC.SERVER_UPDATES_DIR = os.path.join( HC.DB_DIR, 'server_updates' )
         
-        os.makedirs( HC.CLIENT_FILES_DIR ) # for the client files manager which I manually create in a bit
+        os.makedirs( HC.CLIENT_FILES_DIR )
         
         HydrusGlobals.controller = self
         HydrusGlobals.client_controller = self

@@ -8,14 +8,25 @@ import HydrusTags
 import re
 import wx
 
-def SearchEntryMatchesPredicate( search_entry, predicate ):
+def FilterPredicatesBySearchEntry( search_entry, predicates ):
     
-    ( predicate_type, value, inclusive ) = predicate.GetInfo()
+    tags_to_predicates = {}
     
-    if predicate_type == HC.PREDICATE_TYPE_TAG: return SearchEntryMatchesTag( search_entry, value, search_siblings = True )
-    else: return False
-
-def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
+    for predicate in predicates:
+        
+        ( predicate_type, value, inclusive ) = predicate.GetInfo()
+        
+        if predicate_type == HC.PREDICATE_TYPE_TAG:
+            
+            tags_to_predicates[ value ] = predicate
+            
+        
+    
+    matching_tags = FilterTagsBySearchEntry( search_entry, tags_to_predicates.keys() )
+    
+    return [ tags_to_predicates[ tag ] for tag in matching_tags ]
+    
+def FilterTagsBySearchEntry( search_entry, tags, search_siblings = True ):
     
     def compile_re( s ):
         
@@ -36,45 +47,67 @@ def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
         
         namespace_re_predicate = compile_re( namespace_entry )
         
-    else: search_namespace = False
+    else:
+        
+        search_namespace = False
+        
     
     if '*' not in search_entry: search_entry += '*'
     
     re_predicate = compile_re( search_entry )
     
-    if search_siblings:
-        
-        sibling_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-        
-        tags = sibling_manager.GetAllSiblings( tag )
-        
-    else: tags = [ tag ]
+    sibling_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+    
+    result = []
     
     for tag in tags:
         
-        if ':' in tag:
+        if search_siblings:
             
-            ( n, t ) = tag.split( ':', 1 )
-            
-            if search_namespace and re.search( namespace_re_predicate, n ) is None: continue
-            
-            comparee = t
+            possible_tags = sibling_manager.GetAllSiblings( tag )
             
         else:
             
-            if search_namespace: continue
-            
-            comparee = tag
+            possible_tags = [ tag ]
             
         
-        if re.search( re_predicate, comparee ) is not None: return True
+        for possible_tag in possible_tags:
+            
+            if ':' in possible_tag:
+                
+                ( n, t ) = possible_tag.split( ':', 1 )
+                
+                if search_namespace and re.search( namespace_re_predicate, n ) is None:
+                    
+                    continue
+                    
+                
+                comparee = t
+                
+            else:
+                
+                if search_namespace:
+                    
+                    continue
+                    
+                
+                comparee = tag
+                
+            
+            if re.search( re_predicate, comparee ) is not None:
+                
+                result.append( tag )
+                
+                break
+                
+            
         
     
-    return False
-
+    return result
+    
 def FilterPredicates( search_entry, predicates, service_key = None, expand_parents = False ):
     
-    matches = [ predicate for predicate in predicates if SearchEntryMatchesPredicate( search_entry, predicate ) ]
+    matches = FilterPredicatesBySearchEntry( search_entry, predicates )
     
     if service_key is not None and expand_parents:
         

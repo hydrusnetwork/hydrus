@@ -55,23 +55,38 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'INSERT OR IGNORE INTO current_files ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
-    def _AddMappings( self, namespace_id, tag_id, hash_ids ):
+    def _AddMappings( self, mappings_ids ):
         
-        hash_ids = self._FilterFiles( hash_ids )
-        
-        if len( hash_ids ) > 0:
+        for ( namespace_id, tag_id, hash_ids ) in mappings_ids:
             
-            self._RescindPendingMappings( tag_id, namespace_id, hash_ids )
+            hash_ids = self._FilterFiles( hash_ids )
             
-            self._c.executemany( 'INSERT OR IGNORE INTO current_mappings ( hash_id, namespace_id, tag_id ) VALUES ( ?, ?, ? );', ( ( hash_id, namespace_id, tag_id ) for hash_id in hash_ids ) )
-            
-            num_new = self._GetRowCount()
-            
-            if num_new > 0:
+            if len( hash_ids ) > 0:
                 
-                self._c.execute( 'INSERT OR IGNORE INTO ac_cache ( namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ? );', ( namespace_id, tag_id, 0, 0 ) )
+                # direct copy of rescind pending, so we don't filter twice
+                self._c.execute( 'DELETE FROM pending_mappings WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) )
                 
-                self._c.execute( 'UPDATE ac_cache SET current_count = current_count + ? WHERE namespace_id = ? AND tag_id = ?;', ( num_new, namespace_id, tag_id ) )
+                num_deleted = self._GetRowCount()
+                
+                if num_deleted > 0:
+                    
+                    self._c.execute( 'UPDATE ac_cache SET pending_count = pending_count - ? WHERE namespace_id = ? AND tag_id = ?;', ( num_deleted, namespace_id, tag_id ) )
+                    
+                    self._c.execute( 'DELETE FROM ac_cache WHERE namespace_id = ? AND tag_id = ? AND current_count = ? AND pending_count = ?;', ( namespace_id, tag_id, 0, 0 ) )
+                    
+                
+                #
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO current_mappings ( hash_id, namespace_id, tag_id ) VALUES ( ?, ?, ? );', ( ( hash_id, namespace_id, tag_id ) for hash_id in hash_ids ) )
+                
+                num_new = self._GetRowCount()
+                
+                if num_new > 0:
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO ac_cache ( namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ? );', ( namespace_id, tag_id, 0, 0 ) )
+                    
+                    self._c.execute( 'UPDATE ac_cache SET current_count = current_count + ? WHERE namespace_id = ? AND tag_id = ?;', ( num_new, namespace_id, tag_id ) )
+                    
                 
             
         
@@ -149,48 +164,47 @@ class DB( HydrusDB.HydrusDB ):
         
         for hash_id in hash_ids:
             
-            pending_mappings_ids = self._c.execute( 'SELECT namespace_id, tag_id FROM pending_mappings WHERE hash_id = ?;', ( hash_id, ) ).fetchall()
+            hash_id_set = { hash_id }
             
-            for ( namespace_id, tag_id ) in pending_mappings_ids:
-                
-                self._RescindPendingMappings( namespace_id, tag_id, { hash_id } )
-                
+            pending_mappings_ids = [ ( namespace_id, tag_id, hash_id_set ) for ( namespace_id, tag_id ) in self._c.execute( 'SELECT namespace_id, tag_id FROM pending_mappings WHERE hash_id = ?;', ( hash_id, ) ) ]
             
-            current_mappings_ids = self._c.execute( 'SELECT namespace_id, tag_id FROM current_mappings WHERE hash_id = ?;', ( hash_id, ) ).fetchall()
+            self._RescindPendingMappings( pending_mappings_ids )
             
-            for ( namespace_id, tag_id ) in current_mappings_ids:
-                
-                self._DeleteMappings( namespace_id, tag_id, { hash_id } )
-                
+            current_mappings_ids = [ ( namespace_id, tag_id, hash_id_set ) for ( namespace_id, tag_id ) in self._c.execute( 'SELECT namespace_id, tag_id FROM current_mappings WHERE hash_id = ?;', ( hash_id, ) ) ]
+            
+            self._DeleteMappings( current_mappings_ids )
             
         
         self._c.execute( 'DELETE FROM current_files WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' )
         
     
-    def _DeleteMappings( self, namespace_id, tag_id, hash_ids ):
+    def _DeleteMappings( self, mappings_ids ):
         
-        hash_ids = self._FilterFiles( hash_ids )
-        
-        if len( hash_ids ) > 0:
+        for ( namespace_id, tag_id, hash_ids ) in mappings_ids:
             
-            self._c.execute( 'DELETE FROM current_mappings WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND namespace_id = ? AND tag_id = ?;' )
+            hash_ids = self._FilterFiles( hash_ids )
             
-            num_deleted = self._GetRowCount()
-            
-            if num_deleted > 0:
+            if len( hash_ids ) > 0:
                 
-                self._c.execute( 'UPDATE ac_cache SET current_count = current_count - ? WHERE namespace_id = ? AND tag_id = ?;', ( num_deleted, namespace_id, tag_id ) )
+                self._c.execute( 'DELETE FROM current_mappings WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) )
                 
-                self._c.execute( 'DELETE FROM ac_cache WHERE namespace_id = ? AND tag_id = ? AND current_count = ? AND pending_count = ?;', ( namespace_id, tag_id, 0, 0 ) )
+                num_deleted = self._GetRowCount()
+                
+                if num_deleted > 0:
+                    
+                    self._c.execute( 'UPDATE ac_cache SET current_count = current_count - ? WHERE namespace_id = ? AND tag_id = ?;', ( num_deleted, namespace_id, tag_id ) )
+                    
+                    self._c.execute( 'DELETE FROM ac_cache WHERE namespace_id = ? AND tag_id = ? AND current_count = ? AND pending_count = ?;', ( namespace_id, tag_id, 0, 0 ) )
+                    
                 
             
         
     
-    def _GetAutocompleteCounts( self, mapping_ids ):
+    def _GetAutocompleteCounts( self, namespace_ids_to_tag_ids ):
         
         results = []
         
-        for ( namespace_id, tag_ids ) in HydrusData.BuildKeyToListDict( mapping_ids ).items():
+        for ( namespace_id, tag_ids ) in namespace_ids_to_tag_ids.items():
             
             results.extend( ( ( namespace_id, tag_id, current_count, pending_count ) for ( tag_id, current_count, pending_count ) in self._c.execute( 'SELECT tag_id, current_count, pending_count FROM ac_cache WHERE namespace_id = ? AND tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ';', ( namespace_id, ) ) ) )
             
@@ -217,40 +231,55 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _PendMappings( self, namespace_id, tag_id, hash_ids ):
+    def _ManageDBError( self, job, e ):
         
-        hash_ids = self._FilterFiles( hash_ids )
+        ( exception_type, value, tb ) = sys.exc_info()
         
-        if len( hash_ids ) > 0:
+        new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
+        
+        job.PutResult( new_e )
+        
+    
+    def _PendMappings( self, mappings_ids ):
+        
+        for ( namespace_id, tag_id, hash_ids ) in mappings_ids:
             
-            self._c.executemany( 'INSERT OR IGNORE INTO pending_mappings ( hash_id, namespace_id, tag_id ) VALUES ( ?, ?, ? );', ( ( hash_id, namespace_id, tag_id ) for hash_id in hash_ids ) )
+            hash_ids = self._FilterFiles( hash_ids )
             
-            num_new = self._GetRowCount()
-            
-            if num_new > 0:
+            if len( hash_ids ) > 0:
                 
-                self._c.execute( 'INSERT OR IGNORE INTO ac_cache ( namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ? );', ( namespace_id, tag_id, 0, 0 ) )
+                self._c.executemany( 'INSERT OR IGNORE INTO pending_mappings ( hash_id, namespace_id, tag_id ) VALUES ( ?, ?, ? );', ( ( hash_id, namespace_id, tag_id ) for hash_id in hash_ids ) )
                 
-                self._c.execute( 'UPDATE ac_cache SET pending_count = pending_count + ? WHERE namespace_id = ? AND tag_id = ?;', ( num_new, namespace_id, tag_id ) )
+                num_new = self._GetRowCount()
+                
+                if num_new > 0:
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO ac_cache ( namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ? );', ( namespace_id, tag_id, 0, 0 ) )
+                    
+                    self._c.execute( 'UPDATE ac_cache SET pending_count = pending_count + ? WHERE namespace_id = ? AND tag_id = ?;', ( num_new, namespace_id, tag_id ) )
+                    
                 
             
         
     
-    def _RescindPendingMappings( self, namespace_id, tag_id, hash_ids ):
+    def _RescindPendingMappings( self, mappings_ids ):
         
-        hash_ids = self._FilterFiles( hash_ids )
-        
-        if len( hash_ids ) > 0:
+        for ( namespace_id, tag_id, hash_ids ) in mappings_ids:
             
-            self._c.execute( 'DELETE FROM pending_mappings WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND namespace_id = ? AND tag_id = ?;' )
+            hash_ids = self._FilterFiles( hash_ids )
             
-            num_deleted = self._GetRowCount()
-            
-            if num_deleted > 0:
+            if len( hash_ids ) > 0:
                 
-                self._c.execute( 'UPDATE ac_cache SET pending_count = pending_count - ? WHERE namespace_id = ? AND tag_id = ?;', ( num_deleted, namespace_id, tag_id ) )
+                self._c.execute( 'DELETE FROM pending_mappings WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) )
                 
-                self._c.execute( 'DELETE FROM ac_cache WHERE namespace_id = ? AND tag_id = ? AND current_count = ? AND pending_count = ?;', ( namespace_id, tag_id, 0, 0 ) )
+                num_deleted = self._GetRowCount()
+                
+                if num_deleted > 0:
+                    
+                    self._c.execute( 'UPDATE ac_cache SET pending_count = pending_count - ? WHERE namespace_id = ? AND tag_id = ?;', ( num_deleted, namespace_id, tag_id ) )
+                    
+                    self._c.execute( 'DELETE FROM ac_cache WHERE namespace_id = ? AND tag_id = ? AND current_count = ? AND pending_count = ?;', ( namespace_id, tag_id, 0, 0 ) )
+                    
                 
             
         
@@ -305,8 +334,8 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'add_mappings': result = self._AddMappings( *args, **kwargs )
         elif action == 'analyze': result = self._Analyze( *args, **kwargs )
         elif action == 'delete_files': result = self._DeleteFiles( *args, **kwargs )
-        elif action == 'delete_mappings':result = self._DeleteMappings( *args, **kwargs )
-        elif action == 'pend_mappings':result = self._PendMappings( *args, **kwargs )
+        elif action == 'delete_mappings': result = self._DeleteMappings( *args, **kwargs )
+        elif action == 'pend_mappings': result = self._PendMappings( *args, **kwargs )
         elif action == 'rescind_pending_mappings': result = self._RescindPendingMappings( *args, **kwargs )
         elif action == 'vacuum': result = self._Vacuum( *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )

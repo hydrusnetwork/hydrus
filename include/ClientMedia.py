@@ -1244,7 +1244,7 @@ class MediaResult( object ):
         
         service_type = service.GetServiceType()
         
-        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( service_key, content_update )
+        if service_type in HC.TAG_SERVICES: tags_manager.ProcessContentUpdate( service_key, content_update )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.IPFS ):
             
             if service_type == HC.LOCAL_FILE:

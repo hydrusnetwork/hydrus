@@ -1439,7 +1439,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                     else:
                         
-                        gauge_range = ( ( HydrusData.GetNow() - self._info[ 'first_timestamp' ] ) / HC.UPDATE_DURATION ) + 1
+                        gauge_range = ( HydrusData.GetNow() - self._info[ 'first_timestamp' ] ) / HC.UPDATE_DURATION
                         gauge_value = ( ( self._info[ 'next_download_timestamp' ] - self._info[ 'first_timestamp' ] ) / HC.UPDATE_DURATION ) + 1
                         
                         update_index_string = 'update ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range ) + ': '
@@ -1553,7 +1553,7 @@ class ServiceRepository( ServiceRestricted ):
                     break
                     
                 
-                gauge_range = ( ( HydrusData.GetNow() - self._info[ 'first_timestamp' ] ) / HC.UPDATE_DURATION ) + 1
+                gauge_range = ( ( HydrusData.GetNow() - self._info[ 'first_timestamp' ] ) / HC.UPDATE_DURATION )
                 
                 gauge_value = ( ( self._info[ 'next_processing_timestamp' ] - self._info[ 'first_timestamp' ] ) / HC.UPDATE_DURATION ) + 1
                 
@@ -1720,78 +1720,7 @@ class ServiceRepository( ServiceRestricted ):
             job_key.DeleteVariable( 'popup_text_2' )
             job_key.DeleteVariable( 'popup_gauge_2' )
             
-            if self._service_type == HC.FILE_REPOSITORY and self.CanDownload():
-                
-                HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'reviewing thumbnails' )
-                job_key.SetVariable( 'popup_text_1', 'reviewing existing thumbnails' )
-                
-                job_key.SetVariable( 'popup_text_1', 'reviewing service thumbnails' )
-                
-                thumbnail_hashes_i_should_have = HydrusGlobals.client_controller.Read( 'thumbnail_hashes_i_should_have', self._service_key )
-                
-                thumbnail_hashes_i_need = set()
-                
-                for hash in thumbnail_hashes_i_should_have:
-                    
-                    path = ClientFiles.GetExpectedThumbnailPath( hash )
-                    
-                    if not os.path.exists( path ):
-                        
-                        thumbnail_hashes_i_need.add( hash )
-                        
-                    
-                
-                if len( thumbnail_hashes_i_need ) > 0:
-                    
-                    def SaveThumbnails( batch_of_thumbnails ):
-                        
-                        job_key.SetVariable( 'popup_text_1', 'saving thumbnails to database' )
-                        
-                        HydrusGlobals.client_controller.WriteSynchronous( 'thumbnails', batch_of_thumbnails )
-                        
-                        HydrusGlobals.client_controller.pub( 'add_thumbnail_count', self._service_key, len( batch_of_thumbnails ) )
-                        
-                    
-                    thumbnails = []
-                    
-                    for ( i, hash ) in enumerate( thumbnail_hashes_i_need ):
-                        
-                        if options[ 'pause_repo_sync' ]:
-                            
-                            break
-                            
-                        
-                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                        
-                        if should_quit:
-                            
-                            break
-                            
-                        
-                        job_key.SetVariable( 'popup_text_1', 'downloading thumbnail ' + HydrusData.ConvertValueRangeToPrettyString( i, len( thumbnail_hashes_i_need ) ) )
-                        job_key.SetVariable( 'popup_gauge_1', ( i, len( thumbnail_hashes_i_need ) ) )
-                        
-                        request_args = { 'hash' : hash.encode( 'hex' ) }
-                        
-                        thumbnail = self.Request( HC.GET, 'thumbnail', request_args = request_args )
-                        
-                        thumbnails.append( ( hash, thumbnail ) )
-                        
-                        if i % 50 == 0:
-                            
-                            SaveThumbnails( thumbnails )
-                            
-                            thumbnails = []
-                            
-                        
-                        HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
-                        
-                    
-                    if len( thumbnails ) > 0: SaveThumbnails( thumbnails )
-                    
-                    job_key.DeleteVariable( 'popup_gauge_1' )
-                    
-                
+            self.SyncThumbnails( job_key )
             
             HydrusGlobals.client_controller.pub( 'splash_set_status_text', '' )
             
@@ -1821,6 +1750,86 @@ class ServiceRepository( ServiceRestricted ):
             HydrusData.ShowException( e )
             
             time.sleep( 3 )
+            
+        
+    
+    def SyncThumbnails( self, job_key ):
+        
+        if self._service_type == HC.FILE_REPOSITORY and self.CanDownload():
+            
+            options = HydrusGlobals.client_controller.GetOptions()
+            
+            HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'reviewing service thumbnails' )
+            
+            job_key.SetVariable( 'popup_text_1', 'reviewing service thumbnails' )
+            
+            remote_thumbnail_hashes_i_should_have = HydrusGlobals.client_controller.Read( 'remote_thumbnail_hashes_i_should_have', self._service_key )
+            
+            thumbnail_hashes_i_need = set()
+            
+            for hash in remote_thumbnail_hashes_i_should_have:
+                
+                path = ClientFiles.GetExpectedThumbnailPath( hash )
+                
+                if not os.path.exists( path ):
+                    
+                    thumbnail_hashes_i_need.add( hash )
+                    
+                
+            
+            if len( thumbnail_hashes_i_need ) > 0:
+                
+                def SaveThumbnails( batch_of_thumbnails ):
+                    
+                    job_key.SetVariable( 'popup_text_1', 'saving thumbnails to database' )
+                    
+                    HydrusGlobals.client_controller.WriteSynchronous( 'thumbnails', batch_of_thumbnails )
+                    
+                    HydrusGlobals.client_controller.pub( 'add_thumbnail_count', self._service_key, len( batch_of_thumbnails ) )
+                    
+                
+                thumbnails = []
+                
+                for ( i, hash ) in enumerate( thumbnail_hashes_i_need ):
+                    
+                    if options[ 'pause_repo_sync' ]:
+                        
+                        break
+                        
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        break
+                        
+                    
+                    job_key.SetVariable( 'popup_text_1', 'downloading thumbnail ' + HydrusData.ConvertValueRangeToPrettyString( i, len( thumbnail_hashes_i_need ) ) )
+                    job_key.SetVariable( 'popup_gauge_1', ( i, len( thumbnail_hashes_i_need ) ) )
+                    
+                    request_args = { 'hash' : hash.encode( 'hex' ) }
+                    
+                    thumbnail = self.Request( HC.GET, 'thumbnail', request_args = request_args )
+                    
+                    thumbnails.append( ( hash, thumbnail ) )
+                    
+                    if i % 50 == 0:
+                        
+                        SaveThumbnails( thumbnails )
+                        
+                        thumbnails = []
+                        
+                    
+                    HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                    
+                
+                if len( thumbnails ) > 0:
+                    
+                    SaveThumbnails( thumbnails )
+                    
+                
+                job_key.DeleteVariable( 'popup_gauge_1' )
+                
             
         
     

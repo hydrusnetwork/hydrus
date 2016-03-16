@@ -568,7 +568,7 @@ class HTTPConnection( object ):
             text += os.linesep * 2
             text += HydrusData.ToUnicode( e )
             
-            raise Exception( text )
+            raise HydrusExceptions.NetworkException( text )
             
         
     

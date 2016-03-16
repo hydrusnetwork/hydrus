@@ -42,19 +42,31 @@ ANIMATED_SCANBAR_CARET_WIDTH = 10
 
 OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
 
-def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
+def CalculateCanvasMediaSize( media, ( canvas_width, canvas_height ) ):
     
-    ( media_width, media_height ) = media.GetResolution()
-    
-    if media_width == 0 or media_height == 0: return 1.0
-    
-    if ShouldHaveAnimationBar( media ): canvas_height -= ANIMATED_SCANBAR_HEIGHT
+    if ShouldHaveAnimationBar( media ):
+        
+        canvas_height -= ANIMATED_SCANBAR_HEIGHT
+        
     
     if media.GetMime() == HC.APPLICATION_FLASH:
         
         canvas_height -= 10
         canvas_width -= 10
         
+    
+    return ( canvas_width, canvas_height )
+    
+def CalculateCanvasFitZoom( media, ( canvas_width, canvas_height ) ):
+    
+    ( media_width, media_height ) = media.GetResolution()
+    
+    if media_width == 0 or media_height == 0:
+        
+        return 1.0
+        
+    
+    ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, ( canvas_width, canvas_height ) )
     
     width_zoom = canvas_width / float( media_width )
     
@@ -883,20 +895,29 @@ class Canvas( object ):
     
     def _RecalcZoom( self ):
         
-        if self._current_display_media is None: self._current_zoom = 1.0
+        if self._current_display_media is None:
+            
+            self._current_zoom = 1.0
+            
         else:
             
             ( my_width, my_height ) = self.GetClientSize()
             
             ( media_width, media_height ) = self._current_display_media.GetResolution()
             
-            self._canvas_zoom = CalculateCanvasZoom( self._current_display_media, ( my_width, my_height ) )
+            ( canvas_media_width, canvas_media_height ) = CalculateCanvasMediaSize( self._current_display_media, ( my_width, my_height ) )
             
-            media_needs_to_be_scaled_down = media_width > my_width or media_height > my_height
-            media_needs_to_be_scaled_up = media_width < my_width and media_height < my_height and HC.options[ 'fit_to_canvas' ]
+            media_needs_to_be_scaled_down = media_width > canvas_media_width or media_height > canvas_media_height
+            media_needs_to_be_scaled_up = media_width < canvas_media_width and media_height < canvas_media_height and HC.options[ 'fit_to_canvas' ]
             
-            if media_needs_to_be_scaled_down or media_needs_to_be_scaled_up: self._current_zoom = self._canvas_zoom
-            else: self._current_zoom = 1.0
+            if media_needs_to_be_scaled_down or media_needs_to_be_scaled_up:
+                
+                self._current_zoom = CalculateCanvasFitZoom( self._current_display_media, ( my_width, my_height ) )
+                
+            else:
+                
+                self._current_zoom = 1.0
+                
             
         
         HydrusGlobals.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
@@ -1795,12 +1816,23 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
                 
                 ( media_width, media_height ) = media.GetResolution()
                 
-                if media_width > my_width or media_height > my_height: zoom = CalculateCanvasZoom( media, ( my_width, my_height ) )
-                else: zoom = 1.0
+                ( canvas_media_width, canvas_media_height ) = CalculateCanvasMediaSize( media, ( my_width, my_height ) )
+                
+                if media_width > canvas_media_width or media_height > canvas_media_height:
+                    
+                    zoom = CalculateCanvasFitZoom( media, ( my_width, my_height ) )
+                    
+                else:
+                    
+                    zoom = 1.0
+                    
                 
                 resolution_to_request = ( int( round( zoom * media_width ) ), int( round( zoom * media_height ) ) )
                 
-                if not self._image_cache.HasImage( hash, resolution_to_request ): wx.CallLater( delay, self._image_cache.GetImage, media, resolution_to_request )
+                if not self._image_cache.HasImage( hash, resolution_to_request ):
+                    
+                    wx.CallLater( delay, self._image_cache.GetImage, media, resolution_to_request )
+                    
                 
             
         
@@ -2813,7 +2845,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                     
                     hashes = ( self._current_display_media.GetHash(), )
                     
-                    if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                    if service_type in HC.TAG_SERVICES:
                         
                         tag = data
                         

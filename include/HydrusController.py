@@ -183,8 +183,6 @@ class HydrusController( object ):
         
         self._db = self._InitDB()
         
-        threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
-        
     
     def InitView( self ):
         

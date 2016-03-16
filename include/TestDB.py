@@ -52,15 +52,16 @@ class TestClientDB( unittest.TestCase ):
         
         self._db = ClientDB.DB( HydrusGlobals.test_controller, db_path )
         
-        threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
-        
     
     @classmethod
     def tearDownClass( self ):
         
         self._db.Shutdown()
         
-        while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+        while not self._db.LoopIsFinished():
+            
+            time.sleep( 0.1 )
+            
         
         del self._db
         
@@ -1210,15 +1211,18 @@ class TestServerDB( unittest.TestCase ):
         
         self._db = ServerDB.DB( HydrusGlobals.test_controller, db_path )
         
-        threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
-        
     
     @classmethod
     def tearDownClass( self ):
         
         self._db.Shutdown()
         
-        while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+        while not self._db.LoopIsFinished():
+            
+            time.sleep( 0.1 )
+            
+        
+        del self._db
         
     
     def _test_account_creation( self ):

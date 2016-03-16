@@ -1938,7 +1938,7 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
         return num
         
     
-    def IterateContentUpdateChunks( self, chunk_weight = 100):
+    def IterateContentUpdateChunks( self, chunk_weight = 5000 ):
         
         data_types = [ HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ]
         actions = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ]

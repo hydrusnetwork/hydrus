@@ -2996,7 +2996,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         services_manager = HydrusGlobals.client_controller.GetServicesManager()
         
-        tag_services = services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+        tag_services = services_manager.GetServices( HC.TAG_SERVICES )
         
         names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in tag_services }
         
@@ -4963,7 +4963,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
             
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
             
             for service in services: self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
             
@@ -6976,7 +6976,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             ( service_key, service_type, name, info ) = self._original_info
             
-            message = 'This will completely reset ' + name + ', deleting all downloaded and processed information from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will slowly redownload and reprocess everything in the background.' + os.linesep * 2 + 'If you do not understand what this button does, you definitely want to click no!'
+            message = 'This will completely reset ' + name + ', deleting all downloaded and processed information from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will eventually redownload and reprocess everything all over again.' + os.linesep * 2 + 'If you do not understand what this button does, you definitely want to click no!'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
@@ -6993,7 +6993,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             ( service_key, service_type, name, info ) = self._original_info
             
-            message = 'This will remove all the processed information for ' + name + ' from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will slowly reprocess everything in the background.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
+            message = 'This will remove all the processed information for ' + name + ' from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will eventually reprocess everything all over again.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
@@ -9009,96 +9009,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent, file_service_key, media, canvas_key = None ):
         
-        def InitialiseControls():
-            
-            if canvas_key is not None:
-                
-                self._next = wx.Button( self, label = '->' )
-                self._next.Bind( wx.EVT_BUTTON, self.EventNext )
-                
-                self._delete = wx.Button( self, label = 'delete' )
-                self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
-                
-                self._previous = wx.Button( self, label = '<-' )
-                self._previous.Bind( wx.EVT_BUTTON, self.EventPrevious )
-                
-            
-            self._tag_repositories = ClientGUICommon.ListBook( self )
-            self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
-            
-            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
-            
-            name_to_select = None
-            
-            for service in services:
-                
-                service_key = service.GetServiceKey()
-                service_type = service.GetServiceType()
-                name = service.GetName()
-                
-                page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), media )
-                
-                self._tag_repositories.AddPage( name, page )
-                
-                if service_key == HC.options[ 'default_tag_repository' ]: name_to_select = name
-                
-            
-            if name_to_select is not None: self._tag_repositories.Select( name_to_select )
-            
-        
-        def ArrangeControls():
-            
-            buttonbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttonbox.AddF( self._apply, CC.FLAGS_MIXED )
-            buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            if canvas_key is not None:
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( self._previous, CC.FLAGS_MIXED )
-                hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( self._delete, CC.FLAGS_MIXED )
-                hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( self._next, CC.FLAGS_MIXED )
-                
-                vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( remember, size ) = HC.options[ 'tag_dialog_size' ]
-            
-            if remember and size is not None:
-                
-                self.SetInitialSize( size )
-                
-            else:
-                
-                ( x, y ) = self.GetEffectiveMinSize()
-                
-                ( parent_window_width, parent_window_height ) = parent.GetTopLevelParent().GetSize()
-                
-                self.SetInitialSize( ( x + 200, max( 500, parent_window_height - 200 ) ) )
-                
-            
-        
         self._file_service_key = file_service_key
         
         self._hashes = set()
@@ -9124,17 +9034,99 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage tags for ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files', position = my_position )
         
-        InitialiseControls()
+        if canvas_key is not None:
+            
+            self._next = wx.Button( self, label = '->' )
+            self._next.Bind( wx.EVT_BUTTON, self.EventNext )
+            
+            self._delete = wx.Button( self, label = 'delete' )
+            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+            
+            self._previous = wx.Button( self, label = '<-' )
+            self._previous.Bind( wx.EVT_BUTTON, self.EventPrevious )
+            
         
-        PopulateControls()
+        self._tag_repositories = ClientGUICommon.ListBook( self )
+        self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
         
-        ArrangeControls()
+        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
+        self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
+        
+        name_to_select = None
+        
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            service_type = service.GetServiceType()
+            name = service.GetName()
+            
+            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), media )
+            
+            self._tag_repositories.AddPage( name, page )
+            
+            if service_key == HC.options[ 'default_tag_repository' ]: name_to_select = name
+            
+        
+        if name_to_select is not None: self._tag_repositories.Select( name_to_select )
+        
+        #
+        
+        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttonbox.AddF( self._apply, CC.FLAGS_MIXED )
+        buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        if canvas_key is not None:
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._previous, CC.FLAGS_MIXED )
+            hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._delete, CC.FLAGS_MIXED )
+            hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._next, CC.FLAGS_MIXED )
+            
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( remember, size ) = HC.options[ 'tag_dialog_size' ]
+        
+        if remember and size is not None:
+            
+            self.SetInitialSize( size )
+            
+        else:
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            ( parent_window_width, parent_window_height ) = parent.GetTopLevelParent().GetSize()
+            
+            self.SetInitialSize( ( x + 200, max( 500, parent_window_height - 200 ) ) )
+            
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
         self.RefreshAcceleratorTable()
         
-        if self._canvas_key is not None: HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+        if self._canvas_key is not None:
+            
+            HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            
         
     
     def _ClearPanels( self ):
@@ -9436,9 +9428,16 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                             choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, tag ) ) )
                             
                         
-                        if sibling_tag is not None and num_sibling_current < num_files:
+                        if sibling_tag is not None:
                             
-                            choices.append( ( 'add ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - num_sibling_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
+                            if num_sibling_current < num_files:
+                                
+                                choices.append( ( 'add ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - num_sibling_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
+                                
+                            else:
+                                
+                                choices.append( ( 'ignore, as ' + sibling_tag + ' (preferred sibling) already exists for all', None ) )
+                                
                             
                             potential_num_sibling_count += 1
                             
@@ -9469,8 +9468,12 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                                 
                                 choices.append( ( 'pend ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_sibling_current + num_sibling_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, sibling_tag ) ) )
                                 
-                                potential_num_sibling_count += 1
+                            else:
                                 
+                                choices.append( ( 'ignore, as ' + sibling_tag + ' (preferred sibling) already exists for all', None ) )
+                                
+                            
+                            potential_num_sibling_count += 1
                             
                         
                     
@@ -9590,6 +9593,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                                 
                             
                         
+                    
+                
+                if choice is None:
+                    
+                    continue
                     
                 
                 ( choice_action, choice_tag ) = choice

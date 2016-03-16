@@ -11,6 +11,7 @@ import Queue
 import random
 import sqlite3
 import sys
+import threading
 import traceback
 import time
 
@@ -38,6 +39,8 @@ class HydrusDB( object ):
         
         self._local_shutdown = False
         self._loop_finished = False
+        self._ready_to_serve_requests = False
+        self._could_not_initialise = False
         
         self._jobs = Queue.PriorityQueue()
         self._pubsubs = []
@@ -89,6 +92,18 @@ class HydrusDB( object ):
         
         self._CloseDBCursor()
         
+        threading.Thread( target = self.MainLoop, name = 'Database Main Loop' ).start()
+        
+        while not self._ready_to_serve_requests:
+            
+            time.sleep( 0.1 )
+            
+            if self._could_not_initialise:
+                
+                raise Exception( 'Could not initialise the db! Error written to the log!' )
+                
+            
+        
     
     def _CleanUpCaches( self ):
         
@@ -125,7 +140,7 @@ class HydrusDB( object ):
     
     def _InitCaches( self ):
         
-        raise NotImplementedError()
+        pass
         
     
     def _InitDB( self ):
@@ -292,9 +307,22 @@ class HydrusDB( object ):
     
     def MainLoop( self ):
         
-        self._InitDBCursor() # have to reinitialise because the thread id has changed
+        try:
+            
+            self._InitDBCursor() # have to reinitialise because the thread id has changed
+            
+            self._InitCaches()
+            
+        except Exception as e:
+            
+            HydrusData.Print( traceback.format_exc() )
+            
+            HydrusData.ShowExceptionDefault( e )
+            
+            self._could_not_initialise = True
+            
         
-        self._InitCaches()
+        self._ready_to_serve_requests = True
         
         error_count = 0
         
@@ -367,10 +395,30 @@ class HydrusDB( object ):
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
-        if synchronous: return job.GetResult()
+        return job.GetResult()
+        
+    
+    def ReadyToServeRequests( self ):
+        
+        return self._ready_to_serve_requests
         
     
     def Shutdown( self ): self._local_shutdown = True
+    
+    def SimpleRead( self, action, *args, **kwargs ):
+        
+        return self.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        
+    
+    def SimpleWrite( self, action, *args, **kwargs ):
+        
+        return self.Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
+        
+    
+    def SimpleWriteSynchronous( self, action, *args, **kwargs ):
+        
+        return self.Write( action, HC.LOW_PRIORITY, True, *args, **kwargs )
+        
     
     def Write( self, action, priority, synchronous, *args, **kwargs ):
         
