@@ -8,7 +8,7 @@ import HydrusTags
 import re
 import wx
 
-def FilterPredicatesBySearchEntry( search_entry, predicates ):
+def FilterPredicatesBySearchEntry( search_entry, predicates, service_key = None, expand_parents = False ):
     
     tags_to_predicates = {}
     
@@ -24,7 +24,16 @@ def FilterPredicatesBySearchEntry( search_entry, predicates ):
     
     matching_tags = FilterTagsBySearchEntry( search_entry, tags_to_predicates.keys() )
     
-    return [ tags_to_predicates[ tag ] for tag in matching_tags ]
+    matches = [ tags_to_predicates[ tag ] for tag in matching_tags ]
+    
+    if service_key is not None and expand_parents:
+        
+        parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+        
+        matches = parents_manager.ExpandPredicates( service_key, matches )
+        
+    
+    return matches
     
 def FilterTagsBySearchEntry( search_entry, tags, search_siblings = True ):
     
@@ -91,7 +100,7 @@ def FilterTagsBySearchEntry( search_entry, tags, search_siblings = True ):
                     continue
                     
                 
-                comparee = tag
+                comparee = possible_tag
                 
             
             if re.search( re_predicate, comparee ) is not None:
@@ -105,19 +114,6 @@ def FilterTagsBySearchEntry( search_entry, tags, search_siblings = True ):
     
     return result
     
-def FilterPredicates( search_entry, predicates, service_key = None, expand_parents = False ):
-    
-    matches = FilterPredicatesBySearchEntry( search_entry, predicates )
-    
-    if service_key is not None and expand_parents:
-        
-        parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-        
-        matches = parents_manager.ExpandPredicates( service_key, matches )
-        
-    
-    return matches
-
 def SortPredicates( predicates ):
     
     def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )

@@ -121,7 +121,7 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
             
             if update:
                 
-                self.SetLabel( self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
+                self.SetLabelText( self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
                 
                 wx.PostEvent( self.GetEventHandler(), wx.SizeEvent() )
                 
@@ -666,7 +666,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         name = file_service.GetName()
         
-        self._file_repo_button.SetLabel( name )
+        self._file_repo_button.SetLabelText( name )
         
         wx.CallAfter( self.RefreshList )
         
@@ -684,7 +684,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         name = tag_service.GetName()
         
-        self._tag_repo_button.SetLabel( name )
+        self._tag_repo_button.SetLabelText( name )
         
         self._cache_text = ''
         self._current_namespace = ''
@@ -997,8 +997,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cached_results = siblings_manager.CollapsePredicates( self._cached_results )
                             
-                            self._cached_results = ClientSearch.SortPredicates( self._cached_results )
-                            
                         
                         predicates = self._cached_results
                         
@@ -1053,12 +1051,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     predicates = siblings_manager.CollapsePredicates( predicates )
                     
-                    predicates = ClientSearch.SortPredicates( predicates )
-                    
                     self._next_updatelist_is_probably_fast = True
                     
                 
-                matches = ClientSearch.FilterPredicates( search_text, predicates )
+                matches = ClientSearch.FilterPredicatesBySearchEntry( search_text, predicates )
+                
+                matches = ClientSearch.SortPredicates( matches )
                 
             
             if self._include_unusual_predicate_types:
@@ -1094,7 +1092,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 matches.insert( 0, predicate )
                 
-            except: pass
+            except:
+                
+                pass
+                
             
         
         for match in matches:
@@ -1293,8 +1294,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 
                 predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, add_namespaceless = False )
                 
-                predicates = ClientSearch.SortPredicates( predicates )
-                
             else:
                 
                 if must_do_a_search or self._cache_text == '' or not half_complete_tag.startswith( self._cache_text ):
@@ -1303,15 +1302,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, add_namespaceless = False )
                     
-                    self._cached_results = ClientSearch.SortPredicates( self._cached_results )
-                    
                 
                 predicates = self._cached_results
                 
                 self._next_updatelist_is_probably_fast = True
                 
             
-            matches = ClientSearch.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = self._expand_parents )
+            matches = ClientSearch.FilterPredicatesBySearchEntry( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = self._expand_parents )
+            
+            matches = ClientSearch.SortPredicates( matches )
             
             self._PutAtTopOfMatches( matches, entry_predicate )
             
@@ -1798,13 +1797,13 @@ class FitResistantStaticText( wx.StaticText ):
         self.SetMaxSize( ( self._wrap, -1 ) )
         
     
-    def SetLabel( self, label ):
+    def SetLabelText( self, label ):
         
         if label != self._last_label:
             
             self._last_label = label
             
-            wx.StaticText.SetLabel( self, label )
+            wx.StaticText.SetLabelText( self, label )
             
             self.Wrap( self._wrap )
             
@@ -4288,7 +4287,7 @@ class OnOffButton( wx.Button ):
             
             self._on = False
             
-            self.SetLabel( self._off_label )
+            self.SetLabelText( self._off_label )
             
             self.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -4298,7 +4297,7 @@ class OnOffButton( wx.Button ):
             
             self._on = True
             
-            self.SetLabel( self._on_label )
+            self.SetLabelText( self._on_label )
             
             self.SetForegroundColour( ( 0, 128, 0 ) )
             
@@ -4346,7 +4345,7 @@ class PopupDismissAll( PopupWindow ):
     
     def EventButton( self, event ): self.GetParent().DismissAll()
     
-    def SetNumMessages( self, num_messages_pending ): self._text.SetLabel( HydrusData.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
+    def SetNumMessages( self, num_messages_pending ): self._text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
     
 class PopupMessage( PopupWindow ):
     
@@ -4500,13 +4499,13 @@ class PopupMessage( PopupWindow ):
         
         if self._caller_tb_text.IsShown():
             
-            self._show_caller_tb_button.SetLabel( 'show caller traceback' )
+            self._show_caller_tb_button.SetLabelText( 'show caller traceback' )
             
             self._caller_tb_text.Hide()
             
         else:
             
-            self._show_caller_tb_button.SetLabel( 'hide caller traceback' )
+            self._show_caller_tb_button.SetLabelText( 'hide caller traceback' )
             
             self._caller_tb_text.Show()
             
@@ -4518,13 +4517,13 @@ class PopupMessage( PopupWindow ):
         
         if self._db_tb_text.IsShown():
             
-            self._show_db_tb_button.SetLabel( 'show db traceback' )
+            self._show_db_tb_button.SetLabelText( 'show db traceback' )
             
             self._db_tb_text.Hide()
             
         else:
             
-            self._show_db_tb_button.SetLabel( 'hide db traceback' )
+            self._show_db_tb_button.SetLabelText( 'hide db traceback' )
             
             self._db_tb_text.Show()
             
@@ -4545,13 +4544,13 @@ class PopupMessage( PopupWindow ):
         
         if self._tb_text.IsShown():
             
-            self._show_tb_button.SetLabel( 'show traceback' )
+            self._show_tb_button.SetLabelText( 'show traceback' )
             
             self._tb_text.Hide()
             
         else:
             
-            self._show_tb_button.SetLabel( 'hide traceback' )
+            self._show_tb_button.SetLabelText( 'hide traceback' )
             
             self._tb_text.Show()
             
@@ -4578,7 +4577,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_title' )
             
-            if self._title.GetLabel() != text: self._title.SetLabel( text )
+            if self._title.GetLabelText() != text: self._title.SetLabelText( text )
             
             self._title.Show()
             
@@ -4595,7 +4594,7 @@ class PopupMessage( PopupWindow ):
                 text = self._job_key.GetVariable( 'popup_text_1' )
                 
             
-            if self._text_1.GetLabel() != text: self._text_1.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            if self._text_1.GetLabelText() != text: self._text_1.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._text_1.Show()
             
@@ -4620,7 +4619,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_text_2' )
             
-            if self._text_2.GetLabel() != text: self._text_2.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            if self._text_2.GetLabelText() != text: self._text_2.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._text_2.Show()
             
@@ -4647,7 +4646,7 @@ class PopupMessage( PopupWindow ):
             
             text = 'show ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
             
-            if self._show_files_button.GetLabel() != text: self._show_files_button.SetLabel( text )
+            if self._show_files_button.GetLabelText() != text: self._show_files_button.SetLabelText( text )
             
             self._show_files_button.Show()
             
@@ -4660,7 +4659,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_traceback' )
             
-            if self._tb_text.GetLabel() != text: self._tb_text.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            if self._tb_text.GetLabelText() != text: self._tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._show_tb_button.Show()
             
@@ -4674,7 +4673,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_caller_traceback' )
             
-            if self._caller_tb_text.GetLabel() != text: self._caller_tb_text.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            if self._caller_tb_text.GetLabelText() != text: self._caller_tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._show_caller_tb_button.Show()
             
@@ -4688,7 +4687,7 @@ class PopupMessage( PopupWindow ):
             
             text = self._job_key.GetVariable( 'popup_db_traceback' )
             
-            if self._db_tb_text.GetLabel() != text: self._db_tb_text.SetLabel( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            if self._db_tb_text.GetLabelText() != text: self._db_tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._show_db_tb_button.Show()
             
@@ -6247,7 +6246,7 @@ class RadioBox( StaticBox ):
     
     def SetSelection( self, index ): self._indices_to_radio_buttons[ index ].SetValue( True )
     
-    def SetString( self, index, text ): self._indices_to_radio_buttons[ index ].SetLabel( text )
+    def SetString( self, index, text ): self._indices_to_radio_buttons[ index ].SetLabelText( text )
     
 class ShowKeys( Frame ):
     
@@ -6340,12 +6339,12 @@ class WaitingPolitelyStaticText( wx.StaticText ):
             
             if self._waiting:
                 
-                self.SetLabel( 'waiting' )
+                self.SetLabelText( 'waiting' )
                 self.SetToolTipString( 'waiting before attempting another download' )
                 
             else:
                 
-                self.SetLabel( 'ready  ' )
+                self.SetLabelText( 'ready  ' )
                 self.SetToolTipString( 'ready to download' )
                 
             

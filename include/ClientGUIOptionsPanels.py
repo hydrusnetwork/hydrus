@@ -419,7 +419,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
         
-        explicit_button.SetLabel( button_label )
+        explicit_button.SetLabelText( button_label )
         
         self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
         
@@ -561,7 +561,7 @@ class OptionsPanelTags( OptionsPanel ):
             
             button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
             
-            explicit_button.SetLabel( button_label )
+            explicit_button.SetLabelText( button_label )
             
             new_service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
             

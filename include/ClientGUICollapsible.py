@@ -107,7 +107,7 @@ class CollapsiblePanel( wx.Panel ):
         
         if self._expanded:
             
-            self._button.SetLabel( 'expand' )
+            self._button.SetLabelText( 'expand' )
             
             self._panel.Hide()
             
@@ -115,7 +115,7 @@ class CollapsiblePanel( wx.Panel ):
             
         else:
             
-            self._button.SetLabel( 'collapse' )
+            self._button.SetLabelText( 'collapse' )
             
             self._panel.Show()
             

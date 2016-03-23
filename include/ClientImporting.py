@@ -13,6 +13,7 @@ import HydrusFileHandling
 import HydrusGlobals
 import HydrusPaths
 import HydrusSerialisable
+import HydrusTags
 import json
 import os
 import random
@@ -1114,9 +1115,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                             txt_tags_string = f.read()
                                             
                                         
-                                        txt_tags = [ HydrusData.ToUnicode( tag ) for tag in txt_tags_string.split( os.linesep ) ]
+                                        txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
                                         
-                                        service_keys_to_tags = { service_key : tags for service_key in self._txt_parse_tag_service_keys }
+                                        txt_tags = HydrusTags.CleanTags( txt_tags )
+                                        
+                                        service_keys_to_tags = { service_key : txt_tags for service_key in self._txt_parse_tag_service_keys }
                                         
                                         service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
                                         

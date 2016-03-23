@@ -317,8 +317,6 @@ class HydrusDB( object ):
             
             HydrusData.Print( traceback.format_exc() )
             
-            HydrusData.ShowExceptionDefault( e )
-            
             self._could_not_initialise = True
             
         

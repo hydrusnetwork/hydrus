@@ -8,6 +8,24 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 198</h3></li>
+				<ul>
+					<li>ipfs download now parses directory multihashes</li>
+					<li>ipfs directory trees are thrown up on a new checkbox tree dialog for selection/filtering</li>
+					<li>created a new download_urls (i.e. multiple urls in one popup) popup call, which the new ipfs directory downloader uses</li>
+					<li>improved a very inefficient line of sql in the mappings fetch stage of query result building that was also used in the manage tags dialog. on my dev machine, fetching 256 files' mappings dropped from 2.5s to 9ms!</li>
+					<li>regular gallery pages and 'page of images' pages now have a 'paste input' button to mass-add newline-separated queries from the clipboard</li>
+					<li>fixed a typo in new txt_tags import folder code</li>
+					<li>fixed bad autocomplete predicate sorting</li>
+					<li>fixed some sibling autocomplete search_text matching logic</li>
+					<li>some byte-based value/range presentation will now correctly convert to bytes, rather than regular decimal numbers</li>
+					<li>improved linesep splitting code across the program</li>
+					<li>fixed get/setlabel calls across the program to get/setlabeltext, so ampersand characters are handled properly</li>
+					<li>wrote an 'all known files' autocomplete cache db and prepped a bunch of code for it--it should be easy to finish next week</li>
+					<li>added a new regex practise link to the regex dialogs</li>
+					<li>os x release should display better on retina displays</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 197</h3></li>
 				<ul>
 					<li>on client boot, autocomplete caches for specific file/tag service cross-references are now initialised and populated. progress is shown on the splash window</li>

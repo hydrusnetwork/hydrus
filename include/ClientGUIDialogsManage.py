@@ -121,7 +121,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         elif HydrusData.TimeHasPassed( self._timeout ): label = 'timed out'
         else: label = 'authenticated - ' + HydrusData.ConvertTimestampToPrettyExpires( self._timeout )
         
-        self._status.SetLabel( label )
+        self._status.SetLabelText( label )
         
     
     def EventOK( self, event ):
@@ -2984,7 +2984,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             text = 'Not loading tags from neighbouring .txt files for any tag services.'
             
         
-        self._txt_parse_st.SetLabel( text )
+        self._txt_parse_st.SetLabelText( text )
         
     
     def EventCheckLocations( self, event ):
@@ -4880,21 +4880,21 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             estimated_bytes_per_fullscreen = 3 * width * height
             
-            self._estimated_number_fullscreens.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
+            self._estimated_number_fullscreens.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
             
         
         def EventPreviewsUpdate( self, event ):
             
             estimated_bytes_per_preview = 3 * 400 * 400
             
-            self._estimated_number_previews.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._preview_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_preview ) + ' previews)' )
+            self._estimated_number_previews.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._preview_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_preview ) + ' previews)' )
             
         
         def EventThumbnailsUpdate( self, event ):
             
             estimated_bytes_per_thumb = 3 * self._thumbnail_height.GetValue() * self._thumbnail_width.GetValue()
             
-            self._estimated_number_thumbnails.SetLabel( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
+            self._estimated_number_thumbnails.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
             
         
         def UpdateOptions( self ):
@@ -5131,8 +5131,8 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
         
         # _ only given to logged in php sessions
-        if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabel( 'OK!' )
-        else: self._status.SetLabel( 'Did not work!' )
+        if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabelText( 'OK!' )
+        else: self._status.SetLabelText( 'Did not work!' )
         
         wx.CallLater( 2000, self._status.SetLabel, '' )
         
@@ -6982,7 +6982,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    self._reset_downloading_button.SetLabel( 'everything will be reset on dialog ok!' )
+                    self._reset_downloading_button.SetLabelText( 'everything will be reset on dialog ok!' )
                     
                     self._reset_downloading = True
                     
@@ -6999,7 +6999,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    self._reset_processing_button.SetLabel( 'processing will be reset on dialog ok!' )
+                    self._reset_processing_button.SetLabelText( 'processing will be reset on dialog ok!' )
                     
                     self._reset_processing = True
                     
@@ -7502,7 +7502,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             self._original_subscription.CheckNow()
             
-            self._check_now_button.SetLabel( 'will check on dialog ok' )
+            self._check_now_button.SetLabelText( 'will check on dialog ok' )
             self._check_now_button.Disable()
             
         
@@ -7516,7 +7516,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     self._original_subscription.Reset()
                     
-                    self._reset_cache_button.SetLabel( 'cache will be reset on dialog ok' )
+                    self._reset_cache_button.SetLabelText( 'cache will be reset on dialog ok' )
                     self._reset_cache_button.Disable()
                     
                 
@@ -8980,7 +8980,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if len( new_tags ) == 0:
                 
-                self._new_sibling.SetLabel( '' )
+                self._new_sibling.SetLabelText( '' )
                 
                 self._current_new = None
                 
@@ -8990,7 +8990,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 self._old_siblings.RemoveTags( { new } )
                 
-                self._new_sibling.SetLabel( HydrusTags.RenderTag( new ) )
+                self._new_sibling.SetLabelText( HydrusTags.RenderTag( new ) )
                 
                 self._current_new = new
                 
@@ -9682,9 +9682,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             tags = self._tags_box.GetSelectedTags()
             
+            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in self._media ) ) )
+            
             for tag in tags:
                 
-                contents.extend( [ HydrusData.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in self._hashes ] )
+                contents.extend( [ HydrusData.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in hashes ] )
                 
             
             if len( contents ) > 0:
@@ -9757,9 +9759,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if media is None: media = []
             
-            self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
+            hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
             
-            if len( self._hashes ) > 0: media_results = HydrusGlobals.client_controller.Read( 'media_results', self._file_service_key, self._hashes )
+            if len( hashes ) > 0: media_results = HydrusGlobals.client_controller.Read( 'media_results', self._file_service_key, hashes )
             else: media_results = []
             
             # this should now be a nice clean copy of the original media

@@ -1835,15 +1835,70 @@ class ServiceRepository( ServiceRestricted ):
     
 class ServiceIPFS( ServiceRemote ):
     
-    def GetDaemonVersion( self ):
+    def _ConvertMultihashToURLTree( self, name, size, multihash ):
+        
+        api_base_url = self._GetAPIBaseURL()
+        
+        links_url = api_base_url + 'object/links/' + multihash
+        
+        response = ClientNetworking.RequestsGet( links_url )
+        
+        links_json = response.json()
+        
+        is_directory = False
+        
+        for link in links_json[ 'Links' ]:
+            
+            if link[ 'Name' ] != '':
+                
+                is_directory = True
+                
+            
+        
+        if is_directory:
+            
+            children = []
+            
+            for link in links_json[ 'Links' ]:
+                
+                subname = link[ 'Name' ]
+                subsize = link[ 'Size' ]
+                submultihash = link[ 'Hash' ]
+                
+                children.append( self._ConvertMultihashToURLTree( subname, subsize, submultihash ) )
+                
+            
+            if size is None:
+                
+                size = sum( ( subsize for ( type_gumpf, subname, subsize, submultihash ) in children ) )
+                
+            
+            return ( 'directory', name, size, children )
+            
+        else:
+            
+            url = api_base_url + 'cat/' + multihash
+            
+            return ( 'file', name, size, url )
+            
+        
+    
+    def _GetAPIBaseURL( self ):
         
         credentials = self.GetCredentials()
         
         ( host, port ) = credentials.GetAddress()
         
-        path = '/api/v0/version'
+        api_base_url = 'http://' + host + ':' + str( port ) + '/api/v0/'
         
-        url = 'http://' + host + ':' + str( port ) + path
+        return api_base_url
+        
+    
+    def GetDaemonVersion( self ):
+        
+        api_base_url = self._GetAPIBaseURL()
+        
+        url = api_base_url + 'version'
         
         response = ClientNetworking.RequestsGet( url )
         
@@ -1854,50 +1909,59 @@ class ServiceIPFS( ServiceRemote ):
     
     def ImportFile( self, multihash ):
         
-        credentials = self.GetCredentials()
-        
-        ( host, port ) = credentials.GetAddress()
-        
-        api_url = 'http://' + host + ':' + str( port ) + '/api/v0/'
-        
-        links_url = api_url + 'object/links/' + multihash
-        
-        response = ClientNetworking.RequestsGet( links_url )
-        
-        links_json = response.json()
-        
-        for link in links_json[ 'Links' ]:
+        def on_wx_select_tree( job_key, url_tree ):
             
-            if link[ 'Name' ] != '':
+                import ClientGUIDialogs
                 
-                HydrusData.ShowText( multihash + ' appears to be a directory or other non-single file ipfs object, and cannot yet be downloaded.' )
-                
-                return
+                with ClientGUIDialogs.DialogSelectFromURLTree( None, url_tree ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        urls = dlg.GetURLs()
+                        
+                        if len( urls ) > 0:
+                            
+                            HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURLs, job_key, urls, multihash )
+                            
+                        
+                    
                 
             
         
-        #
+        def off_wx():
+            
+            job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+            
+            job_key.SetVariable( 'popup_text_1', 'Looking up multihash information' )
+            
+            HydrusGlobals.client_controller.pub( 'message', job_key )
+            
+            url_tree = self._ConvertMultihashToURLTree( multihash, None, multihash )
+            
+            if url_tree[0] == 'file':
+                
+                url = url_tree[3]
+                
+                HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, multihash )
+                
+            else:
+                
+                job_key.SetVariable( 'popup_text_1', 'Waiting for user selection' )
+                
+                wx.CallAfter( on_wx_select_tree, job_key, url_tree )
+                
+            
         
-        url = api_url + 'cat/' + multihash
-        
-        url_string = multihash
-        
-        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
-        
-        HydrusGlobals.client_controller.pub( 'message', job_key )
-        
-        HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
+        HydrusGlobals.client_controller.CallToThread( off_wx )
         
     
     def PinFile( self, hash, mime ):
         
         mime_string = HC.mime_string_lookup[ mime ]
         
-        credentials = self.GetCredentials()
+        api_base_url = self._GetAPIBaseURL()
         
-        ( host, port ) = credentials.GetAddress()
-        
-        url = 'http://' + host + ':' + str( port ) + '/api/v0/add'
+        url = api_base_url + 'add'
         
         client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
         
@@ -1916,11 +1980,9 @@ class ServiceIPFS( ServiceRemote ):
     
     def UnpinFile( self, multihash ):
         
-        credentials = self.GetCredentials()
+        api_base_url = self._GetAPIBaseURL()
         
-        ( host, port ) = credentials.GetAddress()
-        
-        url = 'http://' + host + ':' + str( port ) + '/api/v0/pin/rm/' + multihash
+        url = api_base_url + 'pin/rm/' + multihash
         
         ClientNetworking.RequestsGet( url )
         

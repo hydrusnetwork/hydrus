@@ -33,6 +33,7 @@ import time
 import traceback
 import urllib
 import wx
+import wx.lib.agw.customtreectrl
 import yaml
 import HydrusData
 import ClientSearch
@@ -492,7 +493,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             self._tag = list( tags )[0]
             
-            self._specific_tag.SetLabel( HydrusTags.RenderTag( self._tag ) )
+            self._specific_tag.SetLabelText( HydrusTags.RenderTag( self._tag ) )
             
         
     
@@ -1672,7 +1673,7 @@ class DialogInputLocalFiles( Dialog ):
             self._gauge.SetValue( gauge_value )
             
         
-        self._gauge_text.SetLabel( text )
+        self._gauge_text.SetLabelText( text )
         
     
     def THREADParseImportablePaths( self, raw_paths, job_key ):
@@ -1788,7 +1789,8 @@ class DialogInputNamespaceRegex( Dialog ):
         
         self._shortcuts = ClientGUICommon.RegexButton( self )
         
-        self._regex_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+        self._regex_intro_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+        self._regex_practise_link = wx.HyperlinkCtrl( self, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -1821,7 +1823,8 @@ class DialogInputNamespaceRegex( Dialog ):
         vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( self._shortcuts, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( self._regex_link, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
         vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -2363,7 +2366,7 @@ class DialogModifyAccounts( Dialog ):
                 
             else: subject_string = 'modifying ' + HydrusData.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
             
-            self._subject_text.SetLabel( subject_string )
+            self._subject_text.SetLabelText( subject_string )
             
             #
             
@@ -2476,7 +2479,7 @@ class DialogModifyAccounts( Dialog ):
             
             account_info = response[ 'account_info' ]
             
-            self._subject_text.SetLabel( HydrusData.ToUnicode( account_info ) )
+            self._subject_text.SetLabelText( HydrusData.ToUnicode( account_info ) )
             
         
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
@@ -2709,16 +2712,16 @@ class DialogPageChooser( Dialog ):
         
         ( entry_type, obj ) = entry
         
-        if entry_type == 'menu': button.SetLabel( obj )
+        if entry_type == 'menu': button.SetLabelText( obj )
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
             name = HydrusGlobals.client_controller.GetServicesManager().GetService( obj ).GetName()
             
-            button.SetLabel( name )
+            button.SetLabelText( name )
             
         elif entry_type == 'page_import_booru':
             
-            button.SetLabel( 'booru' )
+            button.SetLabelText( 'booru' )
             
         elif entry_type == 'page_import_gallery':
             
@@ -2726,10 +2729,10 @@ class DialogPageChooser( Dialog ):
             
             text = HC.site_type_string_lookup[ site_type ]
             
-            button.SetLabel( text )
+            button.SetLabelText( text )
             
-        elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
-        elif entry_type == 'page_import_page_of_images': button.SetLabel( 'page of images' )
+        elif entry_type == 'page_import_thread_watcher': button.SetLabelText( 'thread watcher' )
+        elif entry_type == 'page_import_page_of_images': button.SetLabelText( 'page of images' )
         
         button.Show()
         
@@ -3068,7 +3071,8 @@ class DialogPathsToTags( Dialog ):
             
             self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
             
-            self._regex_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+            self._regex_intro_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+            self._regex_practise_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
             
             #
             
@@ -3147,7 +3151,8 @@ class DialogPathsToTags( Dialog ):
             self._regexes_panel.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._regexes_panel.AddF( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._regexes_panel.AddF( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
-            self._regexes_panel.AddF( self._regex_link, CC.FLAGS_LONE_BUTTON )
+            self._regexes_panel.AddF( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
+            self._regexes_panel.AddF( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
             
             #
             
@@ -3213,7 +3218,7 @@ class DialogPathsToTags( Dialog ):
                     
                     try:
                         
-                        txt_tags = [ HydrusData.ToUnicode( tag ) for tag in txt_tags_string.split( os.linesep ) ]
+                        txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
                         
                         tags.extend( txt_tags )
                         
@@ -3689,62 +3694,167 @@ class DialogSelectBooru( Dialog ):
         return gallery_identifier
         
     
+class DialogSelectFromURLTree( Dialog ):
+    
+    def __init__( self, parent, url_tree ):
+        
+        Dialog.__init__( self, parent, 'select items' )
+        
+        agwStyle = wx.lib.agw.customtreectrl.TR_DEFAULT_STYLE | wx.lib.agw.customtreectrl.TR_AUTO_CHECK_CHILD
+        
+        self._tree = wx.lib.agw.customtreectrl.CustomTreeCtrl( self, agwStyle = agwStyle )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        ( text_gumpf, name, size, children ) = url_tree
+        
+        root_name = self._RenderItemName( name, size )
+        
+        root_item = self._tree.AddRoot( root_name, ct_type = 1 )
+        
+        self._AddDirectory( root_item, children )
+        
+        self._tree.CheckItem( root_item )
+        
+        self._tree.Expand( root_item )
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._ok, CC.FLAGS_MIXED )
+        button_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        x = max( x, 480 )
+        y = max( y, 640 )
+        
+        self.SetInitialSize( ( x, y ) )
+        
+    
+    def _AddDirectory( self, root, children ):
+        
+        for ( child_type, name, size, data ) in children:
+            
+            item_name = self._RenderItemName( name, size )
+            
+            if child_type == 'file':
+                
+                self._tree.AppendItem( root, item_name, ct_type = 1, data = data )
+                
+            else:
+                
+                subroot = self._tree.AppendItem( root, item_name, ct_type = 1 )
+                
+                self._AddDirectory( subroot, data )
+                
+            
+        
+    
+    def _GetSelectedChildrenData( self, parent_item ):
+        
+        result = []
+        
+        cookie = 0
+        
+        ( child_item, cookie ) = self._tree.GetNextChild( parent_item, cookie )
+        
+        while child_item is not None:
+            
+            data = self._tree.GetItemPyData( child_item )
+            
+            if data is None:
+                
+                result.extend( self._GetSelectedChildrenData( child_item ) )
+                
+            else:
+                
+                if self._tree.IsItemChecked( child_item ):
+                    
+                    result.append( data )
+                    
+                
+            
+            ( child_item, cookie ) = self._tree.GetNextChild( parent_item, cookie )
+            
+        
+        return result
+        
+    
+    def _RenderItemName( self, name, size ):
+        
+        return name + ' - ' + HydrusData.ConvertIntToBytes( size )
+        
+    
+    def GetURLs( self ):
+        
+        root_item = self._tree.GetRootItem()
+        
+        urls = self._GetSelectedChildrenData( root_item )
+        
+        return urls
+        
+    
+    
 class DialogSelectImageboard( Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            self._tree = wx.TreeCtrl( self )
-            self._tree.Bind( wx.EVT_TREE_ITEM_ACTIVATED, self.EventActivate )
-            
-        
-        def PopulateControls():
-            
-            all_imageboards = HydrusGlobals.client_controller.Read( 'imageboards' )
-            
-            root_item = self._tree.AddRoot( 'all sites' )
-            
-            for ( site, imageboards ) in all_imageboards.items():
-                
-                site_item = self._tree.AppendItem( root_item, site )
-                
-                for imageboard in imageboards:
-                    
-                    name = imageboard.GetName()
-                    
-                    self._tree.AppendItem( site_item, name, data = wx.TreeItemData( imageboard ) )
-                    
-                
-            
-            self._tree.Expand( root_item )
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 320: x = 320
-            if y < 640: y = 640
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'select imageboard' )
         
-        InitialiseControls()
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        PopulateControls()
+        self._tree = wx.TreeCtrl( self )
+        self._tree.Bind( wx.EVT_TREE_ITEM_ACTIVATED, self.EventActivate )
         
-        ArrangeControls()
+        #
+        
+        all_imageboards = HydrusGlobals.client_controller.Read( 'imageboards' )
+        
+        root_item = self._tree.AddRoot( 'all sites' )
+        
+        for ( site, imageboards ) in all_imageboards.items():
+            
+            site_item = self._tree.AppendItem( root_item, site )
+            
+            for imageboard in imageboards:
+                
+                name = imageboard.GetName()
+                
+                self._tree.AppendItem( site_item, name, data = wx.TreeItemData( imageboard ) )
+                
+            
+        
+        self._tree.Expand( root_item )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 320: x = 320
+        if y < 640: y = 640
+        
+        self.SetInitialSize( ( x, y ) )
         
     
     def EventActivate( self, event ):

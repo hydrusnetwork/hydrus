@@ -328,7 +328,7 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             
             if len( label ) > 0:
                 
-                self._title_text.SetLabel( label )
+                self._title_text.SetLabelText( label )
                 
                 self._title_text.Show()
                 
@@ -336,7 +336,7 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             
             label = self._current_media.GetPrettyInfo() + ' | ' + self._current_media.GetPrettyAge()
             
-            self._info_text.SetLabel( label )
+            self._info_text.SetLabelText( label )
             
             self._info_text.Show()
             
@@ -412,7 +412,7 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             
             label = ClientData.ConvertZoomToPercentage( self._current_zoom )
             
-            self._zoom_text.SetLabel( label )
+            self._zoom_text.SetLabelText( label )
             
             self._top_hbox.Layout()
             
@@ -440,7 +440,7 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
             
             self._current_index_string = text
             
-            self._index_text.SetLabel( self._current_index_string )
+            self._index_text.SetLabelText( self._current_index_string )
             
             self._top_hbox.Layout()
             
@@ -601,7 +601,7 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
                 
                 remote_string = os.linesep.join( remote_strings )
                 
-                self._file_repos.SetLabel( remote_string )
+                self._file_repos.SetLabelText( remote_string )
                 
                 self._file_repos.Show()
                 

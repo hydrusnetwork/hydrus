@@ -42,7 +42,7 @@ def GetExternalIP():
             
             try:
                 
-                lines = output.split( os.linesep )
+                lines = HydrusData.SplitByLinesep( output )
                 
                 i = lines.index( ' i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
                 
@@ -106,7 +106,7 @@ def GetUPnPMappings():
         
         try:
             
-            lines = output.split( os.linesep )
+            lines = HydrusData.SplitByLinesep( output )
             
             i = lines.index( ' i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
             

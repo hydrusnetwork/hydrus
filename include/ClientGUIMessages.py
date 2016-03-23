@@ -1095,12 +1095,12 @@ class DraftPanel( wx.Panel ):
         if is_new:
             
             self._draft_changed = True
-            self._delete_draft.SetLabel( 'discard' )
+            self._delete_draft.SetLabelText( 'discard' )
             
         else:
             
             self._draft_changed = False
-            self._save_draft.SetLabel( 'saved' )
+            self._save_draft.SetLabelText( 'saved' )
             self._save_draft.Disable()
             
         
@@ -1161,7 +1161,7 @@ class DraftPanel( wx.Panel ):
             
             raw_attachments = self._attachments.GetValue()
             
-            attachment_hashes = [ hash.decode( 'hex' ) for hash in raw_attachments.split( os.linesep ) if hash != '' ]
+            attachment_hashes = [ hash.decode( 'hex' ) for hash in HydrusData.SplitByLinesep( raw_attachments ) if hash != '' ]
             
         except:
             
@@ -1192,10 +1192,10 @@ class DraftPanel( wx.Panel ):
             
             self._draft_changed = False
             
-            self._save_draft.SetLabel( 'saved' )
+            self._save_draft.SetLabelText( 'saved' )
             self._save_draft.Disable()
             
-            self._delete_draft.SetLabel( 'delete' )
+            self._delete_draft.SetLabelText( 'delete' )
             
             self._draft_message.Saved()
             

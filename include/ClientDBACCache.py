@@ -43,9 +43,9 @@ import HydrusData
 import ClientSearch
 import HydrusGlobals
 
-class DB( HydrusDB.HydrusDB ):
+class SpecificServicesDB( HydrusDB.HydrusDB ):
     
-    DB_NAME = 'ac_cache'
+    DB_NAME = 'ac_cache_specific_services'
     READ_WRITE_ACTIONS = []
     WRITE_SPECIAL_ACTIONS = [ 'vacuum' ]
     UPDATE_WAIT = 0
@@ -147,9 +147,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE pending_mappings ( hash_id INTEGER, namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( hash_id, namespace_id, tag_id ) );' )
         
         self._c.execute( 'CREATE TABLE ac_cache ( namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
-        
-        self._c.execute( 'CREATE TABLE existing_tags ( namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
-        self._c.execute( 'CREATE INDEX existing_tags_tag_id_index ON existing_tags ( tag_id );' )
         
         self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
         self._c.execute( 'CREATE TABLE maintenance_timestamps ( name TEXT, timestamp INTEGER );' )
@@ -337,6 +334,159 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_mappings': result = self._DeleteMappings( *args, **kwargs )
         elif action == 'pend_mappings': result = self._PendMappings( *args, **kwargs )
         elif action == 'rescind_pending_mappings': result = self._RescindPendingMappings( *args, **kwargs )
+        elif action == 'vacuum': result = self._Vacuum( *args, **kwargs )
+        else: raise Exception( 'db received an unknown write command: ' + action )
+        
+        return result
+        
+    
+
+class CombinedFilesDB( HydrusDB.HydrusDB ):
+    
+    DB_NAME = 'ac_cache_combined_files'
+    READ_WRITE_ACTIONS = []
+    WRITE_SPECIAL_ACTIONS = [ 'vacuum' ]
+    UPDATE_WAIT = 0
+    
+    def _Analyze( self, stale_time_delta, stop_time ):
+        
+        all_names = [ name for ( name, ) in self._c.execute( 'SELECT name FROM sqlite_master;' ) ]
+        
+        existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
+        
+        names_to_analyze = [ name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+        
+        random.shuffle( names_to_analyze )
+        
+        while len( names_to_analyze ) > 0:
+            
+            name = names_to_analyze.pop()
+            
+            started = HydrusData.GetNowPrecise()
+            
+            self._c.execute( 'ANALYZE ' + name + ';' )
+            
+            self._c.execute( 'REPLACE INTO analyze_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
+            
+            time_took = HydrusData.GetNowPrecise() - started
+            
+            if HydrusData.TimeHasPassed( stop_time ) or not self._controller.CurrentlyIdle():
+                
+                break
+                
+            
+        
+        self._c.execute( 'ANALYZE sqlite_master;' ) # this reloads the current stats into the query planner
+        
+        still_more_to_do = len( names_to_analyze ) > 0
+        
+        return still_more_to_do
+        
+    
+    def _CreateDB( self ):
+        
+        self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            self._c.execute( 'PRAGMA page_size = 4096;' )
+            
+        
+        try: self._c.execute( 'BEGIN IMMEDIATE' )
+        except Exception as e:
+            
+            raise HydrusExceptions.DBAccessException( HydrusData.ToUnicode( e ) )
+            
+        
+        self._c.execute( 'CREATE TABLE ac_cache ( namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
+        
+        self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
+        self._c.execute( 'CREATE TABLE maintenance_timestamps ( name TEXT, timestamp INTEGER );' )
+        self._c.execute( 'CREATE TABLE version ( version INTEGER );' )
+        
+        self._c.execute( 'INSERT INTO version ( version ) VALUES ( ? );', ( HC.SOFTWARE_VERSION, ) )
+        
+        self._c.execute( 'COMMIT' )
+        
+    
+    def _GetAutocompleteCounts( self, namespace_ids_to_tag_ids ):
+        
+        results = []
+        
+        for ( namespace_id, tag_ids ) in namespace_ids_to_tag_ids.items():
+            
+            results.extend( ( ( namespace_id, tag_id, current_count, pending_count ) for ( tag_id, current_count, pending_count ) in self._c.execute( 'SELECT tag_id, current_count, pending_count FROM ac_cache WHERE namespace_id = ? AND tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ';', ( namespace_id, ) ) ) )
+            
+        
+        return results
+        
+    
+    def _ManageDBError( self, job, e ):
+        
+        ( exception_type, value, tb ) = sys.exc_info()
+        
+        new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
+        
+        job.PutResult( new_e )
+        
+    
+    def _UpdateCounts( self, count_ids ):
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO ac_cache ( namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ? );', ( ( namespace_id, tag_id, 0, 0 ) for ( namespace_id, tag_id, current_delta, pending_delta ) in count_ids ) )
+        
+        self._c.executemany( 'UPDATE ac_cache SET current_count = current_count + ?, pending_count = pending_count + ? WHERE namespace_id = ? AND tag_id = ?;', ( ( current_delta, pending_delta, namespace_id, tag_id ) for ( namespace_id, tag_id, current_delta, pending_delta ) in count_ids ) )
+        
+        self._c.executemany( 'DELETE FROM ac_cache WHERE namespace_id = ? AND tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( namespace_id, tag_id, 0, 0 ) for ( namespace_id, tag_id, current_delta, pending_delta ) in count_ids ) )
+        
+    
+    def _Read( self, action, *args, **kwargs ):
+        
+        if action == 'ac_counts': result = self._GetAutocompleteCounts( *args, **kwargs )
+        else: raise Exception( 'db received an unknown read command: ' + action )
+        
+        return result
+        
+    
+    def _UpdateDB( self, version ):
+        
+        self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
+        
+    
+    def _Vacuum( self ):
+        
+        if not self._fast_big_transaction_wal:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            ideal_page_size = 4096
+            
+        else:
+            
+            ideal_page_size = 1024
+            
+        
+        ( page_size, ) = self._c.execute( 'PRAGMA page_size;' ).fetchone()
+        
+        if page_size != ideal_page_size:
+            
+            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+            self._c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
+            
+        
+        self._c.execute( 'VACUUM' )
+        
+        self._c.execute( 'REPLACE INTO maintenance_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( 'vacuum', HydrusData.GetNow() ) )
+        
+        self._InitDBCursor()
+        
+    
+    def _Write( self, action, *args, **kwargs ):
+        
+        if action == 'update_counts': result = self._UpdateCounts( *args, **kwargs )
+        elif action == 'analyze': result = self._Analyze( *args, **kwargs )
         elif action == 'vacuum': result = self._Vacuum( *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
         

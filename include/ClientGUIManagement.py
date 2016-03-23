@@ -248,10 +248,10 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             
             dc.Clear()
             
-            self._refresh_button.SetLabel( '' )
+            self._refresh_button.SetLabelText( '' )
             self._refresh_button.Disable()
             
-            self._captcha_time_left.SetLabel( '' )
+            self._captcha_time_left.SetLabelText( '' )
             
         elif self._captcha_challenge == '':
             
@@ -265,16 +265,16 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             
             if event.IsAllowed():
                 
-                self._refresh_button.SetLabel( 'get captcha' )
+                self._refresh_button.SetLabelText( 'get captcha' )
                 self._refresh_button.Enable()
                 
             else:
                 
-                self._refresh_button.SetLabel( 'not yet' )
+                self._refresh_button.SetLabelText( 'not yet' )
                 self._refresh_button.Disable()
                 
             
-            self._captcha_time_left.SetLabel( '' )
+            self._captcha_time_left.SetLabelText( '' )
             
         else:
             
@@ -284,10 +284,10 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             
             wx.CallAfter( wx_bmp.Destroy )
             
-            self._refresh_button.SetLabel( 'get new captcha' )
+            self._refresh_button.SetLabelText( 'get new captcha' )
             self._refresh_button.Enable()
             
-            self._captcha_time_left.SetLabel( HydrusData.ConvertTimestampToPrettyExpires( self._captcha_runs_out ) )
+            self._captcha_time_left.SetLabelText( HydrusData.ConvertTimestampToPrettyExpires( self._captcha_runs_out ) )
             
         
         del dc
@@ -297,7 +297,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
         if ready is None:
             
-            self._ready_button.SetLabel( '' )
+            self._ready_button.SetLabelText( '' )
             self._ready_button.Disable()
             
         else:
@@ -305,12 +305,12 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             if ready:
                 
                 self._captcha_entry.Disable()
-                self._ready_button.SetLabel( 'edit' )
+                self._ready_button.SetLabelText( 'edit' )
                 
             else:
                 
                 self._captcha_entry.Enable()
-                self._ready_button.SetLabel( 'ready' )
+                self._ready_button.SetLabelText( 'ready' )
                 
             
             self._ready_button.Enable()
@@ -366,7 +366,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         else: event.Skip()
         
     
-    def EventReady( self, event ): self._DrawReady( not self._ready_button.GetLabel() == 'edit' )
+    def EventReady( self, event ): self._DrawReady( not self._ready_button.GetLabelText() == 'edit' )
     
     def EventRefreshCaptcha( self, event ):
         
@@ -401,7 +401,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
     
     # change this to hold (current challenge, bmp, timestamp it runs out, value, whethere ready to post)
-    def GetValues( self ): return ( self._captcha_challenge, self._bitmap, self._captcha_runs_out, self._captcha_entry.GetValue(), self._ready_button.GetLabel() == 'edit' )
+    def GetValues( self ): return ( self._captcha_challenge, self._bitmap, self._captcha_runs_out, self._captcha_entry.GetValue(), self._ready_button.GetLabelText() == 'edit' )
     
     def TIMEREvent( self, event ):
         
@@ -921,7 +921,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if self._current_hash is None:
             
-            self._post_info.SetLabel( 'no file selected' )
+            self._post_info.SetLabelText( 'no file selected' )
             
             for ( name, ( field_type, field, default ) ) in self._post_fields.items():
                 
@@ -938,7 +938,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             index = self._sorted_media_hashes.index( self._current_hash )
             
-            self._post_info.SetLabel( HydrusData.ConvertValueRangeToPrettyString( index + 1, num_files ) + ': ' + dump_status_string )
+            self._post_info.SetLabelText( HydrusData.ConvertValueRangeToPrettyString( index + 1, num_files ) + ': ' + dump_status_string )
             
             for ( name, field_type, value ) in post_field_info:
                 
@@ -1066,7 +1066,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_RECOVERABLE_ERROR
             dump_status_string = ''
             
-            self._progress_info.SetLabel( 'Flood limit hit, retrying.' )
+            self._progress_info.SetLabelText( 'Flood limit hit, retrying.' )
             
             self._next_dump_time = HydrusData.GetNow() + self._flood_time
             
@@ -1077,7 +1077,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             HydrusData.ShowText( phrase )
             
-            self._progress_info.SetLabel( 'error: ' + phrase )
+            self._progress_info.SetLabelText( 'error: ' + phrase )
             
             self._start_button.Disable()
             
@@ -1088,7 +1088,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_UNRECOVERABLE_ERROR
             dump_status_string = ''
             
-            self._progress_info.SetLabel( 'thread specified does not exist!' )
+            self._progress_info.SetLabelText( 'thread specified does not exist!' )
             
             self._start_button.Disable()
             
@@ -1112,7 +1112,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if self._next_dump_index == len( self._sorted_media_hashes ):
             
-            self._progress_info.SetLabel( 'done - ' + str( self._num_dumped ) + ' dumped' )
+            self._progress_info.SetLabelText( 'done - ' + str( self._num_dumped ) + ' dumped' )
             
             self._start_button.Disable()
             
@@ -1148,7 +1148,7 @@ class ManagementPanelDumper( ManagementPanel ):
     
     def EventStartButton( self, event ):
         
-        if self._start_button.GetLabel() in ( 'start', 'continue' ):
+        if self._start_button.GetLabelText() in ( 'start', 'continue' ):
             
             for ( name, ( field_type, field ) ) in self._thread_fields.items():
                 
@@ -1166,7 +1166,7 @@ class ManagementPanelDumper( ManagementPanel ):
                         try: int( thread_id )
                         except:
                             
-                            self._progress_info.SetLabel( 'set thread_id field first' )
+                            self._progress_info.SetLabelText( 'set thread_id field first' )
                             
                             return
                             
@@ -1179,7 +1179,7 @@ class ManagementPanelDumper( ManagementPanel ):
             for ( field_type, field ) in self._thread_fields.values(): field.Disable()
             
             self._dumping = True
-            self._start_button.SetLabel( 'pause' )
+            self._start_button.SetLabelText( 'pause' )
             
             if self._next_dump_time == 0: self._next_dump_time = HydrusData.GetNow() + 5
             
@@ -1191,8 +1191,8 @@ class ManagementPanelDumper( ManagementPanel ):
             
             self._dumping = False
             
-            if self._num_dumped == 0: self._start_button.SetLabel( 'start' )
-            else: self._start_button.SetLabel( 'continue' )
+            if self._num_dumped == 0: self._start_button.SetLabelText( 'start' )
+            else: self._start_button.SetLabelText( 'continue' )
             
         
     
@@ -1324,10 +1324,10 @@ class ManagementPanelDumper( ManagementPanel ):
                             
                         
                     
-                    if wait: self._progress_info.SetLabel( 'waiting for captcha' )
+                    if wait: self._progress_info.SetLabelText( 'waiting for captcha' )
                     else:
                         
-                        self._progress_info.SetLabel( 'dumping' ) # 100% cpu time here - may or may not be desirable
+                        self._progress_info.SetLabelText( 'dumping' ) # 100% cpu time here - may or may not be desirable
                         
                         post_fields = []
                         
@@ -1388,12 +1388,12 @@ class ManagementPanelDumper( ManagementPanel ):
                     wx.CallAfter( self.CALLBACKDoneDump, hash, post_field_info, status, phrase )
                     
                 
-            else: self._progress_info.SetLabel( 'dumping next file in ' + str( time_left ) + ' seconds' )
+            else: self._progress_info.SetLabelText( 'dumping next file in ' + str( time_left ) + ' seconds' )
             
         else:
             
-            if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
-            else: self._progress_info.SetLabel( 'paused after ' + str( self._num_dumped ) + ' files dumped' )
+            if self._num_dumped == 0: self._progress_info.SetLabelText( 'will dump to ' + self._imageboard.GetName() )
+            else: self._progress_info.SetLabelText( 'paused after ' + str( self._num_dumped ) + ' files dumped' )
             
         
     
@@ -1435,7 +1435,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._pending_queries_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'pending queries' )
         
-        self._pending_queries_listbox = wx.ListBox( self._pending_queries_panel, size = ( -1, 200 ) )
+        self._pending_queries_listbox = wx.ListBox( self._pending_queries_panel, size = ( -1, 100 ) )
         
         self._advance_button = wx.Button( self._pending_queries_panel, label = u'\u2191' )
         self._advance_button.Bind( wx.EVT_BUTTON, self.EventAdvance )
@@ -1448,6 +1448,9 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._query_input = wx.TextCtrl( self._pending_queries_panel, style = wx.TE_PROCESS_ENTER )
         self._query_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self._query_paste = wx.Button( self._pending_queries_panel, label = 'paste queries' )
+        self._query_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
         
         self._get_tags_if_redundant = wx.CheckBox( self._gallery_downloader_panel, label = 'get tags even if file is already in db' )
         self._get_tags_if_redundant.Bind( wx.EVT_CHECKBOX, self.EventGetTagsIfRedundant )
@@ -1483,8 +1486,13 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         queue_hbox.AddF( self._pending_queries_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_MIXED )
         
+        input_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        input_hbox.AddF( self._query_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        input_hbox.AddF( self._query_paste, CC.FLAGS_MIXED )
+        
         self._pending_queries_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_queries_panel.AddF( self._query_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_queries_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -1574,9 +1582,9 @@ class ManagementPanelGalleryImport( ManagementPanel ):
                 
             
         
-        if self._overall_status.GetLabel() != overall_status:
+        if self._overall_status.GetLabelText() != overall_status:
             
-            self._overall_status.SetLabel( overall_status )
+            self._overall_status.SetLabelText( overall_status )
             
         
         self._overall_gauge.SetRange( overall_range )
@@ -1637,14 +1645,14 @@ class ManagementPanelGalleryImport( ManagementPanel ):
             self._gallery_cancel_button.Disable()
             
         
-        if self._gallery_status.GetLabel() != gallery_status:
+        if self._gallery_status.GetLabelText() != gallery_status:
             
-            self._gallery_status.SetLabel( gallery_status )
+            self._gallery_status.SetLabelText( gallery_status )
             
         
-        if self._current_action.GetLabel() != current_action:
+        if self._current_action.GetLabelText() != current_action:
             
-            self._current_action.SetLabel( current_action )
+            self._current_action.SetLabelText( current_action )
             
         
     
@@ -1733,12 +1741,15 @@ class ManagementPanelGalleryImport( ManagementPanel ):
                 
                 self._gallery_import.PendQuery( query )
                 
-                self._query_input.SetValue( '' )
-                
-                self._Update()
-                
             
-        else: event.Skip()
+            self._query_input.SetValue( '' )
+            
+            self._Update()
+            
+        else:
+            
+            event.Skip()
+            
         
     
     def EventMenu( self, event ):
@@ -1762,6 +1773,41 @@ class ManagementPanelGalleryImport( ManagementPanel ):
                 self._gallery_import.SetImportTagOptions( import_tag_options )
                 
             else: event.Skip()
+            
+        
+    
+    def EventPaste( self, event ):
+    
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            raw_text = data.GetText()
+            
+            try:
+                
+                for query in HydrusData.SplitByLinesep( raw_text ):
+                    
+                    if query != '':
+                        
+                        self._gallery_import.PendQuery( query )
+                        
+                    
+                
+                self._Update()
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        else:
+            
+            wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
         
     
@@ -1843,9 +1889,9 @@ class ManagementPanelHDDImport( ManagementPanel ):
         
         ( ( overall_status, ( overall_value, overall_range ) ), paused ) = self._hdd_import.GetStatus()
         
-        if self._overall_status.GetLabel() != overall_status:
+        if self._overall_status.GetLabelText() != overall_status:
             
-            self._overall_status.SetLabel( overall_status )
+            self._overall_status.SetLabelText( overall_status )
             
         
         self._overall_gauge.SetRange( overall_range )
@@ -1893,9 +1939,9 @@ class ManagementPanelHDDImport( ManagementPanel ):
                 
             
         
-        if self._current_action.GetLabel() != current_action:
+        if self._current_action.GetLabelText() != current_action:
             
-            self._current_action.SetLabel( current_action )
+            self._current_action.SetLabelText( current_action )
             
         
     
@@ -1972,7 +2018,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         self._pending_page_urls_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'pending page urls' )
         
-        self._pending_page_urls_listbox = wx.ListBox( self._pending_page_urls_panel, size = ( -1, 200 ) )
+        self._pending_page_urls_listbox = wx.ListBox( self._pending_page_urls_panel, size = ( -1, 100 ) )
         
         self._advance_button = wx.Button( self._pending_page_urls_panel, label = u'\u2191' )
         self._advance_button.Bind( wx.EVT_BUTTON, self.EventAdvance )
@@ -1985,6 +2031,9 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         self._page_url_input = wx.TextCtrl( self._pending_page_urls_panel, style = wx.TE_PROCESS_ENTER )
         self._page_url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self._page_url_paste = wx.Button( self._pending_page_urls_panel, label = 'paste urls' )
+        self._page_url_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
         
         self._download_image_links = wx.CheckBox( self._page_of_images_panel, label = 'download image links' )
         self._download_image_links.Bind( wx.EVT_CHECKBOX, self.EventDownloadImageLinks )
@@ -2009,8 +2058,13 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         queue_hbox.AddF( self._pending_page_urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_MIXED )
         
+        input_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        input_hbox.AddF( self._page_url_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        input_hbox.AddF( self._page_url_paste, CC.FLAGS_MIXED )
+        
         self._pending_page_urls_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_page_urls_panel.AddF( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_page_urls_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -2085,9 +2139,9 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
                 
             
         
-        if self._overall_status.GetLabel() != overall_status:
+        if self._overall_status.GetLabelText() != overall_status:
             
-            self._overall_status.SetLabel( overall_status )
+            self._overall_status.SetLabelText( overall_status )
             
         
         self._overall_gauge.SetRange( overall_range )
@@ -2124,14 +2178,14 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
                 
             
         
-        if self._parser_status.GetLabel() != parser_status:
+        if self._parser_status.GetLabelText() != parser_status:
             
-            self._parser_status.SetLabel( parser_status )
+            self._parser_status.SetLabelText( parser_status )
             
         
-        if self._current_action.GetLabel() != current_action:
+        if self._current_action.GetLabelText() != current_action:
             
-            self._current_action.SetLabel( current_action )
+            self._current_action.SetLabelText( current_action )
             
         
     
@@ -2202,7 +2256,10 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
                 self._Update()
                 
             
-        else: event.Skip()
+        else:
+            
+            event.Skip()
+            
         
     
     def EventMenu( self, event ):
@@ -2220,6 +2277,41 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
                 self._page_of_images_import.SetImportFileOptions( import_file_options )
                 
             else: event.Skip()
+            
+        
+    
+    def EventPaste( self, event ):
+    
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            raw_text = data.GetText()
+            
+            try:
+                
+                for page_url in HydrusData.SplitByLinesep( raw_text ):
+                    
+                    if page_url != '':
+                        
+                        self._page_of_images_import.PendPageURL( page_url )
+                        
+                    
+                
+                self._Update()
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        else:
+            
+            wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
         
     
@@ -2339,7 +2431,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         if self._current_petition is None:
             
-            self._action_text.SetLabel( '' )
+            self._action_text.SetLabelText( '' )
             self._reason_text.SetValue( '' )
             self._contents.Clear()
             self._process.Disable()
@@ -2353,7 +2445,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             ( action_text, action_colour ) = self._current_petition.GetActionTextAndColour()
             
-            self._action_text.SetLabel( action_text )
+            self._action_text.SetLabelText( action_text )
             self._action_text.SetForegroundColour( action_colour )
             
             reason = self._current_petition.GetReason()
@@ -2399,7 +2491,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _DrawNumPetitions( self ):
         
-        self._num_petitions_text.SetLabel( HydrusData.ConvertIntToPrettyString( self._num_petitions ) + ' petitions' )
+        self._num_petitions_text.SetLabelText( HydrusData.ConvertIntToPrettyString( self._num_petitions ) + ' petitions' )
         
         if self._num_petitions > 0: self._get_petition.Enable()
         else: self._get_petition.Disable()
@@ -2516,7 +2608,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             
         
-        self._num_petitions_text.SetLabel( u'Fetching\u2026' )
+        self._num_petitions_text.SetLabelText( u'Fetching\u2026' )
         
         self._controller.CallToThread( do_it )
         
@@ -2871,9 +2963,9 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         ( watcher_status, ( overall_status, ( overall_value, overall_range ) ), check_now, paused ) = self._thread_watcher_import.GetStatus()
         
-        if self._overall_status.GetLabel() != overall_status:
+        if self._overall_status.GetLabelText() != overall_status:
             
-            self._overall_status.SetLabel( overall_status )
+            self._overall_status.SetLabelText( overall_status )
             
         
         self._overall_gauge.SetRange( overall_range )
@@ -2924,14 +3016,14 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
             self._thread_check_now_button.Enable()
             
         
-        if self._watcher_status.GetLabel() != watcher_status:
+        if self._watcher_status.GetLabelText() != watcher_status:
             
-            self._watcher_status.SetLabel( watcher_status )
+            self._watcher_status.SetLabelText( watcher_status )
             
         
-        if self._current_action.GetLabel() != current_action:
+        if self._current_action.GetLabelText() != current_action:
             
-            self._current_action.SetLabel( current_action )
+            self._current_action.SetLabelText( current_action )
             
         
     

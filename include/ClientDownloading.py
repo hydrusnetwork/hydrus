@@ -218,15 +218,6 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     job_key.SetVariable( 'popup_text_1', url_string + ' - initialising' )
     
-    def hook( gauge_value, gauge_range ):
-        
-        if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
-        else: text = url_string + ' - ' + HydrusData.ConvertValueRangeToPrettyString( gauge_value, gauge_range )
-        
-        job_key.SetVariable( 'popup_text_1', text )
-        job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
-        
-    
     ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
     
     try:
@@ -259,7 +250,11 @@ def THREADDownloadURL( job_key, url, url_string ):
                 
                 gauge_value += len( chunk )
                 
-                hook( gauge_value, gauge_range )
+                if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
+                else: text = url_string + ' - ' + HydrusData.ConvertValueRangeToBytes( gauge_value, gauge_range )
+                
+                job_key.SetVariable( 'popup_text_1', text )
+                job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
                 
             
         
@@ -296,6 +291,147 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         job_key.SetVariable( 'popup_text_1', url_string + ' had already been deleted!' )
         
+    
+    job_key.Finish()
+    
+def THREADDownloadURLs( job_key, urls, title ):
+    
+    job_key.SetVariable( 'popup_text_1', title + ' - initialising' )
+    
+    num_successful = 0
+    num_redundant = 0
+    num_deleted = 0
+    num_failed = 0
+    
+    successful_hashes = set()
+    
+    for ( i, url ) in enumerate( urls ):
+        
+        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+        
+        if should_quit:
+            
+            break
+            
+        
+        job_key.SetVariable( 'popup_text_1', title + ' - ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( urls ) ) )
+        job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( urls ) ) )
+        
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+        
+        try:
+            
+            response = ClientNetworking.RequestsGet( url, stream = True )
+            
+            if 'content-length' in response.headers:
+                
+                gauge_range = int( response.headers[ 'content-length' ] )
+                
+            else:
+                
+                gauge_range = None
+                
+            
+            gauge_value = 0
+            
+            with open( temp_path, 'wb' ) as f:
+                
+                for chunk in response.iter_content( chunk_size = 65536 ):
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        return
+                        
+                    
+                    f.write( chunk )
+                    
+                    gauge_value += len( chunk )
+                    
+                    if gauge_range is None: text = 'downloading - ' + HydrusData.ConvertIntToBytes( gauge_value )
+                    else: text = 'downloading - '  + HydrusData.ConvertValueRangeToBytes( gauge_value, gauge_range )
+                    
+                    job_key.SetVariable( 'popup_text_2', text )
+                    job_key.SetVariable( 'popup_gauge_2', ( gauge_value, gauge_range ) )
+                    
+                
+            
+            job_key.SetVariable( 'popup_text_2', 'importing' )
+            
+            ( result, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path )
+            
+        except HydrusExceptions.NetworkException:
+            
+            job_key.Cancel()
+            
+            raise
+            
+        except Exception as e:
+            
+            HydrusData.Print( url + ' failed to import!' )
+            HydrusData.PrintException( e )
+            
+            num_failed += 1
+            
+            continue
+            
+        finally:
+            
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
+        if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
+            
+            if result == CC.STATUS_SUCCESSFUL:
+                
+                num_successful += 1
+                
+            else:
+                
+                num_redundant += 1
+                
+            
+            successful_hashes.add( hash )
+            
+        elif result == CC.STATUS_DELETED:
+            
+            num_deleted += 1
+            
+        
+    
+    text_components = []
+    
+    if num_successful > 0:
+        
+        text_components.append( HydrusData.ConvertIntToPrettyString( num_successful ) + ' successful' )
+        
+    
+    if num_redundant > 0:
+        
+        text_components.append( HydrusData.ConvertIntToPrettyString( num_redundant ) + ' already in db' )
+        
+    
+    if num_deleted > 0:
+        
+        text_components.append( HydrusData.ConvertIntToPrettyString( num_deleted ) + ' deleted' )
+        
+    
+    if num_failed > 0:
+        
+        text_components.append( HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed (errors written to log)' )
+        
+    
+    job_key.SetVariable( 'popup_text_1', title + ' - ' + ', '.join( text_components ) )
+    
+    if len( successful_hashes ) > 0:
+        
+        job_key.SetVariable( 'popup_files', successful_hashes )
+        
+    
+    job_key.DeleteVariable( 'popup_gauge_1' )
+    job_key.DeleteVariable( 'popup_text_2' )
+    job_key.DeleteVariable( 'popup_gauge_2' )
     
     job_key.Finish()
     

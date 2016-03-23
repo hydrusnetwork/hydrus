@@ -3135,7 +3135,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._bytes.Hide()
                     
-                    self._bytes_text.SetLabel( 'used ' + HydrusData.ConvertIntToBytes( used_monthly_data ) + monthly_requests_text + ' this month' )
+                    self._bytes_text.SetLabelText( 'used ' + HydrusData.ConvertIntToBytes( used_monthly_data ) + monthly_requests_text + ' this month' )
                     
                 else:
                     
@@ -3144,7 +3144,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._bytes.SetRange( max_monthly_data )
                     self._bytes.SetValue( used_monthly_data )
                     
-                    self._bytes_text.SetLabel( 'used ' + HydrusData.ConvertValueRangeToPrettyString( used_monthly_data, max_monthly_data ) + monthly_requests_text + ' this month' )
+                    self._bytes_text.SetLabelText( 'used ' + HydrusData.ConvertValueRangeToPrettyString( used_monthly_data, max_monthly_data ) + monthly_requests_text + ' this month' )
                     
                 
             
@@ -3156,9 +3156,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 account_type_string = account_type.ConvertToString()
                 
-                if self._account_type.GetLabel() != account_type_string:
+                if self._account_type.GetLabelText() != account_type_string:
                     
-                    self._account_type.SetLabel( account_type_string )
+                    self._account_type.SetLabelText( account_type_string )
                     
                     self._account_type.Wrap( 400 )
                     
@@ -3175,7 +3175,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._age.SetValue( min( now - created, expires - created ) )
                     
                 
-                self._age_text.SetLabel( account.GetExpiresString() )
+                self._age_text.SetLabelText( account.GetExpiresString() )
                 
                 max_num_bytes = account_type.GetMaxBytes()
                 max_num_requests = account_type.GetMaxRequests()
@@ -3192,7 +3192,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._bytes.SetValue( used_bytes )
                     
                 
-                self._bytes_text.SetLabel( account.GetUsedBytesString() )
+                self._bytes_text.SetLabelText( account.GetUsedBytesString() )
                 
                 if max_num_requests is None: self._requests.Hide()
                 else:
@@ -3203,7 +3203,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._requests.SetValue( min( used_requests, max_num_requests ) )
                     
                 
-                self._requests_text.SetLabel( account.GetUsedRequestsString() )
+                self._requests_text.SetLabelText( account.GetUsedRequestsString() )
                 
                 if service_type in HC.REPOSITORIES:
                     
@@ -3225,7 +3225,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         self._updates.SetValue( num_updates_downloaded )
                         
                     
-                    self._updates_text.SetLabel( self._service.GetUpdateStatus() )
+                    self._updates_text.SetLabelText( self._service.GetUpdateStatus() )
                     
                     if account.HasPermission( HC.RESOLVE_PETITIONS ):
                         
@@ -3249,7 +3249,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             self._thumbnails.SetRange( self._num_thumbs )
             self._thumbnails.SetValue( min( self._num_local_thumbs, self._num_thumbs ) )
             
-            self._thumbnails_text.SetLabel( HydrusData.ConvertValueRangeToPrettyString( self._num_local_thumbs, self._num_thumbs ) + ' thumbnails downloaded' )
+            self._thumbnails_text.SetLabelText( HydrusData.ConvertValueRangeToPrettyString( self._num_local_thumbs, self._num_thumbs ) + ' thumbnails downloaded' )
             
         
         def _DisplayService( self ):
@@ -3267,11 +3267,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                     total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
                     
-                    self._files_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
+                    self._files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
                     
                     num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                     
-                    self._deleted_files_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
+                    self._deleted_files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
                     
                     if service_type == HC.FILE_REPOSITORY:
                         
@@ -3288,26 +3288,26 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
                     num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
                     
-                    self._tags_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HydrusData.ConvertIntToPrettyString( num_namespaces ) + ' namespaces, ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HydrusData.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
+                    self._tags_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HydrusData.ConvertIntToPrettyString( num_namespaces ) + ' namespaces, ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HydrusData.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
                     
                     if service_type == HC.TAG_REPOSITORY:
                         
                         num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
                         
-                        self._deleted_tags_text.SetLabel( HydrusData.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings' )
+                        self._deleted_tags_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings' )
                         
                     
                 elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
                     num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                     
-                    self._ratings_text.SetLabel( str( num_ratings ) + ' files rated' )
+                    self._ratings_text.SetLabelText( str( num_ratings ) + ' files rated' )
                     
                 elif service_type == HC.LOCAL_BOORU:
                     
                     num_shares = service_info[ HC.SERVICE_INFO_NUM_SHARES ]
                     
-                    self._num_shares.SetLabel( HydrusData.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
+                    self._num_shares.SetLabelText( HydrusData.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
                     
                 
             
@@ -3634,7 +3634,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             try:
                 
-                self._updates_text.SetLabel( self._service.GetUpdateStatus() )
+                self._updates_text.SetLabelText( self._service.GetUpdateStatus() )
                 
             except wx.PyDeadObjectError:
                 
@@ -3691,7 +3691,7 @@ class FrameSeedCache( ClientGUICommon.Frame ):
         
         ( status, ( total_processed, total ) ) = self._seed_cache.GetStatus()
         
-        self._text.SetLabel( status )
+        self._text.SetLabelText( status )
         
         self.Layout()
         

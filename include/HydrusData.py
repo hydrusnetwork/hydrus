@@ -576,6 +576,10 @@ def ConvertUnitToInt( unit ):
     elif unit == 'MB': return 1048576
     elif unit == 'GB': return 1073741824
     
+def ConvertValueRangeToBytes( value, range ):
+    
+    return ConvertIntToBytes( value ) + '/' + ConvertIntToBytes( range )
+    
 def ConvertValueRangeToPrettyString( value, range ):
     
     return ConvertIntToPrettyString( value ) + '/' + ConvertIntToPrettyString( range )
@@ -644,7 +648,7 @@ def GetSiblingProcessPorts( instance ):
             
             try:
                 
-                ( pid, create_time ) = result.split( os.linesep )
+                ( pid, create_time ) = SplitByLinesep( result )
                 
                 pid = int( pid )
                 create_time = float( create_time )
@@ -735,7 +739,7 @@ def IsAlreadyRunning( instance ):
             
             try:
                 
-                ( pid, create_time ) = result.split( os.linesep )
+                ( pid, create_time ) = SplitByLinesep( result )
                 
                 pid = int( pid )
                 create_time = float( create_time )
@@ -802,6 +806,34 @@ def Print( text ):
     
     print( ToByteString( text ) )
     
+ShowText = Print
+
+def PrintException( e ):
+    
+    if isinstance( e, HydrusExceptions.ShutdownException ):
+        
+        return
+        
+    
+    etype = type( e )
+    
+    value = ToUnicode( e )
+    
+    trace_list = traceback.format_stack()
+    
+    trace = ''.join( trace_list )
+    
+    message = ToUnicode( etype.__name__ ) + ': ' + ToUnicode( value ) + os.linesep + ToUnicode( trace )
+    
+    Print( '' )
+    Print( 'Exception:' )
+    
+    DebugPrint( message )
+    
+    time.sleep( 1 )
+    
+ShowException = PrintException
+
 def Profile( code, g, l ):
     
     profile = cProfile.Profile()
@@ -868,35 +900,19 @@ def RestartProcess():
     
     os.execl( sys.executable, sys.executable, *sys.argv )
     
-def ShowExceptionDefault( e ):
-    
-    if isinstance( e, HydrusExceptions.ShutdownException ):
-        
-        return
-        
-    
-    etype = type( e )
-    
-    value = ToUnicode( e )
-    
-    trace_list = traceback.format_stack()
-    
-    trace = ''.join( trace_list )
-    
-    message = ToUnicode( etype.__name__ ) + ': ' + ToUnicode( value ) + os.linesep + ToUnicode( trace )
-    
-    Print( '' )
-    Print( 'Exception:' )
-    
-    DebugPrint( message )
-    
-    time.sleep( 1 )
-    
-ShowException = ShowExceptionDefault
-
-ShowText = Print
-
 def SplayListForDB( xs ): return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
+
+def SplitByLinesep( raw_text ):
+    
+    if '\r\n' in raw_text:
+        
+        return raw_text.split( '\r\n' )
+        
+    else:
+        
+        return raw_text.split( '\n' )
+        
+    
 
 def SplitIteratorIntoChunks( iterator, n ):
     
@@ -1938,7 +1954,7 @@ class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
         return num
         
     
-    def IterateContentUpdateChunks( self, chunk_weight = 5000 ):
+    def IterateContentUpdateChunks( self, chunk_weight = 1250 ):
         
         data_types = [ HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ]
         actions = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ]
