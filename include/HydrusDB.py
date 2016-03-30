@@ -19,7 +19,6 @@ class HydrusDB( object ):
     
     DB_NAME = 'hydrus'
     READ_WRITE_ACTIONS = []
-    WRITE_SPECIAL_ACTIONS = []
     UPDATE_WAIT = 2
     
     def __init__( self, controller, db_path, no_wal = False ):
@@ -103,6 +102,11 @@ class HydrusDB( object ):
                 raise Exception( 'Could not initialise the db! Error written to the log!' )
                 
             
+        
+    
+    def _AttachExternalDatabases( self ):
+        
+        pass
         
     
     def _CleanUpCaches( self ):
@@ -234,6 +238,10 @@ class HydrusDB( object ):
                 
             
         
+        self._c.execute( 'ATTACH ":memory:" AS mem;' )
+        
+        self._AttachExternalDatabases()
+        
     
     def _ManageDBError( self, job, e ):
         
@@ -244,11 +252,7 @@ class HydrusDB( object ):
         
         job_type = job.GetType()
         
-        action = job.GetAction()
-        
-        args = job.GetArgs()
-        
-        kwargs = job.GetKWArgs()
+        ( action, args, kwargs ) = job.GetCallableTuple()
         
         in_transaction = False
         
@@ -257,16 +261,22 @@ class HydrusDB( object ):
             if job_type == 'read': self._c.execute( 'BEGIN DEFERRED' )
             elif job_type in ( 'read_write', 'write' ): self._c.execute( 'BEGIN IMMEDIATE' )
             
-            if job_type != 'write_special': in_transaction = True
+            in_transaction = True
             
             if job_type in ( 'read', 'read_write' ): result = self._Read( action, *args, **kwargs )
-            elif job_type in ( 'write', 'write_special' ): result = self._Write( action, *args, **kwargs )
+            elif job_type in ( 'write' ): result = self._Write( action, *args, **kwargs )
             
-            if job_type != 'write_special': self._c.execute( 'COMMIT' )
+            self._c.execute( 'COMMIT' )
             
-            for ( topic, args, kwargs ) in self._pubsubs: self._controller.pub( topic, *args, **kwargs )
+            for ( topic, args, kwargs ) in self._pubsubs:
+                
+                self._controller.pub( topic, *args, **kwargs )
+                
             
-            if job.IsSynchronous(): job.PutResult( result )
+            if job.IsSynchronous():
+                
+                job.PutResult( result )
+                
             
         except Exception as e:
             
@@ -296,14 +306,20 @@ class HydrusDB( object ):
         raise NotImplementedError()
         
     
-    def pub_after_commit( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
+    def pub_after_commit( self, topic, *args, **kwargs ):
+        
+        self._pubsubs.append( ( topic, args, kwargs ) )
+        
     
     def CurrentlyDoingJob( self ):
         
         return self._currently_doing_job
         
     
-    def LoopIsFinished( self ): return self._loop_finished
+    def LoopIsFinished( self ):
+        
+        return self._loop_finished
+        
     
     def MainLoop( self ):
         
@@ -328,7 +344,7 @@ class HydrusDB( object ):
             
             try:
                 
-                ( priority, job ) = self._jobs.get( timeout = 0.1 )
+                ( priority, job ) = self._jobs.get( timeout = 0.5 )
                 
                 self._currently_doing_job = True
                 
@@ -340,7 +356,7 @@ class HydrusDB( object ):
                     
                     if HydrusGlobals.db_profile_mode:
                         
-                        HydrusData.ShowText( 'Profiling ' + job.GetType() + ' ' + job.GetAction() )
+                        HydrusData.ShowText( 'Profiling ' + job.ToString() )
                         
                         HydrusData.Profile( 'self._ProcessJob( job )', globals(), locals() )
                         
@@ -366,8 +382,10 @@ class HydrusDB( object ):
                 
                 self._controller.pub( 'refresh_status' )
                 
-            except Queue.Empty: pass # no jobs this second; let's see if we should shutdown
-            
+            except Queue.Empty:
+                
+                pass # no jobs in the past little while; let's just check if we should shutdown
+                
             
         
         self._CleanUpCaches()
@@ -384,7 +402,7 @@ class HydrusDB( object ):
         
         synchronous = True
         
-        job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
+        job = HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
         
         if self._controller.ModelIsShutdown():
             
@@ -401,7 +419,10 @@ class HydrusDB( object ):
         return self._ready_to_serve_requests
         
     
-    def Shutdown( self ): self._local_shutdown = True
+    def Shutdown( self ):
+        
+        self._local_shutdown = True
+        
     
     def SimpleRead( self, action, *args, **kwargs ):
         
@@ -420,10 +441,9 @@ class HydrusDB( object ):
     
     def Write( self, action, priority, synchronous, *args, **kwargs ):
         
-        if action in self.WRITE_SPECIAL_ACTIONS: job_type = 'write_special'
-        else: job_type = 'write'
+        job_type = 'write'
         
-        job = HydrusData.JobDatabase( action, job_type, synchronous, *args, **kwargs )
+        job = HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
         
         if self._controller.ModelIsShutdown():
             

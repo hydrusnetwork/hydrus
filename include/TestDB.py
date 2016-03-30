@@ -39,6 +39,16 @@ class TestClientDB( unittest.TestCase ):
         
         c.execute( 'DELETE FROM current_files;' )
         c.execute( 'DELETE FROM files_info;' )
+        
+        del c
+        del db
+        
+        mappings_db_path = self._db._db_path[:-3] + '.mappings.db'
+        
+        db = sqlite3.connect( mappings_db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+        
+        c = db.cursor()
+        
         c.execute( 'DELETE FROM mappings;' )
         
     
@@ -87,11 +97,11 @@ class TestClientDB( unittest.TestCase ):
         
         self._clear_db()
         
-        result = self._read( 'autocomplete_predicates', search_text = 'c' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c' )
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'autocomplete_predicates', search_text = 'series:' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'series:' )
         
         self.assertEqual( result, [] )
         
@@ -119,7 +129,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', search_text = 'c', add_namespaceless = True )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c', add_namespaceless = True )
         
         preds = set()
         
@@ -132,7 +142,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', search_text = 'c', add_namespaceless = False )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c', add_namespaceless = False )
         
         preds = set()
         
@@ -145,13 +155,13 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', search_text = 'ser' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'ser' )
         
         self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'autocomplete_predicates', search_text = 'series:c' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'series:c' )
         
         pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } )
         
@@ -163,7 +173,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', search_text = 'car', exact_match = True )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'car', exact_match = True )
         
         pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } )
         
@@ -175,7 +185,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', search_text = 'c', exact_match = True )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c', exact_match = True )
         
         self.assertEqual( result, [] )
         

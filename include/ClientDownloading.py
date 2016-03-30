@@ -158,12 +158,13 @@ def GetImageboardThreadURLs( thread_url ):
     elif is_8chan:
         
         json_url = 'http://8ch.net/' + board + '/res/' + thread_id + '.json'
+        html_url = 'http://8ch.net/' + board + '/res/' + thread_id + '.html'
         
         if board not in _8CHAN_BOARDS_TO_MEDIA_HOSTS:
             
             try:
                 
-                response = ClientNetworking.RequestsGet( thread_url )
+                response = ClientNetworking.RequestsGet( html_url )
                 
                 thread_html = response.content
                 
@@ -499,7 +500,9 @@ def ParseImageboardThreadURL( thread_url ):
             raise Exception()
             
         
-    except: raise Exception ( 'Could not understand that url!' )
+    except:
+        
+        raise Exception ( 'Could not understand that url!' )
     
     is_4chan = '4chan.org' in host
     is_8chan = '8ch.net' in host

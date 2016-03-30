@@ -10,7 +10,7 @@ import os
 
 class JobKey( object ):
     
-    def __init__( self, pausable = False, cancellable = False, only_when_idle = False, only_start_if_unbusy = False ):
+    def __init__( self, pausable = False, cancellable = False, only_when_idle = False, only_start_if_unbusy = False, stop_time = None ):
         
         self._key = HydrusData.GenerateKey()
         
@@ -18,6 +18,7 @@ class JobKey( object ):
         self._cancellable = cancellable
         self._only_when_idle = only_when_idle
         self._only_start_if_unbusy = only_start_if_unbusy
+        self._stop_time = stop_time
         
         self._deleted = threading.Event()
         self._begun = threading.Event()
@@ -38,11 +39,42 @@ class JobKey( object ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
+    def _CheckCancelTests( self ):
+        
+        if not self._cancelled.is_set():
+            
+            should_cancel = False
+            
+            if HydrusThreading.IsThreadShuttingDown():
+                
+                should_cancel = True
+                
+            
+            if self._only_when_idle and not HydrusGlobals.client_controller.CurrentlyIdle():
+                
+                should_cancel = True
+                
+            
+            if self._stop_time is not None:
+                
+                if HydrusData.TimeHasPassed( self._stop_time ):
+                    
+                    should_cancel = True
+                    
+                
+            
+            if should_cancel:
+                
+                self.Cancel()
+                
+            
+        
+    
     def Begin( self ): self._begun.set()
     
     def CanBegin( self ):
         
-        if self._only_when_idle and not HydrusGlobals.client_controller.CurrentlyIdle():
+        if self.IsCancelled():
             
             return False
             
@@ -105,10 +137,14 @@ class JobKey( object ):
     
     def IsCancelled( self ):
         
+        self._CheckCancelTests()
+        
         return HydrusThreading.IsThreadShuttingDown() or self._cancelled.is_set()
         
     
     def IsDeleted( self ):
+        
+        self._CheckCancelTests()
         
         return HydrusThreading.IsThreadShuttingDown() or self._deleted.is_set()
         
@@ -190,15 +226,13 @@ class JobKey( object ):
             
             time.sleep( 0.1 )
             
-            if HydrusThreading.IsThreadShuttingDown() or self.IsDone(): break
+            if self.IsDone():
+                
+                break
+                
             
         
-        if HydrusThreading.IsThreadShuttingDown() or self.IsCancelled():
-            
-            should_quit = True
-            
-        
-        if self._only_when_idle and not HydrusGlobals.client_controller.CurrentlyIdle():
+        if self.IsCancelled():
             
             should_quit = True
             

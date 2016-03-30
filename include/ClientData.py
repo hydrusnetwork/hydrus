@@ -1367,21 +1367,21 @@ class ServiceRepository( ServiceRestricted ):
     
     def Sync( self, only_when_idle = False, stop_time = None ):
         
-        job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
-        
-        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-        
-        if should_quit:
-            
-            return
-            
-        
-        if self._info[ 'paused' ]:
+        if self.IsPaused():
             
             return
             
         
         if not self.CanDownloadUpdate() and not self.CanProcessUpdate():
+            
+            return
+            
+        
+        job_key = ClientThreading.JobKey( pausable = False, cancellable = True, only_when_idle = only_when_idle, stop_time = stop_time )
+        
+        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+        
+        if should_quit:
             
             return
             
@@ -1402,21 +1402,6 @@ class ServiceRepository( ServiceRestricted ):
             try:
                 
                 while self.CanDownloadUpdate():
-                    
-                    if only_when_idle:
-                        
-                        if not HydrusGlobals.client_controller.CurrentlyIdle():
-                            
-                            break
-                            
-                        
-                    else:
-                        
-                        if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
-                            
-                            break
-                            
-                        
                     
                     if options[ 'pause_repo_sync' ]:
                         
@@ -1510,6 +1495,12 @@ class ServiceRepository( ServiceRestricted ):
                     num_updates_downloaded += 1
                     
                 
+            except HydrusExceptions.ServerBusyException:
+                
+                job_key.SetVariable( 'popup_text_1', 'Server was too busy to respond for now, will continue with processing.' )
+                
+                time.sleep( 3 )
+                
             except Exception as e:
                 
                 if 'Could not connect' in str( e ):
@@ -1525,21 +1516,6 @@ class ServiceRepository( ServiceRestricted ):
                 
             
             while self.CanProcessUpdate():
-                
-                if only_when_idle:
-                    
-                    if not HydrusGlobals.client_controller.CurrentlyIdle():
-                        
-                        break
-                        
-                    
-                else:
-                    
-                    if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
-                        
-                        break
-                        
-                    
                 
                 if options[ 'pause_repo_sync' ]:
                     
@@ -1601,16 +1577,6 @@ class ServiceRepository( ServiceRestricted ):
                     
                     should_break = False
                     
-                    if only_when_idle and not HydrusGlobals.client_controller.CurrentlyIdle():
-                        
-                        should_break = True
-                        
-                    
-                    if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
-                        
-                        should_break = True
-                        
-                    
                     if options[ 'pause_repo_sync' ]:
                         
                         should_break = True
@@ -1661,7 +1627,7 @@ class ServiceRepository( ServiceRestricted ):
                     HydrusGlobals.client_controller.pub( 'splash_set_title_text', self._name + ' - ' + update_index_string + subupdate_index_string )
                     job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'processing' )
                     
-                    ( did_it_all, c_u_p_weight_processed ) = HydrusGlobals.client_controller.WriteSynchronous( 'content_update_package', self._service_key, content_update_package, job_key, only_when_idle )
+                    ( did_it_all, c_u_p_weight_processed ) = HydrusGlobals.client_controller.WriteSynchronous( 'content_update_package', self._service_key, content_update_package, job_key )
                     
                     total_content_weight_processed += c_u_p_weight_processed
                     

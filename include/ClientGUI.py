@@ -552,16 +552,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._controller.pub( 'notify_new_undo' )
         
     
-    def _DeleteOrphans( self ):
-        
-        text = 'This will iterate through the client\'s file store, deleting anything that is no longer needed. It happens automatically every few days, but you can force it here. If you have a lot of files, it will take a few minutes. A popup message will show its status.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES: self._controller.Write( 'delete_orphans' )
-            
-        
-    
     def _DeletePending( self, service_key ):
         
         service = self._controller.GetServicesManager().GetService( service_key )
@@ -866,7 +856,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'rebalance_client_files' ), p( '&Rebalance File Storage' ), p( 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.' ) )
-            #submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'check_db_integrity' ), p( 'Check Database Integrity' ) )
@@ -2274,7 +2263,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._controller.pub( 'notify_new_sessions' )
                 
-            elif command == 'delete_orphans': self._DeleteOrphans()
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'delete_service_info': self._DeleteServiceInfo()
             elif command == 'exit': self.Exit()

@@ -2,6 +2,7 @@ import ClientConstants as CC
 import HydrusConstants as HC
 import HydrusNATPunch
 import os
+import random
 import time
 import unittest
 
@@ -11,9 +12,9 @@ class TestNATPunch( unittest.TestCase ):
         
         internal_client = HydrusNATPunch.GetLocalIP()
         
-        internal_port = 1050
+        internal_port = random.randint( 1000, 1500 )
         
-        external_port = 1051
+        external_port = random.randint( 1000, 1500 )
         
         description_tcp = 'hydrus test tcp'
         description_udp = 'hydrus test udp'

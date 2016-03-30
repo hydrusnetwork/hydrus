@@ -296,7 +296,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if len( media_results ) > 0:
                 
-                ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, media_results, shortcuts )
+                canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
+                
+                canvas_window = ClientGUICanvas.CanvasMediaListCustomFilter( canvas_frame, self._page_key, media_results, shortcuts )
+                
+                canvas_frame.SetCanvas( canvas_window )
                 
             
         
@@ -436,7 +440,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             if first_media is not None and first_media.GetLocationsManager().HasLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
             else: first_hash = None
             
-            ClientGUICanvas.CanvasFullscreenMediaListBrowser( self.GetTopLevelParent(), self._page_key, media_results, first_hash )
+            canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
+            
+            canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, media_results, first_hash )
+            
+            canvas_frame.SetCanvas( canvas_window )
             
         
     
@@ -446,7 +454,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( media_results ) > 0:
             
-            ClientGUICanvas.CanvasFullscreenMediaListFilterInbox( self.GetTopLevelParent(), self._page_key, media_results )
+            canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
+            
+            canvas_window = ClientGUICanvas.CanvasMediaListFilterInbox( canvas_frame, self._page_key, media_results )
+            
+            canvas_frame.SetCanvas( canvas_window )
             
         
     

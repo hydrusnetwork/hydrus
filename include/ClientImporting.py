@@ -2233,6 +2233,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             total_new_urls = 0
             
             urls_to_add = set()
+            urls_to_add_ordered = []
             
             prefix = 'synchronising gallery query'
             
@@ -2318,6 +2319,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         else:
                             
                             urls_to_add.add( url )
+                            urls_to_add_ordered.append( url )
                             
                             new_urls_this_page += 1
                             total_new_urls += 1
@@ -2337,7 +2339,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._last_checked = HydrusData.GetNow()
             
-            for url in urls_to_add:
+            urls_to_add_ordered.reverse()
+            
+            # 'first' urls are now at the end, so the seed_cache should stay roughly in oldest->newest order
+            
+            for url in urls_to_add_ordered:
                 
                 if not self._seed_cache.HasSeed( url ):
                     

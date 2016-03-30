@@ -102,7 +102,6 @@ class DB( HydrusDB.HydrusDB ):
     
     DB_NAME = 'server'
     READ_WRITE_ACTIONS = []
-    WRITE_SPECIAL_ACTIONS = []
     
     def _AccountTypeExists( self, service_id, title ): return self._c.execute( 'SELECT 1 FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
     
@@ -460,6 +459,36 @@ class DB( HydrusDB.HydrusDB ):
         if len( affected_timestamps ) > 0: self._RefreshUpdateCache( service_id, affected_timestamps )
         
     
+    def _AttachExternalDatabases( self ):
+        
+        mappings_db_path = self._db_path[:-3] + '.mappings.db'
+        
+        if not os.path.exists( mappings_db_path ):
+            
+            db = sqlite3.connect( mappings_db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+            
+            c = db.cursor()
+            
+            c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) );' )
+            c.execute( 'CREATE INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
+            c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
+            c.execute( 'CREATE INDEX mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
+            c.execute( 'CREATE INDEX mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
+            
+            c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
+            c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
+            c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
+            
+            c.execute( 'PRAGMA journal_mode = WAL;' )
+            c.execute( 'PRAGMA synchronous = 1;' )
+            
+            del c
+            del db
+            
+        
+        self._c.execute( 'ATTACH ? AS mappings_external;', ( mappings_db_path, ) )
+        
+    
     def _Ban( self, service_id, action, admin_account_id, subject_account_ids, reason_id, expires = None, lifetime = None ):
         
         splayed_subject_account_ids = HydrusData.SplayListForDB( subject_account_ids )
@@ -644,16 +673,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
         
         self._c.execute( 'CREATE TABLE ip_addresses ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, ip TEXT, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-        
-        self._c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) );' )
-        self._c.execute( 'CREATE INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
-        self._c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
-        self._c.execute( 'CREATE INDEX mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
-        self._c.execute( 'CREATE INDEX mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
-        
-        self._c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
-        self._c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
-        self._c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
         
         self._c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
         self._c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
@@ -1838,6 +1857,10 @@ class DB( HydrusDB.HydrusDB ):
         HydrusData.Print( 'backing up: copying db file' )
         shutil.copy2( self._db_path, os.path.join( backup_path, self.DB_NAME + '.db' ) )
         
+        HydrusData.Print( 'backing up: copying mappings db file' )
+        mappings_db_path = self._db_path[:-3] + '.mappings.db'
+        shutil.copy2( mappings_db_path, os.path.join( backup_path, self.DB_NAME + '.mappings.db' ) )
+        
         HydrusData.Print( 'backing up: copying files' )
         HydrusPaths.MirrorTree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
         
@@ -2018,6 +2041,8 @@ class DB( HydrusDB.HydrusDB ):
                 service_id = self._GetServiceId( service_key )
                 
                 self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                self._c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( service_id, ) )
+                self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) )
                 
                 update_dir = ServerFiles.GetExpectedUpdateDir( service_key )
                 
@@ -2329,6 +2354,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateDB( self, version ):
         
+        HydrusData.Print( 'The server is updating to version ' + str( version + 1 ) )
+        
         if version == 155:
             
             results = self._c.execute( 'SELECT service_id, account_type_id, account_type FROM account_types;' ).fetchall()
@@ -2498,6 +2525,24 @@ class DB( HydrusDB.HydrusDB ):
         if version == 188:
             
             self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
+            
+        
+        if version == 198:
+            
+            HydrusData.Print( 'exporting mappings to external db' )
+            
+            self._c.execute( 'INSERT INTO mappings_external.mappings SELECT * FROM main.mappings;' )
+            
+            self._c.execute( 'DROP TABLE main.mappings;' )
+            
+            self._c.execute( 'INSERT INTO mappings_external.mapping_petitions SELECT * FROM main.mapping_petitions;' )
+            
+            self._c.execute( 'DROP TABLE main.mapping_petitions;' )
+            
+            HydrusData.Print( 'analyzing new external db' )
+            
+            self._c.execute( 'ANALYZE mappings;' )
+            self._c.execute( 'ANALYZE mapping_petitions;' )
             
         
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )

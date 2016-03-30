@@ -31,8 +31,6 @@ class FullscreenHoverFrame( wx.Frame ):
         self.SetBackgroundColour( wx.WHITE )
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
-        tlp = self.GetParent().GetTopLevelParent()
-        
         self._timer_check_show = wx.Timer( self, id = ClientGUICanvas.ID_TIMER_HOVER_SHOW )
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventCheckIfShouldShow, id = ClientGUICanvas.ID_TIMER_HOVER_SHOW )
@@ -116,21 +114,21 @@ class FullscreenHoverFrame( wx.Frame ):
                 
                 mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
                 
-                current_focus = wx.Window.FindFocus()
+                current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
                 
-                tlp = wx.GetTopLevelParent( current_focus )
+                canvas_parent_tlp = wx.GetTopLevelParent( self.GetParent() )
                 
-                my_parent_in_focus_tree = False
-                
-                while tlp is not None:
+                if current_focus_tlp in ( self, canvas_parent_tlp ):
                     
-                    if tlp == self.GetParent(): my_parent_in_focus_tree = True
+                    focus_is_good = True
                     
-                    tlp = tlp.GetParent()
+                else:
+                    
+                    focus_is_good = False
                     
                 
-                ready_to_show = in_position and not mouse_is_over_something_important and my_parent_in_focus_tree and not dialog_open and not menu_open
-                ready_to_hide = not menu_open and ( not in_position or dialog_open or not my_parent_in_focus_tree )
+                ready_to_show = in_position and not mouse_is_over_something_important and focus_is_good and not dialog_open and not menu_open
+                ready_to_hide = not menu_open and ( not in_position or dialog_open or not focus_is_good )
                 
                 if ready_to_show:
                     

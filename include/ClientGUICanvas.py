@@ -637,9 +637,13 @@ class AnimationBar( wx.Window ):
             
         
     
-class Canvas( object ):
+class Canvas( wx.Window ):
     
-    def __init__( self, image_cache, claim_focus = True ):
+    BORDER = wx.SIMPLE_BORDER
+    
+    def __init__( self, parent, image_cache, claim_focus = True ):
+        
+        wx.Window.__init__( self, parent, style = self.BORDER )
         
         self._file_service_key = CC.LOCAL_FILE_SERVICE_KEY
         self._image_cache = image_cache
@@ -1189,22 +1193,15 @@ class Canvas( object ):
         
         if media is not None:
             
-            if not self.IsShownOnScreen():
+            locations_manager = media.GetLocationsManager()
+            
+            if not locations_manager.HasLocal():
                 
                 media = None
                 
-            else:
+            elif HC.options[ 'mime_media_viewer_actions' ][ media.GetDisplayMedia().GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
                 
-                locations_manager = media.GetLocationsManager()
-                
-                if not locations_manager.HasLocal():
-                    
-                    media = None
-                    
-                elif HC.options[ 'mime_media_viewer_actions' ][ media.GetDisplayMedia().GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
-                    
-                    media = None
-                    
+                media = None
                 
             
         
@@ -1282,9 +1279,11 @@ class Canvas( object ):
     
 class CanvasWithDetails( Canvas ):
     
-    def __init__( self, *args, **kwargs ):
+    BORDER = wx.NO_BORDER
+    
+    def __init__( self, parent, image_cache ):
         
-        Canvas.__init__( self, *args, **kwargs )
+        Canvas.__init__( self, parent, image_cache )
         
         self._hover_commands = ClientGUIHoverFrames.FullscreenHoverFrameCommands( self, self._canvas_key )
         self._hover_tags = ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self._canvas_key )
@@ -1500,12 +1499,11 @@ class CanvasWithDetails( Canvas ):
         return info_string
         
     
-class CanvasPanel( Canvas, wx.Window ):
+class CanvasPanel( Canvas ):
     
     def __init__( self, parent, page_key ):
         
-        wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER )
-        Canvas.__init__( self, HydrusGlobals.client_controller.GetCache( 'preview' ), claim_focus = False )
+        Canvas.__init__( self, parent, HydrusGlobals.client_controller.GetCache( 'preview' ), claim_focus = False )
         
         self._page_key = page_key
         
@@ -1670,27 +1668,66 @@ class CanvasPanel( Canvas, wx.Window ):
             
         
     
-class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails, ClientGUICommon.FrameThatResizes ):
+class CanvasFrame( ClientGUICommon.FrameThatResizes ):
     
-    def __init__( self, my_parent, page_key, media_results ):
+    def __init__( self, parent ):
         
-        ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client media viewer' )
-        CanvasWithDetails.__init__( self, HydrusGlobals.client_controller.GetCache( 'fullscreen' ) )
+        ClientGUICommon.FrameThatResizes.__init__( self, parent, resize_option_prefix = 'fs_', title = 'hydrus client media viewer' )
+        
+    
+    def Close( self ):
+        
+        if HC.PLATFORM_OSX and self.IsFullScreen():
+            
+            self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
+            
+        
+        self.Destroy()
+        
+    
+    def FullscreenSwitch( self ):
+        
+        if self.IsFullScreen():
+            
+            self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
+            
+        else:
+            
+            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
+            
+        
+    
+    def SetCanvas( self, canvas_window ):
+        
+        self._canvas_window = canvas_window
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._canvas_window, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self.Show( True )
+        
+        wx.GetApp().SetTopWindow( self )
+        
+        self.Bind( wx.EVT_CLOSE, self._canvas_window.EventClose )
+        
+    
+class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
+    
+    def __init__( self, parent, page_key, media_results ):
+        
+        CanvasWithDetails.__init__( self, parent, HydrusGlobals.client_controller.GetCache( 'fullscreen' ) )
         ClientMedia.ListeningMediaList.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._page_key = page_key
         
         self._just_started = True
         
-        self.Show( True )
-        
-        wx.GetApp().SetTopWindow( self )
-        
         self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventCursorHide, id = ID_TIMER_CURSOR_HIDE )
-        
-        self.Bind( wx.EVT_CLOSE, self.EventClose )
         
         self.Bind( wx.EVT_MOTION, self.EventDrag )
         self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
@@ -1708,9 +1745,7 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         
         HydrusGlobals.client_controller.pub( 'set_focus', self._page_key, self._current_media )
         
-        if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
-        
-        wx.CallAfter( self.Destroy )
+        self.GetParent().Close()
         
     
     def _DoManualPan( self, delta_x, delta_y ):
@@ -1720,12 +1755,6 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
         
         self._DrawCurrentMedia()
-        
-    
-    def _FullscreenSwitch( self ):
-        
-        if self.IsFullScreen(): self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
-        else: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
         
     
     def _GetIndexString( self ):
@@ -1963,13 +1992,16 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
         event.Skip()
         
     
-    def EventFullscreenSwitch( self, event ): self._FullscreenSwitch()
+    def EventFullscreenSwitch( self, event ):
+        
+        self.GetParent().FullscreenSwitch()
+        
     
     def FullscreenSwitch( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
             
-            self._FullscreenSwitch()
+            self.GetParent().FullscreenSwitch()
             
         
     
@@ -2023,11 +2055,11 @@ class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetai
             
         
     
-class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
+class CanvasMediaListFilter( CanvasMediaList ):
     
     def __init__( self, my_parent, page_key, media_results ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, media_results )
+        CanvasMediaList.__init__( self, my_parent, page_key, media_results )
         
         self._kept = set()
         self._deleted = set()
@@ -2107,11 +2139,14 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                                 
                             
                         
-                        CanvasFullscreenMediaList._Close( self )
+                        CanvasMediaList._Close( self )
                         
                     
                 
-            else: CanvasFullscreenMediaList._Close( self )
+            else:
+                
+                CanvasMediaList._Close( self )
+                
             
         
     
@@ -2242,7 +2277,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                 elif command == 'back': self.EventBack( event )
                 elif command == 'close': self._Close()
                 elif command == 'delete': self.EventDelete( event )
-                elif command == 'fullscreen_switch': self._FullscreenSwitch()
+                elif command == 'fullscreen_switch': self.GetParent().FullscreenSwitch()
                 elif command == 'filter': self._Close()
                 elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
                 elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
@@ -2304,11 +2339,11 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             
         
     
-class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
+class CanvasMediaListFilterInbox( CanvasMediaListFilter ):
     
     def __init__( self, my_parent, page_key, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, media_results )
+        CanvasMediaListFilter.__init__( self, my_parent, page_key, media_results )
         
         HydrusGlobals.client_controller.sub( self, 'Keep', 'canvas_archive' )
         HydrusGlobals.client_controller.sub( self, 'Delete', 'canvas_delete' )
@@ -2320,11 +2355,11 @@ class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
         self._hover_commands.SetAlwaysArchive( True )
         
     
-class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
+class CanvasMediaListNavigable( CanvasMediaList ):
     
     def __init__( self, my_parent, page_key, media_results ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, media_results )
+        CanvasMediaList.__init__( self, my_parent, page_key, media_results )
         
         HydrusGlobals.client_controller.sub( self, 'Archive', 'canvas_archive' )
         HydrusGlobals.client_controller.sub( self, 'Delete', 'canvas_delete' )
@@ -2422,11 +2457,11 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
             
         
     
-class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
+class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def __init__( self, my_parent, page_key, media_results, first_hash ):
         
-        CanvasFullscreenMediaListNavigable.__init__( self, my_parent, page_key, media_results )
+        CanvasMediaListNavigable.__init__( self, my_parent, page_key, media_results )
         
         self._timer_slideshow = wx.Timer( self, id = ID_TIMER_SLIDESHOW )
         
@@ -2537,7 +2572,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete( data )
-                elif command == 'fullscreen_switch': self._FullscreenSwitch()
+                elif command == 'fullscreen_switch': self.GetParent().FullscreenSwitch()
                 elif command == 'first': self._ShowFirst()
                 elif command == 'last': self._ShowLast()
                 elif command == 'previous': self._ShowPrevious()
@@ -2713,8 +2748,14 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         menu.AppendSeparator()
         
-        if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'exit fullscreen' )
-        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
+        if self.GetParent().IsFullScreen():
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'exit fullscreen' )
+            
+        else:
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
+            
         
         if self._timer_slideshow.IsRunning():
             
@@ -2750,11 +2791,11 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             
         
     
-class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable ):
+class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
     
-    def __init__( self, my_parent, page_key, media_results, shortcuts ):
+    def __init__( self, parent, page_key, media_results, shortcuts ):
         
-        CanvasFullscreenMediaListNavigable.__init__( self, my_parent, page_key, media_results )
+        CanvasMediaListNavigable.__init__( self, parent, page_key, media_results )
         
         self._shortcuts = shortcuts
         
@@ -2819,7 +2860,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                     elif data == 'delete': self._Delete()
                     elif data == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
                     elif data == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
-                    elif data == 'fullscreen_switch': self._FullscreenSwitch()
+                    elif data == 'fullscreen_switch': self.GetParent().FullscreenSwitch()
                     elif data == 'inbox': self._Inbox()
                     elif data == 'manage_ratings': self._ManageRatings()
                     elif data == 'manage_tags': wx.CallLater( 1, self._ManageTags )
@@ -2975,7 +3016,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete( data )
-                elif command == 'fullscreen_switch': self._FullscreenSwitch()
+                elif command == 'fullscreen_switch': self.GetParent().FullscreenSwitch()
                 elif command == 'first': self._ShowFirst()
                 elif command == 'last': self._ShowLast()
                 elif command == 'previous': self._ShowPrevious()
@@ -3120,19 +3161,25 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu.AppendSeparator()
         
-        if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'exit fullscreen' )
-        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
+        if self.GetParent().IsFullScreen():
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'exit fullscreen' )
+            
+        else:
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
+            
         
         HydrusGlobals.client_controller.PopupMenu( self, menu )
         
         event.Skip()
         
     
-class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
+class RatingsFilterFrameLike( CanvasMediaListFilter ):
     
     def __init__( self, my_parent, page_key, service_key, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
+        CanvasMediaListFilter.__init__( self, my_parent, page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._rating_service_key = service_key
         self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
@@ -3175,11 +3222,11 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
                             self._deleted = set()
                             
                         
-                        CanvasFullscreenMediaList._Close( self )
+                        CanvasMediaList._Close( self )
                         
                     
                 
-            else: CanvasFullscreenMediaList._Close( self )
+            else: CanvasMediaList._Close( self )
             
         
     

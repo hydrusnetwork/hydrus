@@ -47,7 +47,6 @@ class SpecificServicesDB( HydrusDB.HydrusDB ):
     
     DB_NAME = 'ac_cache_specific_services'
     READ_WRITE_ACTIONS = []
-    WRITE_SPECIAL_ACTIONS = [ 'vacuum' ]
     UPDATE_WAIT = 0
     
     def _AddFiles( self, hash_ids ):
@@ -296,6 +295,8 @@ class SpecificServicesDB( HydrusDB.HydrusDB ):
     
     def _Vacuum( self ):
         
+        self._c.execute( 'COMMIT' )
+        
         if not self._fast_big_transaction_wal:
             
             self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
@@ -324,6 +325,8 @@ class SpecificServicesDB( HydrusDB.HydrusDB ):
         
         self._InitDBCursor()
         
+        self._c.execute( 'BEGIN IMMEDIATE' )
+        
     
     def _Write( self, action, *args, **kwargs ):
         
@@ -345,7 +348,6 @@ class CombinedFilesDB( HydrusDB.HydrusDB ):
     
     DB_NAME = 'ac_cache_combined_files'
     READ_WRITE_ACTIONS = []
-    WRITE_SPECIAL_ACTIONS = [ 'vacuum' ]
     UPDATE_WAIT = 0
     
     def _Analyze( self, stale_time_delta, stop_time ):
@@ -454,6 +456,8 @@ class CombinedFilesDB( HydrusDB.HydrusDB ):
     
     def _Vacuum( self ):
         
+        self._c.execute( 'COMMIT' )
+        
         if not self._fast_big_transaction_wal:
             
             self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
@@ -481,6 +485,8 @@ class CombinedFilesDB( HydrusDB.HydrusDB ):
         self._c.execute( 'REPLACE INTO maintenance_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( 'vacuum', HydrusData.GetNow() ) )
         
         self._InitDBCursor()
+        
+        self._c.execute( 'BEGIN IMMEDIATE' )
         
     
     def _Write( self, action, *args, **kwargs ):

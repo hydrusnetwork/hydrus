@@ -362,7 +362,10 @@ def DAEMONUPnP( controller ):
         
         our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
         
-    except: return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
+    except:
+        
+        return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
+        
     
     services = controller.GetServicesManager().GetServices( ( HC.LOCAL_BOORU, ) )
     

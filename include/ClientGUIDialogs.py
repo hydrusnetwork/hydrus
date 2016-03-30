@@ -2614,57 +2614,38 @@ class DialogPageChooser( Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            self._button_hidden = wx.Button( self )
-            self._button_hidden.Hide()
-            
-            self._button_1 = wx.Button( self, label = '', id = 1 )
-            self._button_2 = wx.Button( self, label = '', id = 2 )
-            self._button_3 = wx.Button( self, label = '', id = 3 )
-            self._button_4 = wx.Button( self, label = '', id = 4 )
-            self._button_5 = wx.Button( self, label = '', id = 5 )
-            self._button_6 = wx.Button( self, label = '', id = 6 )
-            self._button_7 = wx.Button( self, label = '', id = 7 )
-            self._button_8 = wx.Button( self, label = '', id = 8 )
-            self._button_9 = wx.Button( self, label = '', id = 9 )
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            gridbox = wx.GridSizer( 0, 3 )
-            
-            gridbox.AddF( self._button_7, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_8, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_9, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_4, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_5, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_6, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_1, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_2, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_3, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( gridbox )
-            
-            self.SetInitialSize( ( 420, 210 ) )
-            
-        
         Dialog.__init__( self, parent, 'new page', position = 'center' )
         
-        InitialiseControls()
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        PopulateControls()
+        self._button_hidden = wx.Button( self )
+        self._button_hidden.Hide()
         
-        ArrangeControls()
+        self._button_1 = wx.Button( self, label = '', id = 1 )
+        self._button_2 = wx.Button( self, label = '', id = 2 )
+        self._button_3 = wx.Button( self, label = '', id = 3 )
+        self._button_4 = wx.Button( self, label = '', id = 4 )
+        self._button_5 = wx.Button( self, label = '', id = 5 )
+        self._button_6 = wx.Button( self, label = '', id = 6 )
+        self._button_7 = wx.Button( self, label = '', id = 7 )
+        self._button_8 = wx.Button( self, label = '', id = 8 )
+        self._button_9 = wx.Button( self, label = '', id = 9 )
+        
+        gridbox = wx.GridSizer( 0, 3 )
+        
+        gridbox.AddF( self._button_7, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._button_8, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._button_9, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._button_4, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._button_5, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._button_6, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._button_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._button_2, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._button_3, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( gridbox )
+        
+        self.SetInitialSize( ( 420, 210 ) )
         
         self._services = HydrusGlobals.client_controller.GetServicesManager().GetServices()
         
@@ -2673,7 +2654,6 @@ class DialogPageChooser( Dialog ):
         self._InitButtons( 'home' )
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
         self._button_hidden.SetFocus()
@@ -2878,12 +2858,6 @@ class DialogPageChooser( Dialog ):
             
         
         self._button_hidden.SetFocus()
-        
-    
-    def EventCharHook( self, event ):
-        
-        if event.KeyCode == wx.WXK_ESCAPE: self.EndModal( wx.ID_OK )
-        else: event.Skip()
         
     
     def EventMenu( self, event ):
@@ -3660,13 +3634,14 @@ class DialogSelectBooru( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._boorus, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
         ( x, y ) = self.GetEffectiveMinSize()
         
-        if x < 320: x = 320
+        x = max( x, 320 )
+        y = max( y, 320 )
         
         self.SetInitialSize( ( x, y ) )
         
@@ -3873,56 +3848,41 @@ class DialogCheckFromListOfStrings( Dialog ):
     
     def __init__( self, parent, title, list_of_strings, checked_strings = None ):
         
-        if checked_strings is None: checked_strings = []
-        
-        def InitialiseControls():
-            
-            self._strings = wx.CheckListBox( self )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            
-    
-        def PopulateControls():
-            
-            for s in list_of_strings: self._strings.Append( s )
-            
-            for s in checked_strings:
-                
-                i = self._strings.FindString( s )
-                
-                if i != wx.NOT_FOUND: self._strings.Check( i, True )
-                
-            
-        
-        def ArrangeControls():
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._ok, CC.FLAGS_MIXED )
-            hbox.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._strings, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 320: x = 320
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, title )
         
-        InitialiseControls()
+        if checked_strings is None: checked_strings = []
         
-        PopulateControls()
+        self._strings = wx.CheckListBox( self )
         
-        ArrangeControls()
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        
+        for s in list_of_strings: self._strings.Append( s )
+        
+        for s in checked_strings:
+            
+            i = self._strings.FindString( s )
+            
+            if i != wx.NOT_FOUND: self._strings.Check( i, True )
+            
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._ok, CC.FLAGS_MIXED )
+        hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._strings, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 320: x = 320
+        
+        self.SetInitialSize( ( x, y ) )
         
     
     def GetChecked( self ): return self._strings.GetCheckedStrings()
@@ -3931,46 +3891,32 @@ class DialogSelectFromListOfStrings( Dialog ):
     
     def __init__( self, parent, title, list_of_strings ):
         
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            self._strings = wx.ListBox( self )
-            self._strings.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-            self._strings.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, size = ( 0, 0 ) )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetDefault()
-            
-    
-        def PopulateControls():
-            
-            for s in list_of_strings: self._strings.Append( s )
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._strings, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 320: x = 320
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, title )
         
-        InitialiseControls()
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        PopulateControls()
+        self._strings = wx.ListBox( self )
+        self._strings.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self._strings.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
         
-        ArrangeControls()
+        self._ok = wx.Button( self, id = wx.ID_OK, size = ( 0, 0 ) )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetDefault()
+        
+        for s in list_of_strings: self._strings.Append( s )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._strings, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        x = max( x, 320 )
+        y = max( y, 320 )
+        
+        self.SetInitialSize( ( x, y ) )
         
     
     def EventKeyDown( self, event ):
@@ -4693,61 +4639,50 @@ class DialogTextEntry( Dialog ):
     
     def __init__( self, parent, message, default = '', allow_blank = False ):
         
-        def InitialiseControls():
-            
-            self._text = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-            self._text.Bind( wx.EVT_TEXT, self.EventText )
-            self._text.Bind( wx.EVT_TEXT_ENTER, self.EventEnter )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-    
-        def PopulateControls():
-            
-            self._text.SetValue( default )
-            
-            self._CheckText()
-            
-        
-        def ArrangeControls():
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
-            hbox.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
-            
-            st_message = wx.StaticText( self, label = message )
-            
-            st_message.Wrap( 480 )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( st_message, CC.FLAGS_BIG_INDENT )
-            vbox.AddF( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            x = max( x, 250 )
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'enter text', position = 'center' )
         
         self._allow_blank = allow_blank
         
-        InitialiseControls()
+        self._text = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+        self._text.Bind( wx.EVT_TEXT, self.EventText )
+        self._text.Bind( wx.EVT_TEXT_ENTER, self.EventEnter )
         
-        PopulateControls()
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
-        ArrangeControls()
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._text.SetValue( default )
+        
+        self._CheckText()
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
+        hbox.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        
+        st_message = wx.StaticText( self, label = message )
+        
+        st_message.Wrap( 480 )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( st_message, CC.FLAGS_BIG_INDENT )
+        vbox.AddF( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        x = max( x, 250 )
+        
+        self.SetInitialSize( ( x, y ) )
         
     
     def _CheckText( self ):
@@ -4777,61 +4712,40 @@ class DialogYesNo( Dialog ):
     
     def __init__( self, parent, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no' ):
         
-        def InitialiseControls():
-            
-            self._yes = wx.Button( self, id = wx.ID_YES, label = yes_label )
-            self._yes.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._no = wx.Button( self, id = wx.ID_NO, label = no_label )
-            self._no.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-    
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._yes, CC.FLAGS_SMALL_INDENT )
-            hbox.AddF( self._no, CC.FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            text = wx.StaticText( self, label = message )
-            
-            text.Wrap( 480 )
-            
-            vbox.AddF( text, CC.FLAGS_BIG_INDENT )
-            vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, title, position = 'center' )
         
-        InitialiseControls()
+        self._yes = wx.Button( self, id = wx.ID_YES, label = yes_label )
+        self._yes.SetForegroundColour( ( 0, 128, 0 ) )
         
-        PopulateControls()
+        self._no = wx.Button( self, id = wx.ID_NO, label = no_label )
+        self._no.SetForegroundColour( ( 128, 0, 0 ) )
         
-        ArrangeControls()
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._yes, CC.FLAGS_SMALL_INDENT )
+        hbox.AddF( self._no, CC.FLAGS_SMALL_INDENT )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        text = wx.StaticText( self, label = message )
+        
+        text.Wrap( 480 )
+        
+        vbox.AddF( text, CC.FLAGS_BIG_INDENT )
+        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        x = max( x, 250 )
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._yes.SetFocus )
-        
-    
-    def EventCharHook( self, event ):
-        
-        if event.KeyCode == wx.WXK_ESCAPE: self.EndModal( wx.ID_NO )
-        else: event.Skip()
         
     

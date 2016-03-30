@@ -1286,7 +1286,10 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     must_do_a_search = True
                     
                 
-            else: self._current_namespace = ''
+            else:
+                
+                self._current_namespace = ''
+                
             
             half_complete_tag = search_text
             
@@ -1308,7 +1311,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 self._next_updatelist_is_probably_fast = True
                 
             
-            matches = ClientSearch.FilterPredicatesBySearchEntry( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = self._expand_parents )
+            matches = ClientSearch.FilterPredicatesBySearchEntry( half_complete_tag, predicates )
             
             matches = ClientSearch.SortPredicates( matches )
             
@@ -1317,6 +1320,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             if sibling_predicate is not None:
                 
                 self._PutAtTopOfMatches( matches, sibling_predicate )
+                
+            
+            if self._expand_parents:
+                
+                parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                
+                matches = parents_manager.ExpandPredicates( self._tag_service_key, matches )
                 
             
         

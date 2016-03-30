@@ -8,7 +8,7 @@ import HydrusTags
 import re
 import wx
 
-def FilterPredicatesBySearchEntry( search_entry, predicates, service_key = None, expand_parents = False ):
+def FilterPredicatesBySearchEntry( search_entry, predicates ):
     
     tags_to_predicates = {}
     
@@ -25,13 +25,6 @@ def FilterPredicatesBySearchEntry( search_entry, predicates, service_key = None,
     matching_tags = FilterTagsBySearchEntry( search_entry, tags_to_predicates.keys() )
     
     matches = [ tags_to_predicates[ tag ] for tag in matching_tags ]
-    
-    if service_key is not None and expand_parents:
-        
-        parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-        
-        matches = parents_manager.ExpandPredicates( service_key, matches )
-        
     
     return matches
     

@@ -941,6 +941,11 @@ def SplitListIntoChunks( xs, n ):
     
 def TimeHasPassed( timestamp ):
     
+    if timestamp is None:
+        
+        return False
+        
+    
     return GetNow() > timestamp
     
 def TimeHasPassedPrecise( precise_timestamp ):
@@ -1765,13 +1770,11 @@ class EditLogActionEdit( EditLogAction ):
     
 class JobDatabase( object ):
     
-    yaml_tag = u'!JobDatabase'
-    
-    def __init__( self, action, job_type, synchronous, *args, **kwargs ):
+    def __init__( self, job_type, synchronous, action, *args, **kwargs ):
         
-        self._action = action
         self._type = job_type
         self._synchronous = synchronous
+        self._action = action
         self._args = args
         self._kwargs = kwargs
         
@@ -1779,11 +1782,10 @@ class JobDatabase( object ):
         self._result_ready = threading.Event()
         
     
-    def GetAction( self ): return self._action
-    
-    def GetArgs( self ): return self._args
-    
-    def GetKWArgs( self ): return self._kwargs
+    def GetCallableTuple( self ):
+        
+        return ( self._action, self._args, self._kwargs )
+        
     
     def GetResult( self ):
         
@@ -1825,6 +1827,11 @@ class JobDatabase( object ):
         self._result = result
         
         self._result_ready.set()
+        
+    
+    def ToString( self ):
+        
+        return self._type + ' ' + self._action
         
     
 class ServerToClientContentUpdatePackage( HydrusSerialisable.SerialisableBase ):
