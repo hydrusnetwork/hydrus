@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 199</h3></li>
+				<ul>
+					<li>added 'all known files' autocomplete caches, so manage tags dialogs' autocompletes should now always appear quickly</li>
+					<li>the now caches will be created on startup, which may take a few minutes</li>
+					<li>deleted the old tag autocomplete cache</li>
+					<li>wrote a faster initialisation routine for all known files caches</li>
+					<li>fixed an ac_cache cleanup typo</li>
+					<li>the client's (usually gigantic) mappings table is temporarily extracted to an external db file, which should have numerous benefits and perhaps a few drawbacks for now</li>
+					<li>the update will take a few more minutes, and will need lots of disk space, to extract the mappings</li>
+					<li>the server has a very similar external mappings table, so it will also need a while to update, but future admin backup calls will be a lot quicker, due to a much smaller vacuum</li>
+					<li>greatly optimised a mass-membership calculation in tag processing</li>
+					<li>reduced some db check-spam timer that was adding up idle cpu time because of recent ac_cache additions</li>
+					<li>fixed predicate parent sorting</li>
+					<li>if swfrender fails to generate a swf thumbnail within 60 seconds, the client will now dump out (rather than hanging indefinitely)</li>
+					<li>fixed some string-selection dialog layout rules</li>
+					<li>optimised some 'all known files' search queries</li>
+					<li>subscriptions will now append new urls in oldest->newest order, roughly preserving that order in the internal url cache</li>
+					<li>the 8chan thread watcher now accepts .json API urls directly</li>
+					<li>the repository processing routine will handle server_busy errors more gracefully</li>
+					<li>cleaned and refactored most media viewer 'canvas' code, dejankifying a whole bunch of related stuff and generally improving the object hierarchy</li>
+					<li>cleaned up and unified a lot of logic and responsibility for idle checking and shutdown maintenance stop time for some big jobs</li>
+					<li>misc cleanup</li>
+					<li>misc dialog cleanup</li>
+				</ul>
 				<li><h3>version 198</h3></li>
 				<ul>
 					<li>ipfs download now parses directory multihashes</li>
@@ -23,7 +47,7 @@
 					<li>fixed get/setlabel calls across the program to get/setlabeltext, so ampersand characters are handled properly</li>
 					<li>wrote an 'all known files' autocomplete cache db and prepped a bunch of code for it--it should be easy to finish next week</li>
 					<li>added a new regex practise link to the regex dialogs</li>
-					<li>os x release should display better on retina displays</li>
+					<li>os x app release should display better on retina displays</li>
 					<li>misc cleanup</li>
 				</ul>
 				<li><h3>version 197</h3></li>
