@@ -448,17 +448,6 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 query_hash_ids = HydrusGlobals.client_controller.Read( 'file_query_ids', self._file_search_context )
                 
-                query_hash_ids = list( query_hash_ids )
-                
-                limit = self._file_search_context.GetSystemPredicates().GetLimit()
-                
-                if limit is not None:
-                    
-                    random.shuffle( query_hash_ids )
-                    
-                    query_hash_ids = query_hash_ids[ : limit ]
-                    
-                
                 media_results = []
                 
                 i = 0

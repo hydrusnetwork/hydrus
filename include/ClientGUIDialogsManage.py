@@ -62,7 +62,14 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage 4chan pass' )
         
-        ( token, pin, self._timeout ) = HydrusGlobals.client_controller.Read( '4chan_pass' )
+        result = HydrusGlobals.client_controller.Read( 'serialisable_simple', '4chan_pass' )
+        
+        if result is None:
+            
+            result = ( '', '', 0 )
+            
+        
+        ( token, pin, self._timeout ) = result
         
         self._token = wx.TextCtrl( self )
         self._pin = wx.TextCtrl( self )
@@ -129,7 +136,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         token = self._token.GetValue()
         pin = self._pin.GetValue()
         
-        HydrusGlobals.client_controller.Write( '4chan_pass', ( token, pin, self._timeout ) )
+        HydrusGlobals.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -162,7 +169,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             self._timeout = HydrusData.GetNow() + 365 * 24 * 3600
             
         
-        HydrusGlobals.client_controller.Write( '4chan_pass', ( token, pin, self._timeout ) )
+        HydrusGlobals.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
         
         self._SetStatus()
         
@@ -5047,7 +5054,14 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
+            result = HydrusGlobals.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
+            
+            if result is None:
+                
+                result = ( '', '' )
+                
+            
+            ( id, password ) = result
             
             self._id.SetValue( id )
             self._password.SetValue( password )
@@ -5107,7 +5121,14 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         id = self._id.GetValue()
         password = self._password.GetValue()
         
-        HydrusGlobals.client_controller.Write( 'pixiv_account', ( id, password ) )
+        if id == '' and password == '':
+            
+            HydrusGlobals.client_controller.Write( 'serialisable_simple', 'pixiv_account', None )
+            
+        else:
+            
+            HydrusGlobals.client_controller.Write( 'serialisable_simple', 'pixiv_account', ( id, password ) )
+            
         
         self.EndModal( wx.ID_OK )
         
@@ -7567,73 +7588,62 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
 class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent ):
-        
-        def InitialiseControls():
-            
-            self._tag_services = ClientGUICommon.ListBook( self )
-            self._tag_services.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
-            
-            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-            
-            for service in services:
-                
-                service_key = service.GetServiceKey()
-                name = service.GetName()
-                
-                if service_key == default_tag_repository_key: default_name = name
-                
-                page = self._Panel( self._tag_services, service_key )
-                
-                self._tag_services.AddPage( name, page )
-                
-            
-            self._tag_services.Select( default_name )
-            
-        
-        def ArrangeControls():
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            intro = "Here you can set which tags or classes of tags you do not want to see. Input something like 'series:' to censor an entire namespace, or ':' for all namespaced tags, and '' for all unnamespaced tags. You may have to refresh your current queries to see any changes."
-            
-            st = wx.StaticText( self, label = intro )
-            
-            st.Wrap( 350 )
-            
-            vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            self.SetInitialSize( ( -1, 480 ) )
-            
+    def __init__( self, parent, initial_value = None ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'tag censorship' )
         
-        InitialiseControls()
+        self._tag_services = ClientGUICommon.ListBook( self )
+        self._tag_services.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
         
-        PopulateControls()
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
-        ArrangeControls()
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        
+        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            name = service.GetName()
+            
+            if service_key == default_tag_repository_key: default_name = name
+            
+            page = self._Panel( self._tag_services, service_key, initial_value )
+            
+            self._tag_services.AddPage( name, page )
+            
+        
+        self._tag_services.Select( default_name )
+        
+        #
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
+        buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = "Here you can set which tags or classes of tags you do not want to see. Input something like 'series:' to censor an entire namespace, or ':' for all namespaced tags, and '' for all unnamespaced tags. You may have to refresh your current queries to see any changes."
+        
+        st = wx.StaticText( self, label = intro )
+        
+        st.Wrap( 350 )
+        
+        vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        self.SetInitialSize( ( -1, 480 ) )
         
         interested_actions = [ 'set_search_focus' ]
         
@@ -7671,7 +7681,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_key ):
+        def __init__( self, parent, service_key, initial_value = None ):
             
             wx.Panel.__init__( self, parent )
             
@@ -7694,6 +7704,11 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             else: self._blacklist.SetSelection( 1 )
             
             self._tags.AddTags( tags )
+            
+            if initial_value is not None:
+                
+                self._tag_input.SetValue( initial_value )
+                
             
             #
             

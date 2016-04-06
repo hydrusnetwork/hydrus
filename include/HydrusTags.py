@@ -10,23 +10,65 @@ import HydrusExceptions
 import re
 import HydrusGlobals
 
-def CensorshipMatch( tag, censorship ):
+def CensorshipMatch( tag, censorships ):
     
-    if ':' in censorship:
+    for censorship in censorships:
         
-        if censorship == ':': return ':' in tag # ':' - all namespaced tags
-        else: return tag.startswith( censorship )
-        
-    else:
-        
-        if censorship == '': return ':' not in tag # '' - all non namespaced tags
-        else: # 'table' - normal tag, or namespaced version of same
+        if censorship == '': # '' - all non namespaced tags
             
-            if ':' in tag: ( namespace, tag ) = tag.split( ':', 1 )
+            if ':' not in tag:
+                
+                return True
+                
             
-            return tag == censorship
+        elif censorship == ':': # ':' - all namespaced tags
+            
+            if ':' in tag:
+                
+                return True
+                
+            
+        elif ':' in censorship:
+            
+            if censorship.endswith( ':' ): # 'series:' - namespaced tags
+                
+                if tag.startswith( censorship ):
+                    
+                    return True
+                    
+                
+            else: # 'series:evangelion' - exact match with namespace
+                
+                if tag == censorship:
+                    
+                    return True
+                    
+                
+            
+        else:
+            
+            # 'table' - normal tag, or namespaced version of same
+            
+            if ':' in tag:
+                
+                ( namespace, comparison_tag ) = tag.split( ':', 1 )
+                
+                if comparison_tag == censorship:
+                    
+                    return True
+                    
+                
+            else:
+                
+                if tag == censorship:
+                    
+                    return True
+                    
+                
             
         
+    
+    return False
     
 def ConvertTagToSortable( t ):
 

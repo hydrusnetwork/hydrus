@@ -1186,10 +1186,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         tags = { predicate.GetValue() for predicate in predicates }
         
-        tag_censorship_manager = HydrusGlobals.client_controller.GetManager( 'tag_censorship' )
-        
-        tags = tag_censorship_manager.FilterTags( self._tag_service_key, tags )
-        
         if len( tags ) > 0:
             
             if self._expand_parents:
@@ -1204,8 +1200,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     parents.update( some_parents )
                     
-                
-                parents = tag_censorship_manager.FilterTags( self._tag_service_key, parents )
                 
                 self._chosen_tag_callable( tags, parents )
                 
@@ -1335,8 +1329,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _PutAtTopOfMatches( self, matches, predicate ):
         
-        parents = []
-        
         try:
             
             index = matches.index( predicate )
@@ -1345,37 +1337,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             matches.remove( predicate )
             
-            while matches[ index ].GetType() == HC.PREDICATE_TYPE_PARENT:
-                
-                parent = matches[ index ]
-                
-                matches.remove( parent )
-                
-                parents.append( parent )
-                
+        except ValueError:
             
-        except:
-            
-            if predicate.GetType() == HC.PREDICATE_TYPE_TAG:
-                
-                tag = predicate.GetValue()
-                
-                parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-                
-                raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
-                
-                parents = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
-                
-            
-        
-        if self._expand_parents:
-            
-            parents.reverse()
-            
-            for parent in parents:
-                
-                matches.insert( 0, parent )
-                
+            pass
             
         
         matches.insert( 0, predicate )
@@ -2880,11 +2844,17 @@ class ListBoxTags( ListBox ):
                 
                 self._NewSearchPage()
                 
-            elif command in ( 'parent', 'sibling' ):
+            elif command in ( 'censorship', 'parent', 'sibling' ):
                 
                 import ClientGUIDialogsManage
                 
-                if command == 'parent':
+                if command == 'censorship':
+                    
+                    ( tag, ) = self._selected_terms
+                    
+                    with ClientGUIDialogsManage.DialogManageTagCensorship( self, tag ) as dlg: dlg.ShowModal()
+                    
+                elif command == 'parent':
                     
                     with ClientGUIDialogsManage.DialogManageTagParents( self, self._selected_terms ) as dlg: dlg.ShowModal()
                     
@@ -3041,6 +3011,11 @@ class ListBoxTags( ListBox ):
                     else:
                         
                         text = 'selection'
+                        
+                    
+                    if len( self._selected_terms ) == 1:
+                        
+                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'censorship' ), 'censor ' + text )
                         
                     
                     menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'parent' ), 'add parents to ' + text )

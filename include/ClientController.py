@@ -14,14 +14,12 @@ import HydrusGlobals
 import HydrusNetworking
 import HydrusSerialisable
 import HydrusSessions
-import HydrusServer
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
 import ClientDB
 import ClientGUI
 import ClientGUIDialogs
-import ClientLocalServer
 import os
 import psutil
 import random
@@ -58,9 +56,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        db_path = os.path.join( HC.DB_DIR, 'client.db' )
-        
-        return ClientDB.DB( self, db_path, no_wal = self._no_wal )
+        return ClientDB.DB( self, HC.DB_DIR, 'client', no_wal = self._no_wal )
         
     
     def BackupDatabase( self ):
@@ -737,6 +733,8 @@ class Controller( HydrusController.HydrusController ):
                         
                     except:
                         
+                        import ClientLocalServer
+                        
                         self._booru_service = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'This is the local booru.' ) )
                         
                         try:
@@ -805,6 +803,8 @@ class Controller( HydrusController.HydrusController ):
                         wx.CallLater( 1, HydrusData.ShowText, text )
                         
                     except:
+                        
+                        import ClientLocalServer
                         
                         self._local_service = reactor.listenTCP( port, ClientLocalServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ) )
                         
@@ -1007,17 +1007,6 @@ class Controller( HydrusController.HydrusController ):
     def THREADDoFileQuery( self, query_key, search_context ):
         
         query_hash_ids = self.Read( 'file_query_ids', search_context )
-        
-        query_hash_ids = list( query_hash_ids )
-        
-        random.shuffle( query_hash_ids )
-        
-        limit = search_context.GetSystemPredicates().GetLimit()
-        
-        if limit is not None:
-            
-            query_hash_ids = query_hash_ids[ : limit ]
-            
         
         service_key = search_context.GetFileServiceKey()
         

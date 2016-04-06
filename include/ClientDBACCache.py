@@ -21,7 +21,6 @@ import HydrusImageHandling
 import HydrusNATPunch
 import HydrusPaths
 import HydrusSerialisable
-import HydrusServer
 import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
@@ -45,7 +44,6 @@ import HydrusGlobals
 
 class SpecificServicesDB( HydrusDB.HydrusDB ):
     
-    DB_NAME = 'ac_cache_specific_services'
     READ_WRITE_ACTIONS = []
     UPDATE_WAIT = 0
     
@@ -346,7 +344,6 @@ class SpecificServicesDB( HydrusDB.HydrusDB ):
 
 class CombinedFilesDB( HydrusDB.HydrusDB ):
     
-    DB_NAME = 'ac_cache_combined_files'
     READ_WRITE_ACTIONS = []
     UPDATE_WAIT = 0
     

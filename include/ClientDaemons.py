@@ -12,7 +12,6 @@ import HydrusExceptions
 import HydrusImageHandling
 import HydrusNATPunch
 import HydrusPaths
-import HydrusServer
 import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags

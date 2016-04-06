@@ -27,7 +27,13 @@ class JobKey( object ):
         self._paused = threading.Event()
         
         self._yield_pause_period = 10
-        self._last_yield_pause = HydrusData.GetNow() + self._yield_pause_period
+        self._next_yield_pause = HydrusData.GetNow() + self._yield_pause_period
+        
+        self._bigger_pause_period = 100
+        self._next_bigger_pause = HydrusData.GetNow() + self._bigger_pause_period
+        
+        self._longer_pause_period = 1000
+        self._next_longer_pause = HydrusData.GetNow() + self._longer_pause_period
         
         self._variable_lock = threading.Lock()
         self._variables = dict()
@@ -210,11 +216,25 @@ class JobKey( object ):
     
     def WaitIfNeeded( self ):
         
-        if HydrusData.TimeHasPassed( self._last_yield_pause ):
+        if HydrusData.TimeHasPassed( self._next_yield_pause ):
             
             time.sleep( 0.1 )
             
-            self._last_yield_pause = HydrusData.GetNow() + self._yield_pause_period
+            self._next_yield_pause = HydrusData.GetNow() + self._yield_pause_period
+            
+            if HydrusData.TimeHasPassed( self._next_bigger_pause ):
+                
+                time.sleep( 1 )
+                
+                self._next_bigger_pause = HydrusData.GetNow() + self._bigger_pause_period
+                
+                if HydrusData.TimeHasPassed( self._longer_pause_period ):
+                    
+                    time.sleep( 10 )
+                    
+                    self._next_longer_pause = HydrusData.GetNow() + self._longer_pause_period
+                    
+                
             
         
         i_paused = False

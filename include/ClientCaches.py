@@ -946,7 +946,18 @@ class RenderedImageCache( object ):
         
         hash = media.GetHash()
         
-        if target_resolution is None: target_resolution = media.GetResolution()
+        if target_resolution is None:
+            
+            target_resolution = media.GetResolution()
+            
+        
+        ( media_width, media_height ) = media.GetResolution()
+        ( target_width, target_height ) = target_resolution
+        
+        if target_width > media_width or target_height > media_height:
+            
+            target_resolution = media.GetResolution()
+            
         
         key = ( hash, target_resolution )
         
@@ -1149,27 +1160,33 @@ class ThumbnailCache( object ):
         
         display_media = media.GetDisplayMedia()
         
-        mime = display_media.GetMime()
-        
-        if mime in HC.MIMES_WITH_THUMBNAILS:
+        if display_media.GetLocationsManager().ShouldHaveThumbnail():
             
-            hash = display_media.GetHash()
+            mime = display_media.GetMime()
             
-            if not self._data_cache.HasData( hash ):
+            if mime in HC.MIMES_WITH_THUMBNAILS:
                 
-                hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
+                hash = display_media.GetHash()
                 
-                self._data_cache.AddData( hash, hydrus_bitmap )
+                if not self._data_cache.HasData( hash ):
+                    
+                    hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
+                    
+                    self._data_cache.AddData( hash, hydrus_bitmap )
+                    
                 
+                return self._data_cache.GetData( hash )
+                
+            elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
+            elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
+            elif mime == HC.APPLICATION_FLASH: return self._special_thumbs[ 'flash' ]
+            elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
+            else: return self._special_thumbs[ 'hydrus' ]
             
-            return self._data_cache.GetData( hash )
+        else:
             
-        elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
-        elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
-        elif mime == HC.APPLICATION_FLASH: return self._special_thumbs[ 'flash' ]
-        elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
-        else: return self._special_thumbs[ 'hydrus' ]
-        
+            return self._special_thumbs[ 'hydrus' ]
+            
         
     
     def HasThumbnailCached( self, media ):
@@ -1339,6 +1356,18 @@ class TagCensorshipManager( object ):
         self._controller.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
         
     
+    def _CensorshipMatches( self, tag, blacklist, censorships ):
+        
+        if blacklist:
+            
+            return not HydrusTags.CensorshipMatch( tag, censorships )
+            
+        else:
+            
+            return HydrusTags.CensorshipMatch( tag, censorships )
+            
+        
+    
     def GetInfo( self, service_key ):
         
         if service_key in self._service_keys_to_info: return self._service_keys_to_info[ service_key ]
@@ -1347,68 +1376,90 @@ class TagCensorshipManager( object ):
     
     def RefreshData( self ):
         
-        info = self._controller.Read( 'tag_censorship' )
+        rows = self._controller.Read( 'tag_censorship' )
         
-        self._service_keys_to_info = {}
-        self._service_keys_to_predicates = {}
+        self._service_keys_to_info = { service_key : ( blacklist, censorships ) for ( service_key, blacklist, censorships ) in rows }
         
-        for ( service_key, blacklist, censorships ) in info:
+    
+    def FilterStatusesToPairs( self, service_key, statuses_to_pairs ):
+        
+        for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
             
-            self._service_keys_to_info[ service_key ] = ( blacklist, censorships )
-            
-            tag_matches = lambda tag: True in ( HydrusTags.CensorshipMatch( tag, censorship ) for censorship in censorships )
-            
-            if blacklist:
+            if service_key_lookup in self._service_keys_to_info:
                 
-                predicate = lambda tag: not tag_matches( tag )
+                ( blacklist, censorships ) = self._service_keys_to_info[ service_key_lookup ]
                 
-            else:
+                new_statuses_to_pairs = HydrusData.default_dict_set()
                 
-                predicate = tag_matches
+                for ( status, pairs ) in statuses_to_pairs.items():
+                    
+                    new_statuses_to_pairs[ status ] = { ( one, two ) for ( one, two ) in pairs if self._CensorshipMatches( one, blacklist, censorships ) and self._CensorshipMatches( two, blacklist, censorships ) }
+                    
+                
+                statuses_to_pairs = new_statuses_to_pairs
                 
             
-            self._service_keys_to_predicates[ service_key ] = predicate
-            
+        
+        return statuses_to_pairs
         
     
     def FilterServiceKeysToStatusesToTags( self, service_keys_to_statuses_to_tags ):
         
-        filtered_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
-        
-        for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+        if CC.COMBINED_TAG_SERVICE_KEY in self._service_keys_to_info:
             
-            for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
-                
-                if service_key_lookup in self._service_keys_to_predicates:
-                    
-                    combined_predicate = self._service_keys_to_predicates[ service_key_lookup ]
-                    
-                    new_statuses_to_tags = HydrusData.default_dict_set()
-                    
-                    for ( status, tags ) in statuses_to_tags.items():
-                        
-                        new_statuses_to_tags[ status ] = { tag for tag in tags if combined_predicate( tag ) }
-                        
-                    
-                    statuses_to_tags = new_statuses_to_tags
-                    
-                
+            ( blacklist, censorships ) = self._service_keys_to_info[ CC.COMBINED_TAG_SERVICE_KEY ]
             
-            filtered_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
+            service_keys = service_keys_to_statuses_to_tags.keys()
+            
+            for service_key in service_keys:
+                
+                statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+                
+                statuses = statuses_to_tags.keys()
+                
+                for status in statuses:
+                    
+                    tags = statuses_to_tags[ status ]
+                    
+                    statuses_to_tags[ status ] = { tag for tag in tags if self._CensorshipMatches( tag, blacklist, censorships ) }
+                    
+                
             
         
-        return filtered_service_keys_to_statuses_to_tags
+        for ( service_key, ( blacklist, censorships ) ) in self._service_keys_to_info.items():
+            
+            if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                continue
+                
+            
+            if service_key in service_keys_to_statuses_to_tags:
+                
+                statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+                
+                statuses = statuses_to_tags.keys()
+                
+                for status in statuses:
+                    
+                    tags = statuses_to_tags[ status ]
+                    
+                    statuses_to_tags[ status ] = { tag for tag in tags if self._CensorshipMatches( tag, blacklist, censorships ) }
+                    
+                
+            
+        
+        return service_keys_to_statuses_to_tags
         
     
     def FilterTags( self, service_key, tags ):
         
-        for service_key in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
+        for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
             
-            if service_key in self._service_keys_to_predicates:
+            if service_key_lookup in self._service_keys_to_info:
                 
-                predicate = self._service_keys_to_predicates[ service_key ]
+                ( blacklist, censorships ) = self._service_keys_to_info[ service_key_lookup ]
                 
-                tags = { tag for tag in tags if predicate( tag ) }
+                tags = { tag for tag in tags if self._CensorshipMatches( tag, blacklist, censorships ) }
                 
             
         
@@ -2089,12 +2140,14 @@ class WebSessionManagerClient( object ):
                 
             elif name == 'pixiv':
                 
-                ( id, password ) = self._controller.Read( 'pixiv_account' )
+                result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
                 
-                if id == '' and password == '':
+                if result is None:
                     
-                    raise Exception( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
+                    raise HydrusExceptions.DataMissing( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
                     
+                
+                ( id, password ) = result
                 
                 form_fields = {}
                 

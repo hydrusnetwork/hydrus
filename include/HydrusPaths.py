@@ -10,6 +10,23 @@ import tempfile
 import threading
 import traceback
 
+def AppendPathUntilNoConflicts( path ):
+    
+    ( path_absent_ext, ext ) = os.path.splitext( path )
+    
+    good_path_absent_ext = path_absent_ext
+    
+    i = 0
+    
+    while os.path.exists( good_path_absent_ext + ext ):
+        
+        good_path_absent_ext = path_absent_ext + '_' + str( i )
+        
+        i += 1
+        
+    
+    return good_path_absent_ext + ext
+    
 def CleanUpTempPath( os_file_handle, temp_path ):
     
     try:

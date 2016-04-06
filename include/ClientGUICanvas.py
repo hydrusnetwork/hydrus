@@ -124,8 +124,10 @@ class Animation( wx.Window ):
         
         self.SetDoubleBuffered( True )
         
+        ( initial_width, initial_height ) = initial_size
+        
         self._media = media
-        self._video_container = None
+        self._video_container = self._video_container = ClientRendering.RasterContainerVideo( self._media, initial_size )
         
         self._animation_bar = None
         
@@ -143,7 +145,7 @@ class Animation( wx.Window ):
         
         self._paused = start_paused
         
-        self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
+        self._canvas_bmp = wx.EmptyBitmap( initial_width, initial_height, 24 )
         
         self._timer_video = wx.Timer( self, id = ID_TIMER_VIDEO )
         
@@ -154,9 +156,9 @@ class Animation( wx.Window ):
         self.Bind( wx.EVT_KEY_UP, self.EventPropagateKey )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
-        self.EventResize( None )
-        
         self._timer_video.Start( 5, wx.TIMER_CONTINUOUS )
+        
+        self.Refresh()
         
     
     def __del__( self ):
@@ -291,22 +293,15 @@ class Animation( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._video_container is None:
+                ( image_width, image_height ) = self._video_container.GetSize()
+                
+                we_just_zoomed_in = my_width > image_width
+                
+                if we_just_zoomed_in and self._video_container.IsScaled():
                     
-                    self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_width, my_height ) )
+                    full_resolution = self._video_container.GetResolution()
                     
-                else:
-                    
-                    ( image_width, image_height ) = self._video_container.GetSize()
-                    
-                    we_just_zoomed_in = my_width > image_width
-                    
-                    if we_just_zoomed_in and self._video_container.IsScaled():
-                        
-                        full_resolution = self._video_container.GetResolution()
-                        
-                        self._video_container = ClientRendering.RasterContainerVideo( self._media, full_resolution )
-                        
+                    self._video_container = ClientRendering.RasterContainerVideo( self._media, full_resolution )
                     
                 
                 self._video_container.SetFramePosition( self._current_frame_index )
@@ -914,9 +909,11 @@ class Canvas( wx.Window ):
             media_needs_to_be_scaled_down = media_width > canvas_media_width or media_height > canvas_media_height
             media_needs_to_be_scaled_up = media_width < canvas_media_width and media_height < canvas_media_height and HC.options[ 'fit_to_canvas' ]
             
+            self._canvas_zoom = CalculateCanvasFitZoom( self._current_display_media, ( my_width, my_height ) )
+            
             if media_needs_to_be_scaled_down or media_needs_to_be_scaled_up:
                 
-                self._current_zoom = CalculateCanvasFitZoom( self._current_display_media, ( my_width, my_height ) )
+                self._current_zoom = self._canvas_zoom
                 
             else:
                 
@@ -2477,7 +2474,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         if first_hash is None:
             
-            self.SetMedia( self._GetFirst() )
+            first_media = self._GetFirst()
             
         else:
             
@@ -2485,13 +2482,13 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
                 first_media = self._GetMedia( { first_hash } )[0]
                 
-                self.SetMedia( first_media )
-                
             except:
                 
-                self.SetMedia( self._GetFirst() )
+                first_media = self._GetFirst()
                 
             
+        
+        wx.CallAfter( self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
         
         HydrusGlobals.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
         
@@ -3244,11 +3241,11 @@ class MediaContainer( wx.Window ):
         
         self._MakeMediaWindow()
         
+        self._SizeAndPositionMediaWindow()
+        
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
-        
-        self.EventResize( None )
         
     
     def _MakeMediaWindow( self, do_embed_button = True ):
@@ -3264,7 +3261,10 @@ class MediaContainer( wx.Window ):
             
             return
             
-        elif self._embed_button is not None: self._embed_button.Hide()
+        elif self._embed_button is not None:
+            
+            self._embed_button.Hide()
+            
         
         if action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
             
@@ -3309,8 +3309,33 @@ class MediaContainer( wx.Window ):
                 
             else:
                 
-                self._media_window = self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
+                self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
                 
+            
+        
+    
+    def _SizeAndPositionMediaWindow( self ):
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        if self._media_window is None:
+            
+            self._embed_button.SetSize( ( my_width, my_height ) )
+            
+        else:
+            
+            ( media_width, media_height ) = ( my_width, my_height )
+            
+            if self._animation_bar is not None:
+                
+                media_height -= ANIMATED_SCANBAR_HEIGHT
+                
+                self._animation_bar.SetSize( ( my_width, ANIMATED_SCANBAR_HEIGHT ) )
+                self._animation_bar.SetPosition( ( 0, my_height - ANIMATED_SCANBAR_HEIGHT ) )
+                
+            
+            self._media_window.SetSize( ( media_width, media_height ) )
+            self._media_window.SetPosition( ( 0, 0 ) )
             
         
     
@@ -3345,29 +3370,7 @@ class MediaContainer( wx.Window ):
     
     def EventResize( self, event ):
         
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        action = HC.options[ 'mime_media_viewer_actions' ][ self._media.GetDisplayMedia().GetMime() ]
-        
-        if self._media_window is None:
-            
-            self._embed_button.SetSize( ( my_width, my_height ) )
-            
-        else:
-            
-            ( media_width, media_height ) = ( my_width, my_height )
-            
-            if self._animation_bar is not None:
-                
-                media_height -= ANIMATED_SCANBAR_HEIGHT
-                
-                self._animation_bar.SetSize( ( my_width, ANIMATED_SCANBAR_HEIGHT ) )
-                self._animation_bar.SetPosition( ( 0, my_height - ANIMATED_SCANBAR_HEIGHT ) )
-                
-            
-            self._media_window.SetSize( ( media_width, media_height ) )
-            self._media_window.SetPosition( ( 0, 0 ) )
-            
+        self._SizeAndPositionMediaWindow()
         
     
     def GotoPreviousOrNextFrame( self, direction ):
@@ -3556,10 +3559,12 @@ class StaticImage( wx.Window ):
         self._dirty = True
         
         self._media = media
-        self._image_container = None
         self._image_cache = image_cache
+        self._image_container = self._image_cache.GetImage( self._media, initial_size )
         
-        self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
+        ( initial_width, initial_height ) = initial_size
+        
+        self._canvas_bmp = wx.EmptyBitmap( initial_width, initial_height, 24 )
         
         self._timer_render_wait = wx.Timer( self, id = ID_TIMER_RENDER_WAIT )
         
@@ -3569,7 +3574,10 @@ class StaticImage( wx.Window ):
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
-        self.EventResize( None )
+        if not self._image_container.IsRendered():
+            
+            self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
+            
         
     
     def _Redraw( self, dc ):
@@ -3578,7 +3586,7 @@ class StaticImage( wx.Window ):
         
         dc.Clear()
         
-        if self._image_container is not None and self._image_container.IsRendered():
+        if self._image_container.IsRendered():
             
             hydrus_bitmap = self._image_container.GetHydrusBitmap()
             
@@ -3653,20 +3661,13 @@ class StaticImage( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._image_container is None:
+                ( image_width, image_height ) = self._image_container.GetSize()
+                
+                we_just_zoomed_in = my_width > image_width or my_height > image_height
+                
+                if we_just_zoomed_in and self._image_container.IsScaled():
                     
-                    self._image_container = self._image_cache.GetImage( self._media, ( my_width, my_height ) )
-                    
-                else:
-                    
-                    ( image_width, image_height ) = self._image_container.GetSize()
-                    
-                    we_just_zoomed_in = my_width > image_width or my_height > image_height
-                    
-                    if we_just_zoomed_in and self._image_container.IsScaled():
-                        
-                        self._image_container = self._image_cache.GetImage( self._media )
-                        
+                    self._image_container = self._image_cache.GetImage( self._media )
                     
                 
                 wx.CallAfter( self._canvas_bmp.Destroy )
@@ -3687,7 +3688,7 @@ class StaticImage( wx.Window ):
         
         try:
             
-            if self._image_container is not None and self._image_container.IsRendered():
+            if self._image_container.IsRendered():
                 
                 self._SetDirty()
                 

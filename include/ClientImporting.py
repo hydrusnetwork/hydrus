@@ -934,10 +934,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             dest_path = os.path.join( dest_dir, filename )
                             
-                            while os.path.exists( dest_path ):
-                                
-                                dest_path += str( random.choice( range( 10 ) ) )
-                                
+                            dest_path = HydrusPaths.AppendPathUntilNoConflicts( dest_path )
                             
                             shutil.move( path, dest_path )
                             
@@ -952,10 +949,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             txt_dest_path = os.path.join( dest_dir, txt_filename )
                             
-                            while os.path.exists( txt_dest_path ):
-                                
-                                txt_dest_path += str( random.choice( range( 10 ) ) )
-                                
+                            txt_dest_path = HydrusPaths.AppendPathUntilNoConflicts( txt_dest_path )
                             
                             shutil.move( txt_path, txt_dest_path )
                             

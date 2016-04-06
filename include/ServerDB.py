@@ -100,7 +100,6 @@ class MessageDB( object ):
     '''
 class DB( HydrusDB.HydrusDB ):
     
-    DB_NAME = 'server'
     READ_WRITE_ACTIONS = []
     
     def _AccountTypeExists( self, service_id, title ): return self._c.execute( 'SELECT 1 FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
@@ -461,7 +460,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _AttachExternalDatabases( self ):
         
-        mappings_db_path = self._db_path[:-3] + '.mappings.db'
+        self._db_filenames[ 'mappings' ] = self._db_name + '.mappings.db'
+        
+        mappings_db_path = os.path.join( self._db_dir, self._db_filenames[ 'mappings' ] )
         
         if not os.path.exists( mappings_db_path ):
             
@@ -1854,12 +1855,13 @@ class DB( HydrusDB.HydrusDB ):
             os.makedirs( backup_path )
             
         
-        HydrusData.Print( 'backing up: copying db file' )
-        shutil.copy2( self._db_path, os.path.join( backup_path, self.DB_NAME + '.db' ) )
-        
-        HydrusData.Print( 'backing up: copying mappings db file' )
-        mappings_db_path = self._db_path[:-3] + '.mappings.db'
-        shutil.copy2( mappings_db_path, os.path.join( backup_path, self.DB_NAME + '.mappings.db' ) )
+        for filename in self._db_filenames.values():
+            
+            HydrusData.Print( 'backing up: copying ' + filename )
+            
+            source = os.path.join( self._db_dir, filename )
+            dest = os.path.join( backup_path, filename )
+            
         
         HydrusData.Print( 'backing up: copying files' )
         HydrusPaths.MirrorTree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )

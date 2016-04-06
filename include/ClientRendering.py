@@ -70,10 +70,24 @@ class RasterContainer( object ):
         
         ( width, height ) = target_resolution
         
-        if width == 0 or height == 0: target_resolution = ( 100, 100 )
+        if width == 0 or height == 0:
+            
+            target_resolution = ( 100, 100 )
+            
         
         self._media = media
+        
+        ( media_width, media_height ) = self._media.GetResolution()
+        ( target_width, target_height ) = target_resolution
+        
+        if target_width > media_width or target_height > media_height:
+            
+            target_resolution = self._media.GetResolution()
+            
+        
         self._target_resolution = target_resolution
+        
+        ( target_width, target_height ) = target_resolution
         
         hash = self._media.GetHash()
         mime = self._media.GetMime()
@@ -82,12 +96,8 @@ class RasterContainer( object ):
         
         self._path = client_files_manager.GetFilePath( hash, mime )
         
-        ( original_width, original_height ) = self._media.GetResolution()
-        
-        ( my_width, my_height ) = target_resolution
-        
-        width_zoom = my_width / float( original_width )
-        height_zoom = my_height / float( original_height )
+        width_zoom = target_width / float( media_width )
+        height_zoom = target_height / float( media_height )
         
         self._zoom = min( ( width_zoom, height_zoom ) )
         

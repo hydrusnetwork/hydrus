@@ -17,17 +17,28 @@ import time
 
 class HydrusDB( object ):
     
-    DB_NAME = 'hydrus'
     READ_WRITE_ACTIONS = []
     UPDATE_WAIT = 2
     
-    def __init__( self, controller, db_path, no_wal = False ):
+    def __init__( self, controller, db_dir, db_name, no_wal = False ):
         
         self._controller = controller
-        self._db_path = db_path
+        self._db_dir = db_dir
+        self._db_name = db_name
         self._no_wal = no_wal
         
-        if distutils.version.LooseVersion( sqlite3.sqlite_version ) < distutils.version.LooseVersion( '3.11.0'):
+        main_db_filename = db_name
+        
+        if not main_db_filename.endswith( '.db' ):
+            
+            main_db_filename += '.db'
+            
+        
+        self._db_filenames = {}
+        
+        self._db_filenames[ 'main' ] = main_db_filename
+        
+        if distutils.version.LooseVersion( sqlite3.sqlite_version ) < distutils.version.LooseVersion( '3.11.0' ):
             
             self._fast_big_transaction_wal = False
             
@@ -49,7 +60,7 @@ class HydrusDB( object ):
         self._db = None
         self._c = None
         
-        if os.path.exists( self._db_path ):
+        if os.path.exists( os.path.join( self._db_dir, self._db_filenames[ 'main' ] ) ):
             
             # open and close to clean up in case last session didn't close well
             
@@ -83,7 +94,7 @@ class HydrusDB( object ):
                 
                 self._c.execute( 'ROLLBACK' )
                 
-                raise Exception( 'Updating the ' + self.DB_NAME + ' db to version ' + str( version + 1 ) + ' caused this error:' + os.linesep + traceback.format_exc() )
+                raise Exception( 'Updating the ' + self._db_name + ' db to version ' + str( version + 1 ) + ' caused this error:' + os.linesep + traceback.format_exc() )
                 
             
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
@@ -151,7 +162,9 @@ class HydrusDB( object ):
         
         create_db = False
         
-        if not os.path.exists( self._db_path ):
+        db_path = os.path.join( self._db_dir, self._db_filenames[ 'main' ] )
+        
+        if not os.path.exists( db_path ):
             
             create_db = True
             
@@ -175,15 +188,17 @@ class HydrusDB( object ):
         
         self._CloseDBCursor()
         
-        db_just_created = not os.path.exists( self._db_path )
+        db_path = os.path.join( self._db_dir, self._db_filenames[ 'main' ] )
         
-        self._db = sqlite3.connect( self._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+        db_just_created = not os.path.exists( db_path )
+        
+        self._db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         
         self._db.create_function( 'hydrus_hamming', 2, HydrusData.GetHammingDistance )
         
         self._c = self._db.cursor()
         
-        self._c.execute( 'PRAGMA cache_size = -50000;' )
+        self._c.execute( 'PRAGMA cache_size = -150000;' )
         
         if self._no_wal:
             
@@ -203,7 +218,7 @@ class HydrusDB( object ):
                 
                 self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
                 
-            except sqlite3.OperationalError as e:
+            except sqlite3.OperationalError:
                 
                 traceback.print_exc()
                 
@@ -219,7 +234,7 @@ class HydrusDB( object ):
                     del self._c
                     del self._db
                     
-                    os.remove( self._db_path )
+                    os.remove( db_path )
                     
                     create_no_wal_file()
                     
@@ -321,6 +336,11 @@ class HydrusDB( object ):
         return self._loop_finished
         
     
+    def JobsQueueEmpty( self ):
+        
+        return self._jobs.empty()
+        
+    
     def MainLoop( self ):
         
         try:
@@ -329,11 +349,13 @@ class HydrusDB( object ):
             
             self._InitCaches()
             
-        except Exception as e:
+        except:
             
             HydrusData.Print( traceback.format_exc() )
             
             self._could_not_initialise = True
+            
+            return
             
         
         self._ready_to_serve_requests = True

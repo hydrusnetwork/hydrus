@@ -206,6 +206,11 @@ class LocationsManager( object ):
         self._petitioned.discard( service_key )
         
     
+    def ShouldHaveThumbnail( self ):
+        
+        return len( self._current ) > 0
+        
+    
 class Media( object ):
     
     def __init__( self ):
@@ -1416,10 +1421,6 @@ class SortedList( object ):
 class TagsManagerSimple( object ):
     
     def __init__( self, service_keys_to_statuses_to_tags ):
-        
-        tag_censorship_manager = HydrusGlobals.client_controller.GetManager( 'tag_censorship' )
-        
-        service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
         
         self._service_keys_to_statuses_to_tags = service_keys_to_statuses_to_tags
         

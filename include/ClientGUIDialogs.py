@@ -802,7 +802,7 @@ class DialogInputCustomFilterAction( Dialog ):
         
         self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
         
-        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', '', 'next', 'first', 'last', 'open_externally' ] )
+        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right' ] )
         
         self._ok_none = wx.Button( self._none_panel, label = 'ok' )
         self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
@@ -2096,7 +2096,7 @@ class DialogInputShortcut( Dialog ):
         
         self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
         
-        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally' ] )
+        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right' ] )
         
         self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -2761,9 +2761,9 @@ class DialogPageChooser( Dialog ):
             entries.append( ( 'menu', 'hentai foundry' ) )
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )
             
-            ( id, password ) = HydrusGlobals.client_controller.Read( 'pixiv_account' )
+            result = HydrusGlobals.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
             
-            if id != '' and password != '':
+            if result is not None:
                 
                 entries.append( ( 'menu', 'pixiv' ) )
                 

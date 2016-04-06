@@ -673,7 +673,14 @@ class ManagementPanelDumper( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
-        ( self._4chan_token, pin, timeout ) = self._controller.Read( '4chan_pass' )
+        result = self._controller.Read( 'serialisable_simple', '4chan_pass' )
+        
+        if result is None:
+            
+            result = ( '', '', 0 )
+            
+        
+        ( self._4chan_token, pin, timeout ) = result
         
         self._have_4chan_pass = timeout > HydrusData.GetNow()
         

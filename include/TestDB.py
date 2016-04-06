@@ -33,7 +33,9 @@ class TestClientDB( unittest.TestCase ):
     
     def _clear_db( self ):
         
-        db = sqlite3.connect( self._db._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+        db_path = os.path.join( self._db._db_dir, self._db._db_filenames[ 'main' ] )
+        
+        db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         
         c = db.cursor()
         
@@ -43,7 +45,7 @@ class TestClientDB( unittest.TestCase ):
         del c
         del db
         
-        mappings_db_path = self._db._db_path[:-3] + '.mappings.db'
+        mappings_db_path = os.path.join( self._db._db_dir, self._db._db_filenames[ 'mappings' ] )
         
         db = sqlite3.connect( mappings_db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         
@@ -58,9 +60,7 @@ class TestClientDB( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        db_path = os.path.join( HC.DB_DIR, 'client.db' )
-        
-        self._db = ClientDB.DB( HydrusGlobals.test_controller, db_path )
+        self._db = ClientDB.DB( HydrusGlobals.test_controller, HC.DB_DIR, 'client' )
         
     
     @classmethod
@@ -74,23 +74,6 @@ class TestClientDB( unittest.TestCase ):
             
         
         del self._db
-        
-    
-    def test_4chan_pass( self ):
-        
-        result = self._read( '4chan_pass' )
-        
-        self.assertTrue( result, ( '', '', 0 ) )
-        
-        token = 'token'
-        pin = 'pin'
-        timeout = HydrusData.GetNow() + 100000
-        
-        self._write( '4chan_pass', ( token, pin, timeout ) )
-        
-        result = self._read( '4chan_pass' )
-        
-        self.assertTrue( result, ( token, pin, timeout ) )
         
     
     def test_autocomplete( self ):
@@ -428,8 +411,7 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 100, 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 1, 1 ) )
-        # limit is not applied in file_query_ids! we do it later!
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 0, 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 0, 0 ) )
         
         run_system_predicate_tests( tests )
         
@@ -953,16 +935,16 @@ class TestClientDB( unittest.TestCase ):
     
     def test_pixiv_account( self ):
         
-        result = self._read( 'pixiv_account' )
+        result = self._read( 'serialisable_simple', 'pixiv_account' )
         
-        self.assertTrue( result, ( '', '' ) )
+        self.assertEqual( result, None )
         
         pixiv_id = 123456
         password = 'password'
         
-        self._write( 'pixiv_account', ( pixiv_id, password ) )
+        self._write( 'serialisable_simple', 'pixiv_account', ( pixiv_id, password ) )
         
-        result = self._read( 'pixiv_account' )
+        result = self._read( 'serialisable_simple', 'pixiv_account' )
         
         self.assertTrue( result, ( pixiv_id, password ) )
         
@@ -1217,9 +1199,7 @@ class TestServerDB( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        db_path = os.path.join( HC.DB_DIR, 'server.db' )
-        
-        self._db = ServerDB.DB( HydrusGlobals.test_controller, db_path )
+        self._db = ServerDB.DB( HydrusGlobals.test_controller, HC.DB_DIR, 'server' )
         
     
     @classmethod

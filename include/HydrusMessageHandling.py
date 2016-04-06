@@ -3,7 +3,6 @@ import Crypto.Signature.PKCS1_v1_5
 import hashlib
 import HydrusConstants as HC
 import HydrusEncryption
-import HydrusServer
 import os
 import potr
 import time

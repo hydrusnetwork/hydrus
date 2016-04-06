@@ -36,8 +36,6 @@ FreeFileSync is great for maintaining regular backups. It only takes a few minut
 
 fix the problem
 
-Then close SQLiteStudio.
-
 Open the SQLite shell, which should be in the db directory, called sqlite3 or sqlite3.exe. Type:
 
 .open client.db

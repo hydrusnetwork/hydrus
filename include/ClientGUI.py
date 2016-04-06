@@ -808,9 +808,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu.AppendMenu( CC.ID_NULL, p( '&Hentai Foundry' ), hf_submenu )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_NEWGROUNDS ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
             
-            ( id, password ) = self._controller.Read( 'pixiv_account' )
+            result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
             
-            if id != '' and password != '':
+            if result is not None:
                 
                 pixiv_submenu = wx.Menu()
                 pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_PIXIV_ARTIST_ID ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
