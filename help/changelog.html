@@ -8,6 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 200</h3></li>
+				<ul>
+					<li>added 'censor tag' to tag right-click menu</li>
+					<li>cleaned tag censorship a bit and moved from the gui down to the db layer</li>
+					<li>fixed tag censorship for multiple services</li>
+					<li>sped up tag censorship a bit</li>
+					<li>improved some tag censorship logic for unusual namespace situations</li>
+					<li>tag censorship now applies to siblings and parents, even in their management dialogs!</li>
+					<li>fixed the missing fit zoom when scrolling through zooms and when flipping between 100% and fit zoom</li>
+					<li>cleaned some canvas init code, which was loading bad initial zoom values due to other recent changes</li>
+					<li>restored standard static image zoom mode for cv-supported images to high, inter_area quality</li>
+					<li>cleaned up some image/animation container init code</li>
+					<li>cleaned up some image cache image tracking code</li>
+					<li>fixed ipfs pin, which was conflicting with the new ac caches</li>
+					<li>extracted client deleted_mappings to their own db table</li>
+					<li>prepped mappings processing to work with status-separate mappings tables--it is also a lot cleaner now</li>
+					<li>because of the deleted_mappings extraction, a bunch of mappings membership tests are much simpler now</li>
+					<li>upped the db cache size to a semi-ludicrous 150MB, which nonetheless seems to improve processing speed</li>
+					<li>improved how hydrus databases manage their db file locations</li>
+					<li>improved how the client and server databases backup/restore</li>
+					<li>improved some non-local thumbnail fetching code</li>
+					<li>converted some old YAML stuff to JSON</li>
+					<li>improved big job polite pausing code</li>
+					<li>cleaned up some clientside imports, and set the client to only import its server code if it needs to boot a local service</li>
+					<li>when an import folder needs to rename a file it is about to move because of a conflict, it will now add autoincrementing numbers, starting at 0, and before the file extension</li>
+					<li>added some missing shortcut actions (pan_x and set_media_focus) to the shortcut input entry dialog</li>
+					<li>tags and siblings that match the current WRITE autocomplete tags entry will no longer have doubled parents!</li>
+					<li>improved how system:limit is applied to searches</li>
+				</ul>
 				<li><h3>version 199</h3></li>
 				<ul>
 					<li>added 'all known files' autocomplete caches, so manage tags dialogs' autocompletes should now always appear quickly</li>
