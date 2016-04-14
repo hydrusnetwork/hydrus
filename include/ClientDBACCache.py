@@ -125,12 +125,7 @@ class SpecificServicesDB( HydrusDB.HydrusDB ):
     
     def _CreateDB( self ):
         
-        self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            self._c.execute( 'PRAGMA page_size = 4096;' )
-            
+        HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
         
         try: self._c.execute( 'BEGIN IMMEDIATE' )
         except Exception as e:
@@ -291,41 +286,6 @@ class SpecificServicesDB( HydrusDB.HydrusDB ):
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
     
-    def _Vacuum( self ):
-        
-        self._c.execute( 'COMMIT' )
-        
-        if not self._fast_big_transaction_wal:
-            
-            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-            
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            ideal_page_size = 4096
-            
-        else:
-            
-            ideal_page_size = 1024
-            
-        
-        ( page_size, ) = self._c.execute( 'PRAGMA page_size;' ).fetchone()
-        
-        if page_size != ideal_page_size:
-            
-            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-            self._c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
-            
-        
-        self._c.execute( 'VACUUM' )
-        
-        self._c.execute( 'REPLACE INTO maintenance_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( 'vacuum', HydrusData.GetNow() ) )
-        
-        self._InitDBCursor()
-        
-        self._c.execute( 'BEGIN IMMEDIATE' )
-        
-    
     def _Write( self, action, *args, **kwargs ):
         
         if action == 'add_files': result = self._AddFiles( *args, **kwargs )
@@ -335,7 +295,6 @@ class SpecificServicesDB( HydrusDB.HydrusDB ):
         elif action == 'delete_mappings': result = self._DeleteMappings( *args, **kwargs )
         elif action == 'pend_mappings': result = self._PendMappings( *args, **kwargs )
         elif action == 'rescind_pending_mappings': result = self._RescindPendingMappings( *args, **kwargs )
-        elif action == 'vacuum': result = self._Vacuum( *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
         
         return result
@@ -384,12 +343,7 @@ class CombinedFilesDB( HydrusDB.HydrusDB ):
     
     def _CreateDB( self ):
         
-        self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            self._c.execute( 'PRAGMA page_size = 4096;' )
-            
+        HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
         
         try: self._c.execute( 'BEGIN IMMEDIATE' )
         except Exception as e:
@@ -451,46 +405,10 @@ class CombinedFilesDB( HydrusDB.HydrusDB ):
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
     
-    def _Vacuum( self ):
-        
-        self._c.execute( 'COMMIT' )
-        
-        if not self._fast_big_transaction_wal:
-            
-            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-            
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            ideal_page_size = 4096
-            
-        else:
-            
-            ideal_page_size = 1024
-            
-        
-        ( page_size, ) = self._c.execute( 'PRAGMA page_size;' ).fetchone()
-        
-        if page_size != ideal_page_size:
-            
-            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-            self._c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
-            
-        
-        self._c.execute( 'VACUUM' )
-        
-        self._c.execute( 'REPLACE INTO maintenance_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( 'vacuum', HydrusData.GetNow() ) )
-        
-        self._InitDBCursor()
-        
-        self._c.execute( 'BEGIN IMMEDIATE' )
-        
-    
     def _Write( self, action, *args, **kwargs ):
         
         if action == 'update_counts': result = self._UpdateCounts( *args, **kwargs )
         elif action == 'analyze': result = self._Analyze( *args, **kwargs )
-        elif action == 'vacuum': result = self._Vacuum( *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
         
         return result

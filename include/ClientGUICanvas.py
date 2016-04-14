@@ -135,6 +135,7 @@ class Animation( wx.Window ):
         self._left_down_event = None
         
         self._a_frame_has_been_drawn = False
+        self._has_played_once_through = False
         
         self._num_frames = self._media.GetNumFrames()
         
@@ -337,6 +338,11 @@ class Animation( wx.Window ):
         self._TellAnimationBarAboutPausedStatus()
         
     
+    def HasPlayedOnceThrough( self ):
+        
+        return self._has_played_once_through
+        
+    
     def IsPlaying( self ):
         
         return not self._paused
@@ -388,6 +394,11 @@ class Animation( wx.Window ):
                         num_frames = self._media.GetNumFrames()
                         
                         self._current_frame_index = ( self._current_frame_index + 1 ) % num_frames
+                        
+                        if self._current_frame_index == 0:
+                            
+                            self._has_played_once_through = True
+                            
                         
                         self._current_frame_drawn = False
                         
@@ -2461,6 +2472,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         CanvasMediaListNavigable.__init__( self, my_parent, page_key, media_results )
         
         self._timer_slideshow = wx.Timer( self, id = ID_TIMER_SLIDESHOW )
+        self._timer_slideshow_interval = 0
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventSlideshow, id = ID_TIMER_SLIDESHOW )
         
@@ -2495,8 +2507,14 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def _PausePlaySlideshow( self ):
         
-        if self._timer_slideshow.IsRunning(): self._timer_slideshow.Stop()
-        elif self._timer_slideshow.GetInterval() > 0: self._timer_slideshow.Start()
+        if self._timer_slideshow.IsRunning():
+            
+            self._timer_slideshow.Stop()
+            
+        elif self._timer_slideshow.GetInterval() > 0:
+            
+            self._timer_slideshow.Start()
+            
         
     
     def _StartSlideshow( self, interval = None ):
@@ -2515,7 +2533,12 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             
         
-        if interval > 0: self._timer_slideshow.Start( interval, wx.TIMER_CONTINUOUS )
+        if interval > 0:
+            
+            self._timer_slideshow_interval = interval
+            
+            self._timer_slideshow.Start( self._timer_slideshow_interval, wx.TIMER_CONTINUOUS )
+            
         
     
     def EventCharHook( self, event ):
@@ -2774,7 +2797,19 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         try:
             
-            self._ShowNext()
+            if self._media_container is not None:
+                
+                if self._media_container.ReadyToSlideshow():
+                    
+                    self._ShowNext()
+                    
+                    self._timer_slideshow.Start( self._timer_slideshow_interval, wx.TIMER_CONTINUOUS )
+                    
+                else:
+                    
+                    self._timer_slideshow.Start( 250, wx.TIMER_CONTINUOUS )
+                    
+                
             
         except wx.PyDeadObjectError:
             
@@ -3428,6 +3463,27 @@ class MediaContainer( wx.Window ):
             
         
     
+    def ReadyToSlideshow( self ):
+        
+        if isinstance( self._media_window, Animation ):
+            
+            if self._media_window.IsPlaying() and not self._media_window.HasPlayedOnceThrough():
+                
+                return False
+                
+            
+        
+        if isinstance( self._media_window, StaticImage ):
+            
+            if not self._media_window.IsRendered():
+                
+                return False
+                
+            
+        
+        return True
+        
+    
 class EmbedButton( wx.Window ):
     
     def __init__( self, parent, size ):
@@ -3562,6 +3618,8 @@ class StaticImage( wx.Window ):
         self._image_cache = image_cache
         self._image_container = self._image_cache.GetImage( self._media, initial_size )
         
+        self._is_rendered = False
+        
         ( initial_width, initial_height ) = initial_size
         
         self._canvas_bmp = wx.EmptyBitmap( initial_width, initial_height, 24 )
@@ -3612,6 +3670,8 @@ class StaticImage( wx.Window ):
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
             wx.CallAfter( wx_bitmap.Destroy )
+            
+            self._is_rendered = True
             
         
         self._dirty = False
@@ -3682,6 +3742,11 @@ class StaticImage( wx.Window ):
                     
                 
             
+        
+    
+    def IsRendered( self ):
+        
+        return self._is_rendered
         
     
     def TIMEREventRenderWait( self, event ):

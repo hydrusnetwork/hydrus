@@ -402,6 +402,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = True
         self._dictionary[ 'booleans' ][ 'waiting_politely_text' ] = False
         
+        self._dictionary[ 'booleans' ][ 'show_thumbnail_title_banner' ] = True
+        self._dictionary[ 'booleans' ][ 'show_thumbnail_page' ] = True
+        
         self._dictionary[ 'noneable_integers' ] = {}
         
         self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
@@ -1449,7 +1452,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         if os.path.exists( path ):
                             
-                            size = HydrusPaths.GetPathSize( path )
+                            size = os.path.getsize( path )
                             
                             if size == 0:
                                 

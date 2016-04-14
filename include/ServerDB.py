@@ -460,6 +460,28 @@ class DB( HydrusDB.HydrusDB ):
     
     def _AttachExternalDatabases( self ):
         
+        self._db_filenames[ 'master' ] = self._db_name + '.master.db'
+        
+        master_db_path = os.path.join( self._db_dir, self._db_filenames[ 'master' ] )
+        
+        if not os.path.exists( master_db_path ):
+            
+            db = sqlite3.connect( master_db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+            
+            c = db.cursor()
+            
+            HydrusDB.SetupDBCreatePragma( c, no_wal = self._no_wal )
+            
+            c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
+            
+            c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
+            
+            del c
+            del db
+            
+        
+        self._c.execute( 'ATTACH ? AS external_master;', ( master_db_path, ) )
+        
         self._db_filenames[ 'mappings' ] = self._db_name + '.mappings.db'
         
         mappings_db_path = os.path.join( self._db_dir, self._db_filenames[ 'mappings' ] )
@@ -470,24 +492,81 @@ class DB( HydrusDB.HydrusDB ):
             
             c = db.cursor()
             
-            c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) );' )
+            HydrusDB.SetupDBCreatePragma( c, no_wal = self._no_wal )
+            
+            c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) ) WITHOUT ROWID;' )
             c.execute( 'CREATE INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
             c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
             c.execute( 'CREATE INDEX mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
             c.execute( 'CREATE INDEX mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
             
-            c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
+            c.execute( 'CREATE TABLE mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
             c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
             c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
-            
-            c.execute( 'PRAGMA journal_mode = WAL;' )
-            c.execute( 'PRAGMA synchronous = 1;' )
             
             del c
             del db
             
         
-        self._c.execute( 'ATTACH ? AS mappings_external;', ( mappings_db_path, ) )
+        self._c.execute( 'ATTACH ? AS external_mappings;', ( mappings_db_path, ) )
+        
+    
+    def _Backup( self ):
+        
+        self._c.execute( 'COMMIT;' )
+        
+        self._CloseDBCursor()
+        
+        try:
+            
+            stop_time = HydrusData.GetNow() + 300
+            
+            for filename in self._db_filenames.values():
+                
+                db_path = os.path.join( self._db_dir, filename )
+                
+                if HydrusDB.CanVacuum( db_path, stop_time ):
+                    
+                    HydrusData.Print( 'backing up: vacuuming ' + filename )
+                    
+                    HydrusDB.VacuumDB( db_path )
+                    
+                
+            
+            backup_path = os.path.join( HC.DB_DIR, 'server_backup' )
+            
+            if not os.path.exists( backup_path ):
+                
+                os.makedirs( backup_path )
+                
+            
+            for filename in self._db_filenames.values():
+                
+                HydrusData.Print( 'backing up: copying ' + filename )
+                
+                source = os.path.join( self._db_dir, filename )
+                dest = os.path.join( backup_path, filename )
+                
+                shutil.copy2( source, dest )
+                
+            
+            HydrusData.Print( 'backing up: copying files' )
+            HydrusPaths.MirrorTree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
+            
+            HydrusData.Print( 'backing up: copying thumbnails' )
+            HydrusPaths.MirrorTree( HC.SERVER_THUMBNAILS_DIR, os.path.join( backup_path, 'server_thumbnails' ) )
+            
+            HydrusData.Print( 'backing up: copying updates' )
+            HydrusPaths.MirrorTree( HC.SERVER_UPDATES_DIR, os.path.join( backup_path, 'server_updates' ) )
+            
+        finally:
+            
+            self._InitDBCursor()
+            
+            self._c.execute( 'BEGIN IMMEDIATE;' )
+            
+        
+        HydrusData.Print( 'backing up: done!' )
         
     
     def _Ban( self, service_id, action, admin_account_id, subject_account_ids, reason_id, expires = None, lifetime = None ):
@@ -631,9 +710,9 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._c.execute( 'BEGIN IMMEDIATE' )
+        HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
         
-        self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
+        self._c.execute( 'BEGIN IMMEDIATE' )
         
         now = HydrusData.GetNow()
         
@@ -670,9 +749,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE INDEX file_petitions_service_id_status_index ON file_petitions ( service_id, status );' )
         self._c.execute( 'CREATE INDEX file_petitions_service_id_timestamp_index ON file_petitions ( service_id, timestamp );' )
         
-        self._c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
-        self._c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
-        
         self._c.execute( 'CREATE TABLE ip_addresses ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, ip TEXT, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
         
         self._c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
@@ -705,9 +781,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE INDEX tag_siblings_service_id_old_tag_id_index ON tag_siblings ( service_id, old_tag_id );' )
         self._c.execute( 'CREATE INDEX tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
         self._c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
-        
-        self._c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
-        self._c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
         
         self._c.execute( 'CREATE TABLE update_cache ( service_id INTEGER REFERENCES services ON DELETE CASCADE, begin INTEGER, end INTEGER, dirty INTEGER_BOOLEAN, PRIMARY KEY( service_id, begin ) );' )
         self._c.execute( 'CREATE UNIQUE INDEX update_cache_service_id_end_index ON update_cache ( service_id, end );' )
@@ -1817,68 +1890,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _MakeBackup( self ):
-        
-        self._c.execute( 'COMMIT' )
-        
-        if not self._fast_big_transaction_wal:
-            
-            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-            
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            ideal_page_size = 4096
-            
-        else:
-            
-            ideal_page_size = 1024
-            
-        
-        ( page_size, ) = self._c.execute( 'PRAGMA page_size;' ).fetchone()
-        
-        if page_size != ideal_page_size:
-            
-            self._c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
-            
-        
-        HydrusData.Print( 'backing up: vacuum' )
-        
-        self._c.execute( 'VACUUM' )
-        
-        self._CloseDBCursor()
-        
-        backup_path = os.path.join( HC.DB_DIR, 'server_backup' )
-        
-        if not os.path.exists( backup_path ):
-            
-            os.makedirs( backup_path )
-            
-        
-        for filename in self._db_filenames.values():
-            
-            HydrusData.Print( 'backing up: copying ' + filename )
-            
-            source = os.path.join( self._db_dir, filename )
-            dest = os.path.join( backup_path, filename )
-            
-        
-        HydrusData.Print( 'backing up: copying files' )
-        HydrusPaths.MirrorTree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
-        
-        HydrusData.Print( 'backing up: copying thumbnails' )
-        HydrusPaths.MirrorTree( HC.SERVER_THUMBNAILS_DIR, os.path.join( backup_path, 'server_thumbnails' ) )
-        
-        HydrusData.Print( 'backing up: copying updates' )
-        HydrusPaths.MirrorTree( HC.SERVER_UPDATES_DIR, os.path.join( backup_path, 'server_updates' ) )
-        
-        self._InitDBCursor()
-        
-        self._c.execute( 'BEGIN IMMEDIATE' )
-        
-        HydrusData.Print( 'backing up: done!' )
-        
-    
     def _ManageDBError( self, job, e ):
         
         ( exception_type, value, tb ) = sys.exc_info()
@@ -2533,18 +2544,83 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusData.Print( 'exporting mappings to external db' )
             
-            self._c.execute( 'INSERT INTO mappings_external.mappings SELECT * FROM main.mappings;' )
+            self._c.execute( 'INSERT INTO external_mappings.mappings SELECT * FROM main.mappings;' )
             
             self._c.execute( 'DROP TABLE main.mappings;' )
             
-            self._c.execute( 'INSERT INTO mappings_external.mapping_petitions SELECT * FROM main.mapping_petitions;' )
+            self._c.execute( 'INSERT INTO external_mappings.mapping_petitions SELECT * FROM main.mapping_petitions;' )
             
             self._c.execute( 'DROP TABLE main.mapping_petitions;' )
             
-            HydrusData.Print( 'analyzing new external db' )
+        
+        if version == 200:
             
-            self._c.execute( 'ANALYZE mappings;' )
-            self._c.execute( 'ANALYZE mapping_petitions;' )
+            HydrusData.Print( 'exporting hashes to external db' )
+            
+            self._c.execute( 'INSERT INTO external_master.hashes SELECT * FROM main.hashes;' )
+            
+            self._c.execute( 'DROP TABLE main.hashes;' )
+            
+            HydrusData.Print( 'exporting tags to external db' )
+            
+            self._c.execute( 'INSERT INTO external_master.tags SELECT * FROM main.tags;' )
+            
+            self._c.execute( 'DROP TABLE main.tags;' )
+            
+            #
+            
+            HydrusData.Print( 'compacting mappings tables' )
+            
+            self._c.execute( 'DROP INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index;' )
+            self._c.execute( 'DROP INDEX mapping_petitions_service_id_tag_id_hash_id_index;' )
+            self._c.execute( 'DROP INDEX mapping_petitions_service_id_status_index;' )
+            self._c.execute( 'DROP INDEX mapping_petitions_service_id_timestamp_index;' )
+            
+            self._c.execute( 'DROP INDEX mappings_account_id_index;' )
+            self._c.execute( 'DROP INDEX mappings_timestamp_index;' )
+            
+            self._c.execute( 'ALTER TABLE mapping_petitions RENAME TO mapping_petitions_old;' )
+            self._c.execute( 'ALTER TABLE mappings RENAME TO mappings_old;' )
+            
+            self._c.execute( 'CREATE TABLE external_mappings.mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) ) WITHOUT ROWID;' )
+            
+            self._c.execute( 'CREATE TABLE external_mappings.mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
+            
+            self._c.execute( 'INSERT INTO mapping_petitions SELECT * FROM mapping_petitions_old;' )
+            self._c.execute( 'INSERT INTO mappings SELECT * FROM mappings_old;' )
+            
+            self._c.execute( 'DROP TABLE mapping_petitions_old;' )
+            self._c.execute( 'DROP TABLE mappings_old;' )
+            
+            self._c.execute( 'CREATE INDEX external_mappings.mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
+            self._c.execute( 'CREATE INDEX external_mappings.mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
+            self._c.execute( 'CREATE INDEX external_mappings.mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
+            self._c.execute( 'CREATE INDEX external_mappings.mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
+            
+            self._c.execute( 'CREATE INDEX external_mappings.mappings_account_id_index ON mappings ( account_id );' )
+            self._c.execute( 'CREATE INDEX external_mappings.mappings_timestamp_index ON mappings ( timestamp );' )
+            
+            #
+            
+            self._c.execute( 'COMMIT;' )
+            
+            self._CloseDBCursor()
+            
+            for filename in self._db_filenames.values():
+                
+                HydrusData.Print( 'vacuuming ' + filename )
+                
+                db_path = os.path.join( self._db_dir, filename )
+                
+                if HydrusDB.CanVacuum( db_path ):
+                    
+                    HydrusDB.VacuumDB( db_path )
+                    
+                
+            
+            self._InitDBCursor()
+            
+            self._c.execute( 'BEGIN IMMEDIATE;' )
             
         
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )
@@ -2575,7 +2651,7 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'account': result = self._ModifyAccount( *args, **kwargs )
         elif action == 'account_types': result = self._ModifyAccountTypes( *args, **kwargs )
         elif action == 'analyze': result = self._Analyze( *args, **kwargs )
-        elif action == 'backup': result = self._MakeBackup( *args, **kwargs )
+        elif action == 'backup': result = self._Backup( *args, **kwargs )
         elif action == 'check_data_usage': result = self._CheckDataUsage( *args, **kwargs )
         elif action == 'check_monthly_data': result = self._CheckMonthlyData( *args, **kwargs )
         elif action == 'clean_update': result = self._CleanUpdate( *args, **kwargs )

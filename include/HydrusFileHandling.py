@@ -147,7 +147,7 @@ def GetExtraHashesFromPath( path ):
     
 def GetFileInfo( path ):
     
-    size = HydrusPaths.GetPathSize( path )
+    size = os.path.getsize( path )
     
     if size == 0: raise HydrusExceptions.SizeException( 'File is of zero length!' )
     

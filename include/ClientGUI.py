@@ -393,6 +393,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def do_it():
             
+            started = HydrusData.GetNow()
+            
             service = self._controller.GetServicesManager().GetService( service_key )
             
             service.Request( HC.POST, 'backup' )
@@ -415,7 +417,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 result = service.Request( HC.GET, 'busy' )
                 
             
-            HydrusData.ShowText( 'Server backup done!' )
+            it_took = HydrusData.GetNow() - started
+            
+            HydrusData.ShowText( 'Server backup done in ' + HydrusData.ConvertTimeDeltaToPrettyString( it_took ) + '!' )
             
         
         message = 'This will tell the server to lock and copy its database files. It will probably take a few minutes to complete, during which time it will not be able to serve any requests.'
@@ -2130,7 +2134,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetVariable( 'popup_text_1', 'upload done!' )
+        job_key.SetVariable( 'popup_text_1', u'upload done!' )
         
         HydrusData.Print( job_key.ToString() )
         
@@ -3272,11 +3276,10 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 elif service_type in HC.TAG_SERVICES:
                     
                     num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-                    num_namespaces = service_info[ HC.SERVICE_INFO_NUM_NAMESPACES ]
                     num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
                     num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
                     
-                    self._tags_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HydrusData.ConvertIntToPrettyString( num_namespaces ) + ' namespaces, ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HydrusData.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
+                    self._tags_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HydrusData.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
                     
                     if service_type == HC.TAG_REPOSITORY:
                         

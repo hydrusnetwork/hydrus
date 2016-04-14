@@ -2,6 +2,7 @@ import gc
 import HydrusConstants as HC
 import HydrusData
 import os
+import psutil
 import send2trash
 import shutil
 import subprocess
@@ -135,10 +136,29 @@ def DeletePath( path ):
             os.remove( path )
             
         
+
+def GetDevice( path ):
     
-def GetPathSize( path ):
+    path = path.lower()
     
-    return os.lstat( path )[6]
+    partition_infos = psutil.disk_partitions()
+    
+    def sort_descending_mountpoint( partition_info ): # i.e. put '/home' before '/'
+        
+        return - len( partition_info.mountpoint )
+        
+    
+    partition_infos.sort( key = sort_descending_mountpoint )
+    
+    for partition_info in partition_infos:
+        
+        if path.startswith( partition_info.mountpoint.lower() ):
+            
+            return partition_info.device
+            
+        
+    
+    return None
     
 def GetTempFile(): return tempfile.TemporaryFile()
 def GetTempFileQuick(): return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
@@ -262,11 +282,8 @@ def PathsHaveSameSizeAndDate( path1, path2 ):
     
     if os.path.exists( path1 ) and os.path.exists( path2 ):
         
-        path1_stat = os.lstat( path1 )
-        path2_stat = os.lstat( path2 )
-        
-        same_size = path1_stat[6] == path2_stat[6]
-        same_modified_time = path1_stat[8] == path2_stat[8]
+        same_size = os.path.getsize( path1 ) == os.path.getsize( path2 )
+        same_modified_time = os.path.getmtime( path1 ) == os.path.getmtime( path2 )
         
         if same_size and same_modified_time:
             

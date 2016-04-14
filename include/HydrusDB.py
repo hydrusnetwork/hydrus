@@ -5,16 +5,131 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals
+import HydrusPaths
 import os
-import pstats
+import psutil
 import Queue
 import random
 import sqlite3
 import sys
+import tempfile
 import threading
 import traceback
 import time
 
+def CanVacuum( db_path, stop_time = None ):
+    
+    db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+    
+    c = db.cursor()
+    
+    ( page_size, ) = c.execute( 'PRAGMA page_size;' ).fetchone()
+    ( page_count, ) = c.execute( 'PRAGMA page_count;' ).fetchone()
+    ( freelist_count, ) = c.execute( 'PRAGMA freelist_count;' ).fetchone()
+    
+    db_size = ( page_count - freelist_count ) * page_size
+    
+    if stop_time is not None:
+        
+        approx_vacuum_speed_mb_per_s = 1048576 * 3
+        
+        approx_vacuum_duration = db_size / approx_vacuum_speed_mb_per_s
+        
+        time_i_will_have_to_start = stop_time - approx_vacuum_duration
+        
+        if HydrusData.TimeHasPassed( time_i_will_have_to_start ):
+            
+            return False
+            
+        
+    
+    temp_dir = tempfile.gettempdir()
+    ( db_dir, db_filename ) = os.path.split( db_path )
+    
+    temp_disk_usage = psutil.disk_usage( temp_dir )
+    
+    a = HydrusPaths.GetDevice( temp_dir )
+    b = HydrusPaths.GetDevice( db_dir )
+    
+    if HydrusPaths.GetDevice( temp_dir ) == HydrusPaths.GetDevice( db_dir ):
+        
+        if temp_disk_usage.free < db_size * 2.2:
+            
+            return False
+            
+        
+    else:
+        
+        if temp_disk_usage.free < db_size * 1.1:
+            
+            return False
+            
+        
+        db_disk_usage = psutil.disk_usage( db_dir )
+        
+        if db_disk_usage.free < db_size * 1.1:
+            
+            return False
+            
+        
+    
+    return True
+    
+def SetupDBCreatePragma( c, no_wal = False ):
+    
+    c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        c.execute( 'PRAGMA page_size = 4096;' )
+        
+    
+    if not no_wal:
+        
+        c.execute( 'PRAGMA journal_mode = WAL;' )
+        
+    
+    c.execute( 'PRAGMA synchronous = 1;' )
+    
+def VacuumDB( db_path ):
+    
+    db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+    
+    c = db.cursor()
+    
+    ( previous_journal_mode, ) = c.execute( 'PRAGMA journal_mode;' ).fetchone()
+    
+    fast_big_transaction_wal = not distutils.version.LooseVersion( sqlite3.sqlite_version ) < distutils.version.LooseVersion( '3.11.0' )
+    
+    if previous_journal_mode == 'wal' and not fast_big_transaction_wal:
+        
+        c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        ideal_page_size = 4096
+        
+    else:
+        
+        ideal_page_size = 1024
+        
+    
+    ( page_size, ) = c.execute( 'PRAGMA page_size;' ).fetchone()
+    
+    if page_size != ideal_page_size:
+        
+        c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
+        c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
+        
+    
+    c.execute( 'VACUUM;' )
+    
+    if previous_journal_mode == 'wal':
+        
+        c.execute( 'PRAGMA journal_mode = WAL;' )
+        
+    
 class HydrusDB( object ):
     
     READ_WRITE_ACTIONS = []
@@ -200,62 +315,67 @@ class HydrusDB( object ):
         
         self._c.execute( 'PRAGMA cache_size = -150000;' )
         
-        if self._no_wal:
-            
-            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-            
-            self._c.execute( 'PRAGMA synchronous = 2;' )
-            
-            self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
-            
-        else:
-            
-            self._c.execute( 'PRAGMA journal_mode = WAL;' )
-            
-            self._c.execute( 'PRAGMA synchronous = 1;' )
-            
-            try:
-                
-                self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
-                
-            except sqlite3.OperationalError:
-                
-                traceback.print_exc()
-                
-                def create_no_wal_file():
-                    
-                    HydrusGlobals.controller.CreateNoWALFile()
-                    
-                    self._no_wal = True
-                    
-                
-                if db_just_created:
-                    
-                    del self._c
-                    del self._db
-                    
-                    os.remove( db_path )
-                    
-                    create_no_wal_file()
-                    
-                    self._InitDBCursor()
-                    
-                else:
-                    
-                    self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-                    
-                    self._c.execute( 'PRAGMA synchronous = 2;' )
-                    
-                    self._c.execute( 'SELECT * FROM sqlite_master;' ).fetchone()
-                    
-                    create_no_wal_file()
-                    
-                
-            
-        
         self._c.execute( 'ATTACH ":memory:" AS mem;' )
         
         self._AttachExternalDatabases()
+        
+        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+        
+        for db_name in db_names:
+            
+            if self._no_wal:
+                
+                self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = TRUNCATE;' )
+                
+                self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 2;' )
+                
+                self._c.execute( 'SELECT * FROM ' + db_name + '.sqlite_master;' ).fetchone()
+                
+            else:
+                
+                self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = WAL;' )
+                
+                self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 1;' )
+                
+                try:
+                    
+                    self._c.execute( 'SELECT * FROM ' + db_name + '.sqlite_master;' ).fetchone()
+                    
+                except sqlite3.OperationalError:
+                    
+                    traceback.print_exc()
+                    
+                    def create_no_wal_file():
+                        
+                        HydrusGlobals.controller.CreateNoWALFile()
+                        
+                        self._no_wal = True
+                        
+                    
+                    if db_just_created:
+                        
+                        del self._c
+                        del self._db
+                        
+                        os.remove( db_path )
+                        
+                        create_no_wal_file()
+                        
+                        self._InitDBCursor()
+                        
+                    else:
+                        
+                        self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = TRUNCATE;' )
+                        
+                        self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 2;' )
+                        
+                        self._c.execute( 'SELECT * FROM ' + db_name + '.sqlite_master;' ).fetchone()
+                        
+                        create_no_wal_file()
+                        
+                    
+                
+            
         
     
     def _ManageDBError( self, job, e ):

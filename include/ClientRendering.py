@@ -138,8 +138,6 @@ class RasterContainerImage( RasterContainer ):
         
         self._hydrus_bitmap = hydrus_bitmap
         
-        HydrusGlobals.client_controller.pub( 'finished_rendering', self.GetKey() )
-        
     
     def GetEstimatedMemoryFootprint( self ):
         
@@ -149,14 +147,15 @@ class RasterContainerImage( RasterContainer ):
             
             return width * height * 3
             
-        else: return self._hydrus_bitmap.GetEstimatedMemoryFootprint()
+        else:
+            
+            return self._hydrus_bitmap.GetEstimatedMemoryFootprint()
+            
         
     
     def GetHash( self ): return self._media.GetHash()
     
     def GetHydrusBitmap( self ): return self._hydrus_bitmap
-    
-    def GetKey( self ): return ( self._media.GetHash(), self._target_resolution )
     
     def GetNumFrames( self ): return self._media.GetNumFrames()
     
@@ -447,7 +446,10 @@ class HydrusBitmap( object ):
         
         ( width, height ) = self._size
         
-        if self._format == wx.BitmapBufferFormat_RGB: return wx.ImageFromBuffer( width, height, self._GetData() )
+        if self._format == wx.BitmapBufferFormat_RGB:
+            
+            return wx.ImageFromBuffer( width, height, self._GetData() )
+            
         else:
             
             bitmap = wx.BitmapFromBufferRGBA( width, height, self._GetData() )
@@ -460,7 +462,10 @@ class HydrusBitmap( object ):
             
         
     
-    def GetEstimatedMemoryFootprint( self ): return len( self._data )
+    def GetEstimatedMemoryFootprint( self ):
+        
+        return len( self._data )
+        
     
     def GetSize( self ): return self._size
     

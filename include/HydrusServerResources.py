@@ -292,7 +292,7 @@ class HydrusResourceCommand( Resource ):
             
             path = response_context.GetPath()
             
-            size = HydrusPaths.GetPathSize( path )
+            size = os.path.getsize( path )
             
             if response_context.IsJSON():
                 

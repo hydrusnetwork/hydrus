@@ -527,15 +527,20 @@ class DataCache( object ):
         wx.CallLater( 60 * 1000, self.MaintainCache )
         
     
-    def _DeleteItem( self, index = 0 ):
+    def _DeleteItem( self ):
         
-        ( deletee_key, last_access_time ) = self._keys_fifo.pop( index )
+        ( deletee_key, last_access_time ) = self._keys_fifo.pop( 0 )
         
         deletee_data = self._keys_to_data[ deletee_key ]
         
-        self._total_estimated_memory_footprint -= deletee_data.GetEstimatedMemoryFootprint()
-        
         del self._keys_to_data[ deletee_key ]
+        
+        self._RecalcMemoryUsage()
+        
+    
+    def _RecalcMemoryUsage( self ):
+        
+        self._total_estimated_memory_footprint = sum( ( data.GetEstimatedMemoryFootprint() for data in self._keys_to_data.values() ) )
         
     
     def Clear( self ):
@@ -566,7 +571,7 @@ class DataCache( object ):
                 
                 self._keys_fifo.append( ( key, HydrusData.GetNow() ) )
                 
-                self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
+                self._RecalcMemoryUsage()
                 
             
         
@@ -575,7 +580,10 @@ class DataCache( object ):
         
         with self._lock:
             
-            if key not in self._keys_to_data: raise Exception( 'Cache error! Looking for ' + HydrusData.ToUnicode( key ) + ', but it was missing.' )
+            if key not in self._keys_to_data:
+                
+                raise Exception( 'Cache error! Looking for ' + HydrusData.ToUnicode( key ) + ', but it was missing.' )
+                
             
             for ( i, ( fifo_key, last_access_time ) ) in enumerate( self._keys_fifo ):
                 
@@ -595,7 +603,10 @@ class DataCache( object ):
     
     def HasData( self, key ):
         
-        with self._lock: return key in self._keys_to_data
+        with self._lock:
+            
+            return key in self._keys_to_data
+            
         
     
     def MaintainCache( self ):
@@ -604,18 +615,22 @@ class DataCache( object ):
             
             while True:
                 
-                if len( self._keys_fifo ) == 0: break
+                if len( self._keys_fifo ) == 0:
+                    
+                    break
+                    
                 else:
                     
-                    oldest_index = 0
-                    
-                    ( key, last_access_time ) = self._keys_fifo[ oldest_index ]
+                    ( key, last_access_time ) = self._keys_fifo[ 0 ]
                     
                     if HydrusData.TimeHasPassed( last_access_time + 1200 ):
                         
-                        self._DeleteItem( oldest_index )
+                        self._DeleteItem()
                         
-                    else: break
+                    else:
+                        
+                        break
+                        
                     
                 
             
@@ -933,12 +948,6 @@ class RenderedImageCache( object ):
         if self._type == 'fullscreen': self._data_cache = DataCache( self._controller, 'fullscreen_cache_size' )
         elif self._type == 'preview': self._data_cache = DataCache( self._controller, 'preview_cache_size' )
         
-        self._total_estimated_memory_footprint = 0
-        
-        self._keys_being_rendered = {}
-        
-        self._controller.sub( self, 'FinishedRendering', 'finished_rendering' )
-        
     
     def Clear( self ): self._data_cache.Clear()
     
@@ -958,16 +967,22 @@ class RenderedImageCache( object ):
             
             target_resolution = media.GetResolution()
             
+        else:
+            
+            target_resolution = ( target_width, target_height ) # to convert from wx.size or list to tuple for the cache key
+            
         
         key = ( hash, target_resolution )
         
-        if self._data_cache.HasData( key ): return self._data_cache.GetData( key )
-        elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
+        if self._data_cache.HasData( key ):
+            
+            return self._data_cache.GetData( key )
+            
         else:
             
             image_container = ClientRendering.RasterContainerImage( media, target_resolution )
             
-            self._keys_being_rendered[ key ] = image_container
+            self._data_cache.AddData( key, image_container )
             
             return image_container
             
@@ -977,19 +992,7 @@ class RenderedImageCache( object ):
         
         key = ( hash, target_resolution )
         
-        return self._data_cache.HasData( key ) or key in self._keys_being_rendered
-        
-    
-    def FinishedRendering( self, key ):
-        
-        if key in self._keys_being_rendered:
-            
-            image_container = self._keys_being_rendered[ key ]
-            
-            del self._keys_being_rendered[ key ]
-            
-            self._data_cache.AddData( key, image_container )
-            
+        return self._data_cache.HasData( key )
         
     
 class ThumbnailCache( object ):

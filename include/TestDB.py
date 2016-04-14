@@ -51,7 +51,10 @@ class TestClientDB( unittest.TestCase ):
         
         c = db.cursor()
         
-        c.execute( 'DELETE FROM mappings;' )
+        c.execute( 'DELETE FROM current_mappings;' )
+        c.execute( 'DELETE FROM pending_mappings;' )
+        c.execute( 'DELETE FROM deleted_mappings;' )
+        c.execute( 'DELETE FROM mapping_petitions;' )
         
     
     def _read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )

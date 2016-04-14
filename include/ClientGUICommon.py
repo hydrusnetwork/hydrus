@@ -4543,6 +4543,11 @@ class PopupMessage( PopupWindow ):
         self.GetParent().MakeSureEverythingFits()
         
     
+    def GetJobKey( self ):
+        
+        return self._job_key
+        
+    
     def TryToDismiss( self ):
         
         if self._job_key.IsPausable() or self._job_key.IsCancellable(): return
@@ -4830,6 +4835,28 @@ class PopupMessageManager( wx.Frame ):
         
     
     def CleanBeforeDestroy( self ):
+        
+        for job_key in self._pending_job_keys:
+            
+            if job_key.IsCancellable():
+                
+                job_key.Cancel()
+                
+            
+        
+        sizer_items = self._message_vbox.GetChildren()
+        
+        for sizer_item in sizer_items:
+            
+            message_window = sizer_item.GetWindow()
+            
+            job_key = message_window.GetJobKey()
+            
+            if job_key.IsCancellable():
+                
+                job_key.Cancel()
+                
+            
         
         sys.excepthook = self._old_excepthook
         

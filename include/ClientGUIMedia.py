@@ -470,23 +470,84 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         num_selected = self._GetNumSelected()
         
-        pretty_total_size = self._GetPrettyTotalSelectedSize()
+        ( sorted_mime_classes, selected_mime_classes ) = self._GetSortedSelectedMimeClasses()
         
-        if num_selected == 0:
+        if sorted_mime_classes == set( [ 'image' ] ):
             
-            if num_files == 1: s = '1 file'
-            else: s = HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
+            num_files_descriptor = 'image'
             
-        elif num_selected == 1: s = '1 of ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files selected, ' + pretty_total_size
+        elif sorted_mime_classes == set( [ 'video' ] ):
+            
+            num_files_descriptor = 'video'
+            
         else:
             
-            num_inbox = sum( ( media.GetNumInbox() for media in self._selected_media ) )
+            num_files_descriptor = 'file'
             
-            if num_inbox == num_selected: inbox_phrase = 'all in inbox, '
-            elif num_inbox == 0: inbox_phrase = 'all archived, '
-            else: inbox_phrase = HydrusData.ConvertIntToPrettyString( num_inbox ) + ' in inbox and ' + HydrusData.ConvertIntToPrettyString( num_selected - num_inbox ) + ' archived, '
+        
+        if selected_mime_classes == set( [ 'image' ] ):
             
-            s = HydrusData.ConvertIntToPrettyString( num_selected ) + ' of ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files selected, ' + inbox_phrase + 'totalling ' + pretty_total_size
+            selected_files_descriptor = 'image'
+            
+        elif selected_mime_classes == set( [ 'video' ] ):
+            
+            selected_files_descriptor = 'video'
+            
+        else:
+            
+            selected_files_descriptor = 'file'
+            
+        
+        
+        if num_files == 1:
+            
+            num_files_string = '1 ' + num_files_descriptor
+            
+        else:
+            
+            num_files_string = HydrusData.ConvertIntToPrettyString( num_files ) + ' ' + num_files_descriptor + 's'
+            
+        
+        if selected_files_descriptor == num_files_descriptor:
+            
+            selected_files_string = HydrusData.ConvertIntToPrettyString( num_selected )
+            
+        else:
+            
+            if num_selected == 1:
+                
+                selected_files_string = '1 ' + selected_files_descriptor
+                
+            else:
+                
+                selected_files_string = HydrusData.ConvertIntToPrettyString( num_selected ) + ' ' + selected_files_descriptor + 's'
+                
+            
+        
+        s = num_files_string # 23 files
+        
+        if num_selected > 0:
+            
+            s += ' - '
+            
+            if num_selected == 1: # 23 files - 1 video selected, file_info
+                
+                ( selected_media, ) = self._selected_media
+                
+                s += selected_files_string + ' selected, ' + selected_media.GetPrettyInfo()
+                
+            else: # 23 files - 5 selected, selection_info
+                
+                num_inbox = sum( ( media.GetNumInbox() for media in self._selected_media ) )
+                
+                if num_inbox == num_selected: inbox_phrase = 'all in inbox, '
+                elif num_inbox == 0: inbox_phrase = 'all archived, '
+                else: inbox_phrase = HydrusData.ConvertIntToPrettyString( num_inbox ) + ' in inbox and ' + HydrusData.ConvertIntToPrettyString( num_selected - num_inbox ) + ' archived, '
+                
+                pretty_total_size = self._GetPrettyTotalSelectedSize()
+                
+                s += selected_files_string + ' selected, ' + inbox_phrase + 'totalling ' + pretty_total_size
+                
             
         
         return s
@@ -542,6 +603,59 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             HydrusGlobals.client_controller.pub( 'new_similar_to', self._file_service_key, hash )
             
+        
+    
+    def _GetSortedSelectedMimeClasses( self ):
+        
+        sorted_mimes = set()
+        
+        for media in self._sorted_media:
+            
+            mime = media.GetMime()
+            
+            if mime in HC.IMAGES:
+                
+                sorted_mimes.add( 'image' )
+                
+            elif mime in HC.VIDEO:
+                
+                sorted_mimes.add( 'video' )
+                
+            elif mime in HC.AUDIO:
+                
+                sorted_mimes.add( 'audio' )
+                
+            else:
+                
+                sorted_mimes.add( 'misc' )
+                
+            
+        
+        selected_mimes = set()
+        
+        for media in self._selected_media:
+            
+            mime = media.GetMime()
+            
+            if mime in HC.IMAGES:
+                
+                selected_mimes.add( 'image' )
+                
+            elif mime in HC.VIDEO:
+                
+                selected_mimes.add( 'video' )
+                
+            elif mime in HC.AUDIO:
+                
+                selected_mimes.add( 'audio' )
+                
+            else:
+                
+                selected_mimes.add( 'misc' )
+                
+            
+        
+        return ( sorted_mimes, selected_mimes )
         
     
     def _HitMedia( self, media, ctrl, shift ):
@@ -2853,15 +2967,6 @@ class Thumbnail( Selectable ):
         
         local = self.GetLocationsManager().HasLocal()
         
-        namespaces = self.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
-        
-        creators = namespaces[ 'creator' ]
-        series = namespaces[ 'series' ]
-        titles = namespaces[ 'title' ]
-        volumes = namespaces[ 'volume' ]
-        chapters = namespaces[ 'chapter' ]
-        pages = namespaces[ 'page' ]
-        
         thumbnail_hydrus_bmp = HydrusGlobals.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
         
         ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
@@ -2897,126 +3002,143 @@ class Thumbnail( Selectable ):
         
         wx.CallAfter( wx_bmp.Destroy )
         
-        collections_string = ''
+        namespaces = self.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
         
-        if len( volumes ) > 0:
-            
-            if len( volumes ) == 1:
-                
-                ( volume, ) = volumes
-                
-                collections_string = 'v' + str( volume )
-                
-            else:
-                
-                volumes_sorted = HydrusTags.SortTags( volumes )
-                
-                collections_string_append = 'v' + str( volumes_sorted[0] ) + '-' + str( volumes_sorted[-1] )
-                
-            
+        creators = namespaces[ 'creator' ]
+        series = namespaces[ 'series' ]
+        titles = namespaces[ 'title' ]
+        volumes = namespaces[ 'volume' ]
+        chapters = namespaces[ 'chapter' ]
+        pages = namespaces[ 'page' ]
         
-        if len( chapters ) > 0:
-            
-            if len( chapters ) == 1:
-                
-                ( chapter, ) = chapters
-                
-                collections_string_append = 'c' + str( chapter )
-                
-            else:
-                
-                chapters_sorted = HydrusTags.SortTags( chapters )
-                
-                collections_string_append = 'c' + str( chapters_sorted[0] ) + '-' + str( chapters_sorted[-1] )
-                
-            
-            if len( collections_string ) > 0: collections_string += '-' + collections_string_append
-            else: collections_string = collections_string_append
-            
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
         
-        if len( pages ) > 0:
+        if new_options.GetBoolean( 'show_thumbnail_page' ):
             
-            if len( pages ) == 1:
+            collections_string = ''
+            
+            if len( volumes ) > 0:
                 
-                ( page, ) = pages
+                if len( volumes ) == 1:
+                    
+                    ( volume, ) = volumes
+                    
+                    collections_string = 'v' + str( volume )
+                    
+                else:
+                    
+                    volumes_sorted = HydrusTags.SortTags( volumes )
+                    
+                    collections_string_append = 'v' + str( volumes_sorted[0] ) + '-' + str( volumes_sorted[-1] )
+                    
                 
-                collections_string_append = 'p' + str( page )
+            
+            if len( chapters ) > 0:
                 
-            else:
+                if len( chapters ) == 1:
+                    
+                    ( chapter, ) = chapters
+                    
+                    collections_string_append = 'c' + str( chapter )
+                    
+                else:
+                    
+                    chapters_sorted = HydrusTags.SortTags( chapters )
+                    
+                    collections_string_append = 'c' + str( chapters_sorted[0] ) + '-' + str( chapters_sorted[-1] )
+                    
                 
-                pages_sorted = HydrusTags.SortTags( pages )
+                if len( collections_string ) > 0: collections_string += '-' + collections_string_append
+                else: collections_string = collections_string_append
                 
-                collections_string_append = 'p' + str( pages_sorted[0] ) + '-' + str( pages_sorted[-1] )
+            
+            if len( pages ) > 0:
+                
+                if len( pages ) == 1:
+                    
+                    ( page, ) = pages
+                    
+                    collections_string_append = 'p' + str( page )
+                    
+                else:
+                    
+                    pages_sorted = HydrusTags.SortTags( pages )
+                    
+                    collections_string_append = 'p' + str( pages_sorted[0] ) + '-' + str( pages_sorted[-1] )
+                    
+                
+                if len( collections_string ) > 0: collections_string += '-' + collections_string_append
+                else: collections_string = collections_string_append
                 
             
-            if len( collections_string ) > 0: collections_string += '-' + collections_string_append
-            else: collections_string = collections_string_append
-            
-        
-        if len( collections_string ) > 0:
-            
-            dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-            
-            ( text_x, text_y ) = dc.GetTextExtent( collections_string )
-            
-            top_left_x = width - text_x - CC.THUMBNAIL_BORDER
-            top_left_y = height - text_y - CC.THUMBNAIL_BORDER
-            
-            dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
-            
-            dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
-            
-            dc.SetPen( wx.TRANSPARENT_PEN )
-            
-            dc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 2, text_y + 2 )
-            
-            dc.DrawText( collections_string, top_left_x, top_left_y )
-            
-        
-        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-        
-        upper_info_string = ''
-        
-        if len( creators ) > 0:
-            
-            creators = siblings_manager.CollapseNamespacedTags( 'creator', creators )
-            
-            upper_info_string = ', '.join( creators )
-            
-            if len( series ) > 0 or len( titles ) > 0: upper_info_string += ' - '
-            
-        
-        if len( series ) > 0:
-            
-            series = siblings_manager.CollapseNamespacedTags( 'series', series )
-            
-            upper_info_string += ', '.join( series )
-            
-        elif len( titles ) > 0:
-            
-            titles = siblings_manager.CollapseNamespacedTags( 'title', titles )
-            
-            upper_info_string += ', '.join( titles )
+            if len( collections_string ) > 0:
+                
+                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+                
+                ( text_x, text_y ) = dc.GetTextExtent( collections_string )
+                
+                top_left_x = width - text_x - CC.THUMBNAIL_BORDER
+                top_left_y = height - text_y - CC.THUMBNAIL_BORDER
+                
+                dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
+                
+                dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
+                
+                dc.SetPen( wx.TRANSPARENT_PEN )
+                
+                dc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 2, text_y + 2 )
+                
+                dc.DrawText( collections_string, top_left_x, top_left_y )
+                
             
         
-        if len( upper_info_string ) > 0:
+        if new_options.GetBoolean( 'show_thumbnail_title_banner' ):
             
-            dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
             
-            ( text_x, text_y ) = dc.GetTextExtent( upper_info_string )
+            upper_info_string = ''
             
-            top_left_x = int( ( width - text_x ) / 2 )
-            top_left_y = CC.THUMBNAIL_BORDER
+            if len( creators ) > 0:
+                
+                creators = siblings_manager.CollapseNamespacedTags( 'creator', creators )
+                
+                upper_info_string = ', '.join( creators )
+                
+                if len( series ) > 0 or len( titles ) > 0: upper_info_string += ' - '
+                
             
-            dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
+            if len( series ) > 0:
+                
+                series = siblings_manager.CollapseNamespacedTags( 'series', series )
+                
+                upper_info_string += ', '.join( series )
+                
+            elif len( titles ) > 0:
+                
+                titles = siblings_manager.CollapseNamespacedTags( 'title', titles )
+                
+                upper_info_string += ', '.join( titles )
+                
             
-            dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
-            
-            dc.SetPen( wx.TRANSPARENT_PEN )
-            
-            dc.DrawRectangle( 0, top_left_y - 1, width, text_y + 2 )
-            
-            dc.DrawText( upper_info_string, top_left_x, top_left_y )
+            if len( upper_info_string ) > 0:
+                
+                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+                
+                ( text_x, text_y ) = dc.GetTextExtent( upper_info_string )
+                
+                top_left_x = int( ( width - text_x ) / 2 )
+                top_left_y = CC.THUMBNAIL_BORDER
+                
+                dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
+                
+                dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
+                
+                dc.SetPen( wx.TRANSPARENT_PEN )
+                
+                dc.DrawRectangle( 0, top_left_y - 1, width, text_y + 2 )
+                
+                dc.DrawText( upper_info_string, top_left_x, top_left_y )
+                
             
         
         dc.SetBrush( wx.TRANSPARENT_BRUSH )

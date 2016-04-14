@@ -503,7 +503,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     elif os.path.exists( dest_path ):
                         
-                        dest_size = HydrusPaths.GetPathSize( dest_path )
+                        dest_size = os.path.getsize( dest_path )
                         
                         if dest_size == size:
                             

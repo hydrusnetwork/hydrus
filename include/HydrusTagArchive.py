@@ -136,12 +136,12 @@ class HydrusTagArchive( object ):
         return tag_id
         
     
-    def BeginBigJob( self ): self._c.execute( 'BEGIN IMMEDIATE' )
+    def BeginBigJob( self ): self._c.execute( 'BEGIN IMMEDIATE;' )
     
     def CommitBigJob( self ):
         
-        self._c.execute( 'COMMIT' )
-        self._c.execute( 'VACUUM' )
+        self._c.execute( 'COMMIT;' )
+        self._c.execute( 'VACUUM;' )
         
     
     def AddMapping( self, hash, tag ):

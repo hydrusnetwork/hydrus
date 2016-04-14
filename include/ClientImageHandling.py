@@ -16,12 +16,10 @@ def EfficientlyResizeNumpyImage( numpy_image, ( target_x, target_y ) ):
     
     if target_x >= im_x and target_y >= im_y: return numpy_image
     
-    result = numpy_image
-    
     # this seems to slow things down a lot, at least for cv!
     #if im_x > 2 * target_x and im_y > 2 * target_y: result = cv2.resize( numpy_image, ( 2 * target_x, 2 * target_y ), interpolation = cv2.INTER_NEAREST )
     
-    return cv2.resize( result, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
+    return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
     
 def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     

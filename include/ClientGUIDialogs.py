@@ -1705,7 +1705,7 @@ class DialogInputLocalFiles( Dialog ):
                 break
                 
             
-            size = HydrusPaths.GetPathSize( path )
+            size = os.path.getsize( path )
             
             if size == 0:
                 

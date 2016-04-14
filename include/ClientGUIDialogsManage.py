@@ -4203,7 +4203,12 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._rating_dialog_position = wx.CheckBox( self )
             self._hide_preview = wx.CheckBox( self )
             
+            self._show_thumbnail_title_banner = wx.CheckBox( self )
+            self._show_thumbnail_page = wx.CheckBox( self )
+            
             #
+            
+            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
             
             gui_session_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
             
@@ -4240,6 +4245,10 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._hide_preview.SetValue( HC.options[ 'hide_preview' ] )
             
+            self._show_thumbnail_title_banner.SetValue( self._new_options.GetBoolean( 'show_thumbnail_title_banner' ) )
+            
+            self._show_thumbnail_page.SetValue( self._new_options.GetBoolean( 'show_thumbnail_page' ) )
+            
             #
             
             gridbox = wx.FlexGridSizer( 0, 2 )
@@ -4275,6 +4284,12 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddF( wx.StaticText( self, label = 'Hide the preview window: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._hide_preview, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Show \'title\' banner on thumbnails: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._show_thumbnail_title_banner, CC.FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'Show volume/chapter/page number on thumbnails: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._show_thumbnail_page, CC.FLAGS_MIXED )
             
             self.SetSizer( gridbox )
             
@@ -4328,6 +4343,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
             
             HC.options[ 'hide_preview' ] = self._hide_preview.GetValue()
+            
+            self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
+            self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
             
         
     
@@ -7606,21 +7624,17 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
-        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-        
         for service in services:
             
             service_key = service.GetServiceKey()
             name = service.GetName()
-            
-            if service_key == default_tag_repository_key: default_name = name
             
             page = self._Panel( self._tag_services, service_key, initial_value )
             
             self._tag_services.AddPage( name, page )
             
         
-        self._tag_services.Select( default_name )
+        self._tag_services.Select( 'all known tags' )
         
         #
         

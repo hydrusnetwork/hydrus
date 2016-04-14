@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 201</h3></li>
+				<ul>
+					<li>exported hash and tag master tables to external database files for both client and server</li>
+					<li>the client's 'mappings' table is split into 'current_mappings' and 'pending_mappings', saving about 20% of space and speed for almost all mappings operations</li>
+					<li>removed superfluous rowid column from client mappings tables, saving about another 20% of space</li>
+					<li>removed superfluous rowid column from server mappings tables, saving about 20% of space</li>
+					<li>to save time, service mapping counts now only aggregate current mappings, not current and pending</li>
+					<li>exporting to tag archive now only exports current_mappings, not pending</li>
+					<li>'all known files' queries will more cleverly discern their current/pending search domain</li>
+					<li>tag count queries will more cleverly discern their current/pending search domain</li>
+					<li>cleaned up a lot of mapping-related query code, and any ugly status leftovers from current/pending union</li>
+					<li>num_namespaces is no longer tracked for tag services</li>
+					<li>unified clientside service deletion code, fixing several orphan-generation issues</li>
+					<li>db update will remove all mappings orphans created by a recent tag service deletion</li>
+					<li>some db settings init is harmonised into one location</li>
+					<li>fixed up some external db settings init</li>
+					<li>db connection settings are now applied to all attached db files</li>
+					<li>db vacuum code is harmonised into one location</li>
+					<li>vacuum cleans up after itself better</li>
+					<li>db vacuum is now preceded by a hard drive free space check</li>
+					<li>db vacuum can now predict how long it will take</li>
+					<li>if a vacuum fails for an unexpected reason, the db will now recover better</li>
+					<li>the db recovers from failed backups better</li>
+					<li>the server db will vacuum all its databases on a backup, except any that it thinks will take total vacuum time to more than five minutes</li>
+					<li>server backup will report roughly how long it took, clientside</li>
+					<li>significantly sped up system-tag-only 'all known files' queries for tag services that have many mappings</li>
+					<li>significantly sped up system:numtags for =0 or >0 when tag services have many mappings</li>
+					<li>the status bar has some improved grammar, reporting overall common mime as appropriate</li>
+					<li>the status bar reports single-thumbnail info text when one file is selected</li>
+					<li>fixed an image cache key type-matching bug</li>
+					<li>data cache now tracks objects with dynamic memory usage</li>
+					<li>the static image rendering-cache relationship has been slightly dejanked</li>
+					<li>added a couple of checkboxes to the options->gui page to hide/show thumbnail title banner and page indicator</li>
+					<li>the manage tags censorship dialog now defaults to the 'all known tags' service on init</li>
+					<li>slideshows will not progress if the current media is either a static image that has yet to render or an unpaused animation that has yet to run through once</li>
+					<li>service content package status messages now summarise their final commit status better</li>
+					<li>this nice new line is printed to the log as a record of repo sync rows/s speed</li>
+					<li>the client will shut down faster if big jobs are running</li>
+				</ul>
 				<li><h3>version 200</h3></li>
 				<ul>
 					<li>added 'censor tag' to tag right-click menu</li>
