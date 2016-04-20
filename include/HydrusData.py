@@ -937,6 +937,11 @@ def SplitIteratorIntoChunks( iterator, n ):
 
 def SplitListIntoChunks( xs, n ):
     
+    if isinstance( xs, set ):
+        
+        xs = list( xs )
+        
+    
     for i in xrange( 0, len( xs ), n ): yield xs[ i : i + n ]
     
 def TimeHasPassed( timestamp ):

@@ -127,7 +127,7 @@ class Animation( wx.Window ):
         ( initial_width, initial_height ) = initial_size
         
         self._media = media
-        self._video_container = self._video_container = ClientRendering.RasterContainerVideo( self._media, initial_size )
+        self._video_container = ClientRendering.RasterContainerVideo( self._media, initial_size )
         
         self._animation_bar = None
         
@@ -1237,11 +1237,13 @@ class Canvas( wx.Window ):
                     
                     self._current_display_media = self._current_media.GetDisplayMedia()
                     
-                    if self._current_display_media.GetLocationsManager().HasLocal():
+                    ( initial_size, initial_position ) = self._GetMediaContainerSizeAndPosition()
+                    
+                    ( initial_width, initial_height ) = initial_size
+                    
+                    if self._current_display_media.GetLocationsManager().HasLocal() and initial_width > 0 and initial_height > 0:
                         
                         self._RecalcZoom()
-                        
-                        ( initial_size, initial_position ) = self._GetMediaContainerSizeAndPosition()
                         
                         self._media_container = MediaContainer( self, self._image_cache, self._current_display_media, initial_size, initial_position )
                         
@@ -1249,7 +1251,10 @@ class Canvas( wx.Window ):
                         
                         self._PrefetchNeighbours()
                         
-                    else: self._current_media = None
+                    else:
+                        
+                        self._current_media = None
+                        
                     
                 
                 HydrusGlobals.client_controller.pub( 'canvas_new_display_media', self._canvas_key, self._current_display_media )
@@ -1502,7 +1507,11 @@ class CanvasWithDetails( Canvas ):
     
     def _GetInfoString( self ):
         
-        info_string = self._current_media.GetPrettyInfo() + ' | ' + ClientData.ConvertZoomToPercentage( self._current_zoom ) + ' | ' + self._current_media.GetPrettyAge()
+        lines = self._current_display_media.GetPrettyInfoLines()
+        
+        lines.insert( 1, ClientData.ConvertZoomToPercentage( self._current_zoom ) )
+        
+        info_string = ' | '.join( lines )
         
         return info_string
         
@@ -1569,8 +1578,10 @@ class CanvasPanel( Canvas ):
             
             menu = wx.Menu()
             
-            menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyInfo() )
-            menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyAge() )
+            for line in self._current_display_media.GetPrettyInfoLines():
+                
+                menu.Append( CC.ID_NULL, line )
+                
             
             #
             
@@ -1792,14 +1803,14 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
             
             delay_base = 800
             
-            num_to_go_back = 2
-            num_to_go_forward = 2
+            num_to_go_back = 1
+            num_to_go_forward = 1
             
             self._just_started = False
             
         else:
             
-            delay_base = 200
+            delay_base = 400
             
             num_to_go_back = 3
             num_to_go_forward = 5
@@ -2656,8 +2667,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         menu = wx.Menu()
         
-        menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyInfo() )
-        menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyAge() )
+        for line in self._current_display_media.GetPrettyInfoLines():
+            
+            menu.Append( CC.ID_NULL, line )
+            
         
         menu.AppendSeparator()
         
@@ -3103,8 +3116,10 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
         
         menu = wx.Menu()
         
-        menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyInfo() )
-        menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyAge() )
+        for line in self._current_display_media.GetPrettyInfoLines():
+            
+            menu.Append( CC.ID_NULL, line )
+            
         
         menu.AppendSeparator()
         

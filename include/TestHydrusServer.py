@@ -255,9 +255,9 @@ class TestServer( unittest.TestCase ):
         info[ 'timeout' ] = 0
         info[ 'hashes' ] = hashes
         
-        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings
+        # hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings
         
-        media_results = [ ClientMedia.MediaResult( ( hash, True, 500, HC.IMAGE_JPEG, 0, 640, 480, None, None, None, None, None, None, None ) ) for hash in hashes ]
+        media_results = [ ClientMedia.MediaResult( ( hash, True, 500, HC.IMAGE_JPEG, 640, 480, None, None, None, None, None, None, None ) ) for hash in hashes ]
         
         HydrusGlobals.test_controller.SetRead( 'local_booru_share_keys', [ share_key ] )
         HydrusGlobals.test_controller.SetRead( 'local_booru_share', info )

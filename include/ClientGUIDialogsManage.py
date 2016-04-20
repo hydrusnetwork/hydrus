@@ -1663,7 +1663,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._period_box = ClientGUICommon.StaticBox( self, 'export period' )
         
-        self._period = ClientGUICommon.TimeDeltaCtrl( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
+        self._period = ClientGUICommon.TimeDeltaButton( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
         self._period.SetValue( period )
         
@@ -2727,7 +2727,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._open_popup = wx.CheckBox( self._folder_box )
         
-        self._period = ClientGUICommon.TimeDeltaCtrl( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
+        self._period = ClientGUICommon.TimeDeltaButton( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
         self._paused = wx.CheckBox( self._folder_box )
         
@@ -3612,7 +3612,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._thread_times_to_check = wx.SpinCtrl( thread_checker, min = 0, max = 100 )
             self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
             
-            self._thread_check_period = ClientGUICommon.TimeDeltaCtrl( thread_checker, min = 30, hours = True, minutes = True, seconds = True )
+            self._thread_check_period = ClientGUICommon.TimeDeltaButton( thread_checker, min = 30, hours = True, minutes = True, seconds = True )
             self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
             
             #
@@ -6787,7 +6787,10 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
                     
-                else: return
+                else:
+                    
+                    return
+                    
                 
             
             name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
@@ -7334,7 +7337,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._booru_selector = wx.ListBox( self._query_panel )
             self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
             
-            self._period = ClientGUICommon.TimeDeltaCtrl( self._query_panel, min = 3600 * 4, days = True, hours = True )
+            self._period = ClientGUICommon.TimeDeltaButton( self._query_panel, min = 3600 * 4, days = True, hours = True )
             
             self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
             

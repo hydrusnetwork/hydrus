@@ -332,7 +332,9 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
                 
             else: self._title_text.Hide()
             
-            label = self._current_media.GetPrettyInfo() + ' | ' + self._current_media.GetPrettyAge()
+            lines = self._current_media.GetPrettyInfoLines()
+            
+            label = ' | '.join( lines )
             
             self._info_text.SetLabelText( label )
             

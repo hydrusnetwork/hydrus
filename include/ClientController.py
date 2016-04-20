@@ -598,16 +598,15 @@ class Controller( HydrusController.HydrusController ):
             
             if HydrusData.TimeHasPassed( shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] + maintenance_vacuum_period ):
                 
-                self.WriteSynchronous( 'vacuum' )
+                self.WriteInterruptable( 'vacuum' )
                 
             
         
-        stale_time_delta = 14 * 86400
         stop_time = HydrusData.GetNow() + 120
         
         self.pub( 'splash_set_status_text', 'analyzing' )
         
-        self.WriteSynchronous( 'analyze', stale_time_delta, stop_time )
+        self.WriteInterruptable( 'analyze', stop_time )
         
         if self._timestamps[ 'last_service_info_cache_fatten' ] == 0:
             

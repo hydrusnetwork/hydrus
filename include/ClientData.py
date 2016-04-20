@@ -678,7 +678,7 @@ class Imageboard( HydrusData.HydrusYAMLBase ):
     
     def IsOkToPost( self, media_result ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
         
         if CC.RESTRICTION_MIN_RESOLUTION in self._restrictions:
             
@@ -1300,18 +1300,18 @@ class ServiceRepository( ServiceRestricted ):
     
     def CanDownloadUpdate( self ):
         
-        update_due = HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+        work_to_do = self.IsUpdateDueForDownload()
         
-        return self.CanDownload() and update_due and not self.IsPaused()
+        return work_to_do and self.CanDownload() and not self.IsPaused()
         
     
     def CanProcessUpdate( self ):
         
-        update_is_downloaded = self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
+        work_to_do = self.IsUpdateDueForProcessing()
         
         it_is_time = HydrusData.TimeHasPassed( self._info[ 'next_processing_timestamp' ] + HC.UPDATE_DURATION + HC.options[ 'processing_phase' ] )
         
-        return update_is_downloaded and it_is_time and not self.IsPaused()
+        return work_to_do and it_is_time and not self.IsPaused()
         
     
     def GetTimestamps( self ): return ( self._info[ 'first_timestamp' ], self._info[ 'next_download_timestamp' ], self._info[ 'next_processing_timestamp' ] )
@@ -1366,6 +1366,16 @@ class ServiceRepository( ServiceRestricted ):
     def IsPaused( self ):
         
         return self._info[ 'paused' ]
+        
+    
+    def IsUpdateDueForDownload( self ):
+        
+        return HydrusData.TimeHasPassed( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+        
+    
+    def IsUpdateDueForProcessing( self ):
+        
+        return self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
         
     
     def Sync( self, only_when_idle = False, stop_time = None ):
@@ -1672,8 +1682,6 @@ class ServiceRepository( ServiceRestricted ):
                     
                     HydrusGlobals.client_controller.Write( 'service_updates', service_keys_to_service_updates )
                     
-                    HydrusGlobals.client_controller.pub( 'notify_new_pending' )
-                    
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     
                 
@@ -1720,11 +1728,19 @@ class ServiceRepository( ServiceRestricted ):
             
             time.sleep( 3 )
             
+        finally:
+            
+            HydrusGlobals.client_controller.pub( 'notify_new_pending' )
+            HydrusGlobals.client_controller.pub( 'notify_new_siblings' )
+            HydrusGlobals.client_controller.pub( 'notify_new_parents' )
+            
         
     
     def SyncThumbnails( self, job_key ):
         
-        if self._service_type == HC.FILE_REPOSITORY and self.CanDownload():
+        synced = not ( self.IsUpdateDueForDownload() or self.IsUpdateDueForProcessing() )
+        
+        if self._service_type == HC.FILE_REPOSITORY and synced and self.CanDownload():
             
             options = HydrusGlobals.client_controller.GetOptions()
             

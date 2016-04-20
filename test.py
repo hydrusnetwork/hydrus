@@ -51,7 +51,6 @@ class Controller( object ):
         HC.DB_DIR = tempfile.mkdtemp()
         
         HC.CLIENT_ARCHIVES_DIR = os.path.join( HC.DB_DIR, 'client_archives' )
-        HC.CLIENT_CACHE_DIR = os.path.join( HC.DB_DIR, 'client_cache' )
         HC.CLIENT_FILES_DIR = os.path.join( HC.DB_DIR, 'client_files' )
         HC.CLIENT_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'client_thumbnails' )
         HC.CLIENT_UPDATES_DIR = os.path.join( HC.DB_DIR, 'client_updates' )

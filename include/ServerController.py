@@ -344,10 +344,9 @@ class Controller( HydrusController.HydrusController ):
     
     def MaintainDB( self ):
         
-        stale_time_delta = 30 * 86400
         stop_time = HydrusData.GetNow() + 10
         
-        self.WriteSynchronous( 'analyze', stale_time_delta, stop_time )
+        self.WriteSynchronous( 'analyze', stop_time )
         
     
     def NotifyPubSubs( self ):

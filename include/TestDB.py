@@ -664,7 +664,7 @@ class TestClientDB( unittest.TestCase ):
             
             ( media_result, ) = self._read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( written_hash, ) )
             
-            ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+            ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
             
             now = HydrusData.GetNow()
             
@@ -672,8 +672,6 @@ class TestClientDB( unittest.TestCase ):
             self.assertEqual( mr_inbox, True )
             self.assertEqual( mr_size, size )
             self.assertEqual( mr_mime, mime )
-            self.assertLessEqual( now - 10, mr_timestamp )
-            self.assertLessEqual( mr_timestamp, now + 10 )
             self.assertEqual( mr_width, width )
             self.assertEqual( mr_height, height )
             self.assertEqual( mr_duration, duration )
@@ -795,7 +793,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( media_result, ) = self._read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
         
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         
         now = HydrusData.GetNow()
         
@@ -804,8 +802,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_size, 5270 )
         self.assertEqual( mr_mime, HC.IMAGE_PNG )
         self.assertEqual( mr_hash, hash )
-        self.assertLessEqual( now - 10, mr_timestamp )
-        self.assertLessEqual( mr_timestamp, now + 10 )
         self.assertEqual( mr_width, 200 )
         self.assertEqual( mr_height, 200 )
         self.assertEqual( mr_duration, None )
@@ -814,7 +810,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( media_result, ) = self._read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, ( 1, ) )
         
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         
         now = HydrusData.GetNow()
         
@@ -823,8 +819,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_size, 5270 )
         self.assertEqual( mr_mime, HC.IMAGE_PNG )
         self.assertEqual( mr_hash, hash )
-        self.assertLessEqual( now - 10, mr_timestamp )
-        self.assertLessEqual( mr_timestamp, now + 10 )
         self.assertEqual( mr_width, 200 )
         self.assertEqual( mr_height, 200 )
         self.assertEqual( mr_duration, None )

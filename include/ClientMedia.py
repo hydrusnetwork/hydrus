@@ -64,12 +64,19 @@ class LocationsManager( object ):
     
     LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY }
     
-    def __init__( self, current, deleted, pending, petitioned ):
+    def __init__( self, current, deleted, pending, petitioned, current_to_timestamps = None ):
         
         self._current = current
         self._deleted = deleted
         self._pending = pending
         self._petitioned = petitioned
+        
+        if current_to_timestamps is None:
+            
+            current_to_timestamps = {}
+            
+        
+        self._current_to_timestamps = current_to_timestamps
         
     
     def DeletePending( self, service_key ):
@@ -148,6 +155,30 @@ class LocationsManager( object ):
         return remote_service_strings
         
     
+    def GetTimestamp( self, service_key = None ):
+        
+        if service_key is None:
+            
+            if len( self._current_to_timestamps ) > 0:
+                
+                return max( self._current_to_timestamps.values() )
+                
+            else:
+                
+                return None
+                
+            
+        
+        if service_key in self._current_to_timestamps:
+            
+            return self._current_to_timestamps[ service_key ]
+            
+        else:
+            
+            return None
+            
+        
+    
     def HasDownloading( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._pending
     
     def HasLocal( self ): return len( self._current.intersection( self.LOCAL_LOCATIONS ) ) > 0
@@ -168,6 +199,8 @@ class LocationsManager( object ):
                 self._current.discard( CC.TRASH_SERVICE_KEY )
                 
             
+            self._current_to_timestamps[ service_key ] = HydrusData.GetNow()
+            
         elif action == HC.CONTENT_UPDATE_DELETE:
             
             self._deleted.add( service_key )
@@ -179,12 +212,16 @@ class LocationsManager( object ):
                 
                 self._current.add( CC.TRASH_SERVICE_KEY )
                 
+                self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ] = self._current_to_timestamps[ CC.LOCAL_FILE_SERVICE_KEY ]
+                
             
         elif action == HC.CONTENT_UPDATE_UNDELETE:
             
             self._current.discard( CC.TRASH_SERVICE_KEY )
             
             self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
+            
+            self._current_to_timestamps[ CC.LOCAL_FILE_SERVICE_KEY ] = self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ]
             
         elif action == HC.CONTENT_UPDATE_PEND:
             
@@ -655,7 +692,7 @@ class MediaList( object ):
         
         def deal_with_none( x ):
             
-            if x == None: return -1
+            if x is None: return -1
             else: return x
             
         
@@ -755,8 +792,6 @@ class MediaCollection( MediaList, Media ):
         self._size = 0
         self._size_definite = True
         
-        self._timestamp = 0
-        
         self._width = None
         self._height = None
         self._duration = None
@@ -777,9 +812,6 @@ class MediaCollection( MediaList, Media ):
         
         self._size = sum( [ media.GetSize() for media in self._sorted_media ] )
         self._size_definite = not False in ( media.IsSizeDefinite() for media in self._sorted_media )
-        
-        if len( self._sorted_media ) == 0: self._timestamp = 0
-        else: self._timestamp = max( [ media.GetTimestamp() for media in self._sorted_media ] )
         
         duration_sum = sum( [ media.GetDuration() for media in self._sorted_media if media.HasDuration() ] )
         
@@ -864,9 +896,7 @@ class MediaCollection( MediaList, Media ):
     
     def GetNumWords( self ): return sum( ( media.GetNumWords() for media in self._sorted_media ) )
     
-    def GetPrettyAge( self ): return 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( self._timestamp )
-    
-    def GetPrettyInfo( self ):
+    def GetPrettyInfoLines( self ):
         
         size = HydrusData.ConvertIntToBytes( self._size )
         
@@ -876,7 +906,7 @@ class MediaCollection( MediaList, Media ):
         
         info_string += ' (' + HydrusData.ConvertIntToPrettyString( self.GetNumFiles() ) + ' files)'
         
-        return info_string
+        return [ info_string ]
         
     
     def GetRatings( self ): return self._ratings
@@ -896,7 +926,7 @@ class MediaCollection( MediaList, Media ):
     
     def GetTagsManager( self ): return self._tags_manager
     
-    def GetTimestamp( self ): return self._timestamp
+    def GetTimestamp( self ): return None
     
     def HasArchive( self ): return self._archive
     
@@ -1026,19 +1056,14 @@ class MediaSingleton( Media ):
     
     def GetNumWords( self ): return self._media_result.GetNumWords()
     
-    def GetTimestamp( self ):
+    def GetTimestamp( self, service_key = None ):
         
-        timestamp = self._media_result.GetTimestamp()
-        
-        if timestamp is None: return 0
-        else: return timestamp
+        return self._media_result.GetLocationsManager().GetTimestamp( service_key )
         
     
-    def GetPrettyAge( self ): return 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( self._media_result.GetTimestamp() )
-    
-    def GetPrettyInfo( self ):
+    def GetPrettyInfoLines( self ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._media_result.ToTuple()
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._media_result.ToTuple()
         
         info_string = HydrusData.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         
@@ -1050,7 +1075,27 @@ class MediaSingleton( Media ):
         
         if num_words is not None: info_string += ' (' + HydrusData.ConvertIntToPrettyString( num_words ) + ' words)'
         
-        return info_string
+        lines = [ info_string ]
+        
+        locations_manager = self._media_result.GetLocationsManager()
+        
+        current_service_keys = locations_manager.GetCurrent()
+        
+        if CC.LOCAL_FILE_SERVICE_KEY in current_service_keys:
+            
+            timestamp = locations_manager.GetTimestamp( CC.LOCAL_FILE_SERVICE_KEY )
+            
+            lines.append( 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) )
+            
+        
+        if CC.TRASH_SERVICE_KEY in current_service_keys:
+            
+            timestamp = locations_manager.GetTimestamp( CC.TRASH_SERVICE_KEY )
+            
+            lines.append( 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ', now in the trash' )
+            
+        
+        return lines
         
     
     def GetRatings( self ): return self._media_result.GetRatings()
@@ -1198,14 +1243,14 @@ class MediaResult( object ):
     
     def __init__( self, tuple ):
         
-        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings
+        # hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings
         
         self._tuple = tuple
         
     
     def DeletePending( self, service_key ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
         service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
@@ -1217,33 +1262,31 @@ class MediaResult( object ):
     
     def GetHash( self ): return self._tuple[0]
     
-    def GetDuration( self ): return self._tuple[7]
+    def GetDuration( self ): return self._tuple[6]
     
     def GetInbox( self ): return self._tuple[1]
     
-    def GetLocationsManager( self ): return self._tuple[11]
+    def GetLocationsManager( self ): return self._tuple[10]
     
     def GetMime( self ): return self._tuple[3]
     
-    def GetNumFrames( self ): return self._tuple[8]
+    def GetNumFrames( self ): return self._tuple[7]
     
-    def GetNumWords( self ): return self._tuple[9]
+    def GetNumWords( self ): return self._tuple[8]
     
-    def GetRatings( self ): return ( self._tuple[12], self._tuple[13] )
+    def GetRatings( self ): return ( self._tuple[11], self._tuple[12] )
     
-    def GetResolution( self ): return ( self._tuple[5], self._tuple[6] )
+    def GetResolution( self ): return ( self._tuple[4], self._tuple[5] )
     
     def GetSize( self ): return self._tuple[2]
     
-    def GetTagsManager( self ): return self._tuple[10]
-    
-    def GetTimestamp( self ): return self._tuple[4]
+    def GetTagsManager( self ): return self._tuple[9]
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
         service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
@@ -1272,7 +1315,7 @@ class MediaResult( object ):
                         
                     
                 
-                self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings )
+                self._tuple = ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings )
                 
             
             locations_manager.ProcessContentUpdate( service_key, content_update )
@@ -1286,7 +1329,7 @@ class MediaResult( object ):
     
     def ResetService( self, service_key ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
         tags_manager.ResetService( service_key )
         locations_manager.ResetService( service_key )

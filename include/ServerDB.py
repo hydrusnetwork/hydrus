@@ -100,7 +100,7 @@ class MessageDB( object ):
     '''
 class DB( HydrusDB.HydrusDB ):
     
-    READ_WRITE_ACTIONS = []
+    READ_WRITE_ACTIONS = [ 'access_key', 'immediate_content_update', 'init', 'registration_keys' ]
     
     def _AccountTypeExists( self, service_id, title ): return self._c.execute( 'SELECT 1 FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
     
@@ -217,11 +217,7 @@ class DB( HydrusDB.HydrusDB ):
             
             splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
             
-            affected_timestamps = [ timestamp for ( timestamp, ) in self._c.execute( 'SELECT DISTINCT timestamp FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) ) ]
-            
             self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) )
-            
-            self._RefreshUpdateCache( service_id, affected_timestamps )
             
         else:
             
@@ -312,7 +308,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _AddToExpires( self, account_ids, timespan ): self._c.execute( 'UPDATE accounts SET expires = expires + ? WHERE account_id IN ' + HydrusData.SplayListForDB( account_ids ) + ';', ( timespan, ) )
     
-    def _Analyze( self, stale_time_delta, stop_time ):
+    def _Analyze( self, stop_time ):
+        
+        stale_time_delta = 30 * 86400
         
         all_names = [ name for ( name, ) in self._c.execute( 'SELECT name FROM sqlite_master;' ) ]
         
@@ -339,7 +337,10 @@ class DB( HydrusDB.HydrusDB ):
             
             time_took = HydrusData.GetNowPrecise() - started
             
-            HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+            if time_took > 1:
+                
+                HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+                
             
             if HydrusData.TimeHasPassed( stop_time ):
                 
@@ -369,7 +370,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ApproveFilePetitionOptimised( self, service_id, account_id, hash_ids ):
         
-        ( biggest_end, ) = self._c.execute( 'SELECT end FROM update_cache ORDER BY end DESC LIMIT 1;' ).fetchone()
+        ( biggest_end, ) = self._c.execute( 'SELECT end FROM update_cache WHERE service_id = ? ORDER BY end DESC LIMIT 1;', ( service_id, ) ).fetchone()
         
         self._c.execute( 'DELETE FROM file_map WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND timestamp > ?;', ( service_id, account_id, biggest_end ) )
         
@@ -409,10 +410,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._RewardTagParentPetitioners( service_id, old_tag_id, new_tag_id, 1 )
         
-        # get affected timestamps here?
-        
-        affected_timestamps = [ timestamp for ( timestamp, ) in self._c.execute( 'SELECT DISTINCT timestamp FROM tag_parents WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, old_tag_id, new_tag_id, HC.CURRENT ) ) ]
-        
         self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ?;', ( service_id, old_tag_id, new_tag_id ) )
         
         if status == HC.PENDING: new_status = HC.CURRENT
@@ -421,8 +418,6 @@ class DB( HydrusDB.HydrusDB ):
         now = HydrusData.GetNow()
         
         self._c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
-        
-        if len( affected_timestamps ) > 0: self._RefreshUpdateCache( service_id, affected_timestamps )
         
     
     def _ApproveTagSiblingPetition( self, service_id, account_id, old_tag_id, new_tag_id, reason_id, status ):
@@ -442,10 +437,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._RewardTagSiblingPetitioners( service_id, old_tag_id, new_tag_id, 1 )
         
-        # get affected timestamps here?
-        
-        affected_timestamps = [ timestamp for ( timestamp, ) in self._c.execute( 'SELECT DISTINCT timestamp FROM tag_siblings WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, old_tag_id, new_tag_id, HC.CURRENT ) ) ]
-        
         self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ?;', ( service_id, old_tag_id, new_tag_id ) )
         
         if status == HC.PENDING: new_status = HC.CURRENT
@@ -454,61 +445,6 @@ class DB( HydrusDB.HydrusDB ):
         now = HydrusData.GetNow()
         
         self._c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
-        
-        if len( affected_timestamps ) > 0: self._RefreshUpdateCache( service_id, affected_timestamps )
-        
-    
-    def _AttachExternalDatabases( self ):
-        
-        self._db_filenames[ 'master' ] = self._db_name + '.master.db'
-        
-        master_db_path = os.path.join( self._db_dir, self._db_filenames[ 'master' ] )
-        
-        if not os.path.exists( master_db_path ):
-            
-            db = sqlite3.connect( master_db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
-            
-            c = db.cursor()
-            
-            HydrusDB.SetupDBCreatePragma( c, no_wal = self._no_wal )
-            
-            c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
-            
-            c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
-            
-            del c
-            del db
-            
-        
-        self._c.execute( 'ATTACH ? AS external_master;', ( master_db_path, ) )
-        
-        self._db_filenames[ 'mappings' ] = self._db_name + '.mappings.db'
-        
-        mappings_db_path = os.path.join( self._db_dir, self._db_filenames[ 'mappings' ] )
-        
-        if not os.path.exists( mappings_db_path ):
-            
-            db = sqlite3.connect( mappings_db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
-            
-            c = db.cursor()
-            
-            HydrusDB.SetupDBCreatePragma( c, no_wal = self._no_wal )
-            
-            c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) ) WITHOUT ROWID;' )
-            c.execute( 'CREATE INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
-            c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
-            c.execute( 'CREATE INDEX mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
-            c.execute( 'CREATE INDEX mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
-            
-            c.execute( 'CREATE TABLE mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
-            c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
-            c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
-            
-            del c
-            del db
-            
-        
-        self._c.execute( 'ATTACH ? AS external_mappings;', ( mappings_db_path, ) )
         
     
     def _Backup( self ):
@@ -667,15 +603,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _CleanUpdate( self, service_key, begin, end ):
-        
-        self._GenerateUpdate( service_key, begin, end )
-        
-        service_id = self._GetServiceId( service_key )
-        
-        self._c.execute( 'UPDATE update_cache SET dirty = ? WHERE service_id = ? AND begin = ?;', ( False, service_id, begin ) )
-        
-    
     def _ClearBans( self ):
         
         now = HydrusData.GetNow()
@@ -788,6 +715,26 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE version ( version INTEGER, year INTEGER, month INTEGER );' )
         
+        # mappings
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) ) WITHOUT ROWID;' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mappings_account_id_index ON mappings ( account_id );' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mappings_timestamp_index ON mappings ( timestamp );' )
+        
+        # master
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.tags ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
+        
+        # inserts
+        
         current_time_struct = time.gmtime()
         
         ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
@@ -828,8 +775,6 @@ class DB( HydrusDB.HydrusDB ):
         
         splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
-        affected_timestamps = [ timestamp for ( timestamp, ) in self._c.execute( 'SELECT DISTINCT timestamp FROM file_map WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ) ]
-        
         self._c.execute( 'DELETE FROM file_map WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
         self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
@@ -837,21 +782,15 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, account_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( ( service_id, account_id, hash_id, reason_id, now, HC.DELETED ) for hash_id in hash_ids ) )
         
-        self._RefreshUpdateCache( service_id, affected_timestamps )
-        
     
     def _DeleteMappings( self, service_id, account_id, tag_id, hash_ids, reason_id ):
         
         splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
-        affected_timestamps = [ timestamp for ( timestamp, ) in self._c.execute( 'SELECT DISTINCT timestamp FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) ) ]
-        
         self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
         self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
         
         self._c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, tag_id, hash_id, account_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( ( service_id, tag_id, hash_id, account_id, reason_id, HydrusData.GetNow(), HC.DELETED ) for hash_id in hash_ids ) )
-        
-        self._RefreshUpdateCache( service_id, affected_timestamps )
         
     
     def _DeleteOrphans( self ):
@@ -1302,15 +1241,6 @@ class DB( HydrusDB.HydrusDB ):
         service_id = self._GetServiceId( service_key )
         
         return [ account_type for ( account_type, ) in self._c.execute( 'SELECT account_type FROM account_types WHERE service_id = ?;', ( service_id, ) ) ]
-        
-    
-    def _GetDirtyUpdates( self, service_key ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        result = self._c.execute( 'SELECT begin, end FROM update_cache WHERE service_id = ? AND dirty = ?;', ( service_id, True ) ).fetchall()
-        
-        return result
         
     
     def _GetFile( self, hash ):
@@ -1776,6 +1706,12 @@ class DB( HydrusDB.HydrusDB ):
         
         self._over_monthly_data = False
         self._services_over_monthly_data = set()
+        
+    
+    def _InitExternalDatabases( self ):
+        
+        self._db_filenames[ 'mappings' ] = 'server.mappings.db'
+        self._db_filenames[ 'master' ] = 'server.master.db'
         
     
     def _IterateFileUpdateContentData( self, service_id, begin, end ):
@@ -2286,7 +2222,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'account_key_from_access_key': result = self._GetAccountKeyFromAccessKey( *args, **kwargs )
         elif action == 'account_key_from_identifier': result = self._GetAccountKeyFromIdentifier( *args, **kwargs )
         elif action == 'account_types': result = self._GetAccountTypes( *args, **kwargs )
-        elif action == 'dirty_updates': result = self._GetDirtyUpdates( *args, **kwargs  )
         elif action == 'immediate_content_update': result = self._GenerateImmediateContentUpdate( *args, **kwargs )
         elif action == 'init': result = self._InitAdmin( *args, **kwargs  )
         elif action == 'ip': result = self._GetIPTimestamp( *args, **kwargs )
@@ -2305,8 +2240,6 @@ class DB( HydrusDB.HydrusDB ):
         
         return result
         
-    
-    def _RefreshUpdateCache( self, service_id, affected_timestamps ): self._c.executemany( 'UPDATE update_cache SET dirty = ? WHERE service_id = ? AND ? BETWEEN begin AND end;', [ ( True, service_id, timestamp ) for timestamp in affected_timestamps ] )
     
     def _RewardAccounts( self, service_id, score_type, scores ):
         
@@ -2557,11 +2490,15 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusData.Print( 'exporting hashes to external db' )
             
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
+            
             self._c.execute( 'INSERT INTO external_master.hashes SELECT * FROM main.hashes;' )
             
             self._c.execute( 'DROP TABLE main.hashes;' )
             
             HydrusData.Print( 'exporting tags to external db' )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.tags ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
             
             self._c.execute( 'INSERT INTO external_master.tags SELECT * FROM main.tags;' )
             
@@ -2582,23 +2519,25 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'ALTER TABLE mapping_petitions RENAME TO mapping_petitions_old;' )
             self._c.execute( 'ALTER TABLE mappings RENAME TO mappings_old;' )
             
-            self._c.execute( 'CREATE TABLE external_mappings.mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) ) WITHOUT ROWID;' )
-            
-            self._c.execute( 'CREATE TABLE external_mappings.mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) ) WITHOUT ROWID;' )
             
             self._c.execute( 'INSERT INTO mapping_petitions SELECT * FROM mapping_petitions_old;' )
-            self._c.execute( 'INSERT INTO mappings SELECT * FROM mappings_old;' )
             
             self._c.execute( 'DROP TABLE mapping_petitions_old;' )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
+            
+            self._c.execute( 'INSERT INTO mappings SELECT * FROM mappings_old;' )
+            
             self._c.execute( 'DROP TABLE mappings_old;' )
             
-            self._c.execute( 'CREATE INDEX external_mappings.mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
-            self._c.execute( 'CREATE INDEX external_mappings.mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
-            self._c.execute( 'CREATE INDEX external_mappings.mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
-            self._c.execute( 'CREATE INDEX external_mappings.mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
             
-            self._c.execute( 'CREATE INDEX external_mappings.mappings_account_id_index ON mappings ( account_id );' )
-            self._c.execute( 'CREATE INDEX external_mappings.mappings_timestamp_index ON mappings ( timestamp );' )
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mappings_account_id_index ON mappings ( account_id );' )
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mappings_timestamp_index ON mappings ( timestamp );' )
             
             #
             
@@ -2654,7 +2593,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'backup': result = self._Backup( *args, **kwargs )
         elif action == 'check_data_usage': result = self._CheckDataUsage( *args, **kwargs )
         elif action == 'check_monthly_data': result = self._CheckMonthlyData( *args, **kwargs )
-        elif action == 'clean_update': result = self._CleanUpdate( *args, **kwargs )
         elif action == 'clear_bans': result = self._ClearBans( *args, **kwargs )
         elif action == 'create_update': result = self._CreateUpdate( *args, **kwargs )
         elif action == 'delete_orphans': result = self._DeleteOrphans( *args, **kwargs )

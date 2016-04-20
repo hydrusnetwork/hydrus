@@ -706,7 +706,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         num_chars = len( self._text_ctrl.GetValue() )
         
-        if num_chars == 0: self._lag_timer.Start( 5 * 60 * 1000, wx.TIMER_ONE_SHOT )
+        if num_chars == 0:
+            
+            self._lag_timer.Start( 5 * 60 * 1000, wx.TIMER_ONE_SHOT )
+            
         
     
     def EventFileButton( self, event ):
@@ -914,13 +917,22 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if search_text in ( '', ':' ):
             
-            self._cache_text = ''
-            self._current_namespace = ''
+            input_just_changed = self._cache_text != ''
             
-            if self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service_key
-            else: search_service_key = self._file_service_key
+            db_not_going_to_hang_if_we_hit_it = not HydrusGlobals.client_controller.CurrentlyIdle()
             
-            matches = HydrusGlobals.client_controller.Read( 'file_system_predicates', search_service_key )
+            if input_just_changed or db_not_going_to_hang_if_we_hit_it:
+                
+                self._cache_text = ''
+                self._current_namespace = ''
+                
+                if self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service_key
+                else: search_service_key = self._file_service_key
+                
+                self._cached_results = HydrusGlobals.client_controller.Read( 'file_system_predicates', search_service_key )
+                
+            
+            matches = self._cached_results
             
         else:
             
@@ -6088,6 +6100,109 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
     def SetTagsByMedia( self, media, force_reload = False ):
         
         self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
+        
+    
+class TimeDeltaButton( wx.Button ):
+    
+    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False ):
+        
+        wx.Button.__init__( self, parent )
+        
+        self._min = min
+        self._show_days = days
+        self._show_hours = hours
+        self._show_minutes = minutes
+        self._show_seconds = seconds
+        
+        self._value = self._min
+        
+        self.SetLabelText( 'initialising' )
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        
+    
+    def _RefreshLabel( self ):
+        
+        text_components = []
+        
+        value = self._value
+        
+        if self._show_days:
+            
+            days = value / 86400
+            
+            if days > 0:
+                
+                text_components.append( HydrusData.ConvertIntToPrettyString( days ) + ' days' )
+                
+            
+            value %= 86400
+            
+        
+        if self._show_hours:
+            
+            hours = value / 3600
+            
+            if hours > 0:
+                
+                text_components.append( HydrusData.ConvertIntToPrettyString( hours ) + ' hours' )
+                
+            
+            value %= 3600
+            
+        
+        if self._show_minutes:
+            
+            minutes = value / 60
+            
+            if minutes > 0:
+                
+                text_components.append( HydrusData.ConvertIntToPrettyString( minutes ) + ' minutes' )
+                
+            
+            value %= 60
+            
+        
+        if self._show_seconds:
+            
+            if value > 0 or len( text_components ) == 0:
+                
+                text_components.append( HydrusData.ConvertIntToPrettyString( value ) + ' seconds' )
+                
+            
+        
+        text = ' '.join( text_components )
+        
+        self.SetLabelText( text )
+        
+    
+    def EventButton( self, event ):
+        
+        import ClientGUIDialogs
+        
+        with ClientGUIDialogs.DialogInputTimeDelta( self, self._value, min = self._min, days = self._show_days, hours = self._show_hours, minutes = self._show_minutes, seconds = self._show_seconds ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                value = dlg.GetValue()
+                
+                self.SetValue( value )
+                
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._value
+        
+    
+    def SetValue( self, value ):
+        
+        self._value = value
+        
+        self._RefreshLabel()
+        
+        self.GetParent().Layout()
         
     
 class TimeDeltaCtrl( wx.Panel ):

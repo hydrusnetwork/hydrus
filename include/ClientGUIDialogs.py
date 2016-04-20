@@ -71,6 +71,8 @@ def ExportToHTA( parent, service_key, hashes ):
     message += os.linesep * 2
     message += 'If you do not know what this stuff means, click \'normal\'.'
     
+    hash_type = None
+    
     with DialogYesNo( parent, message, title = 'Choose which hash type.', yes_label = 'normal', no_label = 'alternative' ) as dlg:
         
         result = dlg.ShowModal()
@@ -2208,6 +2210,49 @@ class DialogInputTags( Dialog ):
     def Ok( self ):
         
         self.EndModal( wx.ID_OK )
+        
+    
+class DialogInputTimeDelta( Dialog ):
+    
+    def __init__( self, parent, initial_value, min = 1, days = False, hours = False, minutes = False, seconds = False ):
+        
+        Dialog.__init__( self, parent, 'input time delta' )
+        
+        self._time_delta = ClientGUICommon.TimeDeltaCtrl( self, min = min, days = days, hours = hours, minutes = minutes, seconds = seconds )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._time_delta.SetValue( initial_value )
+        
+        #
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._time_delta, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def GetValue( self ):
+        
+        return self._time_delta.GetValue()
         
     
 class DialogInputUPnPMapping( Dialog ):

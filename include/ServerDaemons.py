@@ -77,36 +77,6 @@ def DAEMONGenerateUpdates( controller ):
             time.sleep( 1 )
             
         
-        time_to_stop = HydrusData.GetNow() + 30
-        
-        service_keys = controller.Read( 'service_keys', HC.REPOSITORIES )
-        
-        for service_key in service_keys:
-            
-            num_petitions = controller.Read( 'num_petitions', service_key )
-            
-            if num_petitions == 0:
-                
-                dirty_updates = controller.Read( 'dirty_updates', service_key )
-                
-                for ( begin, end ) in dirty_updates:
-                    
-                    if HydrusGlobals.view_shutdown or HydrusData.TimeHasPassed( time_to_stop ):
-                        
-                        return
-                        
-                    
-                    HydrusGlobals.server_busy = True
-                    
-                    controller.WriteSynchronous( 'clean_update', service_key, begin, end )
-                    
-                    HydrusGlobals.server_busy = False
-                    
-                    time.sleep( 1 )
-                    
-                
-            
-        
     
 def DAEMONUPnP( controller ):
     

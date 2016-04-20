@@ -314,6 +314,11 @@ class HydrusController( object ):
         return self._Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
         
     
+    def WriteInterruptable( self, action, *args, **kwargs ):
+        
+        return self._Write( action, HC.INTERRUPTABLE_PRIORITY, True, *args, **kwargs )
+        
+    
     def WriteSynchronous( self, action, *args, **kwargs ):
         
         return self._Write( action, HC.LOW_PRIORITY, True, *args, **kwargs )

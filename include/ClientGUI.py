@@ -65,6 +65,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
         
+        self._loading_session = False
+        self._media_status_override = None
         self._closed_pages = []
         self._deleted_page_keys = set()
         self._lock = threading.Lock()
@@ -1166,6 +1168,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _LoadGUISession( self, name ):
         
+        if self._loading_session:
+            
+            HydrusData.ShowText( 'Sorry, currently loading a session. Please wait.' )
+            
+            return
+            
+        
+        self._loading_session = True
+        
         try:
             
             session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
@@ -1194,30 +1205,57 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             self._CloseCurrentPage( polite = False )
             
         
-        for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
+        def do_it():
             
             try:
                 
-                if len( initial_hashes ) > 0:
+                for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
                     
-                    file_service_key = management_controller.GetKey( 'file_service' )
-                    
-                    initial_media_results = self._controller.Read( 'media_results', file_service_key, initial_hashes )
-                    
-                else:
-                    
-                    initial_media_results = []
+                    try:
+                        
+                        if len( initial_hashes ) > 0:
+                            
+                            file_service_key = management_controller.GetKey( 'file_service' )
+                            
+                            initial_media_results = []
+                            
+                            for group_of_inital_hashes in HydrusData.SplitListIntoChunks( initial_hashes, 256 ):
+                                
+                                more_media_results = self._controller.Read( 'media_results', file_service_key, group_of_inital_hashes )
+                                
+                                initial_media_results.extend( more_media_results )
+                                
+                                self._media_status_override = u'Loading session page \'' + page_name + u'\'\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
+                                
+                                self._controller.pub( 'refresh_status' )
+                                
+                            
+                        else:
+                            
+                            initial_media_results = []
+                            
+                        
+                        wx.CallAfter( self._NewPage, page_name, management_controller, initial_media_results = initial_media_results )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowException( e )
+                        
                     
                 
-                self._NewPage( page_name, management_controller, initial_media_results = initial_media_results )
+                if HC.PLATFORM_OSX:
+                    
+                    wx.CallAfter( self._ClosePage, 0 )
+                    
                 
-            except Exception as e:
+            finally:
                 
-                HydrusData.ShowException( e )
+                self._loading_session = False
+                self._media_status_override = None
                 
             
         
-        if HC.PLATFORM_OSX: self._ClosePage( 0 )
+        self._controller.CallToThread( do_it )
         
     
     def _Manage4chanPass( self ):
@@ -1502,10 +1540,23 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _RefreshStatusBar( self ):
         
-        page = self._notebook.GetCurrentPage()
-        
-        if page is None: media_status = ''
-        else: media_status = page.GetPrettyStatus()
+        if self._media_status_override is not None:
+            
+            media_status = self._media_status_override
+            
+        else:
+            
+            page = self._notebook.GetCurrentPage()
+            
+            if page is None:
+                
+                media_status = ''
+                
+            else:
+                
+                media_status = page.GetPrettyStatus()
+                
+            
         
         if self._controller.CurrentlyIdle():
             
@@ -1669,6 +1720,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
     
     def _SaveGUISession( self, name = None ):
+        
+        if self._loading_session:
+            
+            HydrusData.ShowText( 'Sorry, currently loading a session. Please wait.' )
+            
+            return
+            
         
         if name is None:
             
@@ -2062,7 +2120,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             service.Request( HC.POST, 'file', { 'file' : file } )
                             
-                            ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
+                            ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
                             
                             timestamp = HydrusData.GetNow()
                             
@@ -2458,7 +2516,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HydrusGlobals.restart = True
             
         
-        self._SaveGUISession( 'last session' )
+        if not self._loading_session:
+            
+            self._SaveGUISession( 'last session' )
+            
         
         self._message_manager.CleanBeforeDestroy()
         
@@ -3732,6 +3793,7 @@ class FrameSplash( ClientGUICommon.Frame ):
         
         self._controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
         self._controller.sub( self, 'SetStatusText', 'splash_set_status_text' )
+        self._controller.sub( self, 'SetStatusTextNoLog', 'splash_set_status_text_no_log' )
         self._controller.sub( self, 'Destroy', 'splash_destroy' )
         
         self.Raise()
@@ -3819,9 +3881,12 @@ class FrameSplash( ClientGUICommon.Frame ):
             
         
     
-    def SetStatusText( self, text ):
+    def SetStatusText( self, text, print_to_log = True ):
         
-        HydrusData.Print( text )
+        if print_to_log:
+            
+            HydrusData.Print( text )
+            
         
         self._status_text = text
         
@@ -3830,9 +3895,12 @@ class FrameSplash( ClientGUICommon.Frame ):
         self.Refresh()
         
     
-    def SetTitleText( self, text ):
+    def SetTitleText( self, text, print_to_log = True ):
         
-        HydrusData.Print( text )
+        if print_to_log:
+            
+            HydrusData.Print( text )
+            
         
         self._title_text = text
         

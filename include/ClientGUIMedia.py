@@ -534,7 +534,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 ( selected_media, ) = self._selected_media
                 
-                s += selected_files_string + ' selected, ' + selected_media.GetPrettyInfo()
+                s += selected_files_string + ' selected, ' + ', '.join( selected_media.GetPrettyInfoLines() )
                 
             else: # 23 files - 5 selected, selection_info
                 
@@ -2399,11 +2399,16 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 # do the actual menu
                 
-                if multiple_selected: menu.Append( CC.ID_NULL, HydrusData.ConvertIntToPrettyString( num_selected ) + ' files, ' + self._GetPrettyTotalSelectedSize() )
+                if multiple_selected:
+                    
+                    menu.Append( CC.ID_NULL, HydrusData.ConvertIntToPrettyString( num_selected ) + ' files, ' + self._GetPrettyTotalSelectedSize() )
+                    
                 else:
                     
-                    menu.Append( CC.ID_NULL, thumbnail.GetPrettyInfo() )
-                    menu.Append( CC.ID_NULL, thumbnail.GetPrettyAge() )
+                    for line in thumbnail.GetPrettyInfoLines():
+                        
+                        menu.Append( CC.ID_NULL, line )
+                        
                     
                 
                 if len( disparate_current_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_current_file_service_keys, 'some uploaded to', CC.ID_NULL )
