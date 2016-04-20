@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 202</h3></li>
+				<ul>
+					<li>fixed a problem with the v198->v199 update step</li>
+					<li>added a bad error catch in the vacuum step in v200->v201</li>
+					<li>added some rollback exception handling for unusual situations</li>
+					<li>the autocomplete caches under the client_cache subdirectory are dynamically folded into a single client.caches.db file, and that file is folded into the main db journal like the other attached dbs</li>
+					<li>ac_cache file and tag processing lag and edge-case autocomplete miscounting should be removed as a result</li>
+					<li>cache generation is optimised for empty services</li>
+					<li>specific file_caches' add and delete file commands now modify their tables directly, saving a whole load of time that was previously done superfluously filtering</li>
+					<li>the specific ac_caches' add mappings command is a bit more logically efficient</li>
+					<li>increased cache size for each attached database</li>
+					<li>folded all 'attached' db update code into the main update_db routine</li>
+					<li>folded all 'attached' db init code into the main create_db routine</li>
+					<li>made the vacuum checking routine safer</li>
+					<li>reduced analyze log spam</li>
+					<li>analyze maintenance breaks its larger jobs up better</li>
+					<li>analyze mainenance now analyzes external databases</li>
+					<li>the db connection now refreshes every half hour, to regularly clear out journal files</li>
+					<li>the hydrus db assumes it generally has exclusive control over its db, so it no longer wraps its read-only requests in transactions</li>
+					<li>session load now happens off the main gui thread, and media generation is broken into 256-file chunks, which reduces startup db and gui lag for large sessions</li>
+					<li>the youtube video downloader now lists a webm option if youtube provides one (they seem to offer 360p webms on everything(?) now)</li>
+					<li>the timedeltacontrol (where you set the period for the thread checker and import folders and so on) is replaced by the more compact timedeltabutton, which will launch a dialog with the old control when clicked</li>
+					<li>the server will no longer revisit old updates and cull since-deleted content, as this was proving cpu-burdensome and not helpful to future plans for update dissemination, which will rely on static update files</li>
+					<li>misc cleanup of some server db stuff</li>
+					<li>content update processing will not spam menu updates throughout, but only notify once at the end, which should reduce idle gui hang due to db access choke</li>
+					<li>the autocomplete tag entry will not refresh system pred menu during idle, which should reduce idle gui hang due to db access choke</li>
+					<li>shutdown repo sync will now report the update summary text and will not spam the intervening statuses to the log</li>
+					<li>moved timestamp out of the serviceless media_result and into the locations_manager, to reflect the database's knowledge of each current service having a different timestamp</li>
+					<li>local and trash timestamps are generated from the locations_manager now, and non-local file service timestamps will soon follow (e.g. 'pinned to ipfs_service 3 days ago')</li>
+					<li>if the timestamp is unknown for the current service context, it will not be displayed</li>
+					<li>file repositories will now only sync thumbnails when their updates are completely synced (to stop 404s from since-deleted files)</li>
+					<li>fixed a ( 0, 0 ) resize event bug that was sometimes causing borked media containers on media viewer shutdown</li>
+					<li>syncing to a sha256 tag archive will still import the data as requested, but a popup note will explain that as everything will be imported, further syncing is pointless., and the sync will not be saved</li>
+					<li>fixed a bug in hta export if you click cancel on the hash_type choosing dialogs</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 201</h3></li>
 				<ul>
 					<li>exported hash and tag master tables to external database files for both client and server</li>
