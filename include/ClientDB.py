@@ -1,5 +1,4 @@
 import ClientData
-import ClientDBACCache
 import ClientDefaults
 import ClientFiles
 import ClientImporting
@@ -1224,11 +1223,18 @@ class DB( HydrusDB.HydrusDB ):
                 f.write( thumbnail )
                 
             
-            phash = ClientImageHandling.GeneratePerceptualHash( thumbnail_path )
-            
-            hash_id = self._GetHashId( hash )
-            
-            self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+            try:
+                
+                phash = ClientImageHandling.GeneratePerceptualHash( thumbnail_path )
+                
+                hash_id = self._GetHashId( hash )
+                
+                self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                
+            except:
+                
+                pass
+                
             
         
         self._c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL, ) )
@@ -1243,7 +1249,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
         
     
-    def _Analyze( self, stop_time ):
+    def _Analyze( self, stop_time = None, only_when_idle = False, force_reanalyze = False ):
         
         stale_time_delta = 14 * 86400
         
@@ -1251,14 +1257,21 @@ class DB( HydrusDB.HydrusDB ):
         
         db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
         
-        all_index_names = set()
+        all_names = set()
         
         for db_name in db_names:
             
-            all_index_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master WHERE type = ?;', ( 'index', ) ) ) )
+            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master;' ) ) )
             
         
-        names_to_analyze = [ name for name in all_index_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+        if force_reanalyze:
+            
+            names_to_analyze = list( all_names )
+            
+        else:
+            
+            names_to_analyze = [ name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+            
         
         random.shuffle( names_to_analyze )
         
@@ -1277,7 +1290,10 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
                 
             
-            if HydrusData.TimeHasPassed( stop_time ) or not self._controller.CurrentlyIdle():
+            p1 = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+            p2 = only_when_idle and not self._controller.CurrentlyIdle()
+            
+            if p1 or p2:
                 
                 break
                 
@@ -2827,6 +2843,11 @@ class DB( HydrusDB.HydrusDB ):
             
             for given_hash in given_hashes:
                 
+                if given_hash is None:
+                    
+                    continue
+                    
+                
                 result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE ' + given_hash_type + ' = ?;', ( sqlite3.Binary( given_hash ), ) ).fetchone()
                 
                 if result is not None:
@@ -2960,6 +2981,11 @@ class DB( HydrusDB.HydrusDB ):
         hashes_not_in_db = set()
         
         for hash in hashes:
+            
+            if hash is None:
+                
+                continue
+                
             
             result = self._c.execute( 'SELECT hash_id FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
             
@@ -4659,15 +4685,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetThumbnail( self, hash, full_size = False ):
-        
-        path = ClientFiles.GetThumbnailPath( hash, full_size )
-        
-        with open( path, 'rb' ) as f: thumbnail = f.read()
-        
-        return thumbnail
-        
-    
     def _GetURLStatus( self, url ):
         
         result = self._c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
@@ -4872,11 +4889,14 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( archive_name, namespaces ) in tag_archive_sync.items():
                 
-                ( hta_path, hta ) = self._tag_archives[ archive_name ]
-                adding = True
-                
-                try: self._SyncHashesToTagArchive( [ hash ], hta_path, adding, namespaces, service_key )
-                except: pass
+                if archive_name in self._tag_archives:
+                    
+                    ( hta_path, hta ) = self._tag_archives[ archive_name ]
+                    adding = True
+                    
+                    try: self._SyncHashesToTagArchive( [ hash ], hta_path, adding, namespaces, service_key )
+                    except: pass
+                    
                 
             
         
@@ -5865,26 +5885,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if resize_thumbs:
             
-            prefix = 'deleting old resized thumbnails: '
-            
-            job_key = ClientThreading.JobKey()
-            
-            job_key.SetVariable( 'popup_text_1', prefix + 'initialising' )
-            
-            self._controller.pub( 'message', job_key )
-            
-            thumbnail_paths = ( path for path in ClientFiles.IterateAllThumbnailPaths() if path.endswith( '_resized' ) )
-            
-            for ( i, path ) in enumerate( thumbnail_paths ):
-                
-                ClientData.DeletePath( path )
-                
-                job_key.SetVariable( 'popup_text_1', prefix + 'done ' + HydrusData.ConvertIntToPrettyString( i ) )
-                
-            
             self.pub_after_commit( 'thumbnail_resize' )
-            
-            job_key.SetVariable( 'popup_text_1', prefix + 'done!' )
             
         
         self.pub_after_commit( 'notify_new_options' )
@@ -7278,6 +7279,11 @@ class DB( HydrusDB.HydrusDB ):
                     HydrusData.PrintException( e )
                     
                 
+            
+        
+        if version == 202:
+            
+            self._c.execute( 'DELETE FROM analyze_timestamps;' )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

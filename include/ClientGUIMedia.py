@@ -3032,7 +3032,7 @@ class Thumbnail( Selectable ):
                     
                 else:
                     
-                    volumes_sorted = HydrusTags.SortTags( volumes )
+                    volumes_sorted = HydrusTags.SortNumericTags( volumes )
                     
                     collections_string_append = 'v' + str( volumes_sorted[0] ) + '-' + str( volumes_sorted[-1] )
                     
@@ -3048,7 +3048,7 @@ class Thumbnail( Selectable ):
                     
                 else:
                     
-                    chapters_sorted = HydrusTags.SortTags( chapters )
+                    chapters_sorted = HydrusTags.SortNumericTags( chapters )
                     
                     collections_string_append = 'c' + str( chapters_sorted[0] ) + '-' + str( chapters_sorted[-1] )
                     
@@ -3067,7 +3067,7 @@ class Thumbnail( Selectable ):
                     
                 else:
                     
-                    pages_sorted = HydrusTags.SortTags( pages )
+                    pages_sorted = HydrusTags.SortNumericTags( pages )
                     
                     collections_string_append = 'p' + str( pages_sorted[0] ) + '-' + str( pages_sorted[-1] )
                     

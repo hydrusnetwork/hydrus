@@ -1217,52 +1217,49 @@ class Canvas( wx.Window ):
             
             HydrusGlobals.client_controller.ResetIdleTimer()
             
-            with wx.FrozenWindow( self ):
+            self._current_media = media
+            self._current_display_media = None
+            self._total_drag_delta = ( 0, 0 )
+            self._last_drag_coordinates = None
+            
+            if self._media_container is not None:
                 
-                self._current_media = media
-                self._current_display_media = None
-                self._total_drag_delta = ( 0, 0 )
-                self._last_drag_coordinates = None
+                self._media_container.Hide()
                 
-                if self._media_container is not None:
-                    
-                    self._media_container.Hide()
-                    
-                    wx.CallAfter( self._media_container.Destroy )
-                    
-                    self._media_container = None
-                    
+                wx.CallAfter( self._media_container.Destroy )
                 
-                if self._current_media is not None:
+                self._media_container = None
+                
+            
+            if self._current_media is not None:
+                
+                self._current_display_media = self._current_media.GetDisplayMedia()
+                
+                self._RecalcZoom()
+                
+                ( initial_size, initial_position ) = self._GetMediaContainerSizeAndPosition()
+                
+                ( initial_width, initial_height ) = initial_size
+                
+                if self._current_display_media.GetLocationsManager().HasLocal() and initial_width > 0 and initial_height > 0:
                     
-                    self._current_display_media = self._current_media.GetDisplayMedia()
+                    self._media_container = MediaContainer( self, self._image_cache, self._current_display_media, initial_size, initial_position )
                     
-                    ( initial_size, initial_position ) = self._GetMediaContainerSizeAndPosition()
+                    if self._claim_focus: self._media_container.SetFocus()
                     
-                    ( initial_width, initial_height ) = initial_size
+                    self._PrefetchNeighbours()
                     
-                    if self._current_display_media.GetLocationsManager().HasLocal() and initial_width > 0 and initial_height > 0:
-                        
-                        self._RecalcZoom()
-                        
-                        self._media_container = MediaContainer( self, self._image_cache, self._current_display_media, initial_size, initial_position )
-                        
-                        if self._claim_focus: self._media_container.SetFocus()
-                        
-                        self._PrefetchNeighbours()
-                        
-                    else:
-                        
-                        self._current_media = None
-                        
+                else:
+                    
+                    self._current_media = None
                     
                 
-                HydrusGlobals.client_controller.pub( 'canvas_new_display_media', self._canvas_key, self._current_display_media )
-                
-                HydrusGlobals.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
-                
-                self._SetDirty()
-                
+            
+            HydrusGlobals.client_controller.pub( 'canvas_new_display_media', self._canvas_key, self._current_display_media )
+            
+            HydrusGlobals.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
+            
+            self._SetDirty()
             
         
     
@@ -1335,16 +1332,7 @@ class CanvasWithDetails( Canvas ):
             
             tags_i_want_to_display = list( tags_i_want_to_display )
             
-            if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC:
-                
-                reverse = True
-                
-            else:
-                
-                reverse = False
-                
-            
-            tags_i_want_to_display.sort( reverse = reverse )
+            ClientData.SortTagsList( tags_i_want_to_display, HC.options[ 'default_tag_sort' ] )
             
             current_y = 3
             
@@ -1767,7 +1755,16 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
         self.GetParent().Close()
         
     
-    def _DoManualPan( self, delta_x, delta_y ):
+    def _DoManualPan( self, delta_x_step, delta_y_step ):
+        
+        ( my_x, my_y ) = self.GetClientSize()
+        ( media_x, media_y ) = self._media_container.GetClientSize()
+        
+        x_pan_distance = min( my_x / 12, media_x / 12 )
+        y_pan_distance = min( my_y / 12, media_y / 12 )
+        
+        delta_x = delta_x_step * x_pan_distance
+        delta_y = delta_y_step * y_pan_distance
         
         ( old_delta_x, old_delta_y ) = self._total_drag_delta
         
@@ -2304,12 +2301,10 @@ class CanvasMediaListFilter( CanvasMediaList ):
                 elif command == 'manage_tags': wx.CallAfter( self._ManageTags )
                 elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
-                    distance = 20
-                    
-                    if command == 'pan_up': self._DoManualPan( 0, -distance )
-                    elif command == 'pan_down': self._DoManualPan( 0, distance )
-                    elif command == 'pan_left': self._DoManualPan( -distance, 0 )
-                    elif command == 'pan_right': self._DoManualPan( distance, 0 )
+                    if command == 'pan_up': self._DoManualPan( 0, -1 )
+                    elif command == 'pan_down': self._DoManualPan( 0, 1 )
+                    elif command == 'pan_left': self._DoManualPan( -1, 0 )
+                    elif command == 'pan_right': self._DoManualPan( 1, 0 )
                     
                 elif command == 'zoom_in': self._ZoomIn()
                 elif command == 'zoom_out': self._ZoomOut()
@@ -2616,12 +2611,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 elif command == 'open_externally': self._OpenExternally()
                 elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
-                    distance = 20
-                    
-                    if command == 'pan_up': self._DoManualPan( 0, -distance )
-                    elif command == 'pan_down': self._DoManualPan( 0, distance )
-                    elif command == 'pan_left': self._DoManualPan( -distance, 0 )
-                    elif command == 'pan_right': self._DoManualPan( distance, 0 )
+                    if command == 'pan_up': self._DoManualPan( 0, -1 )
+                    elif command == 'pan_down': self._DoManualPan( 0, 1 )
+                    elif command == 'pan_left': self._DoManualPan( -1, 0 )
+                    elif command == 'pan_right': self._DoManualPan( 1, 0 )
                     
                 elif command == 'remove': self._Remove()
                 elif command == 'slideshow': wx.CallLater( 1, self._StartSlideshow, data )
@@ -2911,12 +2904,10 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                     elif data == 'manage_tags': wx.CallLater( 1, self._ManageTags )
                     elif data in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                         
-                        distance = 20
-                        
-                        if data == 'pan_up': self._DoManualPan( 0, -distance )
-                        elif data == 'pan_down': self._DoManualPan( 0, distance )
-                        elif data == 'pan_left': self._DoManualPan( -distance, 0 )
-                        elif data == 'pan_right': self._DoManualPan( distance, 0 )
+                        if data == 'pan_up': self._DoManualPan( 0, -1 )
+                        elif data == 'pan_down': self._DoManualPan( 0, 1 )
+                        elif data == 'pan_left': self._DoManualPan( -1, 0 )
+                        elif data == 'pan_right': self._DoManualPan( 1, 0 )
                         
                     elif data == 'first': self._ShowFirst()
                     elif data == 'last': self._ShowLast()

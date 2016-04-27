@@ -804,7 +804,7 @@ class DialogInputCustomFilterAction( Dialog ):
         
         self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
         
-        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right' ] )
+        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'remove' ] )
         
         self._ok_none = wx.Button( self._none_panel, label = 'ok' )
         self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
@@ -2098,7 +2098,7 @@ class DialogInputShortcut( Dialog ):
         
         self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
         
-        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right' ] )
+        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'remove' ] )
         
         self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -4424,7 +4424,7 @@ class DialogShortcuts( Dialog ):
             
             for ( key, action ) in key_dict.items():
                 
-                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'open_externally' ):
+                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'remove' ):
                     
                     service_key = None
                     

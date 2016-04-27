@@ -606,7 +606,9 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_text', 'analyzing' )
         
-        self.WriteInterruptable( 'analyze', stop_time )
+        only_when_idle = self.CurrentlyIdle()
+        
+        self.WriteInterruptable( 'analyze', stop_time = stop_time, only_when_idle = only_when_idle )
         
         if self._timestamps[ 'last_service_info_cache_fatten' ] == 0:
             

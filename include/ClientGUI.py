@@ -185,6 +185,31 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
+    def _AnalyzeDatabase( self ):
+        
+        message = 'This will gather statistical information on the database\'s indices, helping the query planner design efficient queries.'
+        message += os.linesep * 2
+        message += 'A \'soft\' analyze will only reanalyze those indices that are due for a check in the normal db maintenance cycle. This will typically take less than a second, but if it needs to do work, it will attempt not to take more that a few minutes, during which time your database will be locked and your gui may hang.'
+        message += os.linesep * 2
+        message += 'A \'full\' analyze will force a run over every index in the database. This can take substantially longer. If you do not have a specific reason to select this, it is probably pointless.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose how thorough your analyze will be.', yes_label = 'soft', no_label = 'full' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
+                
+                stop_time = HydrusData.GetNow() + 120
+                
+                self._controller.Write( 'analyze', stop_time = stop_time )
+                
+            elif result == wx.ID_NO:
+                
+                self._controller.Write( 'analyze', force_reanalyze = True )
+                
+            
+        
+    
     def _AutoRepoSetup( self ):
         
         def do_it():
@@ -861,6 +886,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu = wx.Menu()
             
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'analyze_db' ), p( '&Analyze' ), p( 'Reanalyze the Database.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'rebalance_client_files' ), p( '&Rebalance File Storage' ), p( 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
@@ -2271,6 +2297,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ( command, data ) = action
             
             if command == 'account_info': self._AccountInfo( data )
+            elif command == 'analyze_db': self._AnalyzeDatabase()
             elif command == 'auto_repo_setup': self._AutoRepoSetup()
             elif command == 'auto_server_setup': self._AutoServerSetup()
             elif command == 'backup_database': self._controller.BackupDatabase()

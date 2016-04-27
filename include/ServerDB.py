@@ -312,9 +312,16 @@ class DB( HydrusDB.HydrusDB ):
         
         stale_time_delta = 30 * 86400
         
-        all_names = [ name for ( name, ) in self._c.execute( 'SELECT name FROM sqlite_master;' ) ]
-        
         existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
+        
+        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+        
+        all_names = set()
+        
+        for db_name in db_names:
+            
+            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master;' ) ) )
+            
         
         names_to_analyze = [ name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
         
@@ -325,9 +332,7 @@ class DB( HydrusDB.HydrusDB ):
             HydrusGlobals.server_busy = True
             
         
-        while len( names_to_analyze ) > 0:
-            
-            name = names_to_analyze.pop()
+        for name in names_to_analyze:
             
             started = HydrusData.GetNowPrecise()
             
@@ -350,11 +355,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'ANALYZE sqlite_master;' ) # this reloads the current stats into the query planner
         
-        still_more_to_do = len( names_to_analyze ) > 0
-        
         HydrusGlobals.server_busy = False
-        
-        return still_more_to_do
         
     
     def _ApproveFilePetition( self, service_id, account_id, hash_ids, reason_id ):
@@ -2560,6 +2561,11 @@ class DB( HydrusDB.HydrusDB ):
             self._InitDBCursor()
             
             self._c.execute( 'BEGIN IMMEDIATE;' )
+            
+        
+        if version == 202:
+            
+            self._c.execute( 'DELETE FROM analyze_timestamps;' )
             
         
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )

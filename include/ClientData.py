@@ -325,6 +325,43 @@ def ShowTextClient( text ):
     
     HydrusGlobals.client_controller.pub( 'message', job_key )
     
+def SortTagsList( tags, sort_type ):
+    
+    if sort_type in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
+        
+        sort_type = CC.SORT_BY_INCIDENCE_ASC
+        
+    
+    if sort_type in ( CC.SORT_BY_LEXICOGRAPHIC_DESC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
+        
+        reverse = True
+        
+    else:
+        
+        reverse = False
+        
+    
+    if sort_type in ( CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
+        
+        def key( tag ):
+            
+            if ':' in tag:
+                
+                return tag.split( ':', 1 )
+                
+            else:
+                
+                return ( '{', tag ) # '{' is above 'z' in ascii, so this works for most situations
+                
+            
+        
+    else:
+        
+        key = None
+        
+    
+    tags.sort( key = key, reverse = reverse )
+    
 def WaitPolitely( page_key = None ):
     
     if page_key is not None:
@@ -404,6 +441,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'show_thumbnail_title_banner' ] = True
         self._dictionary[ 'booleans' ][ 'show_thumbnail_page' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'disable_cv_for_static_images' ] = False
         
         self._dictionary[ 'noneable_integers' ] = {}
         

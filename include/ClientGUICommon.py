@@ -1172,7 +1172,10 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._expand_parents = expand_parents
         self._null_entry_callable = null_entry_callable
         
-        if HC.options[ 'show_all_tags_in_autocomplete' ]: file_service_key = CC.COMBINED_FILE_SERVICE_KEY
+        if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY and HC.options[ 'show_all_tags_in_autocomplete' ]:
+            
+            file_service_key = CC.COMBINED_FILE_SERVICE_KEY
+            
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
         
@@ -3714,7 +3717,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
-        if not include_counts and self._sort not in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_DESC ):
+        if not include_counts and self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
             
             self._sort = CC.SORT_BY_LEXICOGRAPHIC_ASC
             
@@ -3851,19 +3854,7 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def _SortTags( self ):
         
-        if self._sort == CC.SORT_BY_LEXICOGRAPHIC_ASC:
-            
-            key = None
-            
-            reverse = False
-            
-        elif self._sort == CC.SORT_BY_LEXICOGRAPHIC_DESC:
-            
-            key = None
-            
-            reverse = True
-            
-        elif self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
+        if self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
             
             tags_to_count = collections.Counter()
             
@@ -3891,8 +3882,12 @@ class ListBoxTagsSelection( ListBoxTags ):
                 reverse = False
                 
             
-        
-        self._ordered_strings.sort( key = key, reverse = reverse )
+            self._ordered_strings.sort( key = key, reverse = reverse )
+            
+        else:
+            
+            ClientData.SortTagsList( self._ordered_strings, self._sort )
+            
         
         self._TextsHaveChanged()
         
@@ -6063,13 +6058,17 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         
         self._sorter.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
         self._sorter.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
+        self._sorter.Append( 'lexicographic (a-z) (grouped by namespace)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
+        self._sorter.Append( 'lexicographic (z-a) (grouped by namespace)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
         self._sorter.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
         self._sorter.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
         
         if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._sorter.Select( 0 )
         elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._sorter.Select( 1 )
-        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._sorter.Select( 2 )
-        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._sorter.Select( 3 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC: self._sorter.Select( 2 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC: self._sorter.Select( 3 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._sorter.Select( 4 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._sorter.Select( 5 )
         
         self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
         

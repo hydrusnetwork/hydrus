@@ -4357,8 +4357,12 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
+            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            
             self._fit_to_canvas = wx.CheckBox( self, label = '' )
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
+            
+            self._disable_cv_for_static_images = wx.CheckBox( self, label = '' )
             
             self._mime_media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
@@ -4386,6 +4390,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
+            self._disable_cv_for_static_images.SetValue( self._new_options.GetBoolean( 'disable_cv_for_static_images' ) )
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
@@ -4413,6 +4418,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'Start animations this % in: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._animation_start_position, CC.FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( self, label = 'Disable OpenCV for static images: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._disable_cv_for_static_images, CC.FLAGS_MIXED )
+            
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._mime_media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -4432,6 +4440,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
             
             HC.options[ 'mime_media_viewer_actions' ] = mime_media_viewer_actions
+            
+            self._new_options.SetBoolean( 'disable_cv_for_static_images', self._disable_cv_for_static_images.GetValue() )
             
         
     
@@ -4926,17 +4936,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
             
-            if new_thumbnail_dimensions != HC.options[ 'thumbnail_dimensions' ]:
-                
-                text = 'You have changed the thumbnail dimensions, which will mean deleting all the old resized thumbnails right now, during which time the database will be locked. If you have tens or hundreds of thousands of files, this could take a long time.'
-                text += os.linesep * 2
-                text += 'Are you sure you want to change your thumbnail dimensions?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES: HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
-                    
-                
+            HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
             
             HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
             HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
@@ -4972,6 +4972,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._default_tag_sort.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
             self._default_tag_sort.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
+            self._default_tag_sort.Append( 'lexicographic (a-z) (grouped by namespace)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
+            self._default_tag_sort.Append( 'lexicographic (z-a) (grouped by namespace)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
             self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
             self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
             
@@ -4985,6 +4987,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC: self._default_tag_sort.Select( 2 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC: self._default_tag_sort.Select( 3 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
             

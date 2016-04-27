@@ -16,24 +16,35 @@ import wx
 
 def GenerateHydrusBitmap( path, compressed = True ):
     
-    numpy_image = None
+    new_options = HydrusGlobals.client_controller.GetNewOptions()
     
-    try:
-        
-        numpy_image = ClientImageHandling.GenerateNumpyImage( path )
-        
-        return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
-        
-    except:
-        
-        if numpy_image is not None:
-            
-            del numpy_image
-            
+    if new_options.GetBoolean( 'disable_cv_for_static_images' ):
         
         pil_image = HydrusImageHandling.GeneratePILImage( path )
         
         return GenerateHydrusBitmapFromPILImage( pil_image, compressed = compressed )
+        
+    else:
+        
+        numpy_image = None
+        
+        try:
+            
+            numpy_image = ClientImageHandling.GenerateNumpyImage( path )
+            
+            return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
+            
+        except:
+            
+            if numpy_image is not None:
+                
+                del numpy_image
+                
+            
+            pil_image = HydrusImageHandling.GeneratePILImage( path )
+            
+            return GenerateHydrusBitmapFromPILImage( pil_image, compressed = compressed )
+            
         
     
 def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
@@ -119,21 +130,34 @@ class RasterContainerImage( RasterContainer ):
         
         time.sleep( 0.00001 )
         
-        try:
-            
-            numpy_image = ClientImageHandling.GenerateNumpyImage( self._path )
-            
-            resized_numpy_image = ClientImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
-            
-            hydrus_bitmap = GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
-            
-        except:
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        if new_options.GetBoolean( 'disable_cv_for_static_images' ):
             
             pil_image = HydrusImageHandling.GeneratePILImage( self._path )
             
             resized_pil_image = HydrusImageHandling.EfficientlyResizePILImage( pil_image, self._target_resolution )
             
             hydrus_bitmap = GenerateHydrusBitmapFromPILImage( resized_pil_image )
+            
+        else:
+            
+            try:
+                
+                numpy_image = ClientImageHandling.GenerateNumpyImage( self._path )
+                
+                resized_numpy_image = ClientImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
+                
+                hydrus_bitmap = GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
+                
+            except:
+                
+                pil_image = HydrusImageHandling.GeneratePILImage( self._path )
+                
+                resized_pil_image = HydrusImageHandling.EfficientlyResizePILImage( pil_image, self._target_resolution )
+                
+                hydrus_bitmap = GenerateHydrusBitmapFromPILImage( resized_pil_image )
+                
             
         
         self._hydrus_bitmap = hydrus_bitmap

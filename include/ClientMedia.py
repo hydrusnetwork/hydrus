@@ -1173,7 +1173,7 @@ class MediaSingleton( Media ):
                 
             else:
                 
-                volumes_sorted = HydrusTags.SortTags( volumes )
+                volumes_sorted = HydrusTags.SortNumericTags( volumes )
                 
                 title_string_append = 'volumes ' + str( volumes_sorted[0] ) + '-' + str( volumes_sorted[-1] )
                 
@@ -1192,7 +1192,7 @@ class MediaSingleton( Media ):
                 
             else:
                 
-                chapters_sorted = HydrusTags.SortTags( chapters )
+                chapters_sorted = HydrusTags.SortNumericTags( chapters )
                 
                 title_string_append = 'chapters ' + str( chapters_sorted[0] ) + '-' + str( chapters_sorted[-1] )
                 
@@ -1211,7 +1211,7 @@ class MediaSingleton( Media ):
                 
             else:
                 
-                pages_sorted = HydrusTags.SortTags( pages )
+                pages_sorted = HydrusTags.SortNumericTags( pages )
                 
                 title_string_append = 'pages ' + str( pages_sorted[0] ) + '-' + str( pages_sorted[-1] )
                 
@@ -1508,7 +1508,7 @@ class TagsManagerSimple( object ):
             
             tags = [ tag.split( ':', 1 )[1] for tag in tags ]
             
-            tags = HydrusTags.SortTags( tags )
+            tags = HydrusTags.SortNumericTags( tags )
             
             tags = tuple( ( HydrusTags.ConvertTagToSortable( tag ) for tag in tags ) )
             

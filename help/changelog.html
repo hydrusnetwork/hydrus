@@ -8,6 +8,24 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 203</h3></li>
+				<ul>
+					<li>thumbnail resize now happens on the fly--feel free to change it as often as you like, it takes no time at all</li>
+					<li>added 'lexicopgrahic (grouped by namespace)' tag sorting to the selection tags box</li>
+					<li>added an option to disable OpenCV for static images under the media options page</li>
+					<li>panning with the shortcut keys now pans by a twelfth of the media size or canvas size, whichever is smaller</li>
+					<li>cleared the analyze timestamp cache for both client and server, which will force a reanalyze of the new db files on the next db maintenance run</li>
+					<li>improved some misc analyze code--primary keys are analyzed again</li>
+					<li>added an explicit analyze command to the client's database maintenance menu</li>
+					<li>the server now analyzes attached database files</li>
+					<li>improved an unhelpful server thumbnail error message</li>
+					<li>added an invalid NULL check-and-skip to hash cross-referencing</li>
+					<li>fixed some invalid a/c write dropdown search domain initialisation</li>
+					<li>fixed some borked zoom calculation code that was sometimes lagging the media viewer and leading to 100% zoomed images being sent unneccessarily and then being nastily scaled down</li>
+					<li>fixed a file import error if a synced tag archive is missing</li>
+					<li>updated sqlite for windows</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 202</h3></li>
 				<ul>
 					<li>fixed a problem with the v198->v199 update step</li>

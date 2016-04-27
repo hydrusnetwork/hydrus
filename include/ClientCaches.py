@@ -1059,6 +1059,35 @@ class ThumbnailCache( object ):
                 
                 hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path )
                 
+                options = HydrusGlobals.client_controller.GetOptions()
+                
+                ( media_x, media_y ) = display_media.GetResolution()
+                ( actual_x, actual_y ) = hydrus_bitmap.GetSize()
+                ( desired_x, desired_y ) = options[ 'thumbnail_dimensions' ]
+                
+                too_large = actual_x > desired_x or actual_y > desired_y
+                
+                small_original_image = actual_x == media_x and actual_y == media_y
+                
+                too_small = actual_x < desired_x and actual_y < desired_y
+                
+                if too_large or ( too_small and not small_original_image ):
+                    
+                    if not from_error: # If we get back here with an error, just return the badly sized bitmap--it'll probably get sorted next session
+                        
+                        del hydrus_bitmap
+                        
+                        try:
+                            
+                            os.remove( path ) # Sometimes, the image library doesn't release this fast enough, so this fails
+                            
+                        finally:
+                            
+                            hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media, from_error = True )
+                            
+                        
+                    
+                
             except Exception as e:
                 
                 if from_error:

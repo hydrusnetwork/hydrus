@@ -1,6 +1,7 @@
 import numpy.core.multiarray # important this comes before cv!
 import cv2
 import HydrusImageHandling
+import HydrusGlobals
 
 if cv2.__version__.startswith( '2' ):
     
@@ -32,6 +33,13 @@ def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
     
 def GenerateNumpyImage( path ):
+    
+    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    
+    if new_options.GetBoolean( 'disable_cv_for_static_images' ):
+        
+        raise Exception( 'Cannot read image--OpenCV for images is currently disabled.' )
+        
     
     numpy_image = cv2.imread( path, flags = -1 ) # flags = -1 loads alpha channel, if present
     
@@ -76,6 +84,13 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
     
 def GeneratePerceptualHash( path ):
+    
+    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    
+    if new_options.GetBoolean( 'disable_cv_for_static_images' ):
+        
+        raise Exception( 'Cannot generate perceptual hash--OpenCV for images is currently disabled.' )
+        
     
     numpy_image = cv2.imread( path, IMREAD_UNCHANGED )
     

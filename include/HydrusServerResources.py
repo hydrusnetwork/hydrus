@@ -76,8 +76,16 @@ def ParseFileArguments( path ):
     
     if mime in HC.MIMES_WITH_THUMBNAILS:
         
-        try: thumbnail = HydrusFileHandling.GenerateThumbnail( path )
-        except: raise HydrusExceptions.ForbiddenException( 'Could not generate thumbnail from that file.' )
+        try:
+            
+            thumbnail = HydrusFileHandling.GenerateThumbnail( path )
+            
+        except Exception as e:
+            
+            tb = traceback.format_exc()
+            
+            raise HydrusExceptions.ForbiddenException( 'Could not generate thumbnail from that file:' + os.linesep + tb )
+            
         
         args[ 'thumbnail' ] = thumbnail
         

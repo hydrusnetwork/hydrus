@@ -124,7 +124,7 @@ def FilterNamespaces( tags, namespaces ):
     
     return result
     
-def SortTags( tags ):
+def SortNumericTags( tags ):
     
     tags = list( tags )
     
