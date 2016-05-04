@@ -2,6 +2,7 @@ import numpy.core.multiarray # important this comes before cv!
 import cv2
 import ClientImageHandling
 import HydrusExceptions
+import HydrusGlobals
 import HydrusImageHandling
 
 if cv2.__version__.startswith( '2' ):
@@ -61,7 +62,9 @@ class GIFRenderer( object ):
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         
-        if cv2.__version__.startswith( '2' ):
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        if new_options.GetBoolean( 'disable_cv_for_gifs' ) or cv2.__version__.startswith( '2' ):
             
             self._InitialisePIL()
             

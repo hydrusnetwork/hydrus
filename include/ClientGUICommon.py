@@ -4527,7 +4527,7 @@ class PopupMessage( PopupWindow ):
         
         hashes = self._job_key.GetVariable( 'popup_files' )
         
-        media_results = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
+        media_results = HydrusGlobals.client_controller.Read( 'media_results', hashes )
         
         HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
         

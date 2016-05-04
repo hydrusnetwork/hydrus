@@ -515,6 +515,41 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
+    def _ClearOrphans( self ):
+        
+        text = 'This will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                text = 'What would you like to do with the orphaned files? Note that all orphaned thumbnails will be deleted.'
+                
+                with ClientGUIDialogs.DialogYesNo( self, text, title = 'Choose what do to with the orphans.', yes_label = 'move them somewhere', no_label = 'delete them' ) as dlg_2:
+                    
+                    result = dlg_2.ShowModal()
+                    
+                    if result == wx.ID_YES:
+                        
+                        with wx.DirDialog( self, 'Select location.' ) as dlg_3:
+                            
+                            if dlg_3.ShowModal() == wx.ID_OK:
+                                
+                                path = HydrusData.ToUnicode( dlg_3.GetPath() )
+                                
+                                self._controller.Write( 'clear_orphans', path )
+                                
+                            
+                        
+                    elif result == wx.ID_NO:
+                        
+                        self._controller.Write( 'clear_orphans' )
+                        
+                    
+                
+            
+        
+    
     def _CloseCurrentPage( self, polite = True ):
         
         selection = self._notebook.GetSelection()
@@ -890,6 +925,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'rebalance_client_files' ), p( '&Rebalance File Storage' ), p( 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_orphans' ), p( '&Clear Orphans' ), p( 'Clear out surplus files that have found their way into the database.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'check_db_integrity' ), p( 'Check Database Integrity' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( '&Maintenance' ), submenu )
@@ -1241,13 +1277,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         if len( initial_hashes ) > 0:
                             
-                            file_service_key = management_controller.GetKey( 'file_service' )
-                            
                             initial_media_results = []
                             
                             for group_of_inital_hashes in HydrusData.SplitListIntoChunks( initial_hashes, 256 ):
                                 
-                                more_media_results = self._controller.Read( 'media_results', file_service_key, group_of_inital_hashes )
+                                more_media_results = self._controller.Read( 'media_results', group_of_inital_hashes )
                                 
                                 initial_media_results.extend( more_media_results )
                                 
@@ -2304,6 +2338,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'backup_service': self._BackupService( data )
             elif command == 'check_db_integrity': self._CheckDBIntegrity()
             elif command == 'clear_caches': self._controller.ClearCaches()
+            elif command == 'clear_orphans': self._ClearOrphans()
             elif command == 'close_page': self._CloseCurrentPage()
             elif command == 'db_profile_mode':
                 
@@ -3473,7 +3508,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
                 
-                media_results = self._controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
+                media_results = self._controller.Read( 'media_results', hashes )
                 
                 self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
                 

@@ -347,7 +347,16 @@ def SortTagsList( tags, sort_type ):
             
             if ':' in tag:
                 
-                return tag.split( ':', 1 )
+                ( namespace, subtag ) = tag.split( ':', 1 )
+                
+                if namespace == '':
+                    
+                    return ( '{', subtag )
+                    
+                else:
+                    
+                    return ( namespace, subtag )
+                    
                 
             else:
                 
@@ -436,13 +445,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
-        self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = True
+        self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
         self._dictionary[ 'booleans' ][ 'waiting_politely_text' ] = False
         
         self._dictionary[ 'booleans' ][ 'show_thumbnail_title_banner' ] = True
         self._dictionary[ 'booleans' ][ 'show_thumbnail_page' ] = True
         
         self._dictionary[ 'booleans' ][ 'disable_cv_for_static_images' ] = False
+        self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
         
         self._dictionary[ 'noneable_integers' ] = {}
         

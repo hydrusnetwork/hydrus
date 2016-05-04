@@ -92,7 +92,7 @@ def DAEMONDownloadFiles( controller ):
             
             job_key.SetVariable( 'popup_text_1', 'downloading ' + HydrusData.ConvertIntToPrettyString( num_downloads - len( successful_hashes ) ) + ' files from repositories' )
             
-            ( media_result, ) = controller.Read( 'media_results', CC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
+            ( media_result, ) = controller.Read( 'media_results', ( hash, ) )
             
             service_keys = list( media_result.GetLocationsManager().GetCurrent() )
             

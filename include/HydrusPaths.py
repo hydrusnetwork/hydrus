@@ -5,6 +5,7 @@ import os
 import psutil
 import send2trash
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -70,13 +71,39 @@ def CleanUpTempPath( os_file_handle, temp_path ):
     
 def ConvertAbsPathToPortablePath( abs_path ):
     
-    try: return os.path.relpath( abs_path, HC.BASE_DIR )
-    except: return abs_path
+    try:
+        
+        portable_path = os.path.relpath( abs_path, HC.BASE_DIR )
+        
+    except:
+        
+        portable_path = abs_path
+        
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        portable_path = portable_path.replace( '\\', '/' ) # store seps as /, to maintain multiplatform uniformity
+        
+    
+    return portable_path
     
 def ConvertPortablePathToAbsPath( portable_path ):
     
-    if os.path.isabs( portable_path ): abs_path = portable_path
-    else: abs_path = os.path.normpath( os.path.join( HC.BASE_DIR, portable_path ) )
+    portable_path = os.path.normpath( portable_path ) # collapses .. stuff and converts / to \\ for windows only
+    
+    if os.path.isabs( portable_path ):
+        
+        abs_path = portable_path
+        
+    else:
+        
+        abs_path = os.path.join( HC.BASE_DIR, portable_path )
+        
+    
+    if not HC.PLATFORM_WINDOWS and not os.path.exists( abs_path ):
+        
+        abs_path = abs_path.replace( '\\', '/' )
+        
     
     return abs_path
     
@@ -126,6 +153,8 @@ def CopyFileLikeToFileLike( f_source, f_dest ):
 def DeletePath( path ):
     
     if os.path.exists( path ):
+        
+        MakeFileWritable( path )
         
         if os.path.isdir( path ):
             
@@ -221,6 +250,11 @@ def LaunchFile( path ):
     thread.daemon = True
     
     thread.start()
+    
+def MakeFileWritable( path ):
+    
+    try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
+    except: pass
     
 def MirrorTree( source, dest ):
     
@@ -329,6 +363,8 @@ def RecyclePath( path ):
         
     
     if os.path.exists( path ):
+        
+        MakeFileWritable( path )
         
         try:
             

@@ -1009,15 +1009,13 @@ class Controller( HydrusController.HydrusController ):
         
         query_hash_ids = self.Read( 'file_query_ids', search_context )
         
-        service_key = search_context.GetFileServiceKey()
-        
         media_results = []
         
         for sub_query_hash_ids in HydrusData.SplitListIntoChunks( query_hash_ids, 256 ):
             
             if query_key.IsCancelled(): return
             
-            more_media_results = self.Read( 'media_results_from_ids', service_key, sub_query_hash_ids )
+            more_media_results = self.Read( 'media_results_from_ids', sub_query_hash_ids )
             
             media_results.extend( more_media_results )
             

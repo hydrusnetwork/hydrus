@@ -51,10 +51,12 @@ class TestClientDB( unittest.TestCase ):
         
         c = db.cursor()
         
-        c.execute( 'DELETE FROM current_mappings;' )
-        c.execute( 'DELETE FROM pending_mappings;' )
-        c.execute( 'DELETE FROM deleted_mappings;' )
-        c.execute( 'DELETE FROM mapping_petitions;' )
+        table_names = [ name for ( name, ) in c.execute( 'SELECT name FROM sqlite_master where type = "table";' ).fetchall() ]
+        
+        for name in table_names:
+            
+            c.execute( 'DELETE FROM ' + name + ';' )
+            
         
     
     def _read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
@@ -540,6 +542,8 @@ class TestClientDB( unittest.TestCase ):
         predicates = []
         
         predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 1 } ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1 } ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 0 } ) )
         predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
         
         self.assertEqual( result, predicates )
@@ -662,7 +666,7 @@ class TestClientDB( unittest.TestCase ):
             self.assertEqual( written_result, CC.STATUS_REDUNDANT )
             self.assertEqual( written_hash, hash )
             
-            ( media_result, ) = self._read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( written_hash, ) )
+            ( media_result, ) = self._read( 'media_results', ( written_hash, ) )
             
             ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
             
@@ -791,7 +795,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( media_result, ) = self._read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
         
         ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         
@@ -808,7 +812,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_num_frames, None )
         self.assertEqual( mr_num_words, None )
         
-        ( media_result, ) = self._read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, ( 1, ) )
+        ( media_result, ) = self._read( 'media_results_from_ids', ( 1, ) )
         
         ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         

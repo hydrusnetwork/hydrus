@@ -2485,7 +2485,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
     
-        with wx.BusyCursor(): media_results = self._controller.Read( 'media_results', file_service_key, hashes )
+        with wx.BusyCursor(): media_results = self._controller.Read( 'media_results', hashes )
         
         panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
@@ -2723,6 +2723,12 @@ class ManagementPanelQuery( ManagementPanel ):
         if self._search_enabled:
             
             t = ClientGUICommon.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, predicates_callable = self._current_predicates_box.GetPredicates )
+            
+            file_search_context = self._management_controller.GetVariable( 'file_search_context' )
+            
+            tag_service_key = file_search_context.GetTagServiceKey()
+            
+            t.ChangeTagService( tag_service_key )
             
         else:
             

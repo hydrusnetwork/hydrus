@@ -124,9 +124,9 @@ def GetExportPath():
     
     options = HydrusGlobals.client_controller.GetOptions()
     
-    path = options[ 'export_path' ]
+    portable_path = options[ 'export_path' ]
     
-    if path is None:
+    if portable_path is None:
         
         path = os.path.join( os.path.expanduser( '~' ), 'hydrus_export' )
         
@@ -135,10 +135,10 @@ def GetExportPath():
             os.makedirs( path )
             
         
-    
-    path = os.path.normpath( path ) # converts slashes to backslashes for windows
-    
-    path = HydrusPaths.ConvertPortablePathToAbsPath( path )
+    else:
+        
+        path = HydrusPaths.ConvertPortablePathToAbsPath( portable_path )
+        
     
     return path
     
@@ -466,7 +466,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     sub_query_hash_ids = query_hash_ids[ last_i : i ]
                     
-                    more_media_results = HydrusGlobals.client_controller.Read( 'media_results_from_ids', CC.LOCAL_FILE_SERVICE_KEY, sub_query_hash_ids )
+                    more_media_results = HydrusGlobals.client_controller.Read( 'media_results_from_ids', sub_query_hash_ids )
                     
                     media_results.extend( more_media_results )
                     

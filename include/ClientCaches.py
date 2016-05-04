@@ -695,7 +695,7 @@ class LocalBooruCache( object ):
             
             info[ 'hashes_set' ] = set( hashes )
             
-            media_results = self._controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, hashes )
+            media_results = self._controller.Read( 'media_results', hashes )
             
             info[ 'media_results' ] = media_results
             

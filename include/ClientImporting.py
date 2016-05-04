@@ -235,7 +235,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
-                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', ( hash, ) )
                 
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
@@ -700,7 +700,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
-                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', ( hash, ) )
                 
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
@@ -1338,7 +1338,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                 
-                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', ( hash, ) )
                 
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 
@@ -2630,7 +2630,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
-                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', CC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', ( hash, ) )
                 
                 HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
                 

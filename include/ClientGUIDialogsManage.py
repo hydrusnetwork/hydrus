@@ -4363,6 +4363,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
             
             self._disable_cv_for_static_images = wx.CheckBox( self, label = '' )
+            self._disable_cv_for_gifs = wx.CheckBox( self, label = '' )
             
             self._mime_media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
@@ -4391,6 +4392,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
             self._disable_cv_for_static_images.SetValue( self._new_options.GetBoolean( 'disable_cv_for_static_images' ) )
+            self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
@@ -4421,6 +4423,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self, label = 'Disable OpenCV for static images: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._disable_cv_for_static_images, CC.FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( self, label = 'Disable OpenCV for gifs: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._disable_cv_for_gifs, CC.FLAGS_MIXED )
+            
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._mime_media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -4442,6 +4447,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             HC.options[ 'mime_media_viewer_actions' ] = mime_media_viewer_actions
             
             self._new_options.SetBoolean( 'disable_cv_for_static_images', self._disable_cv_for_static_images.GetValue() )
+            self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
             
         
     
@@ -9797,7 +9803,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
             
-            if len( hashes ) > 0: media_results = HydrusGlobals.client_controller.Read( 'media_results', self._file_service_key, hashes )
+            if len( hashes ) > 0: media_results = HydrusGlobals.client_controller.Read( 'media_results', hashes )
             else: media_results = []
             
             # this should now be a nice clean copy of the original media

@@ -420,6 +420,13 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
         
+        if new_status == HC.CURRENT:
+            
+            child_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ?;', ( service_id, old_tag_id ) ) ]
+            
+            self._AddMappings( service_id, account_id, new_tag_id, child_hash_ids, True )
+            
+        
     
     def _ApproveTagSiblingPetition( self, service_id, account_id, old_tag_id, new_tag_id, reason_id, status ):
         

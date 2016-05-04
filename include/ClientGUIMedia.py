@@ -1017,7 +1017,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            media_results = HydrusGlobals.client_controller.Read( 'media_results', self._file_service_key, hashes )
+            media_results = HydrusGlobals.client_controller.Read( 'media_results', hashes )
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
             
