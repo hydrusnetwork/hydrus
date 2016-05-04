@@ -8,10 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 204</h3></li>
+				<ul>
+					<li>current, deleted, pending, and petitioned mappings are now stored on service-separated dynamic tables</li>
+					<li>any tag service deletion or reset should now only take a few seconds</li>
+					<li>fixed a physical file deletion bug that seems to have affected (some?) versions of linux and os x</li>
+					<li>reintroduced a revamped 'clear orphans' database->maintenance routine for the client, which will delete or move orphaned files and delete orphaned thumbnails. run this if you are on os x or linux</li>
+					<li>improved misc file deletion code</li>
+					<li>fixed some multiplatform path conversion, and generally improved how paths are stored and retrieved</li>
+					<li>the network application of a parent tag to all files with the child tag now happens serverside, and only on petitioner-approval of a tag parent relationship. it still occurs locally to the uploader, but is now wrapped up in the parent commit</li>
+					<li>fixed some numtags search logic</li>
+					<li>fixed an issue when mixing system:age with any tag-based predicate</li>
+					<li>media_results db calls no longer require a file domain</li>
+					<li>'hide inbox and archive preds if either has no files' now defaults to off</li>
+					<li>added an option to disable OpenCV for gif rendering</li>
+					<li>the selection tags panel now initialises with the correct tag domain (it was previously always starting as 'all known tags', which is not always true for session pages)</li>
+				</ul>
 				<li><h3>version 203</h3></li>
 				<ul>
 					<li>thumbnail resize now happens on the fly--feel free to change it as often as you like, it takes no time at all</li>
-					<li>added 'lexicopgrahic (grouped by namespace)' tag sorting to the selection tags box</li>
+					<li>added 'lexicographic (grouped by namespace)' tag sorting to the selection tags box</li>
 					<li>added an option to disable OpenCV for static images under the media options page</li>
 					<li>panning with the shortcut keys now pans by a twelfth of the media size or canvas size, whichever is smaller</li>
 					<li>cleared the analyze timestamp cache for both client and server, which will force a reanalyze of the new db files on the next db maintenance run</li>
