@@ -45,7 +45,7 @@ class TestClientDB( unittest.TestCase ):
         del c
         del db
         
-        mappings_db_path = os.path.join( self._db._db_dir, self._db._db_filenames[ 'mappings' ] )
+        mappings_db_path = os.path.join( self._db._db_dir, self._db._db_filenames[ 'external_mappings' ] )
         
         db = sqlite3.connect( mappings_db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         
@@ -1179,19 +1179,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( result, [] )
         
     
-    def test_shutdown_timestamps( self ):
-        
-        result = self._read( 'shutdown_timestamps' )
-        
-        self.assertEqual( type( result ), collections.defaultdict )
-        
-        for ( k, v ) in result.items():
-            
-            self.assertEqual( type( k ), int )
-            self.assertEqual( type( v ), int )
-            
-        
-
 class TestServerDB( unittest.TestCase ):
     
     def _read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )

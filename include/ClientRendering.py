@@ -18,41 +18,22 @@ def GenerateHydrusBitmap( path, compressed = True ):
     
     new_options = HydrusGlobals.client_controller.GetNewOptions()
     
-    if new_options.GetBoolean( 'disable_cv_for_static_images' ):
-        
-        pil_image = HydrusImageHandling.GeneratePILImage( path )
-        
-        return GenerateHydrusBitmapFromPILImage( pil_image, compressed = compressed )
-        
-    else:
-        
-        numpy_image = None
-        
-        try:
-            
-            numpy_image = ClientImageHandling.GenerateNumpyImage( path )
-            
-            return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
-            
-        except:
-            
-            if numpy_image is not None:
-                
-                del numpy_image
-                
-            
-            pil_image = HydrusImageHandling.GeneratePILImage( path )
-            
-            return GenerateHydrusBitmapFromPILImage( pil_image, compressed = compressed )
-            
-        
+    numpy_image = ClientImageHandling.GenerateNumpyImage( path )
+    
+    return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
     
 def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
     
     ( y, x, depth ) = numpy_image.shape
     
-    if depth == 4: buffer_format = wx.BitmapBufferFormat_RGBA
-    else: buffer_format = wx.BitmapBufferFormat_RGB
+    if depth == 4:
+        
+        buffer_format = wx.BitmapBufferFormat_RGBA
+        
+    else:
+        
+        buffer_format = wx.BitmapBufferFormat_RGB
+        
     
     return HydrusBitmap( numpy_image.data, buffer_format, ( x, y ), compressed = compressed )
     
@@ -62,16 +43,16 @@ def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
         
         if pil_image.mode == 'P': pil_image = pil_image.convert( 'RGBA' )
         
-        format = wx.BitmapBufferFormat_RGBA
+        buffer_format = wx.BitmapBufferFormat_RGBA
         
     else:
         
         if pil_image.mode != 'RGB': pil_image = pil_image.convert( 'RGB' )
         
-        format = wx.BitmapBufferFormat_RGB
+        buffer_format = wx.BitmapBufferFormat_RGB
         
     
-    return HydrusBitmap( pil_image.tobytes(), format, pil_image.size, compressed = compressed )
+    return HydrusBitmap( pil_image.tobytes(), buffer_format, pil_image.size, compressed = compressed )
     
 class RasterContainer( object ):
     
@@ -130,35 +111,11 @@ class RasterContainerImage( RasterContainer ):
         
         time.sleep( 0.00001 )
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        numpy_image = ClientImageHandling.GenerateNumpyImage( self._path )
         
-        if new_options.GetBoolean( 'disable_cv_for_static_images' ):
-            
-            pil_image = HydrusImageHandling.GeneratePILImage( self._path )
-            
-            resized_pil_image = HydrusImageHandling.EfficientlyResizePILImage( pil_image, self._target_resolution )
-            
-            hydrus_bitmap = GenerateHydrusBitmapFromPILImage( resized_pil_image )
-            
-        else:
-            
-            try:
-                
-                numpy_image = ClientImageHandling.GenerateNumpyImage( self._path )
-                
-                resized_numpy_image = ClientImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
-                
-                hydrus_bitmap = GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
-                
-            except:
-                
-                pil_image = HydrusImageHandling.GeneratePILImage( self._path )
-                
-                resized_pil_image = HydrusImageHandling.EfficientlyResizePILImage( pil_image, self._target_resolution )
-                
-                hydrus_bitmap = GenerateHydrusBitmapFromPILImage( resized_pil_image )
-                
-            
+        resized_numpy_image = ClientImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
+        
+        hydrus_bitmap = GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
         
         self._hydrus_bitmap = hydrus_bitmap
         

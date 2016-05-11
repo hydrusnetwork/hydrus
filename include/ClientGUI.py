@@ -187,9 +187,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _AnalyzeDatabase( self ):
         
-        message = 'This will gather statistical information on the database\'s indices, helping the query planner design efficient queries.'
+        message = 'This will gather statistical information on the database\'s indices, helping the query planner design efficient queries. It typically happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes, during which your gui may hang. A popup message will show its status.'
         message += os.linesep * 2
-        message += 'A \'soft\' analyze will only reanalyze those indices that are due for a check in the normal db maintenance cycle. This will typically take less than a second, but if it needs to do work, it will attempt not to take more that a few minutes, during which time your database will be locked and your gui may hang.'
+        message += 'A \'soft\' analyze will only reanalyze those indices that are due for a check in the normal db maintenance cycle. If nothing is due, it will return immediately.'
         message += os.linesep * 2
         message += 'A \'full\' analyze will force a run over every index in the database. This can take substantially longer. If you do not have a specific reason to select this, it is probably pointless.'
         
@@ -923,6 +923,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'analyze_db' ), p( '&Analyze' ), p( 'Reanalyze the Database.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'rebalance_client_files' ), p( '&Rebalance File Storage' ), p( 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_ac_cache' ), p( '&Regenerate Autocomplete Cache' ), p( 'Delete and recreate the tag autocomplete cache.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_orphans' ), p( '&Clear Orphans' ), p( 'Clear out surplus files that have found their way into the database.' ) )
@@ -1651,6 +1652,25 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._statusbar.SetStatusText( db_status, number = 3 )
         
     
+    def _RegenerateACCache( self ):
+        
+        message = 'This will delete and then recreate the entire autocomplete cache. This is useful if miscounting has somehow occured.'
+        message += os.linesep * 2
+        message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
+                
+                self._controller.Write( 'regenerate_ac_cache' )
+                
+            
+        
+    
     def _RegenerateThumbnails( self ):
         
         text = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
@@ -2001,15 +2021,28 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _VacuumDatabase( self ):
         
-        text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes. A popup message will show its status'
+        text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It typically happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes, during which your gui may hang. A popup message will show its status.'
+        text += os.linesep * 2
+        text += 'A \'soft\' vacuum will only reanalyze those databases that are due for a check in the normal db maintenance cycle. If nothing is due, it will return immediately.'
+        text += os.linesep * 2
+        text += 'A \'full\' vacuum will immediately force a vacuum for the entire database. This can take substantially longer.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, text, title = 'Choose how thorough your vacuum will be.', yes_label = 'soft', no_label = 'full' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: self._controller.Write( 'vacuum' )
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
+                
+                self._controller.Write( 'vacuum' )
+                
+            elif result == wx.ID_NO:
+                
+                self._controller.Write( 'vacuum', force_vacuum = True )
+                
             
         
     
-    def _THREADSyncToTagArchive( self, hta_path, adding, namespaces, service_key ):
+    def _THREADSyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces ):
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         
@@ -2057,6 +2090,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     chunk_of_hydrus_hashes = self._controller.Read( 'file_hashes', chunk_of_hta_hashes, given_hash_type, 'sha256' )
                     
                 
+                if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
+                    
+                    chunk_of_hydrus_hashes = self._controller.Read( 'filter_hashes', chunk_of_hydrus_hashes, file_service_key )
+                    
+                
                 hydrus_hashes.extend( chunk_of_hydrus_hashes )
                 
                 total_num_hta_hashes += len( chunk_of_hta_hashes )
@@ -2086,7 +2124,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                     
                 
-                self._controller.WriteSynchronous( 'sync_hashes_to_tag_archive', chunk_of_hydrus_hashes, hta_path, adding, namespaces, service_key )
+                self._controller.WriteSynchronous( 'sync_hashes_to_tag_archive', chunk_of_hydrus_hashes, hta_path, tag_service_key, adding, namespaces )
                 
                 total_num_processed += len( chunk_of_hydrus_hashes )
                 
@@ -2457,6 +2495,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None: page.RefreshQuery()
                 
+            elif command == 'regenerate_ac_cache': self._RegenerateACCache()
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
             elif command == 'restart': self.Exit( restart = True )
             elif command == 'restore_database': self._controller.RestoreDatabase()
@@ -2796,9 +2835,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         FrameSeedCache( self._controller, seed_cache )
         
     
-    def SyncToTagArchive( self, hta, adding, namespaces, service_key ):
+    def SyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces ):
         
-        self._controller.CallToThread( self._THREADSyncToTagArchive, hta, adding, namespaces, service_key )
+        self._controller.CallToThread( self._THREADSyncToTagArchive, hta_path, tag_service_key, file_service_key, adding, namespaces )
         
     
     '''

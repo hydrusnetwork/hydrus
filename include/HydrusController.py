@@ -195,7 +195,7 @@ class HydrusController( object ):
             
         
     
-    def MaintainDB( self ):
+    def MaintainDB( self, stop_time = None ):
         
         pass
         

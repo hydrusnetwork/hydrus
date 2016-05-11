@@ -52,6 +52,7 @@ class Controller( HydrusController.HydrusController ):
         self._last_mouse_position = None
         self._menu_open = False
         self._previously_idle = False
+        self._idle_started = None
         
     
     def _InitDB( self ):
@@ -302,6 +303,8 @@ class Controller( HydrusController.HydrusController ):
         
         if HydrusGlobals.force_idle_mode:
             
+            self._idle_started = 0
+            
             return True
             
         
@@ -339,16 +342,33 @@ class Controller( HydrusController.HydrusController ):
             currently_idle = False
             
         
-        turning_idle = not self._previously_idle and currently_idle
+        turning_idle = currently_idle and not self._previously_idle
         
         self._previously_idle = currently_idle
         
         if turning_idle:
             
+            self._idle_started = HydrusData.GetNow()
+            
             self.pub( 'wake_daemons' )
             
         
+        if not currently_idle:
+            
+            self._idle_started = None
+            
+        
         return currently_idle
+        
+    
+    def CurrentlyVeryIdle( self ):
+        
+        if self._idle_started is not None and HydrusData.TimeHasPassed( self._idle_started + 3600 ):
+            
+            return True
+            
+        
+        return False
         
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
@@ -359,7 +379,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._client_files_manager.Rebalance( partial = False, stop_time = stop_time )
         
-        self.MaintainDB()
+        self.MaintainDB( stop_time = stop_time )
         
         if not self._options[ 'pause_repo_sync' ]:
             
@@ -586,48 +606,38 @@ class Controller( HydrusController.HydrusController ):
         if HydrusGlobals.is_db_updated: wx.CallLater( 1, HydrusData.ShowText, 'The client has updated to version ' + str( HC.SOFTWARE_VERSION ) + '!' )
         
     
-    def MaintainDB( self ):
+    def MaintainDB( self, stop_time = None ):
         
-        now = HydrusData.GetNow()
-        
-        shutdown_timestamps = self.Read( 'shutdown_timestamps' )
-        
-        maintenance_vacuum_period = self._options[ 'maintenance_vacuum_period' ]
-        
-        if maintenance_vacuum_period is not None and maintenance_vacuum_period > 0:
+        if stop_time is None:
             
-            if HydrusData.TimeHasPassed( shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] + maintenance_vacuum_period ):
+            if not self.CurrentlyVeryIdle():
                 
-                self.WriteInterruptable( 'vacuum' )
+                stop_time = HydrusData.GetNow() + 30
                 
             
         
-        stop_time = HydrusData.GetNow() + 120
+        self.WriteInterruptable( 'vacuum', stop_time = stop_time )
         
         self.pub( 'splash_set_status_text', 'analyzing' )
         
-        only_when_idle = self.CurrentlyIdle()
+        self.WriteInterruptable( 'analyze', stop_time = stop_time, only_when_idle = True )
         
-        self.WriteInterruptable( 'analyze', stop_time = stop_time, only_when_idle = only_when_idle )
-        
-        if self._timestamps[ 'last_service_info_cache_fatten' ] == 0:
+        if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
             
-            self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
-            
-        
-        if HydrusData.TimeHasPassed( self._timestamps[ 'last_service_info_cache_fatten' ] + ( 60 * 20 ) ):
-            
-            self.pub( 'splash_set_status_text', 'fattening service info' )
-            
-            services = self.GetServicesManager().GetServices()
-            
-            for service in services:
+            if HydrusData.TimeHasPassed( self._timestamps[ 'last_service_info_cache_fatten' ] + ( 60 * 20 ) ):
                 
-                try: self.Read( 'service_info', service.GetServiceKey() )
-                except: pass # sometimes this breaks when a service has just been removed and the client is closing, so ignore the error
+                self.pub( 'splash_set_status_text', 'fattening service info' )
                 
-            
-            self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
+                services = self.GetServicesManager().GetServices()
+                
+                for service in services:
+                    
+                    try: self.Read( 'service_info', service.GetServiceKey() )
+                    except: pass # sometimes this breaks when a service has just been removed and the client is closing, so ignore the error
+                    
+                
+                self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
+                
             
         
     
@@ -975,18 +985,11 @@ class Controller( HydrusController.HydrusController ):
     
     def ThereIsIdleShutdownWorkDue( self ):
         
-        now = HydrusData.GetNow()
+        maintenance_due = self.Read( 'maintenance_due' )
         
-        shutdown_timestamps = self.Read( 'shutdown_timestamps' )
-        
-        maintenance_vacuum_period = self._options[ 'maintenance_vacuum_period' ]
-        
-        if maintenance_vacuum_period is not None and maintenance_vacuum_period > 0:
+        if maintenance_due:
             
-            if HydrusData.TimeHasPassed( shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] + maintenance_vacuum_period ):
-                
-                return True
-                
+            return True
             
         
         if not self._options[ 'pause_repo_sync' ]:
@@ -1086,12 +1089,13 @@ class Controller( HydrusController.HydrusController ):
         except HydrusExceptions.ShutdownException: pass
         except:
             
-            traceback.print_exc()
-            
             text = 'A serious error occured while trying to exit the program. Its traceback may be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
             
             HydrusData.DebugPrint( text )
             
+            traceback.print_exc()
+            
+            wx.CallAfter( wx.MessageBox, traceback.format_exc() )
             wx.CallAfter( wx.MessageBox, text )
             
         finally:

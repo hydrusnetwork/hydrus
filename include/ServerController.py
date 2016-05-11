@@ -342,7 +342,7 @@ class Controller( HydrusController.HydrusController ):
     
     def JustWokeFromSleep( self ): return False
     
-    def MaintainDB( self ):
+    def MaintainDB( self, stop_time = None ):
         
         stop_time = HydrusData.GetNow() + 10
         

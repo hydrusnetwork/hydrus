@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 205</h3></li>
+				<ul>
+					<li>fixed v201->v202 update code, which v204 retroactively broke</li>
+					<li>wrote a new maintenance routine to regenerate the ac cache if it ends up miscounting or not generating correctly</li>
+					<li>fixed specific ac_cache generation code, which was double-counting because of recent file-add optimisation</li>
+					<li>client db maintenance now vacuums attached databases according to their own vacuum clocks</li>
+					<li>client will more aggressively vacuum and analyze if the client has been idle for an hour</li>
+					<li>client vacuum now prints success statements, with duration, to the log</li>
+					<li>analyze now produces an auto-dismissing vacuum-like popup message</li>
+					<li>the 'is maintenance due' check on shutdown now accounts for the new vacuum logic and includes analyze needs as well</li>
+					<li>shutdown maintenance will use more of its allotted time if needed</li>
+					<li>tag archive sync now always filters to local files on initial sync</li>
+					<li>if you import a tag archive with sha256 hash, you are now given the option to filter to local files or import everything</li>
+					<li>the occasionally crashtastic opencv.imread call is now completely replaced with PIL, let's see if it's too slow</li>
+					<li>the new-but-now-redundant 'disable opencv for static images' option is removed as a result</li>
+					<li>fixed a redirection location parsing bug that was affecting sankaku subs with >1000 initial files</li>
+					<li>fixed some bad analyze timestamp tracking code</li>
+					<li>fixed advanced content update code, which still had some mapping service_ids floating around</li>
+				</ul>
 				<li><h3>version 204</h3></li>
 				<ul>
 					<li>current, deleted, pending, and petitioned mappings are now stored on service-separated dynamic tables</li>

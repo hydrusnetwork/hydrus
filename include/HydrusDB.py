@@ -35,7 +35,7 @@ def CanVacuum( db_path, stop_time = None ):
         
         if stop_time is not None:
             
-            approx_vacuum_speed_mb_per_s = 1048576 * 3
+            approx_vacuum_speed_mb_per_s = 1048576 * 1
             
             approx_vacuum_duration = db_size / approx_vacuum_speed_mb_per_s
             
@@ -281,7 +281,7 @@ class HydrusDB( object ):
                 del db
                 
             
-            self._c.execute( 'ATTACH ? AS external_' + name + ';', ( db_path, ) )
+            self._c.execute( 'ATTACH ? AS ' + name + ';', ( db_path, ) )
             
         
     

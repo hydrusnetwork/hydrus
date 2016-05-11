@@ -338,7 +338,9 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'ANALYZE ' + name + ';' )
             
-            self._c.execute( 'REPLACE INTO analyze_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
+            self._c.execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
+            
+            self._c.execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
             
             time_took = HydrusData.GetNowPrecise() - started
             
@@ -1718,8 +1720,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _InitExternalDatabases( self ):
         
-        self._db_filenames[ 'mappings' ] = 'server.mappings.db'
-        self._db_filenames[ 'master' ] = 'server.master.db'
+        self._db_filenames[ 'external_mappings' ] = 'server.mappings.db'
+        self._db_filenames[ 'external_master' ] = 'server.master.db'
         
     
     def _IterateFileUpdateContentData( self, service_id, begin, end ):

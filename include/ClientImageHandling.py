@@ -34,35 +34,12 @@ def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     
 def GenerateNumpyImage( path ):
     
-    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    # this used to be a regular cv.imread call, but it was crashing the whole process on random thumbs, hooray
+    # it was just the read that was the problem, so this seems to work fine, even if pil is only about half as fast
     
-    if new_options.GetBoolean( 'disable_cv_for_static_images' ):
-        
-        raise Exception( 'Cannot read image--OpenCV for images is currently disabled.' )
-        
+    pil_image = HydrusImageHandling.GeneratePILImage( path )
     
-    numpy_image = cv2.imread( path, flags = -1 ) # flags = -1 loads alpha channel, if present
-    
-    if numpy_image is None:
-        
-        raise Exception( 'CV could not understand this image!' )
-        
-    
-    ( width, height, depth ) = numpy_image.shape
-    
-    if width * height * depth != len( numpy_image.data ):
-        
-        raise Exception( 'CV could not understand this image; it was probably an unusual png!' )
-        
-    
-    if depth == 4:
-        
-        raise Exception( 'CV is bad at alpha!' )
-        
-    else:
-        
-        numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
-        
+    numpy_image = GenerateNumPyImageFromPILImage( pil_image )
     
     return numpy_image
     
@@ -85,14 +62,7 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     
 def GeneratePerceptualHash( path ):
     
-    new_options = HydrusGlobals.client_controller.GetNewOptions()
-    
-    if new_options.GetBoolean( 'disable_cv_for_static_images' ):
-        
-        raise Exception( 'Cannot generate perceptual hash--OpenCV for images is currently disabled.' )
-        
-    
-    numpy_image = cv2.imread( path, IMREAD_UNCHANGED )
+    numpy_image = GenerateNumpyImage( path )
     
     ( y, x, depth ) = numpy_image.shape
     

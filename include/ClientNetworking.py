@@ -666,7 +666,11 @@ class HTTPConnection( object ):
                 
                 url = location
                 
-                if ' ' in url:
+                if ', ' in url:
+                    
+                    url = url.split( ', ' )[0]
+                    
+                elif ' ' in url:
                     
                     # some booru is giving daft redirect responses
                     HydrusData.Print( url )

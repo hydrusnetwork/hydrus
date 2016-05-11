@@ -451,7 +451,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'show_thumbnail_title_banner' ] = True
         self._dictionary[ 'booleans' ][ 'show_thumbnail_page' ] = True
         
-        self._dictionary[ 'booleans' ][ 'disable_cv_for_static_images' ] = False
         self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
         
         self._dictionary[ 'noneable_integers' ] = {}
@@ -2010,6 +2009,51 @@ class ServiceIPFS( ServiceRemote ):
         multihash = j[ 'Hash' ]
         
         return multihash
+        
+    
+    def PinDirectory( self, hashes ):
+        
+        # this needs a popup message
+        # it needs some good error handling as well
+        
+        file_info = []
+        
+        for hash in hashes:
+            
+            # get the multihash from the db
+            
+            # if missing, then pin it with PinFile obviously (how does this update the db? maybe it doesn't! maybe it should!)
+            
+            pass
+            
+        
+        api_base_url = self._GetAPIBaseURL()
+        
+        url = api_base_url + 'object/new?arg=unixfs-dir'
+        
+        response = ClientNetworking.RequestsGet( url )
+        
+        for ( hash, mime, multihash ) in file_info:
+            
+            object_multihash = response.json()[ 'Hash' ]
+            
+            filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+            
+            url = api_base_url + 'object/patch/add-link?arg=' + object_multihash + '&arg=' + filename + '&arg=' + multihash
+            
+            response = ClientNetworking.RequestsGet( url )
+            
+        
+        directory_multihash = response.json()[ 'Hash' ]
+        
+        url = api_base_url + 'pin/add?arg=' + directory_multihash
+        
+        response = ClientNetworking.RequestsGet( url )
+        
+        if response.ok:
+            
+            return directory_multihash
+            
         
     
     def UnpinFile( self, multihash ):

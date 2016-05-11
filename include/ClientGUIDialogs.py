@@ -105,17 +105,17 @@ def ExportToHTA( parent, service_key, hashes ):
         HydrusGlobals.client_controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
         
     
-def ImportFromHTA( parent, path, service_key ):
+def ImportFromHTA( parent, path, tag_service_key ):
     
     hta = HydrusTagArchive.HydrusTagArchive( path )
     
     potential_namespaces = hta.GetNamespaces()
     
-    hta.GetHashType() # this tests if the hta can produce a hashtype
+    hash_type = hta.GetHashType() # this tests if the hta can produce a hashtype
     
     del hta
     
-    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+    service = HydrusGlobals.client_controller.GetServicesManager().GetService( tag_service_key )
     
     service_type = service.GetServiceType()
     
@@ -161,6 +161,35 @@ def ImportFromHTA( parent, path, service_key ):
             
             namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg_namespaces.GetChecked() )
             
+            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
+                
+                text = 'This tag archive can be fully merged into your database, but this may be more than you want.'
+                text += os.linesep * 2
+                text += 'Would you like to import the tags only for files you actually have, or do you want absolutely everything?'
+                
+                with DialogYesNo( parent, text, title = 'How much do you want?', yes_label = 'just for my local files', no_label = 'everything' ) as dlg_add:
+                    
+                    result = dlg_add.ShowModal()
+                    
+                    if result == wx.ID_YES:
+                        
+                        file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+                        
+                    elif result == wx.ID_NO:
+                        
+                        file_service_key = CC.COMBINED_FILE_SERVICE_KEY
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+            else:
+                
+                file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+                
+            
             text = 'Are you absolutely sure you want to '
             
             if adding: text += 'add'
@@ -171,8 +200,12 @@ def ImportFromHTA( parent, path, service_key ):
             text += os.linesep.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) )
             text += os.linesep * 2
             
-            if adding: text += 'To '
-            else: text += 'From '
+            file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( file_service_key )
+            
+            text += 'For ' + file_service.GetName()
+            
+            if adding: text += ' to '
+            else: text += ' from '
             
             text += service.GetName() + ' ?'
             
@@ -180,7 +213,7 @@ def ImportFromHTA( parent, path, service_key ):
                 
                 if dlg_final.ShowModal() == wx.ID_YES:
                     
-                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', path, adding, namespaces, service_key )
+                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', path, tag_service_key, file_service_key, adding, namespaces )
                     
                 
             
