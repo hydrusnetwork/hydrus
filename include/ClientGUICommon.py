@@ -13,6 +13,7 @@ import traceback
 import wx
 import wx.combo
 import wx.richtext
+import wx.lib.newevent
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
 import HydrusTags
@@ -219,6 +220,8 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._cache_text = ''
         self._cached_results = []
+        
+        self._initial_matches_fetched = False
         
         if self._float_mode:
             
@@ -634,8 +637,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._current_namespace = ''
         self._current_matches = []
         
-        self._cached_results = []
-        
         self._file_service_key = file_service_key
         self._tag_service_key = tag_service_key
         
@@ -699,6 +700,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._last_search_text = self._text_ctrl.GetValue()
         
         matches = self._GenerateMatches()
+        
+        self._initial_matches_fetched = True
         
         self._dropdown_list.SetPredicates( matches )
         
@@ -919,9 +922,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             input_just_changed = self._cache_text != ''
             
-            db_not_going_to_hang_if_we_hit_it = not HydrusGlobals.client_controller.CurrentlyIdle()
+            db_not_going_to_hang_if_we_hit_it = not HydrusGlobals.client_controller.GetDB().CurrentlyDoingJob()
             
-            if input_just_changed or db_not_going_to_hang_if_we_hit_it:
+            if input_just_changed or db_not_going_to_hang_if_we_hit_it or not self._initial_matches_fetched:
                 
                 self._cache_text = ''
                 self._current_namespace = ''
@@ -1947,16 +1950,16 @@ class ListBook( wx.Panel ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
-        self._names_to_active_pages = {}
-        self._names_to_proto_pages = {}
+        self._keys_to_active_pages = {}
+        self._keys_to_proto_pages = {}
         
-        self._list_box = self.LB( self, style = wx.LB_SINGLE | wx.LB_SORT )
+        self._list_box = wx.ListBox( self, style = wx.LB_SINGLE | wx.LB_SORT )
         
         self._empty_panel = wx.Panel( self )
         
         self._empty_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
-        self._current_name = None
+        self._current_key = None
         
         self._current_panel = self._empty_panel
         
@@ -1976,55 +1979,67 @@ class ListBook( wx.Panel ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
-    class LB( wx.ListBox ):
+    def _ActivatePage( self, key ):
+
+        ( classname, args, kwargs ) = self._keys_to_proto_pages[ key ]
         
-        def FindString( self, name ):
+        page = classname( *args, **kwargs )
+        
+        page.Hide()
+        
+        self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self._keys_to_active_pages[ key ] = page
+        
+        del self._keys_to_proto_pages[ key ]
+        
+        self._RecalcListBoxWidth()
+        
+    
+    def _GetIndex( self, key ):
+        
+        for i in range( self._list_box.GetCount() ):
             
-            if HC.PLATFORM_WINDOWS: return wx.ListBox.FindString( self, name )
-            else:
+            i_key = self._list_box.GetClientData( i )
+            
+            if i_key == key:
                 
-                for i in range( self.GetCount() ):
-                    
-                    if self.GetString( i ) == name: return i
-                    
-                
-                return wx.NOT_FOUND
+                return i
                 
             
+        
+        return wx.NOT_FOUND
         
     
     def _RecalcListBoxWidth( self ): self.Layout()
     
     def _Select( self, selection ):
         
-        if selection == wx.NOT_FOUND: self._current_name = None
-        else: self._current_name = self._list_box.GetString( selection )
+        if selection == wx.NOT_FOUND:
+            
+            self._current_key = None
+            
+        else:
+            
+            self._current_key = self._list_box.GetClientData( selection )
+            
         
         self._current_panel.Hide()
         
         self._list_box.SetSelection( selection )
         
-        if selection == wx.NOT_FOUND: self._current_panel = self._empty_panel
+        if selection == wx.NOT_FOUND:
+            
+            self._current_panel = self._empty_panel
+            
         else:
             
-            if self._current_name in self._names_to_proto_pages:
+            if self._current_key in self._keys_to_proto_pages:
                 
-                ( classname, args, kwargs ) = self._names_to_proto_pages[ self._current_name ]
-                
-                page = classname( *args, **kwargs )
-                
-                page.Hide()
-                
-                self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                self._names_to_active_pages[ self._current_name ] = page
-                
-                del self._names_to_proto_pages[ self._current_name ]
-                
-                self._RecalcListBoxWidth()
+                self._ActivatePage( self._current_key )
                 
             
-            self._current_panel = self._names_to_active_pages[ self._current_name ]
+            self._current_panel = self._keys_to_active_pages[ self._current_key ]
             
         
         self._current_panel.Show()
@@ -2038,7 +2053,12 @@ class ListBook( wx.Panel ):
         self.ProcessEvent( event )
         
     
-    def AddPage( self, name, page, select = False ):
+    def AddPage( self, display_name, key, page, select = False ):
+        
+        if self._GetIndex( key ) != wx.NOT_FOUND:
+            
+            raise HydrusExceptions.NameException( 'That entry already exists!' )
+            
         
         if not isinstance( page, tuple ):
             
@@ -2047,30 +2067,41 @@ class ListBook( wx.Panel ):
             self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
-        self._list_box.Append( name )
+        self._list_box.Append( display_name, key )
         
-        self._names_to_active_pages[ name ] = page
+        self._keys_to_active_pages[ key ] = page
         
         self._RecalcListBoxWidth()
         
-        if self._list_box.GetCount() == 1: self._Select( 0 )
-        elif select: self._Select( self._list_box.FindString( name ) )
+        if self._list_box.GetCount() == 1:
+            
+            self._Select( 0 )
+            
+        elif select:
+            
+            index = self._GetIndex( key )
+            
+            self._Select( index )
+            
         
     
-    def AddPageArgs( self, name, classname, args, kwargs ):
+    def AddPageArgs( self, display_name, key, classname, args, kwargs ):
         
-        if self.NameExists( name ):
+        if self._GetIndex( key ) != wx.NOT_FOUND:
             
-            raise HydrusExceptions.NameException( 'That name is already in use!' )
+            raise HydrusExceptions.NameException( 'That entry already exists!' )
             
         
-        self._list_box.Append( name )
+        self._list_box.Append( display_name, key )
         
-        self._names_to_proto_pages[ name ] = ( classname, args, kwargs )
+        self._keys_to_proto_pages[ key ] = ( classname, args, kwargs )
         
         self._RecalcListBoxWidth()
         
-        if self._list_box.GetCount() == 1: self._Select( 0 )
+        if self._list_box.GetCount() == 1:
+            
+            self._Select( 0 )
+            
         
     
     def DeleteAllPages( self ):
@@ -2081,12 +2112,12 @@ class ListBook( wx.Panel ):
         
         self._panel_sizer.AddF( self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self._current_name = None
+        self._current_key = None
         
         self._current_panel = self._empty_panel
         
-        self._names_to_active_pages = {}
-        self._names_to_proto_pages = {}
+        self._keys_to_active_pages = {}
+        self._keys_to_proto_pages = {}
         
         self._list_box.Clear()
         
@@ -2097,23 +2128,32 @@ class ListBook( wx.Panel ):
         
         if selection != wx.NOT_FOUND:
             
-            name_to_delete = self._current_name
+            key_to_delete = self._current_key
             page_to_delete = self._current_panel
             
             next_selection = selection + 1
             previous_selection = selection - 1
             
-            if next_selection < self._list_box.GetCount(): self._Select( next_selection )
-            elif previous_selection >= 0: self._Select( previous_selection )
-            else: self._Select( wx.NOT_FOUND )
+            if next_selection < self._list_box.GetCount():
+                
+                self._Select( next_selection )
+                
+            elif previous_selection >= 0:
+                
+                self._Select( previous_selection )
+                
+            else:
+                
+                self._Select( wx.NOT_FOUND )
+                
             
             self._panel_sizer.Detach( page_to_delete )
             
             wx.CallAfter( page_to_delete.Destroy )
             
-            del self._names_to_active_pages[ name_to_delete ]
+            del self._keys_to_active_pages[ key_to_delete ]
             
-            self._list_box.Delete( self._list_box.FindString( name_to_delete ) )
+            self._list_box.Delete( selection )
             
             self._RecalcListBoxWidth()
             
@@ -2135,85 +2175,97 @@ class ListBook( wx.Panel ):
     
     def EventSelection( self, event ):
         
-        if self._list_box.GetSelection() != self._list_box.FindString( self._current_name ):
+        if self._list_box.GetSelection() != self._GetIndex( self._current_key ):
             
             event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING, -1 )
             
             self.GetEventHandler().ProcessEvent( event )
             
-            if event.IsAllowed(): self._Select( self._list_box.GetSelection() )
-            else: self._list_box.SetSelection( self._list_box.FindString( self._current_name ) )
+            if event.IsAllowed():
+                
+                self._Select( self._list_box.GetSelection() )
+                
+            else:
+                
+                self._list_box.SetSelection( self._GetIndex( self._current_key ) )
+                
             
         
     
-    def GetCurrentName( self ): return self._current_name
+    def GetCurrentKey( self ):
+        
+        return self._current_key
+        
     
     def GetCurrentPage( self ):
         
-        if self._current_panel == self._empty_panel: return None
-        else: return self._current_panel
-        
-    
-    def GetNames( self ):
-        
-        names = set()
-        
-        names.update( self._names_to_proto_pages.keys() )
-        names.update( self._names_to_active_pages.keys() )
-        
-        return names
-        
-    
-    def GetNamesToActivePages( self ):
-        
-        return self._names_to_active_pages
-        
-    
-    def NameExists( self, name ): return self._list_box.FindString( name ) != wx.NOT_FOUND
-    
-    def RenamePage( self, name, new_name ):
-        
-        if self.NameExists( new_name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
-        
-        if self._current_name == name: self._current_name = new_name
-        
-        if name in self._names_to_active_pages:
+        if self._current_panel == self._empty_panel:
             
-            dict_to_rename = self._names_to_active_pages
+            return None
             
         else:
             
-            dict_to_rename = self._names_to_proto_pages
+            return self._current_panel
             
         
-        page_info = dict_to_rename[ name ]
+    
+    def GetActivePages( self ):
         
-        del dict_to_rename[ name ]
+        return self._keys_to_active_pages.values()
         
-        dict_to_rename[ new_name ] = page_info
+    
+    def GetPage( self, key ):
         
-        self._list_box.SetString( self._list_box.FindString( name ), new_name )
+        if key in self._keys_to_proto_pages:
+            
+            self._ActivatePage( key )
+            
+        
+        if key in self._keys_to_active_pages:
+            
+            return self._keys_to_active_pages[ key ]
+            
+        
+        raise Exception( 'That page not found!' )
+        
+    
+    def KeyExists( self, key ):
+        
+        return key in self._keys_to_active_pages or key in self._keys_to_proto_pages
+        
+    
+    def RenamePage( self, key, new_name ):
+        
+        index = self._GetIndex( key )
+        
+        if index != wx.NOT_FOUND:
+            
+            self._list_box.SetString( index, new_name )
+            
         
         self._RecalcListBoxWidth()
         
     
-    def Select( self, name ):
+    def Select( self, key ):
         
-        selection = self._list_box.FindString( name )
+        index = self._GetIndex( key )
         
-        if selection != wx.NOT_FOUND and selection != self._list_box.GetSelection():
+        if index != wx.NOT_FOUND and index != self._list_box.GetSelection():
             
             event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING, -1 )
             
             self.GetEventHandler().ProcessEvent( event )
             
-            if event.IsAllowed(): self._Select( selection )
+            if event.IsAllowed():
+                
+                self._Select( index )
+                
             
         
     
     def SelectDown( self ):
         
-        current_selection = self._list_box.FindString( self._current_name )
+        current_selection = self._list_box.GetSelection()
         
         if current_selection != wx.NOT_FOUND:
             
@@ -2222,17 +2274,20 @@ class ListBook( wx.Panel ):
             if current_selection == num_entries - 1: selection = 0
             else: selection = current_selection + 1
             
-            if selection != current_selection: self._Select( selection )
+            if selection != current_selection:
+                
+                self._Select( selection )
+                
             
         
     
     def SelectPage( self, page_to_select ):
         
-        for ( name, page ) in self._names_to_active_pages.items():
+        for ( key, page ) in self._keys_to_active_pages.items():
             
             if page == page_to_select:
                 
-                self._Select( self._list_box.FindString( name ) )
+                self._Select( self._GetIndex( key ) )
                 
                 return
                 
@@ -2241,7 +2296,7 @@ class ListBook( wx.Panel ):
     
     def SelectUp( self ):
         
-        current_selection = self._list_box.FindString( self._current_name )
+        current_selection = self._list_box.GetSelection()
         
         if current_selection != wx.NOT_FOUND:
             
@@ -2250,7 +2305,10 @@ class ListBook( wx.Panel ):
             if current_selection == 0: selection = num_entries - 1
             else: selection = current_selection - 1
             
-            if selection != current_selection: self._Select( selection )
+            if selection != current_selection:
+                
+                self._Select( selection )
+                
             
         
     
@@ -6101,6 +6159,8 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
         
     
+( TimeDeltaEvent, EVT_TIME_DELTA ) = wx.lib.newevent.NewCommandEvent()
+
 class TimeDeltaButton( wx.Button ):
     
     def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False ):
@@ -6187,6 +6247,10 @@ class TimeDeltaButton( wx.Button ):
                 
                 self.SetValue( value )
                 
+                new_event = TimeDeltaEvent( 0 )
+                
+                wx.PostEvent( self, new_event )
+                
             
         
     
@@ -6266,7 +6330,9 @@ class TimeDeltaCtrl( wx.Panel ):
             self.SetValue( self._min )
             
         
-        wx.PostEvent( self, event )
+        new_event = TimeDeltaEvent( 0 )
+        
+        wx.PostEvent( self, new_event )
         
     
     def GetValue( self ):

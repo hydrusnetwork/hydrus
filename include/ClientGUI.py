@@ -1105,8 +1105,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
-            #menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
-            #menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
             menu.AppendSeparator()
@@ -1140,10 +1138,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             twitter.SetBitmap( CC.GlobalBMPs.twitter )
             tumblr = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'tumblr' ), p( 'Tumblr' ) )
             tumblr.SetBitmap( CC.GlobalBMPs.tumblr )
+            patreon = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'patreon' ), p( 'Patreon' ) )
+            patreon.SetBitmap( CC.GlobalBMPs.patreon )
             links.AppendItem( site )
             links.AppendItem( board )
             links.AppendItem( twitter )
             links.AppendItem( tumblr )
+            links.AppendItem( patreon )
             menu.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
             
             db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'db_profile_mode' )
@@ -1319,11 +1320,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._controller.CallToThread( do_it )
         
     
-    def _Manage4chanPass( self ):
-        
-        with ClientGUIDialogsManage.DialogManage4chanPass( self ) as dlg: dlg.ShowModal()
-        
-    
     def _ManageAccountTypes( self, service_key ):
         
         with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_key ) as dlg: dlg.ShowModal()
@@ -1337,11 +1333,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     def _ManageExportFolders( self ):
         
         with ClientGUIDialogsManage.DialogManageExportFolders( self ) as dlg: dlg.ShowModal()
-        
-    
-    def _ManageImageboards( self ):
-        
-        with ClientGUIDialogsManage.DialogManageImageboards( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageImportFolders( self ):
@@ -2441,11 +2432,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'import_files': self._ImportFiles()
             elif command == 'import_tags': self._ImportTags()
             elif command == 'load_gui_session': self._LoadGUISession( data )
-            elif command == 'manage_4chan_pass': self._Manage4chanPass()
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
             elif command == 'manage_boorus': self._ManageBoorus()
             elif command == 'manage_export_folders': self._ManageExportFolders()
-            elif command == 'manage_imageboards': self._ManageImageboards()
             elif command == 'manage_import_folders': self._ManageImportFolders()
             elif command == 'manage_pixiv_account': self._ManagePixivAccount()
             elif command == 'manage_server_services': self._ManageServer( data )
@@ -2477,6 +2466,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'open_export_folder': self._OpenExportFolder()
             elif command == 'open_install_folder': self._OpenInstallFolder()
             elif command == 'options': self._ManageOptions()
+            elif command == 'patreon': webbrowser.open( 'https://www.patreon.com/hydrus_dev' )
             elif command == 'pause_export_folders_sync': self._PauseSync( 'export_folders' )
             elif command == 'pause_import_folders_sync': self._PauseSync( 'import_folders' )
             elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
@@ -2782,6 +2772,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshMenu( self, name ):
         
+        db_going_to_hang_if_we_hit_it = HydrusGlobals.client_controller.GetDB().CurrentlyDoingJob()
+        
+        if db_going_to_hang_if_we_hit_it:
+            
+            wx.CallLater( 2500, self.RefreshMenu, name )
+            
+            return
+            
+        
         ( menu, label, show ) = self._GenerateMenuInfo( name )
         
         if HC.PLATFORM_OSX: menu.SetTitle( label ) # causes bugs in os x if this is not here
@@ -2958,14 +2957,14 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 listbook_dict[ service_type ] = listbook
                 
-                parent_listbook.AddPage( name, listbook )
+                parent_listbook.AddPage( name, name, listbook )
                 
             
             listbook = listbook_dict[ service_type ]
             
             name = service.GetName()
             
-            listbook.AddPageArgs( name, self._Panel, ( listbook, self._controller, service.GetServiceKey() ), {} )
+            listbook.AddPageArgs( name, name, self._Panel, ( listbook, self._controller, service.GetServiceKey() ), {} )
             
         
         wx.CallAfter( self._local_listbook.Layout )

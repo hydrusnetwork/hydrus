@@ -501,14 +501,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         do_copy = False
                         
-                    elif os.path.exists( dest_path ):
+                    elif HydrusPaths.PathsHaveSameSizeAndDate( source_path, dest_path ):
                         
-                        dest_size = os.path.getsize( dest_path )
-                        
-                        if dest_size == size:
-                            
-                            do_copy = False
-                            
+                        do_copy = False
                         
                     
                     if do_copy:

@@ -2267,57 +2267,66 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     new_urls_this_page = 0
                     
-                    ( page_of_urls, definitely_no_more_pages ) = gallery.GetPage( self._query, page_index )
-                    
-                    page_index += 1
-                    
-                    if definitely_no_more_pages:
+                    try:
                         
-                        keep_checking = False
+                        ( page_of_urls, definitely_no_more_pages ) = gallery.GetPage( self._query, page_index )
                         
-                    
-                    for url in page_of_urls:
+                        page_index += 1
                         
-                        if this_is_initial_sync:
-                            
-                            if self._initial_file_limit is not None and total_new_urls + 1 > self._initial_file_limit:
-                                
-                                keep_checking = False
-                                
-                                break
-                                
-                            
-                        else:
-                            
-                            if self._periodic_file_limit is not None and total_new_urls + 1 > self._periodic_file_limit:
-                                
-                                keep_checking = False
-                                
-                                break
-                                
-                            
-                        
-                        if url in urls_to_add:
-                            
-                            # this catches the occasional overflow when a new file is uploaded while gallery parsing is going on
-                            
-                            continue
-                            
-                        
-                        if self._seed_cache.HasSeed( url ):
+                        if definitely_no_more_pages:
                             
                             keep_checking = False
                             
-                            break
+                        
+                        for url in page_of_urls:
                             
-                        else:
+                            if this_is_initial_sync:
+                                
+                                if self._initial_file_limit is not None and total_new_urls + 1 > self._initial_file_limit:
+                                    
+                                    keep_checking = False
+                                    
+                                    break
+                                    
+                                
+                            else:
+                                
+                                if self._periodic_file_limit is not None and total_new_urls + 1 > self._periodic_file_limit:
+                                    
+                                    keep_checking = False
+                                    
+                                    break
+                                    
+                                
                             
-                            urls_to_add.add( url )
-                            urls_to_add_ordered.append( url )
+                            if url in urls_to_add:
+                                
+                                # this catches the occasional overflow when a new file is uploaded while gallery parsing is going on
+                                
+                                continue
+                                
                             
-                            new_urls_this_page += 1
-                            total_new_urls += 1
+                            if self._seed_cache.HasSeed( url ):
+                                
+                                keep_checking = False
+                                
+                                break
+                                
+                            else:
+                                
+                                urls_to_add.add( url )
+                                urls_to_add_ordered.append( url )
+                                
+                                new_urls_this_page += 1
+                                total_new_urls += 1
+                                
                             
+                        
+                    except HydrusExceptions.NotFoundException:
+                        
+                        # paheal now 404s when no results, so just move on and naturally break
+                        
+                        pass
                         
                     
                     if new_urls_this_page == 0:

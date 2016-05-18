@@ -2092,7 +2092,7 @@ class CanvasMediaListFilter( CanvasMediaList ):
         
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
-        self.SetMedia( self._GetFirst() )
+        wx.CallAfter( self.SetMedia, self._GetFirst() ) # don't set this until we have a size > (20, 20)!
         
     
     def _Back( self ):
@@ -2846,7 +2846,7 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
         
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
-        self.SetMedia( self._GetFirst() )
+        wx.CallAfter( self.SetMedia, self._GetFirst() ) # don't set this until we have a size > (20, 20)!
         
         self._hover_commands.AddCommand( 'edit shortcuts', self.EventShortcuts )
         

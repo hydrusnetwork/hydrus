@@ -142,7 +142,10 @@ def CopyAndMergeTree( source, dest ):
             source_path = os.path.join( root, filename )
             dest_path = os.path.join( dest_root, filename )
             
-            shutil.copy2( source_path, dest_path )
+            if not PathsHaveSameSizeAndDate( source, dest ):
+                
+                shutil.copy2( source_path, dest_path )
+                
             
         
     
@@ -317,7 +320,7 @@ def PathsHaveSameSizeAndDate( path1, path2 ):
     if os.path.exists( path1 ) and os.path.exists( path2 ):
         
         same_size = os.path.getsize( path1 ) == os.path.getsize( path2 )
-        same_modified_time = os.path.getmtime( path1 ) == os.path.getmtime( path2 )
+        same_modified_time = int( os.path.getmtime( path1 ) ) == int( os.path.getmtime( path2 ) )
         
         if same_size and same_modified_time:
             

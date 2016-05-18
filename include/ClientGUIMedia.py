@@ -79,6 +79,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         self._page_key = page_key
         
         self._focussed_media = None
+        self._next_best_media_after_focussed_media_removed = None
         self._shift_focussed_media = None
         
         self._selected_media = set()
@@ -677,7 +678,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                     self._DeselectSelect( ( media, ), () )
                     
-                    if self._focussed_media == media: self._SetFocussedMedia( None )
+                    if self._focussed_media == media:
+                        
+                        self._SetFocussedMedia( None )
+                        
                     
                     self._shift_focussed_media = None
                     
@@ -973,6 +977,33 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
     
     def _SetFocussedMedia( self, media ):
+        
+        if media is None and self._focussed_media is not None:
+            
+            next_best_media = self._focussed_media
+            
+            i = self._sorted_media.index( next_best_media )
+            
+            while next_best_media in self._selected_media:
+                
+                if i == 0:
+                    
+                    next_best_media = None
+                    
+                    break
+                    
+                
+                i -= 1
+                
+                next_best_media = self._sorted_media[ i ]
+                
+            
+            self._next_best_media_after_focussed_media_removed = next_best_media
+            
+        else:
+            
+            self._next_best_media_after_focussed_media_removed = None
+            
         
         self._focussed_media = media
         
@@ -1581,7 +1612,29 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if self._focussed_media is not None:
             
-            current_position = self._sorted_media.index( self._focussed_media )
+            media_to_use = self._focussed_media
+            
+        elif self._next_best_media_after_focussed_media_removed is not None:
+            
+            media_to_use = self._next_best_media_after_focussed_media_removed
+            
+            if columns == -1: # treat it as if the focussed area is between this and the next
+                
+                columns = 0
+                
+            
+        elif len( self._sorted_media ) > 0:
+            
+            media_to_use = self._sorted_media[ 0 ]
+            
+        else:
+            
+            media_to_use = None
+            
+        
+        if media_to_use is not None:
+            
+            current_position = self._sorted_media.index( media_to_use )
             
             new_position = current_position + columns + ( self._num_columns * rows )
             
@@ -1590,8 +1643,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._HitMedia( self._sorted_media[ new_position ], False, shift )
             
-            self._ScrollToMedia( self._focussed_media )
+            self._ScrollToMedia( media_to_use )
             
+        
         
     
     def _RecalculateVirtualSize( self ):
@@ -1708,12 +1762,18 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _RemoveMedia( self, singleton_media, collected_media ):
         
+        if self._focussed_media is not None:
+            
+            if self._focussed_media in singleton_media or self._focussed_media in collected_media:
+                
+                self._SetFocussedMedia( None )
+                
+            
+        
         MediaPanel._RemoveMedia( self, singleton_media, collected_media )
         
         self._selected_media.difference_update( singleton_media )
         self._selected_media.difference_update( collected_media )
-        
-        if self._focussed_media not in self._selected_media: self._SetFocussedMedia( None )
         
         self._shift_focussed_media = None
         

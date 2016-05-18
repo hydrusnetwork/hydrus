@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 206</h3></li>
+				<ul>
+					<li>if the currently focussed thumbnail is removed from view, the earliest non-selected thumbnail will be remembered as a 'ghost' focus if the user then presses the arrow keys to continue to navigate</li>
+					<li>if the user presses an arrow key to navigate the thumbs when there is no known focus thumb, the first will be assumed</li>
+					<li>the listbook now supports duplicate display names</li>
+					<li>services of the same type can now have the same name</li>
+					<li>cleaned some listbook code</li>
+					<li>inbox or custom filters will now render first-file animations correctly on initialisation</li>
+					<li>fixed the 'change' event on the new timedeltabutton, which was not updating the thread checker on dialog ok</li>
+					<li>subscriptions will now naturally terminate their gallery sync on a 404, rather than dumping out with an error</li>
+					<li>fixed some false positive 'paths are different' testing in default directory mirroring code (used in db backup, restore) that was slowing these operations down</li>
+					<li>if database files have the same file and modified timestamp, they won't be re-copied in a backup or restore</li>
+					<li>client external storage location recovery/rebalancing will now skip over files with the same size and modified date</li>
+					<li>if you backup the client and have external file storage locations, a popup will remind you to back those locations up manually</li>
+					<li>did a quick pass over some help stuff, and added a 'can the client manage files from their origial locations' bit to the faq</li>
+					<li>created a simple no-reward patreon, wrote some help about it, and added links in the usual places</li>
+					<li>empty 'read' a/c dropdowns will be more careful about idly refreshing their system preds, hopefully leading to less accidental gui hang on large jobs</li>
+					<li>main gui menus will be more careful about refreshing themselves when called, hopefully leading to less accidental gui hang on large jobs</li>
+					<li>text snippets are stored inside the client db in a better way</li>
+					<li>added flat service directory structure storage support to the client db</li>
+					<li>fixed a mapping petition rescind sql typo</li>
+					<li>fixed the v198->v199 server update code</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 205</h3></li>
 				<ul>
 					<li>fixed v201->v202 update code, which v204 retroactively broke</li>

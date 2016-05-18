@@ -405,6 +405,7 @@ class GlobalBMPs( object ):
         GlobalBMPs.eight_chan = wx.Bitmap( os.path.join( HC.STATIC_DIR, '8chan.png' ) )
         GlobalBMPs.twitter = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'twitter.png' ) )
         GlobalBMPs.tumblr = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'tumblr.png' ) )
+        GlobalBMPs.patreon = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'patreon.png' ) )
         
         GlobalBMPs.first = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'first.png' ) )
         GlobalBMPs.previous = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'previous.png' ) )

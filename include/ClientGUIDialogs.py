@@ -2986,7 +2986,7 @@ class DialogPathsToTags( Dialog ):
                 
                 name = service.GetName()
                 
-                self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, paths ), {} )
+                self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, paths ), {} )
                 
             
         
@@ -2994,13 +2994,11 @@ class DialogPathsToTags( Dialog ):
         
         name = CC.LOCAL_TAG_SERVICE_KEY
         
-        self._tag_repositories.AddPage( name, page )
+        self._tag_repositories.AddPage( name, name, page )
         
         default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
-        default_tag_repository = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
-        
-        self._tag_repositories.Select( default_tag_repository.GetName() )
+        self._tag_repositories.Select( default_tag_repository_key )
         
         #
         
@@ -3067,7 +3065,7 @@ class DialogPathsToTags( Dialog ):
         
         paths_to_tags = collections.defaultdict( dict )
         
-        for page in self._tag_repositories.GetNamesToActivePages().values():
+        for page in self._tag_repositories.GetActivePages():
             
             ( service_key, page_of_paths_to_tags ) = page.GetInfo()
             
@@ -4394,7 +4392,7 @@ class DialogShortcuts( Dialog ):
             
             page = self._Panel( self._shortcuts, default_shortcuts )
             
-            self._shortcuts.AddPage( 'default', page )
+            self._shortcuts.AddPage( 'default', 'default', page )
             
             all_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
             
@@ -4402,7 +4400,7 @@ class DialogShortcuts( Dialog ):
             
             for ( name, shortcuts ) in names_to_shortcuts.items():
                 
-                self._shortcuts.AddPageArgs( name, self._Panel, ( self._shortcuts, shortcuts ), {} )
+                self._shortcuts.AddPageArgs( name, name, self._Panel, ( self._shortcuts, shortcuts ), {} )
                 
             
         
@@ -4473,7 +4471,7 @@ class DialogShortcuts( Dialog ):
     
     def _CurrentPageIsUntouchable( self ):
         
-        name = self._shortcuts.GetCurrentName()
+        name = self._shortcuts.GetCurrentKey()
         
         if name == 'default': return True
         else: return False
@@ -4487,7 +4485,7 @@ class DialogShortcuts( Dialog ):
             
             if not self._CurrentPageIsUntouchable():
                 
-                name = self._shortcuts.GetCurrentName()
+                name = self._shortcuts.GetCurrentKey()
                 
                 self._edit_log.append( HydrusData.EditLogActionDelete( name ) )
                 
@@ -4508,7 +4506,7 @@ class DialogShortcuts( Dialog ):
                 
             
         
-        for ( name, page ) in self._shortcuts.GetNamesToActivePages().items():
+        for page in self._shortcuts.GetActivePages():
             
             if name != 'default':
                 
@@ -4531,7 +4529,10 @@ class DialogShortcuts( Dialog ):
                 
                 if name == '': return
                 
-                while self._shortcuts.NameExists( name ): name += str( random.randint( 0, 9 ) )
+                while self._shortcuts.KeyExists( name ):
+                    
+                    name += str( random.randint( 0, 9 ) )
+                    
                 
                 shortcuts = ClientData.Shortcuts( name )
                 
@@ -4554,7 +4555,7 @@ class DialogShortcuts( Dialog ):
                 
                 page = self._Panel( self._shortcuts, shortcuts )
                 
-                self._shortcuts.AddPage( name, page, select = True )
+                self._shortcuts.AddPage( name, name, page, select = True )
                 
             
         

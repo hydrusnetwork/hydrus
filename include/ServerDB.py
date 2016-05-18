@@ -493,7 +493,10 @@ class DB( HydrusDB.HydrusDB ):
                 source = os.path.join( self._db_dir, filename )
                 dest = os.path.join( backup_path, filename )
                 
-                shutil.copy2( source, dest )
+                if not HydrusPaths.PathsHaveSameSizeAndDate( source, dest ):
+                    
+                    shutil.copy2( source, dest )
+                    
                 
             
             HydrusData.Print( 'backing up: copying files' )
@@ -2487,9 +2490,13 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusData.Print( 'exporting mappings to external db' )
             
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
+            
             self._c.execute( 'INSERT INTO external_mappings.mappings SELECT * FROM main.mappings;' )
             
             self._c.execute( 'DROP TABLE main.mappings;' )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) );' )
             
             self._c.execute( 'INSERT INTO external_mappings.mapping_petitions SELECT * FROM main.mapping_petitions;' )
             

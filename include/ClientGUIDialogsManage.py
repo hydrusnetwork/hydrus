@@ -412,7 +412,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             for ( name, booru ) in boorus.items():
                 
-                self._boorus.AddPageArgs( name, self._Panel, ( self._boorus, booru ), {} )
+                self._boorus.AddPageArgs( name, name, self._Panel, ( self._boorus, booru ), {} )
                 
             
         
@@ -462,15 +462,21 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     name = dlg.GetValue()
                     
-                    if self._boorus.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
+                    if self._boorus.KeyExists( name ):
+                        
+                        raise HydrusExceptions.NameException( 'That name is already in use!' )
+                        
                     
-                    if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
+                    if name == '':
+                        
+                        raise HydrusExceptions.NameException( 'Please enter a nickname for the booru.' )
+                        
                     
                     booru = ClientData.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
                     
                     page = self._Panel( self._boorus, booru, is_new = True )
                     
-                    self._boorus.AddPage( name, page, select = True )
+                    self._boorus.AddPage( name, name, page, select = True )
                     
                 except HydrusExceptions.NameException as e:
                     
@@ -488,7 +494,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         if booru_panel is not None:
             
-            name = self._boorus.GetCurrentName()
+            name = self._boorus.GetCurrentKey()
             
             booru = booru_panel.GetBooru()
             
@@ -513,11 +519,13 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 HydrusGlobals.client_controller.Write( 'delete_remote_booru', name )
                 
             
-            for ( name, page ) in self._boorus.GetNamesToActivePages().items():
+            for page in self._boorus.GetActivePages():
                 
                 if page.HasChanges():
                     
                     booru = page.GetBooru()
+                    
+                    name = booru.GetName()
                     
                     HydrusGlobals.client_controller.Write( 'remote_booru', name, booru )
                     
@@ -532,7 +540,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         if booru_panel is not None:
             
-            name = self._boorus.GetCurrentName()
+            name = self._boorus.GetCurrentKey()
             
             self._names_to_delete.append( name )
             
@@ -556,18 +564,18 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     name = booru.GetName()
                     
-                    if not self._boorus.NameExists( name ):
+                    if not self._boorus.KeyExists( name ):
                         
                         new_booru = ClientData.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
                         
                         page = self._Panel( self._boorus, new_booru, is_new = True )
                         
-                        self._boorus.AddPage( name, page, select = True )
+                        self._boorus.AddPage( name, name, page, select = True )
                         
                     
                     self._boorus.Select( name )
                     
-                    page = self._boorus.GetNamesToActivePages()[ name ]
+                    page = self._boorus.GetPage( name )
                     
                     page.Update( booru )
                     
@@ -1773,7 +1781,7 @@ If you select synchronise, be careful!'''
         
         return self._export_folder
         
-    
+'''
 class DialogManageImageboards( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -1809,7 +1817,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             for ( name, imageboards ) in sites.items():
                 
-                self._sites.AddPageArgs( name, self._Panel, ( self._sites, imageboards ), {} )
+                self._sites.AddPageArgs( name, name, self._Panel, ( self._sites, imageboards ), {} )
                 
             
         
@@ -1859,13 +1867,13 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     name = dlg.GetValue()
                     
-                    if self._sites.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
+                    if self._sites.KeyExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
                     
                     if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
                     
                     page = self._Panel( self._sites, [], is_new = True )
                     
-                    self._sites.AddPage( name, page, select = True )
+                    self._sites.AddPage( name, name, page, select = True )
                     
                 except HydrusExceptions.NameException as e:
                     
@@ -1883,7 +1891,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         if site_panel is not None:
             
-            name = self._sites.GetCurrentName()
+            name = self._sites.GetCurrentKey()
             
             imageboards = site_panel.GetImageboards()
             
@@ -1910,11 +1918,13 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 HydrusGlobals.client_controller.Write( 'delete_imageboard', name )
                 
             
-            for ( name, page ) in self._sites.GetNamesToActivePages().items():
+            for page in self._sites.GetActivePages():
                 
                 if page.HasChanges():
                     
                     imageboards = page.GetImageboards()
+                    
+                    name = 'this is old code'
                     
                     HydrusGlobals.client_controller.Write( 'imageboard', name, imageboards )
                     
@@ -1929,7 +1939,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         if site_panel is not None:
             
-            name = self._sites.GetCurrentName()
+            name = self._sites.GetCurrentKey()
             
             self._names_to_delete.append( name )
             
@@ -1951,14 +1961,14 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     ( name, imageboards ) = thing.items()[0]
                     
-                    if not self._sites.NameExists( name ):
+                    if not self._sites.KeyExists( name ):
                         
                         page = self._Panel( self._sites, [], is_new = True )
                         
-                        self._sites.AddPage( name, page, select = True )
+                        self._sites.AddPage( name, name, page, select = True )
                         
                     
-                    page = self._sites.GetNamesToActivePages()[ name ]
+                    page = self._sites.GetPage( name )
                     
                     for imageboard in imageboards:
                         
@@ -2009,7 +2019,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     name = imageboard.GetName()
                     
-                    self._imageboards.AddPageArgs( name, self._Panel, ( self._imageboards, imageboard ), {} )
+                    self._imageboards.AddPageArgs( name, name, self._Panel, ( self._imageboards, imageboard ), {} )
                     
                 
             
@@ -2057,7 +2067,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                         
                         name = dlg.GetValue()
                         
-                        if self._imageboards.NameExists( name ): raise HydrusExceptions.NameException()
+                        if self._imageboards.KeyExists( name ): raise HydrusExceptions.NameException()
                         
                         if name == '': raise Exception( 'Please enter a nickname for the service.' )
                         
@@ -2065,7 +2075,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                         
                         page = self._Panel( self._imageboards, imageboard, is_new = True )
                         
-                        self._imageboards.AddPage( name, page, select = True )
+                        self._imageboards.AddPage( name, name, page, select = True )
                         
                         self._has_changes = True
                         
@@ -2105,7 +2115,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             if imageboard_panel is not None:
                 
-                name = self._imageboards.GetCurrentName()
+                name = self._imageboards.GetCurrentKey()
                 
                 self._imageboards.DeleteCurrentPage()
                 
@@ -2115,11 +2125,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         def GetImageboards( self ):
             
-            current_names = self._imageboards.GetNames()
+            names_to_imageboards = { imageboard.GetName() : imageboard for imageboard in self._original_imageboards if self._imageboards.KeyExists( imageboard.GetName() ) }
             
-            names_to_imageboards = { imageboard.GetName() : imageboard for imageboard in self._original_imageboards if imageboard.GetName() in current_names }
-            
-            for page in self._imageboards.GetNamesToActivePages().values():
+            for page in self._imageboards.GetActivePages():
                 
                 imageboard = page.GetImageboard()
                 
@@ -2133,23 +2141,23 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             if self._is_new: return True
             
-            return self._has_changes or True in ( page.HasChanges() for page in self._imageboards.GetNamesToActivePages().values() )
+            return self._has_changes or True in ( page.HasChanges() for page in self._imageboards.GetActivePages() )
             
         
         def UpdateImageboard( self, imageboard ):
             
             name = imageboard.GetName()
             
-            if not self._imageboards.NameExists( name ):
+            if not self._imageboards.KeyExists( name ):
                 
                 new_imageboard = ClientData.Imageboard( name, '', 60, [], {} )
                 
                 page = self._Panel( self._imageboards, new_imageboard, is_new = True )
                 
-                self._imageboards.AddPage( name, page, select = True )
+                self._imageboards.AddPage( name, name, page, select = True )
                 
             
-            page = self._imageboards.GetNamesToActivePages()[ name ]
+            page = self._imageboards.GetPage( name )
             
             page.Update( imageboard )
             
@@ -2495,7 +2503,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
             
         
-    
+'''
 class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -3130,22 +3138,22 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         self._listbook = ClientGUICommon.ListBook( self )
         
-        self._listbook.AddPage( 'connection', self._ConnectionPanel( self._listbook ) )
-        self._listbook.AddPage( 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
-        self._listbook.AddPage( 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
-        self._listbook.AddPage( 'media', self._MediaPanel( self._listbook ) )
-        self._listbook.AddPage( 'gui', self._GUIPanel( self._listbook ) )
-        #self._listbook.AddPage( 'sound', self._SoundPanel( self._listbook ) )
-        self._listbook.AddPage( 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'colours', self._ColoursPanel( self._listbook ) )
-        self._listbook.AddPage( 'local server', self._ServerPanel( self._listbook ) )
-        self._listbook.AddPage( 'sort/collect', self._SortCollectPanel( self._listbook ) )
-        self._listbook.AddPage( 'shortcuts', self._ShortcutsPanel( self._listbook ) )
-        self._listbook.AddPage( 'file storage locations', self._ClientFilesPanel( self._listbook ) )
-        self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'tags', self._TagsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'connection', 'connection', self._ConnectionPanel( self._listbook ) )
+        self._listbook.AddPage( 'files and trash', 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
+        self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
+        self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
+        self._listbook.AddPage( 'gui', 'gui', self._GUIPanel( self._listbook ) )
+        #self._listbook.AddPage( 'sound', 'sound', self._SoundPanel( self._listbook ) )
+        self._listbook.AddPage( 'default file system predicates', 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'default tag import options', 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
+        self._listbook.AddPage( 'local server', 'local server', self._ServerPanel( self._listbook ) )
+        self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
+        self._listbook.AddPage( 'shortcuts', 'shortcuts', self._ShortcutsPanel( self._listbook ) )
+        self._listbook.AddPage( 'file storage locations', 'file storage locations', self._ClientFilesPanel( self._listbook ) )
+        self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'Save' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -5036,7 +5044,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        for ( name, page ) in self._listbook.GetNamesToActivePages().items():
+        for page in self._listbook.GetActivePages():
             
             page.UpdateOptions()
             
@@ -5642,7 +5650,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 
                 page = self._Panel( self._services_listbook, service_key, service_type, options )
                 
-                self._services_listbook.AddPage( name, page )
+                self._services_listbook.AddPage( name, service_key, page )
                 
             
         
@@ -5694,22 +5702,17 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             ( service_key, service_type, options ) = service_panel.GetInfo()
             
-            for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNamesToActivePages().values() if page != service_panel ]:
+            for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetActivePages() if page != service_panel ]:
                 
-                if options[ 'port' ] == existing_options[ 'port' ]: raise Exception( 'That port is already in use!' )
+                if options[ 'port' ] == existing_options[ 'port' ]:
+                    
+                    raise Exception( 'That port is already in use!' )
+                    
                 
-            
-            name = self._services_listbook.GetCurrentName()
-            
-            new_name = HC.service_string_lookup[ service_type ] + '@' + str( options[ 'port' ] )
-            
-            if name != new_name: self._services_listbook.RenamePage( name, new_name )
             
         
     
     def EventAdd( self, event ):
-        
-        self._CheckCurrentServiceIsValid()
         
         service_key = HydrusData.GenerateKey()
         
@@ -5719,7 +5722,10 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         existing_ports = set()
         
-        for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNamesToActivePages().values() ]: existing_ports.add( existing_options[ 'port' ] )
+        for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetActivePages() ]:
+            
+            existing_ports.add( existing_options[ 'port' ] )
+            
         
         while port in existing_ports: port += 1
         
@@ -5733,7 +5739,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         name = HC.service_string_lookup[ service_type ] + '@' + str( port )
         
-        self._services_listbook.AddPage( name, page, select = True )
+        self._services_listbook.AddPage( name, service_key, page, select = True )
         
     
     def EventOK( self, event ):
@@ -5746,7 +5752,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             return
             
         
-        for ( name, page ) in self._services_listbook.GetNamesToActivePages().items():
+        for page in self._services_listbook.GetActivePages():
             
             if page.HasChanges():
                 
@@ -5798,7 +5804,21 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
     
     def EventServiceChanging( self, event ):
         
-        try: self._CheckCurrentServiceIsValid()
+        try:
+            
+            self._CheckCurrentServiceIsValid()
+            
+            service_panel = self._services_listbook.GetCurrentPage()
+            
+            if service_panel is not None:
+                
+                ( service_key, service_type, options ) = service_panel.GetInfo()
+                
+                new_name = HC.service_string_lookup[ service_type ] + '@' + str( options[ 'port' ] )
+                
+                self._services_listbook.RenamePage( service_key, new_name )
+                
+            
         except Exception as e:
             
             wx.MessageBox( HydrusData.ToUnicode( e ) )
@@ -5991,7 +6011,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             self._service_types_to_listbooks[ service_type ] = listbook
             self._listbooks_to_service_types[ listbook ] = service_type
             
-            parent_listbook.AddPage( name, listbook )
+            parent_listbook.AddPage( name, name, listbook )
             
             services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( service_type, ) )
             
@@ -6001,7 +6021,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 name = service.GetName()
                 info = service.GetInfo()
                 
-                listbook.AddPageArgs( name, self._Panel, ( listbook, service_key, service_type, name, info ), {} )
+                listbook.AddPageArgs( name, service_key, self._Panel, ( listbook, service_key, service_type, name, info ), {} )
                 
             
         
@@ -6041,7 +6061,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def _CheckCurrentServiceIsValid( self ):
+    def _RenameCurrentServiceIfNeeded( self ):
         
         local_or_remote_listbook = self._notebook.GetCurrentPage()
         
@@ -6057,14 +6077,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     ( service_key, service_type, name, info ) = service_panel.GetInfo()
                     
-                    old_name = services_listbook.GetCurrentName()
-                    
-                    if old_name is not None and name != old_name:
-                        
-                        if services_listbook.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
-                        
-                        services_listbook.RenamePage( old_name, name )
-                        
+                    services_listbook.RenamePage( service_key, name )
                     
                 
             
@@ -6086,9 +6099,10 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         services_listbook = local_or_remote_listbook.GetCurrentPage()
                         
-                        if services_listbook.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
-                        
-                        if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
+                        if name == '':
+                            
+                            raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
+                            
                         
                         service_key = HydrusData.GenerateKey()
                         service_type = self._listbooks_to_service_types[ services_listbook ]
@@ -6175,7 +6189,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         page = self._Panel( services_listbook, service_key, service_type, name, info )
                         
-                        services_listbook.AddPage( name, page, select = True )
+                        services_listbook.AddPage( name, service_key, page, select = True )
                         
                     
                 except HydrusExceptions.NameException as e:
@@ -6189,14 +6203,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
     
     def EventExport( self, event ):
-        
-        try: self._CheckCurrentServiceIsValid()
-        except HydrusExceptions.NameException as e:
-            
-            wx.MessageBox( str( e ) )
-            
-            return
-            
         
         local_or_remote_listbook = self._notebook.GetCurrentPage()
         
@@ -6240,19 +6246,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        try: self._CheckCurrentServiceIsValid()
-        except HydrusExceptions.NameException as e:
-            
-            wx.MessageBox( str( e ) )
-            
-            return
-            
-        
         all_listbooks = self._service_types_to_listbooks.values()
         
         for listbook in all_listbooks:
             
-            all_pages = listbook.GetNamesToActivePages().values()
+            all_pages = listbook.GetActivePages()
             
             for page in all_pages:
                 
@@ -6262,7 +6260,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         for listbook in all_listbooks:
             
-            all_pages = listbook.GetNamesToActivePages().values()
+            all_pages = listbook.GetActivePages()
             
             for page in all_pages:
                 
@@ -6284,13 +6282,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     def EventPageChanging( self, event ):
         
-        try: self._CheckCurrentServiceIsValid()
-        except HydrusExceptions.NameException as e:
-            
-            wx.MessageBox( str( e ) )
-            
-            event.Veto()
-            
+        self._RenameCurrentServiceIfNeeded()
         
     
     def EventRemove( self, event ):
@@ -6343,24 +6335,10 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     def EventServiceChanging( self, event ):
         
-        try: self._CheckCurrentServiceIsValid()
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            event.Veto()
-            
+        self._RenameCurrentServiceIfNeeded()
         
     
     def Import( self, paths ):
-        
-        try: self._CheckCurrentServiceIsValid()
-        except Exception as e:
-            
-            wx.MessageBox( HydrusData.ToUnicode( e ) )
-            
-            return
-            
         
         for path in paths:
             
@@ -6370,15 +6348,15 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             services_listbook = self._service_types_to_listbooks[ service_type ]
             
-            if services_listbook.NameExists( name ):
+            if services_listbook.KeyExists( service_key ):
                 
-                message = 'A service already exists with that name. Overwrite it?'
+                message = 'That service seems to already exist. Overwrite it?'
                 
                 with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        page = services_listbook.GetNamesToActivePages()[ name ]
+                        page = services_listbook.GetPage[ service_key ]
                         
                         page.Update( service_key, service_type, name, info )
                         
@@ -6390,7 +6368,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 page = self._Panel( services_listbook, service_key, service_type, name, info )
                 
-                services_listbook.AddPage( name, page, select = True )
+                services_listbook.AddPage( name, service_key, page, select = True )
                 
             
         
@@ -7116,7 +7094,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         for name in self._original_subscription_names:
             
-            self._listbook.AddPageArgs( name, self._Panel, ( self._listbook, name ), {} )
+            self._listbook.AddPageArgs( name, name, self._Panel, ( self._listbook, name ), {} )
             
         
         #
@@ -7163,13 +7141,16 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     name = dlg.GetValue()
                     
-                    if self._listbook.NameExists( name ): raise HydrusExceptions.NameException( 'That name is already in use!' )
+                    if self._listbook.KeyExists( name ):
+                        
+                        raise HydrusExceptions.NameException( 'That name is already in use!' )
+                        
                     
                     if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the subscription.' )
                     
                     page = self._Panel( self._listbook, name, is_new_subscription = True )
                     
-                    self._listbook.AddPage( name, page, select = True )
+                    self._listbook.AddPage( name, name, page, select = True )
                     
                 except HydrusExceptions.NameException as e:
                     
@@ -7222,7 +7203,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        all_pages = self._listbook.GetNamesToActivePages().values()
+        all_pages = self._listbook.GetActivePages()
         
         try:
             
@@ -7245,7 +7226,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     def EventRemove( self, event ):
         
-        name = self._listbook.GetCurrentName()
+        name = self._listbook.GetCurrentKey()
         
         self._names_to_delete.add( name )
         
@@ -7264,9 +7245,9 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 name = subscription.GetName()
                 
-                if self._listbook.NameExists( name ):
+                if self._listbook.KeyExists( name ):
                     
-                    message = 'A service already exists with that name. Overwrite it?'
+                    message = 'A subscription with that name already exists. Overwrite it?'
                     
                     with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                         
@@ -7274,7 +7255,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                             
                             self._listbook.Select( name )
                             
-                            page = self._listbook.GetNamesToActivePages()[ name ]
+                            page = self._listbook.GetPage( name )
                             
                             page.Update( subscription )
                             
@@ -7286,7 +7267,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     page.Update( subscription )
                     
-                    self._listbook.AddPage( name, page, select = True )
+                    self._listbook.AddPage( name, name, page, select = True )
                     
                 
             except:
@@ -7638,7 +7619,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             page = self._Panel( self._tag_services, service_key, initial_value )
             
-            self._tag_services.AddPage( name, page )
+            self._tag_services.AddPage( name, service_key, page )
             
         
         self._tag_services.Select( 'all known tags' )
@@ -7686,7 +7667,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         try:
             
-            info = [ page.GetInfo() for page in self._tag_services.GetNamesToActivePages().values() if page.HasInfo() ]
+            info = [ page.GetInfo() for page in self._tag_services.GetActivePages() if page.HasInfo() ]
             
             HydrusGlobals.client_controller.Write( 'tag_censorship', info )
             
@@ -7804,7 +7785,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     name = service.GetName()
                     service_key = service.GetServiceKey()
                     
-                    self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
+                    self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
                     
                 
             
@@ -7812,13 +7793,11 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             name = CC.LOCAL_TAG_SERVICE_KEY
             
-            self._tag_repositories.AddPage( name, page )
+            self._tag_repositories.AddPage( name, name, page )
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            service = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
-            
-            self._tag_repositories.Select( service.GetName() )
+            self._tag_repositories.Select( default_tag_repository_key )
             
         
         def ArrangeControls():
@@ -7883,7 +7862,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for page in self._tag_repositories.GetNamesToActivePages().values():
+            for page in self._tag_repositories.GetActivePages():
                 
                 ( service_key, content_updates ) = page.GetContentUpdates()
                 
@@ -8393,7 +8372,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         name = CC.LOCAL_TAG_SERVICE_KEY
         
-        self._tag_repositories.AddPage( name, page )
+        self._tag_repositories.AddPage( name, name, page )
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
         
@@ -8406,15 +8385,13 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 name = service.GetName()
                 service_key = service.GetServiceKey()
                 
-                self._tag_repositories.AddPageArgs( name, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
+                self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
                 
             
         
         default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( default_tag_repository_key )
-        
-        self._tag_repositories.Select( service.GetName() )
+        self._tag_repositories.Select( default_tag_repository_key )
         
         #
         
@@ -8471,7 +8448,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         try:
             
-            for page in self._tag_repositories.GetNamesToActivePages().values():
+            for page in self._tag_repositories.GetActivePages():
                 
                 ( service_key, content_updates ) = page.GetContentUpdates()
                 
@@ -9096,8 +9073,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
         
-        name_to_select = None
-        
         for service in services:
             
             service_key = service.GetServiceKey()
@@ -9106,12 +9081,12 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), media )
             
-            self._tag_repositories.AddPage( name, page )
-            
-            if service_key == HC.options[ 'default_tag_repository' ]: name_to_select = name
+            self._tag_repositories.AddPage( name, service_key, page )
             
         
-        if name_to_select is not None: self._tag_repositories.Select( name_to_select )
+        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        
+        self._tag_repositories.Select( default_tag_repository_key )
         
         #
         
@@ -9167,14 +9142,14 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def _ClearPanels( self ):
         
-        for page in self._tag_repositories.GetNamesToActivePages().values(): page.SetMedia( set() )
+        for page in self._tag_repositories.GetActivePages(): page.SetMedia( set() )
         
     
     def _CommitCurrentChanges( self ):
         
         service_keys_to_content_updates = {}
         
-        for page in self._tag_repositories.GetNamesToActivePages().values():
+        for page in self._tag_repositories.GetActivePages():
             
             ( service_key, content_updates ) = page.GetContentUpdates()
             
@@ -9200,7 +9175,10 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._current_media = new_media
             
-            for page in self._tag_repositories.GetNamesToActivePages().values(): page.SetMedia( ( new_media, ) )
+            for page in self._tag_repositories.GetActivePages():
+                
+                page.SetMedia( ( new_media, ) )
+                
             
         
     
