@@ -13,11 +13,11 @@
 			<ul>
 				<li><b>IPFS daemon</b> -- A running instance of the IPFS executable that can talk to the larger network.</li>
 				<li><b>IPFS multihash</b> -- An IPFS-specific identifier for a file or group of files.</li>
-				<li><b>pin</b> -- To tell our IPFS daemon to host a file.</li>
-				<li><b>unpin</b> -- To tell our IPFS daemon to stop hosting a file.</li>
+				<li><b>pin</b> -- To tell our IPFS daemon to host a file or group of files.</li>
+				<li><b>unpin</b> -- To tell our IPFS daemon to stop hosting a file or group of files.</li>
 			</ul>
 			<h3>getting ipfs</h3>
-			<p>I have found the easiest way to run IPFS is to get the built executable <a href="https://gobuilder.me/github.com/ipfs/go-ipfs/cmd/ipfs?branch=release">here</a>. Scroll down a bit and pick the release for your platform. Inside should be a very simple 'ipfs' executable that does everything. Extract it somewhere and open up a terminal in the same folder, and then type:</p>
+			<p>Get the prebuilt executable <a href="https://ipfs.io/docs/install/">here</a>. Inside should be a very simple 'ipfs' executable that does everything. Extract it somewhere and open up a terminal in the same folder, and then type:</p>
 			<ul>
 				<li>ipfs init</li>
 				<li>ipfs daemon</li>
@@ -38,14 +38,20 @@
 			<p>Unpin works the same as pin, just like a hydrus repository petition.</p>
 			<p>Right-clicking any pinned file will give you a new 'share' action:</p>
 			<p><img src="ipfs_multihash.png" /></p>
-			<p>Which will put it straight in your clipboard. In this case, it is QmP6BNvWfkNf74bY3q1ohtDZ9gAmss4LAjuFhqpDPQNm1S. <a href="http://127.0.0.1:8080/ipfs/QmP6BNvWfkNf74bY3q1ohtDZ9gAmss4LAjuFhqpDPQNm1S">See if I still have it pinned!</a></p>
+			<p>Which will put it straight in your clipboard. In this case, it is <a href="http://127.0.0.1:8080/ipfs/QmP6BNvWfkNf74bY3q1ohtDZ9gAmss4LAjuFhqpDPQNm1S">QmP6BNvWfkNf74bY3q1ohtDZ9gAmss4LAjuFhqpDPQNm1S</a>.</p>
 			<p>If you want to share a pinned file with someone, you have to tell them this multihash. They can then:</p>
 			<ul>
 				<li>View it through their own ipfs daemon's gateway, at http://127.0.0.1:8080/ipfs/[multihash]</li>
 				<li>View it through a public web gateway, such as the one the IPFS people run, at http://ipfs.io/ipfs/[multihash]</li>
-				<li>Download it through their ipfs-connected hydrus client by going <i>pages->new download popup->a file from ipfs</i>.</li>
+				<li>Download it through their ipfs-connected hydrus client by going <i>pages->new download popup->an ipfs multihash</i>.</li>
 			</ul>
-			<p>I hope to support ipfs directories for more convenient mass-sharing in the near future!</p>
+			<h3>directories</h3>
+			<p>If you have many files to share, IPFS also supports directories, and now hydrus does as well. IPFS directories use the same sorts of multihash as files, and you can download them into the hydrus client using the same <i>pages->new download popup->an ipfs multihash</i> menu entry. The client will detect the multihash represents a directory and give you a simple selection dialog:</p>
+			<p><img src="ipfs_dir_download.png" /></p>
+			<p>You may recognise those hash filenames--this example was created by hydrus, which can create ipfs directories from any selection of files from the same right-click menu:</p>
+			<p><img src="ipfs_dir_upload.png" /></p>
+			<p>Hydrus will pin all the files and then wrap them in a directory, showing its progress in a popup. Your current directory shares are summarised on the respective <i>services->review services</i> panel:</p>
+			<p><img src="ipfs_review_services.png" /></p>
 			<h3>additional links</h3>
 			<p>If you find you use IPFS a lot, here are some add-ons for your web browser, as recommended by /tech/:</p>
 			<blockquote><i>

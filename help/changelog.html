@@ -8,9 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 207</h3></li>
+				<ul>
+					<li>finished ipfs directory creation</li>
+					<li>ipfs review services pane now shows current directory shares</li>
+					<li>cleaned up some content event responsibility in ipfs service code</li>
+					<li>fixed a file download bug when using ipfs 0.4.2</li>
+					<li>wrote some more ipfs help, for directories</li>
+					<li>popup messages can now hold arbitrary copy-to-clipboard text content</li>
+					<li>fixed the new listbook changes for Linux, which was having trouble tracking the client_data inside the sorted listbox</li>
+					<li>fixed an issue with the custom filter management dialog possibly duping the 'default' entry on ok, making impossible to again launch</li>
+					<li>offloaded tag parent generation responsibility in the a/c write tag pipeline</li>
+					<li>added a checkbox to manage tags dialog that will control if siblings are auto-replaced on entry</li>
+					<li>all the clunky 'add preferred sibling' workflow is removed from the manage tags dialog</li>
+					<li>fixed incidence tag sort order not initialising properly in the options dialog (and transferring to lexi (namespace) every time)</li>
+					<li>fixed too-eager quit during shutdown db analyze</li>
+					<li>fixed the db restorebackup call, which wasn't closing the gui correctly</li>
+					<li>the manage services dialog will now automatically re-check 'allow zero' on numerical ratings with only one star</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 206</h3></li>
 				<ul>
-					<li>if the currently focussed thumbnail is removed from view, the earliest non-selected thumbnail will be remembered as a 'ghost' focus if the user then presses the arrow keys to continue to navigate</li>
+					<li>if the currently focused thumbnail is removed from view, the earliest non-selected thumbnail will be remembered as a 'ghost' focus if the user then presses the arrow keys to continue to navigate</li>
 					<li>if the user presses an arrow key to navigate the thumbs when there is no known focus thumb, the first will be assumed</li>
 					<li>the listbook now supports duplicate display names</li>
 					<li>services of the same type can now have the same name</li>
