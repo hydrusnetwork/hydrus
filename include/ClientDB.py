@@ -3167,29 +3167,6 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
-    def _GetDirectoryHashes( self, service_key, dirname ):
-        
-        service_id = self._GetServiceId( service_key )
-        directory_id = self._GetTextId( dirname )
-        
-        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM service_directory_file_map WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) ) ]
-        
-        hashes = self._GetHashes( hash_ids )
-        
-        return hashes
-        
-    
-    def _GetDirectoryInfo( self, service_key ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        incomplete_info = self._c.execute( 'SELECT directory_id, num_files, total_size FROM service_directories WHERE service_id = ?;', ( service_id, ) ).fetchall()
-        
-        info = [ ( self._GetText( directory_id ), num_files, total_size ) for ( directory_id, num_files, total_size ) in incomplete_info ]
-        
-        return info
-        
-    
     def _GetDownloads( self ): return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
     
     def _GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ):
@@ -4736,6 +4713,29 @@ class DB( HydrusDB.HydrusDB ):
         return service
         
     
+    def _GetServiceDirectoryHashes( self, service_key, dirname ):
+        
+        service_id = self._GetServiceId( service_key )
+        directory_id = self._GetTextId( dirname )
+        
+        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM service_directory_file_map WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) ) ]
+        
+        hashes = self._GetHashes( hash_ids )
+        
+        return hashes
+        
+    
+    def _GetServiceDirectoriesInfo( self, service_key ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        incomplete_info = self._c.execute( 'SELECT directory_id, num_files, total_size FROM service_directories WHERE service_id = ?;', ( service_id, ) ).fetchall()
+        
+        info = [ ( self._GetText( directory_id ), num_files, total_size ) for ( directory_id, num_files, total_size ) in incomplete_info ]
+        
+        return info
+        
+    
     def _GetServiceFilename( self, service_id, hash_id ):
         
         result = self._c.execute( 'SELECT filename FROM service_filenames WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
@@ -4805,7 +4805,7 @@ class DB( HydrusDB.HydrusDB ):
             
         elif service_type == HC.IPFS:
             
-            info_types = { HC.SERVICE_INFO_NUM_FILES }
+            info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_TOTAL_SIZE }
             
         elif service_type == HC.LOCAL_TAG:
             
@@ -6277,11 +6277,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'known_urls': result = self._GetKnownURLs( *args, **kwargs )
-        elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
-        elif action == 'serialisable_simple': result = self._GetJSONSimple( *args, **kwargs )
-        elif action == 'serialisable_named': result = self._GetJSONDumpNamed( *args, **kwargs )
-        elif action == 'serialisable_names': result = self._GetJSONDumpNames( *args, **kwargs )
-        elif action == 'service_filenames': result = self._GetServiceFilenames( *args, **kwargs )
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
@@ -6296,6 +6291,13 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
         elif action == 'remote_booru': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'remote_boorus': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU )
+        elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
+        elif action == 'serialisable_simple': result = self._GetJSONSimple( *args, **kwargs )
+        elif action == 'serialisable_named': result = self._GetJSONDumpNamed( *args, **kwargs )
+        elif action == 'serialisable_names': result = self._GetJSONDumpNames( *args, **kwargs )
+        elif action == 'service_directory': result = self._GetServiceDirectoryHashes( *args, **kwargs )
+        elif action == 'service_directories': result = self._GetServiceDirectoriesInfo( *args, **kwargs )
+        elif action == 'service_filenames': result = self._GetServiceFilenames( *args, **kwargs )
         elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
         elif action == 'services': result = self._GetServices( *args, **kwargs )
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
@@ -6543,8 +6545,8 @@ class DB( HydrusDB.HydrusDB ):
         
         directory_id = self._GetTextId( dirname )
         
-        self._c._execute( 'DELETE FROM service_directories WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
-        self._c._execute( 'DELETE FROM service_directory_file_map WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
+        self._c.execute( 'DELETE FROM service_directories WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
+        self._c.execute( 'DELETE FROM service_directory_file_map WHERE service_id = ? AND directory_id = ?;', ( service_id, directory_id ) )
         
         num_files = len( hash_ids )
         
@@ -8139,6 +8141,11 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'INSERT OR IGNORE INTO texts SELECT reason_id, reason FROM reasons;' )
             
             self._c.execute( 'DROP TABLE reasons;' )
+            
+        
+        if version == 206:
+            
+            self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'default' ) )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

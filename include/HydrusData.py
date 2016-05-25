@@ -1673,6 +1673,10 @@ class ContentUpdate( object ):
                 ( hashes, reason ) = self._row
                 
             
+        elif self._data_type == HC.CONTENT_TYPE_DIRECTORIES:
+            
+            hashes = set()
+            
         elif self._data_type == HC.CONTENT_TYPE_MAPPINGS:
             
             if self._action == HC.CONTENT_UPDATE_ADVANCED:

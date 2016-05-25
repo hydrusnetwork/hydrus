@@ -1880,11 +1880,14 @@ class ServiceIPFS( ServiceRemote ):
         
         is_directory = False
         
-        for link in links_json[ 'Links' ]:
+        if 'Links' in links_json:
             
-            if link[ 'Name' ] != '':
+            for link in links_json[ 'Links' ]:
                 
-                is_directory = True
+                if link[ 'Name' ] != '':
+                    
+                    is_directory = True
+                    
                 
             
         
@@ -1988,6 +1991,115 @@ class ServiceIPFS( ServiceRemote ):
         HydrusGlobals.client_controller.CallToThread( off_wx )
         
     
+    def PinDirectory( self, hashes ):
+        
+        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+        
+        job_key.SetVariable( 'popup_title', 'creating ipfs directory on ' + self._name )
+        
+        HydrusGlobals.client_controller.pub( 'message', job_key )
+        
+        try:
+            
+            file_info = []
+            
+            hashes = list( hashes )
+            
+            hashes.sort()
+            
+            for ( i, hash ) in enumerate( hashes ):
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                if should_quit:
+                    
+                    return
+                    
+                
+                job_key.SetVariable( 'popup_text_1', 'pinning files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( hashes ) ) )
+                job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( hashes ) ) )
+                
+                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', ( hash, ) )
+                
+                mime = media_result.GetMime()
+                
+                result = HydrusGlobals.client_controller.Read( 'service_filenames', self._service_key, { hash } )
+                
+                if len( result ) == 0:
+                    
+                    multihash = self.PinFile( hash, mime )
+                    
+                else:
+                    
+                    ( multihash, ) = result
+                    
+                
+                file_info.append( ( hash, mime, multihash ) )
+                
+            
+            api_base_url = self._GetAPIBaseURL()
+            
+            url = api_base_url + 'object/new?arg=unixfs-dir'
+            
+            response = ClientNetworking.RequestsGet( url )
+            
+            for ( i, ( hash, mime, multihash ) ) in enumerate( file_info ):
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                if should_quit:
+                    
+                    return
+                    
+                
+                job_key.SetVariable( 'popup_text_1', 'creating directory: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( file_info ) ) )
+                job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( file_info ) ) )
+                
+                object_multihash = response.json()[ 'Hash' ]
+                
+                filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                
+                url = api_base_url + 'object/patch/add-link?arg=' + object_multihash + '&arg=' + filename + '&arg=' + multihash
+                
+                response = ClientNetworking.RequestsGet( url )
+                
+            
+            directory_multihash = response.json()[ 'Hash' ]
+            
+            url = api_base_url + 'pin/add?arg=' + directory_multihash
+            
+            response = ClientNetworking.RequestsGet( url )
+            
+            content_update_row = ( hashes, directory_multihash )
+            
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+            
+            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            multihash_prefix = self._info[ 'multihash_prefix' ]
+            
+            text = multihash_prefix + directory_multihash
+            
+            job_key.SetVariable( 'popup_clipboard', ( 'copy multihash to clipboard', text ) )
+            
+            job_key.Finish()
+            
+            return directory_multihash
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            job_key.SetVariable( 'popup_text_1', 'error' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            job_key.Cancel()
+            
+        
+    
     def PinFile( self, hash, mime ):
         
         mime_string = HC.mime_string_lookup[ mime ]
@@ -2008,61 +2120,39 @@ class ServiceIPFS( ServiceRemote ):
         
         multihash = j[ 'Hash' ]
         
+        content_update_row = ( hash, multihash )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        
         return multihash
         
     
-    def PinDirectory( self, hashes ):
-        
-        # this needs a popup message
-        # it needs some good error handling as well
-        
-        file_info = []
-        
-        for hash in hashes:
-            
-            # get the multihash from the db
-            
-            # if missing, then pin it with PinFile obviously (how does this update the db? maybe it doesn't! maybe it should!)
-            
-            pass
-            
-        
-        api_base_url = self._GetAPIBaseURL()
-        
-        url = api_base_url + 'object/new?arg=unixfs-dir'
-        
-        response = ClientNetworking.RequestsGet( url )
-        
-        for ( hash, mime, multihash ) in file_info:
-            
-            object_multihash = response.json()[ 'Hash' ]
-            
-            filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
-            
-            url = api_base_url + 'object/patch/add-link?arg=' + object_multihash + '&arg=' + filename + '&arg=' + multihash
-            
-            response = ClientNetworking.RequestsGet( url )
-            
-        
-        directory_multihash = response.json()[ 'Hash' ]
-        
-        url = api_base_url + 'pin/add?arg=' + directory_multihash
-        
-        response = ClientNetworking.RequestsGet( url )
-        
-        if response.ok:
-            
-            return directory_multihash
-            
-        
-    
-    def UnpinFile( self, multihash ):
+    def UnpinDirectory( self, multihash ):
         
         api_base_url = self._GetAPIBaseURL()
         
         url = api_base_url + 'pin/rm/' + multihash
         
         ClientNetworking.RequestsGet( url )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_DELETE, multihash ) ]
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        
+    
+    def UnpinFile( self, hash, multihash ):
+        
+        api_base_url = self._GetAPIBaseURL()
+        
+        url = api_base_url + 'pin/rm/' + multihash
+        
+        ClientNetworking.RequestsGet( url )
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
         
     
 class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):

@@ -620,7 +620,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_text', 'analyzing' )
         
-        self.WriteInterruptable( 'analyze', stop_time = stop_time, only_when_idle = True )
+        self.WriteInterruptable( 'analyze', stop_time = stop_time )
         
         if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
             
@@ -881,7 +881,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         def THREADRestart():
                             
-                            wx.CallAfter( self.Exit )
+                            wx.CallAfter( self._gui.Exit )
                             
                             while not self._db.LoopIsFinished():
                                 

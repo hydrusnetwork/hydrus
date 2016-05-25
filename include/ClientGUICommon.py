@@ -1206,25 +1206,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         if len( tags ) > 0:
             
-            if self._expand_parents:
-                
-                tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-                
-                parents = set()
-                
-                for tag in tags:
-                    
-                    some_parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
-                    
-                    parents.update( some_parents )
-                    
-                
-                self._chosen_tag_callable( tags, parents )
-                
-            else:
-                
-                self._chosen_tag_callable( tags )
-                
+            self._chosen_tag_callable( tags )
             
         
     
@@ -1953,7 +1935,8 @@ class ListBook( wx.Panel ):
         self._keys_to_active_pages = {}
         self._keys_to_proto_pages = {}
         
-        self._list_box = wx.ListBox( self, style = wx.LB_SINGLE | wx.LB_SORT )
+        # Don't use LB_SORT! Linux can't handle clientdata that jumps around!
+        self._list_box = wx.ListBox( self, style = wx.LB_SINGLE )
         
         self._empty_panel = wx.Panel( self )
         
@@ -2067,7 +2050,23 @@ class ListBook( wx.Panel ):
             self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
-        self._list_box.Append( display_name, key )
+        # Can't do LB_SORT because of Linux not being able to track clientdata, have to do it manually.
+        
+        current_display_names = self._list_box.GetStrings()
+        
+        insertion_index = len( current_display_names )
+        
+        for ( i, current_display_name ) in enumerate( current_display_names ):
+            
+            if current_display_name > display_name:
+                
+                insertion_index = i
+                
+                break
+                
+            
+        
+        self._list_box.Insert( display_name, insertion_index, key )
         
         self._keys_to_active_pages[ key ] = page
         
@@ -2092,7 +2091,23 @@ class ListBook( wx.Panel ):
             raise HydrusExceptions.NameException( 'That entry already exists!' )
             
         
-        self._list_box.Append( display_name, key )
+        # Can't do LB_SORT because of Linux not being able to track clientdata, have to do it manually.
+        
+        current_display_names = self._list_box.GetStrings()
+        
+        insertion_index = len( current_display_names )
+        
+        for ( i, current_display_name ) in enumerate( current_display_names ):
+            
+            if current_display_name > display_name:
+                
+                insertion_index = i
+                
+                break
+                
+            
+        
+        self._list_box.Insert( display_name, insertion_index, key )
         
         self._keys_to_proto_pages[ key ] = ( classname, args, kwargs )
         
@@ -4429,6 +4444,11 @@ class PopupMessage( PopupWindow ):
         self._gauge_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_2.Hide()
         
+        self._copy_to_clipboard_button = wx.Button( self )
+        self._copy_to_clipboard_button.Bind( wx.EVT_BUTTON, self.EventCopyToClipboardButton )
+        self._copy_to_clipboard_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._copy_to_clipboard_button.Hide()
+        
         self._show_files_button = wx.Button( self )
         self._show_files_button.Bind( wx.EVT_BUTTON, self.EventShowFilesButton )
         self._show_files_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
@@ -4489,6 +4509,7 @@ class PopupMessage( PopupWindow ):
         vbox.AddF( self._gauge_1, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._copy_to_clipboard_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._show_files_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._show_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -4529,6 +4550,13 @@ class PopupMessage( PopupWindow ):
     def EventCopyTBButton( self, event ):
         
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', self._job_key.ToString() )
+        
+    
+    def EventCopyToClipboardButton( self, event ):
+        
+        ( title, text ) = self._job_key.GetVariable( 'popup_clipboard' )
+        
+        HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
         
     
     def EventPauseButton( self, event ):
@@ -4695,17 +4723,39 @@ class PopupMessage( PopupWindow ):
             
         else: self._gauge_2.Hide()
         
+        if self._job_key.HasVariable( 'popup_clipboard' ):
+            
+            ( title, text ) = self._job_key.GetVariable( 'popup_clipboard' )
+            
+            if self._copy_to_clipboard_button.GetLabelText() != title:
+                
+                self._copy_to_clipboard_button.SetLabelText( title )
+                
+            
+            self._copy_to_clipboard_button.Show()
+            
+        else:
+            
+            self._copy_to_clipboard_button.Hide()
+            
+        
         if self._job_key.HasVariable( 'popup_files' ):
             
             hashes = self._job_key.GetVariable( 'popup_files' )
             
             text = 'show ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
             
-            if self._show_files_button.GetLabelText() != text: self._show_files_button.SetLabelText( text )
+            if self._show_files_button.GetLabelText() != text:
+                
+                self._show_files_button.SetLabelText( text )
+                
             
             self._show_files_button.Show()
             
-        else: self._show_files_button.Hide()
+        else:
+            
+            self._show_files_button.Hide()
+            
         
         if self._job_key.HasVariable( 'popup_traceback' ) or self._job_key.HasVariable( 'popup_caller_traceback' ) or self._job_key.HasVariable( 'popup_db_traceback' ): self._copy_tb_button.Show()
         else: self._copy_tb_button.Hide()

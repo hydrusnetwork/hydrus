@@ -381,67 +381,56 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._names_to_delete = []
-            
-            self._boorus = ClientGUICommon.ListBook( self )
-            
-            self._add = wx.Button( self, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            self._add.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._remove = wx.Button( self, label = 'remove' )
-            self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-            self._remove.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            self._export = wx.Button( self, label = 'export' )
-            self._export.Bind( wx.EVT_BUTTON, self.EventExport )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK,  label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
-            
-            for ( name, booru ) in boorus.items():
-                
-                self._boorus.AddPageArgs( name, name, self._Panel, ( self._boorus, booru ), {} )
-                
-            
-        
-        def ArrangeControls():
-            
-            add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
-            
-            ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
-            ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-        
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage boorus' )
         
-        InitialiseControls()
+        self._names_to_delete = []
         
-        PopulateControls()
+        self._boorus = ClientGUICommon.ListBook( self )
         
-        ArrangeControls()
+        self._add = wx.Button( self, label = 'add' )
+        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+        self._add.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._remove = wx.Button( self, label = 'remove' )
+        self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+        self._remove.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        self._export = wx.Button( self, label = 'export' )
+        self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK,  label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
+        
+        for ( name, booru ) in boorus.items():
+            
+            self._boorus.AddPageArgs( name, name, self._Panel, ( self._boorus, booru ), {} )
+            
+        
+        #
+        
+        add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+        
+        ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
+        ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox.AddF( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
+        vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
     
@@ -4997,8 +4986,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC: self._default_tag_sort.Select( 2 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC: self._default_tag_sort.Select( 3 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 4 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 5 )
             
             services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
             
@@ -6944,8 +6933,16 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if service_type == HC.LOCAL_RATING_NUMERICAL:
                     
-                    info[ 'num_stars' ] = self._num_stars.GetValue()
-                    info[ 'allow_zero' ] = self._allow_zero.GetValue()
+                    num_stars = self._num_stars.GetValue()
+                    allow_zero = self._allow_zero.GetValue()
+                    
+                    if num_stars == 1 and not allow_zero:
+                        
+                        allow_zero = True
+                        
+                    
+                    info[ 'num_stars' ] = num_stars
+                    info[ 'allow_zero' ] = allow_zero
                     
                 
                 info[ 'shape' ] = self._shape.GetChoice()
@@ -8244,7 +8241,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             else: self._add.Enable()
             
         
-        def EnterChildren( self, tags, parents = None ):
+        def EnterChildren( self, tags ):
             
             if len( tags ) > 0:
                 
@@ -8256,7 +8253,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
             
         
-        def EnterParents( self, tags, parents = None ):
+        def EnterParents( self, tags ):
             
             if len( tags ) > 0:
                 
@@ -9344,9 +9341,13 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
+            self._collapse_siblings_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-replace entered siblings' )
+            self._collapse_siblings_checkbox.SetValue( True )
+            
             self._show_deleted_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'show deleted' )
             self._show_deleted_checkbox.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
             
+            self._tags_box_sorter.AddF( self._collapse_siblings_checkbox, CC.FLAGS_LONE_BUTTON )
             self._tags_box_sorter.AddF( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
             
             expand_parents = True
@@ -9409,7 +9410,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 forced_reason = 'admin'
                 
             
-            force_siblings = False
+            collapse_siblings = self._collapse_siblings_checkbox.GetValue()
             
             tag_managers = [ m.GetTagsManager() for m in self._media ]
             
@@ -9417,21 +9418,23 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             sets_of_choices = []
             
-            potential_num_sibling_count = 0
             potential_num_reasons_needed = 0
             
             for tag in tags:
                 
+                if collapse_siblings:
+                    
+                    sibling_tag = HydrusGlobals.client_controller.GetManager( 'tag_siblings' ).GetSibling( tag )
+                    
+                    if sibling_tag is not None:
+                        
+                        tag = sibling_tag
+                        
+                    
+                
                 num_current = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
                 
                 choices = []
-                
-                sibling_tag = HydrusGlobals.client_controller.GetManager( 'tag_siblings' ).GetSibling( tag )
-                
-                if sibling_tag is not None:
-                    
-                    num_sibling_current = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
-                    
                 
                 if self._i_am_local_tag_service:
                     
@@ -9440,20 +9443,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                         if num_current < num_files:
                             
                             choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, tag ) ) )
-                            
-                        
-                        if sibling_tag is not None:
-                            
-                            if num_sibling_current < num_files:
-                                
-                                choices.append( ( 'add ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - num_sibling_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, sibling_tag ) ) )
-                                
-                            else:
-                                
-                                choices.append( ( 'ignore, as ' + sibling_tag + ' (preferred sibling) already exists for all', None ) )
-                                
-                            
-                            potential_num_sibling_count += 1
                             
                         
                     
@@ -9473,22 +9462,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     if not only_remove:
                         
                         if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, tag ) ) )
-                        
-                        if sibling_tag is not None:
-                            
-                            num_sibling_pending = len( [ 1 for tag_manager in tag_managers if sibling_tag in tag_manager.GetPending( self._tag_service_key ) ] )
-                            
-                            if num_sibling_current + num_sibling_pending < num_files:
-                                
-                                choices.append( ( 'pend ' + sibling_tag + ' (preferred sibling) to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_sibling_current + num_sibling_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, sibling_tag ) ) )
-                                
-                            else:
-                                
-                                choices.append( ( 'ignore, as ' + sibling_tag + ' (preferred sibling) already exists for all', None ) )
-                                
-                            
-                            potential_num_sibling_count += 1
-                            
                         
                     
                     if not only_add:
@@ -9556,21 +9529,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                 
             
-            if potential_num_sibling_count > 1:
-                
-                message = 'You are about to add more than one tag that has siblings.'
-                message += os.linesep * 2
-                message += 'To save you time, would you like to always choose those siblings, when they exist?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Many siblings found' ) as yn_dlg:
-                    
-                    if yn_dlg.ShowModal() == wx.ID_YES:
-                        
-                        force_siblings = True
-                        
-                    
-                
-            
             for choices in sets_of_choices:
                 
                 if len( choices ) == 1:
@@ -9579,32 +9537,19 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                 else:
                     
-                    if force_siblings and True in ( '(preferred sibling)' in text_gumpf for ( text_gumpf, choice ) in choices ):
+                    intro = 'What would you like to do?'
+                    
+                    with ClientGUIDialogs.DialogButtonChoice( self, intro, choices ) as dlg:
                         
-                        for ( text_gumpf, choice ) in choices:
-                            
-                            if '(preferred sibling)' in text_gumpf:
-                                
-                                break
-                                
-                            
+                        result = dlg.ShowModal()
                         
-                    else:
-                        
-                        intro = 'What would you like to do?'
-                        
-                        with ClientGUIDialogs.DialogButtonChoice( self, intro, choices ) as dlg:
+                        if result == wx.ID_OK:
                             
-                            result = dlg.ShowModal()
+                            choice = dlg.GetData()
                             
-                            if result == wx.ID_OK:
-                                
-                                choice = dlg.GetData()
-                                
-                            else:
-                                
-                                break
-                                
+                        else:
+                            
+                            break
                             
                         
                     
@@ -9624,6 +9569,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
                 
                 hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
+                
+                content_updates = []
                 
                 if choice_action == HC.CONTENT_UPDATE_PETITION:
                     
@@ -9649,33 +9596,41 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                         reason = forced_reason
                         
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes, reason ) )
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes, reason ) ) )
                     
-                else: content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes ) )
+                else:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes ) ) )
+                    
                 
-                for m in self._media: m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
+                if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ):
+                    
+                    tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                    
+                    parents = tag_parents_manager.GetParents( self._tag_service_key, choice_tag )
+                    
+                    content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( parent, hashes ) ) for parent in parents ) )
+                    
                 
-                self._content_updates.append( content_update )
+                for m in self._media:
+                    
+                    for content_update in content_updates:
+                        
+                        m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
+                        
+                    
+                
+                self._content_updates.extend( content_updates )
                 
             
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
         
-        def AddTags( self, tags, parents = None ):
-            
-            if parents is None:
-                
-                parents = []
-                
+        def AddTags( self, tags ):
             
             if len( tags ) > 0:
                 
                 self._AddTags( tags )
-                
-                if len( parents ) > 0:
-                    
-                    self._AddTags( parents, only_add = True )
-                    
                 
             
         

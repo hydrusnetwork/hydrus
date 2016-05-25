@@ -38,7 +38,7 @@ class Page( wx.SplitterWindow ):
         
         self.Bind( wx.EVT_SPLITTER_DCLICK, self.EventUnsplit )
         
-        self._search_preview_split = wx.SplitterWindow( self, style=wx.SP_NOBORDER )
+        self._search_preview_split = wx.SplitterWindow( self, style = wx.SP_NOBORDER )
         
         self._search_preview_split.SetMinimumPaneSize( 180 )
         self._search_preview_split.SetSashGravity( 1.0 )
@@ -53,9 +53,9 @@ class Page( wx.SplitterWindow ):
         
         self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, initial_media_results )
         
-        self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
+        self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
-        wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
+        self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
         
         if HC.options[ 'hide_preview' ]:
             
@@ -109,7 +109,10 @@ class Page( wx.SplitterWindow ):
             
             x = self.GetSashPosition()
             
-        else: x = HC.options[ 'hpos' ]
+        else:
+            
+            x = HC.options[ 'hpos' ]
+            
         
         if self._search_preview_split.IsSplit():
             
@@ -123,7 +126,10 @@ class Page( wx.SplitterWindow ):
             
             y = -1 * ( sps_y - sash_y )
             
-        else: y = HC.options[ 'vpos' ]
+        else:
+            
+            y = HC.options[ 'vpos' ]
+            
         
         return ( x, y )
         

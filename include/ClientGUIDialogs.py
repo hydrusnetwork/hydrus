@@ -2181,6 +2181,8 @@ class DialogInputTags( Dialog ):
         
         Dialog.__init__( self, parent, 'input tags' )
         
+        self._service_key = service_key
+        
         self._tags = ClientGUICommon.ListBoxTagsStrings( self )
         
         expand_parents = True
@@ -2221,11 +2223,17 @@ class DialogInputTags( Dialog ):
         wx.CallAfter( self._tag_box.SetFocus )
         
 
-    def EnterTags( self, tags, parents = None ):
+    def EnterTags( self, tags ):
         
-        if parents is None:
+        tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+        
+        parents = set()
+        
+        for tag in tags:
             
-            parents = []
+            some_parents = tag_parents_manager.GetParents( self._service_key, tag )
+            
+            parents.update( some_parents )
             
         
         if len( tags ) > 0:
@@ -3350,11 +3358,17 @@ class DialogPathsToTags( Dialog ):
             self._RefreshFileList()
             
         
-        def EnterTags( self, tags, parents = None ):
+        def EnterTags( self, tags ):
             
-            if parents is None:
+            tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+            
+            parents = set()
+            
+            for tag in tags:
                 
-                parents = []
+                some_parents = tag_parents_manager.GetParents( self._service_key, tag )
+                
+                parents.update( some_parents )
                 
             
             if len( tags ) > 0:
@@ -3366,11 +3380,17 @@ class DialogPathsToTags( Dialog ):
                 
             
         
-        def EnterTagsSingle( self, tags, parents = None ):
+        def EnterTagsSingle( self, tags ):
             
-            if parents is None:
+            tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+            
+            parents = set()
+            
+            for tag in tags:
                 
-                parents = []
+                some_parents = tag_parents_manager.GetParents( self._service_key, tag )
+                
+                parents.update( some_parents )
                 
             
             if len( tags ) > 0:
@@ -3690,7 +3710,7 @@ class DialogSelectBooru( Dialog ):
         
         self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        self._boorus = wx.ListBox( self, style = wx.LB_SORT )
+        self._boorus = wx.ListBox( self )
         self._boorus.Bind( wx.EVT_LISTBOX_DCLICK, self.EventDoubleClick )
         
         self._ok = wx.Button( self, id = wx.ID_OK, size = ( 0, 0 ) )
@@ -3701,7 +3721,11 @@ class DialogSelectBooru( Dialog ):
         
         boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
         
-        for name in boorus.keys():
+        booru_names = boorus.keys()
+        
+        booru_names.sort()
+        
+        for name in booru_names:
             
             self._boorus.Append( name )
             
@@ -3791,7 +3815,7 @@ class DialogSelectFromURLTree( Dialog ):
         
         ( x, y ) = self.GetEffectiveMinSize()
         
-        x = max( x, 480 )
+        x = max( x, 640 )
         y = max( y, 640 )
         
         self.SetInitialSize( ( x, y ) )
@@ -4367,80 +4391,70 @@ class DialogShortcuts( Dialog ):
     
     def __init__( self, parent ):
         
-        def InitialiseControls():
-            
-            self._shortcuts = ClientGUICommon.ListBook( self )
-            self._shortcuts.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventSelect )
-            
-            self._add = wx.Button( self, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
-            self._delete = wx.Button( self, label = 'delete' )
-            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            default_shortcuts = self._GetDefaultShortcuts()
-            
-            page = self._Panel( self._shortcuts, default_shortcuts )
-            
-            self._shortcuts.AddPage( 'default', 'default', page )
-            
-            all_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
-            
-            names_to_shortcuts = { shortcuts.GetName() : shortcuts for shortcuts in all_shortcuts }
-            
-            for ( name, shortcuts ) in names_to_shortcuts.items():
-                
-                self._shortcuts.AddPageArgs( name, name, self._Panel, ( self._shortcuts, shortcuts ), {} )
-                
-            
-        
-        def ArrangeControls():
-            
-            button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            button_hbox.AddF( self._add, CC.FLAGS_MIXED )
-            button_hbox.AddF( self._delete, CC.FLAGS_MIXED )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_MIXED )
-            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( button_hbox, CC.FLAGS_MIXED )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 780: x = 780
-            if y < 480: y = 480
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'setup shortcuts' )
         
         self._edit_log = []
         
-        InitialiseControls()
+        self._shortcuts = ClientGUICommon.ListBook( self )
+        self._shortcuts.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventSelect )
         
-        PopulateControls()
+        self._add = wx.Button( self, label = 'add' )
+        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
         
-        ArrangeControls()
+        self._delete = wx.Button( self, label = 'delete' )
+        self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        default_shortcuts = self._GetDefaultShortcuts()
+        
+        page = self._Panel( self._shortcuts, default_shortcuts )
+        
+        self._shortcuts.AddPage( 'default', 'default', page )
+        
+        all_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        
+        names_to_shortcuts = { shortcuts.GetName() : shortcuts for shortcuts in all_shortcuts }
+        
+        for ( name, shortcuts ) in names_to_shortcuts.items():
+            
+            self._shortcuts.AddPageArgs( name, name, self._Panel, ( self._shortcuts, shortcuts ), {} )
+            
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._add, CC.FLAGS_MIXED )
+        button_hbox.AddF( self._delete, CC.FLAGS_MIXED )
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_MIXED )
+        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( button_hbox, CC.FLAGS_MIXED )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 780: x = 780
+        if y < 480: y = 480
+        
+        self.SetInitialSize( ( x, y ) )
+        
         
         wx.CallAfter( self.EventSelect, None )
         
@@ -4473,8 +4487,14 @@ class DialogShortcuts( Dialog ):
         
         name = self._shortcuts.GetCurrentKey()
         
-        if name == 'default': return True
-        else: return False
+        if name is None: # 'default'
+            
+            return True
+            
+        else:
+            
+            return False
+            
         
     
     def EventDelete( self, event ):
@@ -4506,9 +4526,11 @@ class DialogShortcuts( Dialog ):
                 
             
         
+        default_page = self._shortcuts.GetPage( 'default' )
+        
         for page in self._shortcuts.GetActivePages():
             
-            if name != 'default':
+            if page is not default_page:
                 
                 shortcuts = page.GetShortcuts()
                 

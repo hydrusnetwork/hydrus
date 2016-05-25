@@ -898,7 +898,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if has_ipfs:
                 
-                download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_ipfs_download' ), p( '&A File From IPFS' ), p( 'Enter an IPFS multihash and attempt to import whatever is returned' ) )
+                download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_ipfs_download' ), p( '&An IPFS Multihash' ), p( 'Enter an IPFS multihash and attempt to import whatever is returned' ) )
                 
             
             download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
@@ -2226,6 +2226,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             content_updates = content_update_package.GetContentUpdates( for_client = True )
                             
                         
+                        self._controller.WriteSynchronous( 'content_updates', { service_key : content_updates } )
+                        
                     elif service_type == HC.IPFS:
                         
                         if isinstance( result, ClientMedia.MediaResult ):
@@ -2235,23 +2237,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             hash = media_result.GetHash()
                             mime = media_result.GetMime()
                             
-                            multihash = service.PinFile( hash, mime )
-                            
-                            content_update_row = ( hash, multihash )
-                            
-                            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                            service.PinFile( hash, mime )
                             
                         else:
                             
                             ( hash, multihash ) = result
                             
-                            service.UnpinFile( multihash )
-                            
-                            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]
+                            service.UnpinFile( hash, multihash )
                             
                         
-                    
-                    self._controller.WriteSynchronous( 'content_updates', { service_key : content_updates } )
                     
                 except HydrusExceptions.ServerBusyException:
                     
@@ -3005,7 +2999,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             service_type = self._service.GetServiceType()
             
-            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
+            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES + [ HC.IPFS ]:
                 
                 self._info_panel = ClientGUICommon.StaticBox( self, 'service information' )
                 
@@ -3045,6 +3039,10 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._bytes = ClientGUICommon.Gauge( self._info_panel )
                     
                     self._bytes_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                elif service_type == HC.IPFS:
+                    
+                    self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
                 
             
@@ -3101,6 +3099,22 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._booru_delete.Bind( wx.EVT_BUTTON, self.EventBooruDelete )
                 
             
+            if service_type == HC.IPFS:
+                
+                self._ipfs_shares_panel = ClientGUICommon.StaticBox( self, 'pinned directories' )
+                
+                self._ipfs_shares = ClientGUICommon.SaneListCtrl( self._ipfs_shares_panel, -1, [ ( 'multihash', 110 ), ( 'total size', 70 ), ( 'num files', 70 ) ], delete_key_callback = self.UnpinIPFSDirectories )
+                
+                self._ipfs_open_search = wx.Button( self._ipfs_shares_panel, label = 'open share in new page' )
+                self._ipfs_open_search.Bind( wx.EVT_BUTTON, self.EventIPFSOpenSearch )
+                
+                self._copy_multihash = wx.Button( self._ipfs_shares_panel, label = 'copy multihash' )
+                self._copy_multihash.Bind( wx.EVT_BUTTON, self.EventIPFSCopyMultihash )
+                
+                self._ipfs_delete = wx.Button( self._ipfs_shares_panel, label = 'unpin' )
+                self._ipfs_delete.Bind( wx.EVT_BUTTON, self.EventIPFSUnpin )
+                
+            
             if service_type in HC.TAG_SERVICES:
                 
                 self._service_wide_update = wx.Button( self, label = 'perform a service-wide operation' )
@@ -3128,11 +3142,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._copy_account_key.Bind( wx.EVT_BUTTON, self.EventCopyAccountKey )
                 
             
-            if service_type == HC.IPFS:
-                
-                self._online_status = wx.StaticText( self, label = 'I will put some \'it is online/offline\' and version stuff here later.' )
-                
-            
             #
             
             self._DisplayService()
@@ -3143,7 +3152,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
+            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES + [ HC.IPFS ]:
                 
                 if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
                     
@@ -3175,6 +3184,10 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._info_panel.AddF( self._num_shares, CC.FLAGS_EXPAND_PERPENDICULAR )
                     self._info_panel.AddF( self._bytes, CC.FLAGS_EXPAND_PERPENDICULAR )
                     self._info_panel.AddF( self._bytes_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
+                elif service_type == HC.IPFS:
+                    
+                    self._info_panel.AddF( self._files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                 
                 vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3218,6 +3231,20 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 vbox.AddF( self._booru_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
             
+            if service_type == HC.IPFS:
+                
+                self._ipfs_shares_panel.AddF( self._ipfs_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                b_box = wx.BoxSizer( wx.HORIZONTAL )
+                b_box.AddF( self._ipfs_open_search, CC.FLAGS_MIXED )
+                b_box.AddF( self._copy_multihash, CC.FLAGS_MIXED )
+                b_box.AddF( self._ipfs_delete, CC.FLAGS_MIXED )
+                
+                self._ipfs_shares_panel.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+                
+                vbox.AddF( self._ipfs_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+            
             if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ] or self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
                 
                 repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -3244,11 +3271,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                 
                 vbox.AddF( repo_buttons_hbox, CC.FLAGS_BUTTON_SIZER )
-                
-            
-            if service_type == HC.IPFS:
-                
-                vbox.AddF( self._online_status, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             self.SetSizer( vbox )
@@ -3411,7 +3433,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._DisplayAccountInfo()
             
-            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
+            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES + [ HC.IPFS ]:
                 
                 service_info = self._controller.Read( 'service_info', self._service_key )
                 
@@ -3461,6 +3483,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._num_shares.SetLabelText( HydrusData.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
                     
+                elif service_type == HC.IPFS:
+                    
+                    num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+                    total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
+                    
+                    self._files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
+                    
                 
             
             if service_type == HC.LOCAL_BOORU:
@@ -3477,6 +3506,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     hashes = info[ 'hashes' ]
                     
                     self._booru_shares.Append( ( name, text, HydrusData.ConvertTimestampToPrettyExpires( timeout ), len( hashes ) ), ( name, text, timeout, ( len( hashes ), hashes, share_key ) ) )
+                    
+                
+            
+            if service_type == HC.IPFS:
+                
+                ipfs_shares = self._controller.Read( 'service_directories', self._service_key )
+                
+                for ( multihash, num_files, total_size ) in ipfs_shares:
+                    
+                    self._ipfs_shares.Append( ( multihash, HydrusData.ConvertIntToPrettyString( num_files ), HydrusData.ConvertIntToBytes( total_size ) ), ( multihash, num_files, total_size ) )
                     
                 
             
@@ -3512,8 +3551,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._controller.Write( 'delete_local_booru_share', share_key )
                 
             
+            self._booru_shares.RemoveAllSelected()
+            
         
-        def EventBooruDelete( self, event ): self.DeleteBoorus()
+        def EventBooruDelete( self, event ):
+            
+            self.DeleteBoorus()
+            
         
         def EventBooruEdit( self, event ):
             
@@ -3569,8 +3613,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = self._controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
-                
                 info = self._service.GetInfo()
                 
                 external_ip = HydrusNATPunch.GetExternalIP() # eventually check for optional host replacement here
@@ -3592,8 +3634,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             if len( shares ) > 0:
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
-                
-                self._service = self._controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -3698,6 +3738,39 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             self._controller.CallToThread( do_it )
             
         
+        def EventIPFSCopyMultihash( self, event ):
+            
+            shares = self._ipfs_shares.GetSelectedClientData()
+            
+            if len( shares ) > 0:
+                
+                ( multihash, num_files, total_size ) = shares[0]
+                
+                multihash_prefix = self._service.GetInfo( 'multihash_prefix' )
+                
+                text = multihash_prefix + multihash
+                
+                self._controller.pub( 'clipboard', 'text', text )
+                
+            
+        
+        def EventIPFSOpenSearch( self, event ):
+            
+            for ( multihash, num_files, total_size ) in self._ipfs_shares.GetSelectedClientData():
+                
+                hashes = self._controller.Read( 'service_directory', self._service_key, multihash )
+                
+                media_results = self._controller.Read( 'media_results', hashes )
+                
+                self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+                
+            
+        
+        def EventIPFSUnpin( self, event ):
+            
+            self.UnpinIPFSDirectories()
+            
+        
         def EventServiceWideUpdate( self, event ):
             
             with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._service_key ) as dlg:
@@ -3780,6 +3853,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         def RefreshLocalBooruShares( self ):
             
             self._DisplayService()
+            
+        
+        def UnpinIPFSDirectories( self ):
+            
+            for ( multihash, num_files, total_size ) in self._ipfs_shares.GetSelectedClientData():
+                
+                self._service.UnpinDirectory( multihash )
+                
+            
+            self._ipfs_shares.RemoveAllSelected()
             
         
         def TIMEREventUpdates( self, event ):

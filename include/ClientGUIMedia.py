@@ -1095,6 +1095,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _UploadDirectory( self, file_service_key ):
+        
+        hashes = self._GetSelectedHashes()
+        
+        if hashes is not None and len( hashes ) > 0:
+            
+            ipfs_service = HydrusGlobals.client_controller.GetServicesManager().GetService( file_service_key )
+            
+            HydrusGlobals.client_controller.CallToThread( ipfs_service.PinDirectory, hashes )
+            
+        
+    
     def _UploadFiles( self, file_service_key ):
         
         hashes = self._GetSelectedHashes( not_uploaded_to = file_service_key )
@@ -2044,6 +2056,7 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
             elif command == 'undelete': self._Undelete()
             elif command == 'upload': self._UploadFiles( data )
+            elif command == 'upload_directory': self._UploadDirectory( data )
             elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
             elif command == 'key_down': self._MoveFocussedThumbnail( 1, 0, False )
             elif command == 'key_left': self._MoveFocussedThumbnail( 0, -1, False )
@@ -2517,6 +2530,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 len_interesting_remote_service_keys += len( unpinnable_ipfs_service_keys )
                 len_interesting_remote_service_keys += len( petitioned_ipfs_service_keys )
                 
+                if multiple_selected:
+                    
+                    len_interesting_remote_service_keys += len( ipfs_service_keys )
+                    
+                
                 if len_interesting_remote_service_keys > 0:
                     
                     remote_action_menu = wx.Menu()
@@ -2544,6 +2562,11 @@ class MediaPanelThumbnails( MediaPanel ):
                     if len( unpinnable_ipfs_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'petition' )
                     
                     if len( petitioned_ipfs_service_keys ) > 0: AddServiceKeysToMenu( remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'rescind_petition' )
+                    
+                    if multiple_selected and len( ipfs_service_keys ) > 0:
+                        
+                        AddServiceKeysToMenu( remote_action_menu, ipfs_service_keys, 'pin new directory to', 'upload_directory' )
+                        
                     
                     menu.AppendMenu( CC.ID_NULL, 'remote services', remote_action_menu )
                     
