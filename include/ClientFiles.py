@@ -495,25 +495,17 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     dest_path = os.path.join( folder_path, filename )
                     
-                    do_copy = True
-                    
-                    if filename in sync_filenames:
+                    if filename not in sync_filenames:
                         
-                        do_copy = False
+                        copied = HydrusPaths.MirrorFile( source_path, dest_path )
                         
-                    elif HydrusPaths.PathsHaveSameSizeAndDate( source_path, dest_path ):
-                        
-                        do_copy = False
-                        
-                    
-                    if do_copy:
-                        
-                        shutil.copy2( source_path, dest_path )
-                        
-                        num_copied += 1
-                        
-                        try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
-                        except: pass
+                        if copied:
+                            
+                            num_copied += 1
+                            
+                            try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
+                            except: pass
+                            
                         
                     
                     sync_filenames.add( filename )

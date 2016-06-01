@@ -529,6 +529,11 @@ class HydrusDB( object ):
         return self._currently_doing_job
         
     
+    def GetDBDir( self ):
+        
+        return self._db_dir
+        
+    
     def LoopIsFinished( self ):
         
         return self._loop_finished

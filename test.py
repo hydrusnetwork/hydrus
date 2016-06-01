@@ -50,8 +50,6 @@ class Controller( object ):
         
         HC.DB_DIR = tempfile.mkdtemp()
         
-        HC.CLIENT_ARCHIVES_DIR = os.path.join( HC.DB_DIR, 'client_archives' )
-        HC.CLIENT_FILES_DIR = os.path.join( HC.DB_DIR, 'client_files' )
         HC.CLIENT_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'client_thumbnails' )
         HC.CLIENT_UPDATES_DIR = os.path.join( HC.DB_DIR, 'client_updates' )
         
@@ -59,7 +57,9 @@ class Controller( object ):
         HC.SERVER_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'server_thumbnails' )
         HC.SERVER_UPDATES_DIR = os.path.join( HC.DB_DIR, 'server_updates' )
         
-        os.makedirs( HC.CLIENT_FILES_DIR )
+        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        
+        os.makedirs( client_files_default )
         
         HydrusGlobals.controller = self
         HydrusGlobals.client_controller = self
@@ -97,7 +97,7 @@ class Controller( object ):
         services.append( ClientData.GenerateService( CC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, CC.LOCAL_TAG_SERVICE_KEY, {} ) )
         self._reads[ 'services' ] = services
         
-        client_files_locations = { prefix : HC.CLIENT_FILES_DIR for prefix in HydrusData.IterateHexPrefixes() }
+        client_files_locations = { prefix : client_files_default for prefix in HydrusData.IterateHexPrefixes() }
         
         self._reads[ 'client_files_locations' ] = client_files_locations
         

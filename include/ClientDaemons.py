@@ -196,7 +196,7 @@ def DAEMONMaintainTrash( controller ):
                 return
                 
             
-            hashes = controller.Read( 'oldest_trash_hashes' )
+            hashes = controller.Read( 'trash_hashes', limit = 10 )
             
             if len( hashes ) == 0:
                 
@@ -219,7 +219,7 @@ def DAEMONMaintainTrash( controller ):
         
         max_age = HC.options[ 'trash_max_age' ] * 3600
         
-        hashes = controller.Read( 'oldest_trash_hashes', minimum_age = max_age )
+        hashes = controller.Read( 'trash_hashes', limit = 10, minimum_age = max_age )
         
         while len( hashes ) > 0:
             
@@ -236,7 +236,7 @@ def DAEMONMaintainTrash( controller ):
             
             controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
-            hashes = controller.Read( 'oldest_trash_hashes', minimum_age = max_age )
+            hashes = controller.Read( 'trash_hashes', limit = 10, minimum_age = max_age )
             
         
     

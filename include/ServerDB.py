@@ -217,11 +217,11 @@ class DB( HydrusDB.HydrusDB ):
             
             splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
             
-            self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) )
+            self._c.execute( 'DELETE FROM deleted_mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
             
         else:
             
-            already_deleted = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) ) ]
+            already_deleted = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM deleted_mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
             
             hash_ids = set( hash_ids ).difference( already_deleted )
             
@@ -237,11 +237,9 @@ class DB( HydrusDB.HydrusDB ):
         
         valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
         
-        self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( valid_hash_ids ) + ' AND STATUS = ?;', ( service_id, account_id, tag_id, HC.PETITIONED ) )
+        self._c.execute( 'DELETE FROM petitioned_mappings WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( valid_hash_ids ) + ';', ( service_id, account_id, tag_id ) )
         
-        now = HydrusData.GetNow()
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, account_id, tag_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, tag_id, hash_id, reason_id, now, HC.PETITIONED ) for hash_id in valid_hash_ids ] )
+        self._c.executemany( 'INSERT OR IGNORE INTO petitioned_mappings ( service_id, account_id, tag_id, hash_id, reason_id ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, account_id, tag_id, hash_id, reason_id ) for hash_id in valid_hash_ids ] )
         
     
     def _AddMessagingSession( self, service_key, session_key, account_key, name, expires ):
@@ -493,10 +491,7 @@ class DB( HydrusDB.HydrusDB ):
                 source = os.path.join( self._db_dir, filename )
                 dest = os.path.join( backup_path, filename )
                 
-                if not HydrusPaths.PathsHaveSameSizeAndDate( source, dest ):
-                    
-                    shutil.copy2( source, dest )
-                    
+                HydrusPaths.MirrorFile( source, dest )
                 
             
             HydrusData.Print( 'backing up: copying files' )
@@ -532,7 +527,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
-        self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
+        self._c.execute( 'DELETE FROM petitioned_mappings WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) )
         
         self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) )
         
@@ -730,11 +725,12 @@ class DB( HydrusDB.HydrusDB ):
         
         # mappings
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) ) WITHOUT ROWID;' )
-        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
-        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
-        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
-        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.petitioned_mappings ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, tag_id, hash_id, account_id ) ) WITHOUT ROWID;' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.petitioned_mappings_service_id_account_id_reason_id_tag_id_index ON petitioned_mappings ( service_id, account_id, reason_id, tag_id );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.deleted_mappings ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.deleted_mappings_service_id_account_id_index ON deleted_mappings ( service_id, account_id );' )
+        self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.deleted_mappings_service_id_timestamp_index ON deleted_mappings ( service_id, timestamp );' )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
         self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mappings_account_id_index ON mappings ( account_id );' )
@@ -801,9 +797,9 @@ class DB( HydrusDB.HydrusDB ):
         splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
         self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
-        self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
+        self._c.execute( 'DELETE FROM petitioned_mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
         
-        self._c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, tag_id, hash_id, account_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( ( service_id, tag_id, hash_id, account_id, reason_id, HydrusData.GetNow(), HC.DELETED ) for hash_id in hash_ids ) )
+        self._c.executemany( 'INSERT OR IGNORE INTO deleted_mappings ( service_id, tag_id, hash_id, account_id, reason_id, timestamp ) VALUES ( ?, ?, ?, ?, ?, ? );', ( ( service_id, tag_id, hash_id, account_id, reason_id, HydrusData.GetNow() ) for hash_id in hash_ids ) )
         
     
     def _DeleteOrphans( self ):
@@ -848,7 +844,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._RewardMappingPetitioners( service_id, tag_id, hash_ids, -1 )
         
-        self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
+        self._c.execute( 'DELETE FROM petitioned_mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) )
         
     
     def _DenyTagParentPetition( self, service_id, old_tag_id, new_tag_id, action ):
@@ -1224,7 +1220,7 @@ class DB( HydrusDB.HydrusDB ):
         else: ( petition_score, ) = result
         
         # crazy query here because two distinct columns
-        ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT tag_id, reason_id FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND status = ? );', ( service_id, account_id, HC.PETITIONED ) ).fetchone()
+        ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT tag_id, reason_id FROM petitioned_mappings WHERE service_id = ? AND account_id = ? );', ( service_id, account_id ) ).fetchone()
         
         account_info = {}
         
@@ -1414,7 +1410,7 @@ class DB( HydrusDB.HydrusDB ):
             
         elif service_type == HC.TAG_REPOSITORY:
             
-            ( num_mapping_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, tag_id, reason_id FROM mapping_petitions WHERE service_id = ? AND status = ? );', ( service_id, HC.PETITIONED ) ).fetchone()
+            ( num_mapping_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, tag_id, reason_id FROM petitioned_mappings WHERE service_id = ? );', ( service_id, ) ).fetchone()
             
             ( num_tag_sibling_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
             
@@ -1606,22 +1602,21 @@ class DB( HydrusDB.HydrusDB ):
         
         random.shuffle( content_types )
         
-        contents = []
-        
         for content_type in content_types:
+            
+            contents = []
             
             if content_type == HC.CONTENT_TYPE_MAPPINGS:
                 
-                status = HC.PETITIONED
                 action = HC.CONTENT_UPDATE_PETITION
                 
-                result = self._c.execute( 'SELECT account_id, reason_id FROM mapping_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, status ) ).fetchone()
+                result = self._c.execute( 'SELECT account_id, reason_id FROM petitioned_mappings WHERE service_id = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, ) ).fetchone()
                 
                 if result is None: continue
                 
                 ( account_id, reason_id ) = result
                 
-                tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, reason_id, status ) ) )
+                tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM petitioned_mappings WHERE service_id = ? AND account_id = ? AND reason_id = ?;', ( service_id, account_id, reason_id ) ) )
                 
                 for ( tag_id, hash_ids ) in tag_ids_to_hash_ids.items():
                     
@@ -1774,7 +1769,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        deleted_mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, mapping_petitions USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) )
+        deleted_mappings_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag, hash_id FROM tags, deleted_mappings USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) )
         
         for ( tag, hash_ids ) in deleted_mappings_dict.items():
             
@@ -2004,7 +1999,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 self._c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( service_id, ) )
-                self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) )
+                self._c.execute( 'DELETE FROM petitioned_mappings WHERE service_id = ?;', ( service_id, ) )
+                self._c.execute( 'DELETE FROM deleted_mappings WHERE service_id = ?;', ( service_id, ) )
                 
                 update_dir = ServerFiles.GetExpectedUpdateDir( service_key )
                 
@@ -2270,7 +2266,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RewardMappingPetitioners( self, service_id, tag_id, hash_ids, multiplier ):
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in self._c.execute( 'SELECT account_id, COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' AND status = ? GROUP BY account_id;', ( service_id, tag_id, HC.PETITIONED ) ) ]
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in self._c.execute( 'SELECT account_id, COUNT( * ) FROM petitioned_mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ' GROUP BY account_id;', ( service_id, tag_id ) ) ]
         
         self._RewardAccounts( service_id, HC.SCORE_PETITION, scores )
         
@@ -2582,6 +2578,29 @@ class DB( HydrusDB.HydrusDB ):
         if version == 202:
             
             self._c.execute( 'DELETE FROM analyze_timestamps;' )
+            
+        
+        if version == 207:
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.petitioned_mappings ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, tag_id, hash_id, account_id ) ) WITHOUT ROWID;' )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.deleted_mappings ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
+            
+            #
+            
+            self._c.execute( 'INSERT INTO petitioned_mappings ( service_id, account_id, tag_id, hash_id, reason_id ) SELECT service_id, account_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE status = ?;', ( HC.PETITIONED, ) )
+            self._c.execute( 'INSERT INTO deleted_mappings ( service_id, account_id, tag_id, hash_id, reason_id, timestamp ) SELECT service_id, account_id, tag_id, hash_id, reason_id, timestamp FROM mapping_petitions WHERE status = ?;', ( HC.DELETED, ) )
+            
+            #
+            
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.petitioned_mappings_service_id_account_id_reason_id_tag_id_index ON petitioned_mappings ( service_id, account_id, reason_id, tag_id );' )
+            
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.deleted_mappings_service_id_account_id_index ON deleted_mappings ( service_id, account_id );' )
+            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.deleted_mappings_service_id_timestamp_index ON deleted_mappings ( service_id, timestamp );' )
+            
+            #
+            
+            self._c.execute( 'DROP TABLE mapping_petitions;' )
             
         
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )

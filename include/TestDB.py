@@ -733,13 +733,15 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertTrue( os.path.exists( os.path.join( HC.DB_DIR, 'client.db' ) ) )
         
-        self.assertTrue( os.path.exists( HC.CLIENT_FILES_DIR ) )
+        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        
+        self.assertTrue( os.path.exists( client_files_default ) )
         
         self.assertTrue( os.path.exists( HC.CLIENT_THUMBNAILS_DIR ) )
         
         for prefix in HydrusData.IterateHexPrefixes():
             
-            dir = os.path.join( HC.CLIENT_FILES_DIR, prefix )
+            dir = os.path.join( client_files_default, prefix )
             
             self.assertTrue( os.path.exists( dir ) )
             

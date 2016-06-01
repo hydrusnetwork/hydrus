@@ -925,9 +925,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'rebalance_client_files' ), p( '&Rebalance File Storage' ), p( 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_ac_cache' ), p( '&Regenerate Autocomplete Cache' ), p( 'Delete and recreate the tag autocomplete cache.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'check_db_integrity' ), p( 'Check Database Integrity' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_orphans' ), p( '&Clear Orphans' ), p( 'Clear out surplus files that have found their way into the database.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'check_db_integrity' ), p( 'Check Database Integrity' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( '&Maintenance' ), submenu )
             
@@ -3103,10 +3103,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 self._ipfs_shares_panel = ClientGUICommon.StaticBox( self, 'pinned directories' )
                 
-                self._ipfs_shares = ClientGUICommon.SaneListCtrl( self._ipfs_shares_panel, -1, [ ( 'multihash', 110 ), ( 'total size', 70 ), ( 'num files', 70 ) ], delete_key_callback = self.UnpinIPFSDirectories )
+                self._ipfs_shares = ClientGUICommon.SaneListCtrl( self._ipfs_shares_panel, -1, [ ( 'multihash', 110 ), ( 'num files', 70 ), ( 'total size', 70 ), ( 'note', 200 ) ], delete_key_callback = self.UnpinIPFSDirectories )
                 
                 self._ipfs_open_search = wx.Button( self._ipfs_shares_panel, label = 'open share in new page' )
                 self._ipfs_open_search.Bind( wx.EVT_BUTTON, self.EventIPFSOpenSearch )
+                
+                self._ipfs_set_note = wx.Button( self._ipfs_shares_panel, label = 'set note' )
+                self._ipfs_set_note.Bind( wx.EVT_BUTTON, self.EventIPFSSetNote )
                 
                 self._copy_multihash = wx.Button( self._ipfs_shares_panel, label = 'copy multihash' )
                 self._copy_multihash.Bind( wx.EVT_BUTTON, self.EventIPFSCopyMultihash )
@@ -3124,7 +3127,14 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             if self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
                 
                 self._delete_local_deleted = wx.Button( self, label = 'clear deleted file record' )
+                self._delete_local_deleted.SetToolTipString( 'Make the client forget which files it has deleted from local files, resetting all the \'exclude already deleted files\' checks.' )
                 self._delete_local_deleted.Bind( wx.EVT_BUTTON, self.EventDeleteLocalDeleted )
+                
+            
+            if self._service_key == CC.TRASH_SERVICE_KEY:
+                
+                self._clear_trash = wx.Button( self, label = 'clear trash' )
+                self._clear_trash.Bind( wx.EVT_BUTTON, self.EventClearTrash )
                 
             
             if service_type == HC.SERVER_ADMIN:
@@ -3237,6 +3247,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 b_box = wx.BoxSizer( wx.HORIZONTAL )
                 b_box.AddF( self._ipfs_open_search, CC.FLAGS_MIXED )
+                b_box.AddF( self._ipfs_set_note, CC.FLAGS_MIXED )
                 b_box.AddF( self._copy_multihash, CC.FLAGS_MIXED )
                 b_box.AddF( self._ipfs_delete, CC.FLAGS_MIXED )
                 
@@ -3245,13 +3256,18 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 vbox.AddF( self._ipfs_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
             
-            if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ] or self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ] or self._service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
                 
                 repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
                 if self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
                     
                     repo_buttons_hbox.AddF( self._delete_local_deleted, CC.FLAGS_MIXED )
+                    
+                
+                if self._service_key == CC.TRASH_SERVICE_KEY:
+                    
+                    repo_buttons_hbox.AddF( self._clear_trash, CC.FLAGS_MIXED )
                     
                 
                 if service_type in HC.TAG_SERVICES:
@@ -3513,9 +3529,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ipfs_shares = self._controller.Read( 'service_directories', self._service_key )
                 
-                for ( multihash, num_files, total_size ) in ipfs_shares:
+                self._ipfs_shares.DeleteAllItems()
+                
+                for ( multihash, num_files, total_size, note ) in ipfs_shares:
                     
-                    self._ipfs_shares.Append( ( multihash, HydrusData.ConvertIntToPrettyString( num_files ), HydrusData.ConvertIntToBytes( total_size ) ), ( multihash, num_files, total_size ) )
+                    self._ipfs_shares.Append( ( multihash, HydrusData.ConvertIntToPrettyString( num_files ), HydrusData.ConvertIntToBytes( total_size ), note ), ( multihash, num_files, total_size, note ) )
                     
                 
             
@@ -3583,7 +3601,10 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                 
             
-            for ( share_key, info ) in writes: self._controller.Write( 'local_booru_share', share_key, info )
+            for ( share_key, info ) in writes:
+                
+                self._controller.Write( 'local_booru_share', share_key, info )
+                
             
         
         def EventBooruOpenSearch( self, event ):
@@ -3594,6 +3615,24 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
                 
+            
+        
+        def EventClearTrash( self, event ):
+            
+            def do_it():
+                
+                hashes = self._controller.Read( 'trash_hashes' )
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
+                
+                service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+                
+                self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                
+                wx.CallAfter( self._DisplayService )
+                
+            
+            self._controller.CallToThread( do_it )
             
         
         def EventCopyAccountKey( self, event ):
@@ -3744,7 +3783,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if len( shares ) > 0:
                 
-                ( multihash, num_files, total_size ) = shares[0]
+                ( multihash, num_files, total_size, note ) = shares[0]
                 
                 multihash_prefix = self._service.GetInfo( 'multihash_prefix' )
                 
@@ -3756,7 +3795,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def EventIPFSOpenSearch( self, event ):
             
-            for ( multihash, num_files, total_size ) in self._ipfs_shares.GetSelectedClientData():
+            for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
                 
                 hashes = self._controller.Read( 'service_directory', self._service_key, multihash )
                 
@@ -3764,6 +3803,30 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
                 
+            
+        
+        def EventIPFSSetNote( self, event ):
+            
+            for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for ' + multihash + '.' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        hashes = self._controller.Read( 'service_directory', self._service_key, multihash )
+                        
+                        note = dlg.GetValue()
+                        
+                        content_update_row = ( hashes, multihash, note )
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        
+                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+                        
+                    
+                
+            
+            self._DisplayService()
             
         
         def EventIPFSUnpin( self, event ):
@@ -3857,7 +3920,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def UnpinIPFSDirectories( self ):
             
-            for ( multihash, num_files, total_size ) in self._ipfs_shares.GetSelectedClientData():
+            for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
                 
                 self._service.UnpinDirectory( multihash )
                 

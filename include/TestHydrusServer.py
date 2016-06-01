@@ -116,7 +116,9 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        path = ClientFiles.GetExpectedFilePath( HC.CLIENT_FILES_DIR, self._file_hash, HC.IMAGE_JPEG )
+        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        
+        path = ClientFiles.GetExpectedFilePath( client_files_default, self._file_hash, HC.IMAGE_JPEG )
         
         with open( path, 'wb' ) as f: f.write( 'file' )
         
@@ -238,7 +240,9 @@ class TestServer( unittest.TestCase ):
         share_key = HydrusData.GenerateKey()
         hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
         
-        with open( ClientFiles.GetExpectedFilePath( HC.CLIENT_FILES_DIR, hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
+        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        
+        with open( ClientFiles.GetExpectedFilePath( client_files_default, hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
         with open( ClientFiles.GetExpectedThumbnailPath( hashes[0], False ), 'wb' ) as f: f.write( 'thumbnail' )
         
         local_booru_manager = HydrusGlobals.test_controller.GetManager( 'local_booru' )

@@ -64,12 +64,26 @@ class LocationsManager( object ):
     
     LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY }
     
-    def __init__( self, current, deleted, pending, petitioned, current_to_timestamps = None ):
+    def __init__( self, current, deleted, pending, petitioned, urls = None, service_keys_to_filenames = None, current_to_timestamps = None ):
         
         self._current = current
         self._deleted = deleted
         self._pending = pending
         self._petitioned = petitioned
+        
+        if urls is None:
+            
+            urls = []
+            
+        
+        self._urls = urls
+        
+        if service_keys_to_filenames is None:
+            
+            service_keys_to_filenames = {}
+            
+        
+        self._service_keys_to_filenames = service_keys_to_filenames
         
         if current_to_timestamps is None:
             
@@ -155,19 +169,7 @@ class LocationsManager( object ):
         return remote_service_strings
         
     
-    def GetTimestamp( self, service_key = None ):
-        
-        if service_key is None:
-            
-            if len( self._current_to_timestamps ) > 0:
-                
-                return max( self._current_to_timestamps.values() )
-                
-            else:
-                
-                return None
-                
-            
+    def GetTimestamp( self, service_key ):
         
         if service_key in self._current_to_timestamps:
             
@@ -177,6 +179,11 @@ class LocationsManager( object ):
             
             return None
             
+        
+    
+    def GetURLs( self ):
+        
+        return self._urls
         
     
     def HasDownloading( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._pending
@@ -703,8 +710,8 @@ class MediaList( object ):
             elif sort_by_data == CC.SORT_BY_LARGEST: sort_function = lambda x: -deal_with_none( x.GetSize() )
             elif sort_by_data == CC.SORT_BY_SHORTEST: sort_function = lambda x: deal_with_none( x.GetDuration() )
             elif sort_by_data == CC.SORT_BY_LONGEST: sort_function = lambda x: -deal_with_none( x.GetDuration() )
-            elif sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: deal_with_none( x.GetTimestamp() )
-            elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -deal_with_none( x.GetTimestamp() )
+            elif sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: deal_with_none( x.GetTimestamp( self._file_service_key ) )
+            elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -deal_with_none( x.GetTimestamp( self._file_service_key ) )
             elif sort_by_data == CC.SORT_BY_MIME: sort_function = lambda x: x.GetMime()
             
         elif sort_by_type == 'namespaces':
@@ -926,7 +933,7 @@ class MediaCollection( MediaList, Media ):
     
     def GetTagsManager( self ): return self._tags_manager
     
-    def GetTimestamp( self ): return None
+    def GetTimestamp( self, service_key ): return None
     
     def HasArchive( self ): return self._archive
     
@@ -1056,7 +1063,7 @@ class MediaSingleton( Media ):
     
     def GetNumWords( self ): return self._media_result.GetNumWords()
     
-    def GetTimestamp( self, service_key = None ):
+    def GetTimestamp( self, service_key ):
         
         return self._media_result.GetLocationsManager().GetTimestamp( service_key )
         
@@ -1093,6 +1100,31 @@ class MediaSingleton( Media ):
             timestamp = locations_manager.GetTimestamp( CC.TRASH_SERVICE_KEY )
             
             lines.append( 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ', now in the trash' )
+            
+        
+        for service_key in current_service_keys:
+            
+            if service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+                
+                continue
+                
+            
+            timestamp = locations_manager.GetTimestamp( service_key )
+            
+            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+            
+            service_type = service.GetServiceType()
+            
+            if service_type == HC.IPFS:
+                
+                status = 'pinned '
+                
+            else:
+                
+                status = 'uploaded '
+                
+            
+            lines.append( status + 'to ' + service.GetName() + ' ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) )
             
         
         return lines

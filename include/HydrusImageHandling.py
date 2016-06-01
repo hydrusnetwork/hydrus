@@ -187,6 +187,11 @@ def GetResolutionAndNumFrames( path ):
     
 def GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) ):
     
+    if target_x >= im_x and target_y >= im_y:
+        
+        return ( im_x, im_y )
+        
+    
     im_x = float( im_x )
     im_y = float( im_y )
     
@@ -196,10 +201,17 @@ def GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) ):
     x_ratio = im_x / target_x
     y_ratio = im_y / target_y
     
-    ratio_to_use = max( x_ratio, y_ratio )
+    if x_ratio > y_ratio:
+        
+        target_y = im_y / x_ratio
+        
+    elif y_ratio > x_ratio:
+        
+        target_x = im_x / y_ratio
+        
     
-    target_x = int( im_x / ratio_to_use )
-    target_y = int( im_y / ratio_to_use )
+    target_x = int( target_x )
+    target_y = int( target_y )
     
     return ( target_x, target_y )
     

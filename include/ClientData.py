@@ -457,7 +457,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
         
-        self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( HC.CLIENT_FILES_DIR ), 1.0 ) ]
+        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        
+        self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -1991,7 +1993,7 @@ class ServiceIPFS( ServiceRemote ):
         HydrusGlobals.client_controller.CallToThread( off_wx )
         
     
-    def PinDirectory( self, hashes ):
+    def PinDirectory( self, hashes, note ):
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         
@@ -2070,7 +2072,7 @@ class ServiceIPFS( ServiceRemote ):
             
             response = ClientNetworking.RequestsGet( url )
             
-            content_update_row = ( hashes, directory_multihash )
+            content_update_row = ( hashes, directory_multihash, note )
             
             content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
             

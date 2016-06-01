@@ -22,8 +22,6 @@ else:
     
 BIN_DIR = os.path.join( BASE_DIR, 'bin' )
 DB_DIR = os.path.join( BASE_DIR, 'db' )
-CLIENT_ARCHIVES_DIR = os.path.join( DB_DIR, 'client_archives' )
-CLIENT_FILES_DIR = os.path.join( DB_DIR, 'client_files' )
 SERVER_FILES_DIR = os.path.join( DB_DIR, 'server_files' )
 CLIENT_THUMBNAILS_DIR = os.path.join( DB_DIR, 'client_thumbnails' )
 SERVER_THUMBNAILS_DIR = os.path.join( DB_DIR, 'server_thumbnails' )
@@ -53,7 +51,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 207
+SOFTWARE_VERSION = 208
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

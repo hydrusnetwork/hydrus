@@ -325,6 +325,8 @@ class DialogAdvancedContentUpdate( Dialog ):
     ALL_MAPPINGS = 0
     SPECIFIC_MAPPINGS = 1
     SPECIFIC_NAMESPACE = 2
+    NAMESPACED = 3
+    UNNAMESPACED = 4
     
     def __init__( self, parent, service_key, hashes = None ):
         
@@ -377,6 +379,8 @@ class DialogAdvancedContentUpdate( Dialog ):
         #
         
         self._tag_type_dropdown.Append( 'all mappings', self.ALL_MAPPINGS )
+        self._tag_type_dropdown.Append( 'all namespaced mappings', self.NAMESPACED )
+        self._tag_type_dropdown.Append( 'all unnamespaced mappings', self.UNNAMESPACED )
         self._tag_type_dropdown.Append( 'specific tag\'s mappings', self.SPECIFIC_MAPPINGS )
         self._tag_type_dropdown.Append( 'specific namespace\'s mappings', self.SPECIFIC_NAMESPACE )
         
@@ -474,8 +478,14 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         tag_type = self._tag_type_dropdown.GetChoice()
         
-        if tag_type == self.ALL_MAPPINGS: tag = None
-        elif tag_type == self.SPECIFIC_MAPPINGS: tag = ( 'tag', self._tag )
+        if tag_type == self.ALL_MAPPINGS:
+            
+            tag = None
+            
+        elif tag_type == self.SPECIFIC_MAPPINGS:
+            
+            tag = ( 'tag', self._tag )
+            
         elif tag_type == self.SPECIFIC_NAMESPACE:
             
             tag = self._tag
@@ -484,8 +494,19 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             tag = ( 'namespace', tag )
             
+        elif tag_type == self.NAMESPACED:
+            
+            tag = ( 'namespaced', None )
+            
+        elif tag_type == self.UNNAMESPACED:
+            
+            tag = ( 'unnamespaced', None )
+            
         
-        if tag == '': return
+        if tag == '':
+            
+            return
+            
         
         service_key_target = self._service_key_dropdown.GetChoice()
         
@@ -837,7 +858,7 @@ class DialogInputCustomFilterAction( Dialog ):
         
         self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
         
-        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'remove' ] )
+        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove' ] )
         
         self._ok_none = wx.Button( self._none_panel, label = 'ok' )
         self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
@@ -2131,7 +2152,7 @@ class DialogInputShortcut( Dialog ):
         
         self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
         
-        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'remove' ] )
+        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove' ] )
         
         self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -2300,81 +2321,70 @@ class DialogInputUPnPMapping( Dialog ):
     
     def __init__( self, parent, external_port, protocol_type, internal_port, description, duration ):
         
-        def InitialiseControls():
-            
-            self._external_port = wx.SpinCtrl( self, min = 0, max = 65535 )
-            
-            self._protocol_type = ClientGUICommon.BetterChoice( self )
-            self._protocol_type.Append( 'TCP', 'TCP' )
-            self._protocol_type.Append( 'UDP', 'UDP' )
-            
-            self._internal_port = wx.SpinCtrl( self, min = 0, max = 65535 )
-            self._description = wx.TextCtrl( self )
-            self._duration = wx.SpinCtrl( self, min = 0, max = 86400 )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-    
-        def PopulateControls():
-            
-            self._external_port.SetValue( external_port )
-            
-            if protocol_type == 'TCP': self._protocol_type.Select( 0 )
-            elif protocol_type == 'UDP': self._protocol_type.Select( 1 )
-            
-            self._internal_port.SetValue( internal_port )
-            self._description.SetValue( description )
-            self._duration.SetValue( duration )
-            
-        
-        def ArrangeControls():
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'external port' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._external_port, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'protocol type' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._protocol_type, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'internal port' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._internal_port, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'description' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._description, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'duration (0 = indefinite)' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._duration, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, CC.FLAGS_MIXED )
-            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'configure upnp mapping' )
         
-        InitialiseControls()
+        self._external_port = wx.SpinCtrl( self, min = 0, max = 65535 )
         
-        PopulateControls()
+        self._protocol_type = ClientGUICommon.BetterChoice( self )
+        self._protocol_type.Append( 'TCP', 'TCP' )
+        self._protocol_type.Append( 'UDP', 'UDP' )
         
-        ArrangeControls()
+        self._internal_port = wx.SpinCtrl( self, min = 0, max = 65535 )
+        self._description = wx.TextCtrl( self )
+        self._duration = wx.SpinCtrl( self, min = 0, max = 86400 )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        self._external_port.SetValue( external_port )
+        
+        if protocol_type == 'TCP': self._protocol_type.Select( 0 )
+        elif protocol_type == 'UDP': self._protocol_type.Select( 1 )
+        
+        self._internal_port.SetValue( internal_port )
+        self._description.SetValue( description )
+        self._duration.SetValue( duration )
+        
+        #
+        
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'external port' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._external_port, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'protocol type' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._protocol_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'internal port' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._internal_port, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'description' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'duration (0 = indefinite)' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._duration, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box.AddF( self._ok, CC.FLAGS_MIXED )
+        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -2394,151 +2404,142 @@ class DialogModifyAccounts( Dialog ):
     
     def __init__( self, parent, service_key, subject_identifiers ):
         
-        def InitialiseControls():
-            
-            self._account_info_panel = ClientGUICommon.StaticBox( self, 'account info' )
-            
-            self._subject_text = wx.StaticText( self._account_info_panel )
-            
-            #
-            
-            self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
-            
-            self._account_types = wx.Choice( self._account_types_panel )
-            
-            self._account_types_ok = wx.Button( self._account_types_panel, label = 'Ok' )
-            self._account_types_ok.Bind( wx.EVT_BUTTON, self.EventChangeAccountType )
-            
-            #
-            
-            self._expiration_panel = ClientGUICommon.StaticBox( self, 'change expiration' )
-            
-            self._add_to_expires = wx.Choice( self._expiration_panel )
-            
-            self._add_to_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
-            self._add_to_expires_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpires )
-            
-            self._set_expires = wx.Choice( self._expiration_panel )
-            
-            self._set_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
-            self._set_expires_ok.Bind( wx.EVT_BUTTON, self.EventSetExpires )
-            
-            #
-            
-            self._ban_panel = ClientGUICommon.StaticBox( self, 'bans' )
-            
-            self._ban = wx.Button( self._ban_panel, label = 'ban user' )
-            self._ban.Bind( wx.EVT_BUTTON, self.EventBan )        
-            self._ban.SetBackgroundColour( ( 255, 0, 0 ) )
-            self._ban.SetForegroundColour( ( 255, 255, 0 ) )
-            
-            self._superban = wx.Button( self._ban_panel, label = 'ban user and delete every contribution they have ever made' )
-            self._superban.Bind( wx.EVT_BUTTON, self.EventSuperban )        
-            self._superban.SetBackgroundColour( ( 255, 0, 0 ) )
-            self._superban.SetForegroundColour( ( 255, 255, 0 ) )
-            
-            self._exit = wx.Button( self, id = wx.ID_CANCEL, label = 'Exit' )
-            
-    
-        def PopulateControls():
-            
-            if len( self._subject_identifiers ) == 1:
-                
-                ( subject_identifier, ) = self._subject_identifiers
-                
-                response = self._service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_identifier } )
-                
-                subject_string = HydrusData.ToUnicode( response[ 'account_info' ] )
-                
-            else: subject_string = 'modifying ' + HydrusData.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
-            
-            self._subject_text.SetLabelText( subject_string )
-            
-            #
-            
-            response = self._service.Request( HC.GET, 'account_types' )
-            
-            account_types = response[ 'account_types' ]
-            
-            for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
-            
-            self._account_types.SetSelection( 0 )
-            
-            #
-            
-            for ( string, value ) in HC.lifetimes:
-                
-                if value is not None: self._add_to_expires.Append( string, value ) # don't want 'add no limit'
-                
-            
-            self._add_to_expires.SetSelection( 1 ) # three months
-            
-            for ( string, value ) in HC.lifetimes: self._set_expires.Append( string, value )
-            self._set_expires.SetSelection( 1 ) # three months
-            
-            #
-            
-            if not self._service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ):
-                
-                self._account_types_ok.Disable()
-                self._add_to_expires_ok.Disable()
-                self._set_expires_ok.Disable()
-                
-            
-        
-        def ArrangeControls():
-            
-            self._account_info_panel.AddF( self._subject_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            account_types_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            account_types_hbox.AddF( self._account_types, CC.FLAGS_MIXED )
-            account_types_hbox.AddF( self._account_types_ok, CC.FLAGS_MIXED )
-            
-            self._account_types_panel.AddF( account_types_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            add_to_expires_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            add_to_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), CC.FLAGS_MIXED )
-            add_to_expires_box.AddF( self._add_to_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
-            add_to_expires_box.AddF( self._add_to_expires_ok, CC.FLAGS_MIXED )
-            
-            set_expires_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            set_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), CC.FLAGS_MIXED )
-            set_expires_box.AddF( self._set_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
-            set_expires_box.AddF( self._set_expires_ok, CC.FLAGS_MIXED )
-            
-            self._expiration_panel.AddF( add_to_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._expiration_panel.AddF( set_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._ban_panel.AddF( self._ban, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._ban_panel.AddF( self._superban, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._account_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._expiration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._ban_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._exit, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'modify account' )
         
         self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         self._subject_identifiers = list( subject_identifiers )
         
-        InitialiseControls()
+        #
         
-        PopulateControls()
+        self._account_info_panel = ClientGUICommon.StaticBox( self, 'account info' )
         
-        ArrangeControls()
+        self._subject_text = wx.StaticText( self._account_info_panel )
+        
+        #
+        
+        self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
+        
+        self._account_types = wx.Choice( self._account_types_panel )
+        
+        self._account_types_ok = wx.Button( self._account_types_panel, label = 'Ok' )
+        self._account_types_ok.Bind( wx.EVT_BUTTON, self.EventChangeAccountType )
+        
+        #
+        
+        self._expiration_panel = ClientGUICommon.StaticBox( self, 'change expiration' )
+        
+        self._add_to_expires = wx.Choice( self._expiration_panel )
+        
+        self._add_to_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
+        self._add_to_expires_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpires )
+        
+        self._set_expires = wx.Choice( self._expiration_panel )
+        
+        self._set_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
+        self._set_expires_ok.Bind( wx.EVT_BUTTON, self.EventSetExpires )
+        
+        #
+        
+        self._ban_panel = ClientGUICommon.StaticBox( self, 'bans' )
+        
+        self._ban = wx.Button( self._ban_panel, label = 'ban user' )
+        self._ban.Bind( wx.EVT_BUTTON, self.EventBan )        
+        self._ban.SetBackgroundColour( ( 255, 0, 0 ) )
+        self._ban.SetForegroundColour( ( 255, 255, 0 ) )
+        
+        self._superban = wx.Button( self._ban_panel, label = 'ban user and delete every contribution they have ever made' )
+        self._superban.Bind( wx.EVT_BUTTON, self.EventSuperban )        
+        self._superban.SetBackgroundColour( ( 255, 0, 0 ) )
+        self._superban.SetForegroundColour( ( 255, 255, 0 ) )
+        
+        self._exit = wx.Button( self, id = wx.ID_CANCEL, label = 'Exit' )
+        
+        #
+        
+        if len( self._subject_identifiers ) == 1:
+            
+            ( subject_identifier, ) = self._subject_identifiers
+            
+            response = self._service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_identifier } )
+            
+            subject_string = HydrusData.ToUnicode( response[ 'account_info' ] )
+            
+        else: subject_string = 'modifying ' + HydrusData.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
+        
+        self._subject_text.SetLabelText( subject_string )
+        
+        #
+        
+        response = self._service.Request( HC.GET, 'account_types' )
+        
+        account_types = response[ 'account_types' ]
+        
+        for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
+        
+        self._account_types.SetSelection( 0 )
+        
+        #
+        
+        for ( string, value ) in HC.lifetimes:
+            
+            if value is not None: self._add_to_expires.Append( string, value ) # don't want 'add no limit'
+            
+        
+        self._add_to_expires.SetSelection( 1 ) # three months
+        
+        for ( string, value ) in HC.lifetimes: self._set_expires.Append( string, value )
+        self._set_expires.SetSelection( 1 ) # three months
+        
+        #
+        
+        if not self._service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ):
+            
+            self._account_types_ok.Disable()
+            self._add_to_expires_ok.Disable()
+            self._set_expires_ok.Disable()
+            
+        
+        #
+        
+        self._account_info_panel.AddF( self._subject_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        account_types_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        account_types_hbox.AddF( self._account_types, CC.FLAGS_MIXED )
+        account_types_hbox.AddF( self._account_types_ok, CC.FLAGS_MIXED )
+        
+        self._account_types_panel.AddF( account_types_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        add_to_expires_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        add_to_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), CC.FLAGS_MIXED )
+        add_to_expires_box.AddF( self._add_to_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
+        add_to_expires_box.AddF( self._add_to_expires_ok, CC.FLAGS_MIXED )
+        
+        set_expires_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        set_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), CC.FLAGS_MIXED )
+        set_expires_box.AddF( self._set_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
+        set_expires_box.AddF( self._set_expires_ok, CC.FLAGS_MIXED )
+        
+        self._expiration_panel.AddF( add_to_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._expiration_panel.AddF( set_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._ban_panel.AddF( self._ban, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._ban_panel.AddF( self._superban, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox.AddF( self._account_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._expiration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._ban_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._exit, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._exit.SetFocus )
         
@@ -2972,7 +2973,6 @@ class DialogPathsToTags( Dialog ):
         self._paths = paths
         
         self._tag_repositories = ClientGUICommon.ListBook( self )
-        self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
         
         self._add_button = wx.Button( self, id = wx.ID_OK, label = 'Import Files' )
         self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
@@ -3029,45 +3029,6 @@ class DialogPathsToTags( Dialog ):
         
         self.SetInitialSize( ( width, height ) )
         
-        interested_actions = [ 'set_search_focus' ]
-        
-        entries = []
-        
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        wx.CallAfter( self._add_button.SetFocus )
-        
-    
-    def _SetSearchFocus( self ):
-        
-        page = self._tag_repositories.GetCurrentPage()
-        
-        page.SetTagBoxFocus()
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'set_search_focus': self._SetSearchFocus()
-            else: event.Skip()
-            
-        
-    
-    def EventServiceChanged( self, event ):
-        
-        page = self._tag_repositories.GetCurrentPage()
-        
-        wx.CallAfter( page.SetTagBoxFocus )
-        
     
     def GetInfo( self ):
         
@@ -3092,8 +3053,6 @@ class DialogPathsToTags( Dialog ):
             self._service_key = service_key
             self._paths = paths
             
-            self._load_from_txt_files = False
-            
             self._paths_list = ClientGUICommon.SaneListCtrl( self, 250, [ ( '#', 50 ), ( 'path', 400 ), ( 'tags', -1 ) ] )
             
             self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
@@ -3101,227 +3060,44 @@ class DialogPathsToTags( Dialog ):
             
             #
             
-            self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
+            self._notebook = wx.Notebook( self )
             
-            self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces )
+            self._simple_panel = self._SimplePanel( self._notebook, self._service_key, self.RefreshFileList )
+            self._advanced_panel = self._AdvancedPanel( self._notebook, self._service_key, self.RefreshFileList )
             
-            self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
-            self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
-            self._add_quick_namespace_button.SetMinSize( ( 20, -1 ) )
-            
-            self._edit_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'edit' )
-            self._edit_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventEditQuickNamespace )
-            self._edit_quick_namespace_button.SetMinSize( ( 20, -1 ) )
-            
-            self._delete_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'delete' )
-            self._delete_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventDeleteQuickNamespace )
-            self._delete_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+            self._notebook.AddPage( self._simple_panel, 'simple', select = True )
+            self._notebook.AddPage( self._advanced_panel, 'advanced' )
             
             #
             
-            self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
-            
-            self._regexes = wx.ListBox( self._regexes_panel )
-            self._regexes.Bind( wx.EVT_LISTBOX_DCLICK, self.EventRemoveRegex )
-            
-            self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
-            self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
-            
-            self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
-            
-            self._regex_intro_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
-            self._regex_practise_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
-            
-            #
-            
-            self._num_panel = ClientGUICommon.StaticBox( self, '#' )
-            
-            self._num_base = wx.SpinCtrl( self._num_panel, min = -10000000, max = 10000000, size = ( 60, -1 ) )
-            self._num_base.SetValue( 1 )
-            self._num_base.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
-            
-            self._num_step = wx.SpinCtrl( self._num_panel, min = -1000000, max = 1000000, size = ( 60, -1 ) )
-            self._num_step.SetValue( 1 )
-            self._num_step.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
-            
-            self._num_namespace = wx.TextCtrl( self._num_panel, size = ( 100, -1 ) )
-            self._num_namespace.Bind( wx.EVT_TEXT, self.EventNumNamespaceChanged )
-            
-            #
-            
-            self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
-            
-            self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagsRemoved )
-            
-            expand_parents = True
-            
-            self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-            
-            #
-            
-            self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for selected files' )
-            
-            self._paths_to_single_tags = collections.defaultdict( set )
-            
-            self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagsRemoved )
-            
-            expand_parents = True
-            
-            self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-            
-            self._load_from_txt_files_checkbox = wx.CheckBox( self, label = 'try to load tags from neighbouring .txt files' )
-            self._load_from_txt_files_checkbox.SetToolTipString( 'This looks for a [path].txt file, and will try to load line-separated tags from it. Look at thumbnail->share->export->files\'s txt file checkbox for an example.' )
-            self._load_from_txt_files_checkbox.Bind( wx.EVT_CHECKBOX, self.EventLoadFromTextFiles )
-            
-            #
-            
-            num_base = self._num_base.GetValue()
-            num_step = self._num_step.GetValue()
-            
-            for ( num, path ) in enumerate( self._paths ):
+            for ( index, path ) in enumerate( self._paths ):
                 
-                processed_num = num_base + num * num_step
+                pretty_num = HydrusData.ConvertIntToPrettyString( index + 1 )
                 
-                pretty_num = HydrusData.ConvertIntToPrettyString( processed_num )
-                
-                tags = self._GetTags( num, path )
+                tags = self._GetTags( index, path )
                 
                 tags_string = ', '.join( tags )
                 
-                self._paths_list.Append( ( pretty_num, path, tags_string ), ( ( num, processed_num ), path, tags ) )
+                self._paths_list.Append( ( pretty_num, path, tags_string ), ( index, path, tags ) )
                 
             
-            self._single_tag_box.Disable()
-            
             #
-            
-            button_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            button_box.AddF( self._add_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            button_box.AddF( self._edit_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            button_box.AddF( self._delete_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._quick_namespaces_panel.AddF( self._quick_namespaces_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._quick_namespaces_panel.AddF( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
-            self._regexes_panel.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._regexes_panel.AddF( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._regexes_panel.AddF( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
-            self._regexes_panel.AddF( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
-            self._regexes_panel.AddF( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
-            
-            #
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._num_panel, label = '# base/step: ' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._num_base, CC.FLAGS_MIXED )
-            hbox.AddF( self._num_step, CC.FLAGS_MIXED )
-            
-            self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self._num_panel, label = '# namespace: ' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            second_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            second_vbox.AddF( self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            second_vbox.AddF( self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            self._tags_panel.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._tags_panel.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._single_tags_panel.AddF( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._single_tags_panel.AddF( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            hbox.AddF( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._load_from_txt_files_checkbox, CC.FLAGS_LONE_BUTTON )
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
         
         
-        def _GetTags( self, num, path ):
+        def _GetTags( self, index, path ):
             
             tags = []
             
-            if self._load_from_txt_files:
-                
-                txt_path = path + '.txt'
-                
-                if os.path.exists( txt_path ):
-                    
-                    with open( txt_path, 'rb' ) as f:
-                        
-                        txt_tags_string = f.read()
-                        
-                    
-                    try:
-                        
-                        txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
-                        
-                        tags.extend( txt_tags )
-                        
-                    except:
-                        
-                        HydrusData.Print( 'Could not parse the tags from ' + txt_path + '!' )
-                        
-                    
-                
-            
-            tags.extend( self._tags.GetTags() )
-            
-            for regex in self._regexes.GetStrings():
-                
-                try:
-                    
-                    result = re.findall( regex, path )
-                    
-                    for match in result: tags.append( match )
-                    
-                except: pass
-                
-            
-            for ( namespace, regex ) in self._quick_namespaces_list.GetClientData():
-                
-                try:
-                    
-                    result = re.findall( regex, path )
-                    
-                    for match in result: tags.append( namespace + ':' + match )
-                    
-                except: pass
-                
-            
-            if path in self._paths_to_single_tags:
-                
-                tags.extend( list( self._paths_to_single_tags[ path ] ) )
-                
-            
-            num_namespace = self._num_namespace.GetValue()
-            
-            if num_namespace != '':
-                
-                tags.append( num_namespace + ':' + str( num ) )
-                
+            tags.extend( self._simple_panel.GetTags( index, path ) )
+            tags.extend( self._advanced_panel.GetTags( index, path ) )
             
             tags = HydrusTags.CleanTags( tags )
             
@@ -3332,258 +3108,611 @@ class DialogPathsToTags( Dialog ):
             return tags
             
         
-        def _RefreshFileList( self ):
+        def EventItemSelected( self, event ):
             
-            for ( index, ( ( original_num, processed_num ), path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
+            paths = [ path for ( index, path, tags ) in self._paths_list.GetSelectedClientData() ]
+            
+            self._simple_panel.SetSelectedPaths( paths )
+            
+        
+        def GetInfo( self ):
+            
+            paths_to_tags = { path : tags for ( index, path, tags ) in self._paths_list.GetClientData() }
+            
+            return ( self._service_key, paths_to_tags )
+            
+        
+        def RefreshFileList( self ):
+            
+            for ( list_index, ( index, path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
                 
                 # when doing regexes, make sure not to include '' results, same for system: and - started tags.
                 
-                tags = self._GetTags( processed_num, path )
+                tags = self._GetTags( index, path )
                 
                 if tags != old_tags:
                     
-                    pretty_num = HydrusData.ConvertIntToPrettyString( processed_num )
+                    pretty_num = HydrusData.ConvertIntToPrettyString( index + 1 )
                     
                     tags_string = ', '.join( tags )
                     
-                    self._paths_list.UpdateRow( index, ( pretty_num, path, tags_string ), ( ( original_num, processed_num ), path, tags ) )
+                    self._paths_list.UpdateRow( list_index, ( pretty_num, path, tags_string ), ( index, path, tags ) )
                     
                 
             
         
-        def DeleteQuickNamespaces( self ):
+        def SetTagBoxFocus( self ):
             
-            self._quick_namespaces_list.RemoveAllSelected()
-            
-            self._RefreshFileList()
+            self._simple_panel._tag_box.SetFocus()
             
         
-        def EnterTags( self, tags ):
+        class _AdvancedPanel( wx.Panel ):
             
-            tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+            def __init__( self, parent, service_key, refresh_callable ):
+                
+                wx.Panel.__init__( self, parent )
+                
+                self._service_key = service_key
+                self._refresh_callable = refresh_callable
+                
+                #
+                
+                self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
+                
+                self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces )
+                
+                self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
+                self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
+                self._add_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+                
+                self._edit_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'edit' )
+                self._edit_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventEditQuickNamespace )
+                self._edit_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+                
+                self._delete_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'delete' )
+                self._delete_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventDeleteQuickNamespace )
+                self._delete_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+                
+                #
+                
+                self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
+                
+                self._regexes = wx.ListBox( self._regexes_panel )
+                self._regexes.Bind( wx.EVT_LISTBOX_DCLICK, self.EventRemoveRegex )
+                
+                self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
+                self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
+                
+                self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
+                
+                self._regex_intro_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+                self._regex_practise_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
+                
+                #
+                
+                self._num_panel = ClientGUICommon.StaticBox( self, '#' )
+                
+                self._num_base = wx.SpinCtrl( self._num_panel, min = -10000000, max = 10000000, size = ( 60, -1 ) )
+                self._num_base.SetValue( 1 )
+                self._num_base.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
+                
+                self._num_step = wx.SpinCtrl( self._num_panel, min = -1000000, max = 1000000, size = ( 60, -1 ) )
+                self._num_step.SetValue( 1 )
+                self._num_step.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
+                
+                self._num_namespace = wx.TextCtrl( self._num_panel, size = ( 100, -1 ) )
+                self._num_namespace.Bind( wx.EVT_TEXT, self.EventNumNamespaceChanged )
+                
+                #
+                
+                button_box = wx.BoxSizer( wx.HORIZONTAL )
+                
+                button_box.AddF( self._add_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+                button_box.AddF( self._edit_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+                button_box.AddF( self._delete_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._quick_namespaces_panel.AddF( self._quick_namespaces_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._quick_namespaces_panel.AddF( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                #
+                
+                self._regexes_panel.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._regexes_panel.AddF( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._regexes_panel.AddF( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
+                self._regexes_panel.AddF( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
+                self._regexes_panel.AddF( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
+                
+                #
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( wx.StaticText( self._num_panel, label = '# base/step: ' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._num_base, CC.FLAGS_MIXED )
+                hbox.AddF( self._num_step, CC.FLAGS_MIXED )
+                
+                self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( wx.StaticText( self._num_panel, label = '# namespace: ' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                second_vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                second_vbox.AddF( self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                second_vbox.AddF( self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                #
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                self.SetSizer( hbox )
+                
             
-            parents = set()
-            
-            for tag in tags:
+            def DeleteQuickNamespaces( self ):
                 
-                some_parents = tag_parents_manager.GetParents( self._service_key, tag )
+                self._quick_namespaces_list.RemoveAllSelected()
                 
-                parents.update( some_parents )
+                self._refresh_callable()
                 
             
-            if len( tags ) > 0:
+            def EventAddRegex( self, event ):
                 
-                self._tags.EnterTags( tags )
-                self._tags.AddTags( parents )
+                regex = self._regex_box.GetValue()
                 
-                self._RefreshFileList()
-                
-            
-        
-        def EnterTagsSingle( self, tags ):
-            
-            tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-            
-            parents = set()
-            
-            for tag in tags:
-                
-                some_parents = tag_parents_manager.GetParents( self._service_key, tag )
-                
-                parents.update( some_parents )
-                
-            
-            if len( tags ) > 0:
-                
-                self._single_tags.EnterTags( tags )
-                self._single_tags.AddTags( parents )
-                
-                indices = self._paths_list.GetAllSelected()
-                
-                for index in indices:
+                if regex != '':
                     
-                    ( ( original_num, processed_num ), path, old_pretty_tags ) = self._paths_list.GetClientData( index )
-                    
-                    current_tags = self._paths_to_single_tags[ path ]
-                    
-                    for tag in tags:
+                    try:
                         
-                        if tag in current_tags:
-                            
-                            current_tags.discard( tag )
-                            
-                        else:
-                            
-                            current_tags.add( tag )
-                            
+                        re.compile( regex, flags = re.UNICODE )
+                        
+                    except Exception as e:
+                        
+                        text = 'That regex would not compile!'
+                        text += os.linesep * 2
+                        text += HydrusData.ToUnicode( e )
+                        
+                        wx.MessageBox( text )
+                        
+                        return
                         
                     
-                    current_tags.update( parents )
+                    self._regexes.Append( regex )
                     
-                
-                self._RefreshFileList()
-                
-            
-        
-        def EventAddRegex( self, event ):
-            
-            regex = self._regex_box.GetValue()
-            
-            if regex != '':
-                
-                try:
+                    self._regex_box.Clear()
                     
-                    re.compile( regex, flags = re.UNICODE )
-                    
-                except Exception as e:
-                    
-                    text = 'That regex would not compile!'
-                    text += os.linesep * 2
-                    text += HydrusData.ToUnicode( e )
-                    
-                    wx.MessageBox( text )
-                    
-                    return
-                    
-                
-                self._regexes.Append( regex )
-                
-                self._regex_box.Clear()
-                
-                self._RefreshFileList()
-                
-            
-        
-        def EventAddQuickNamespace( self, event ):
-            
-            with DialogInputNamespaceRegex( self ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( namespace, regex ) = dlg.GetInfo()
-                    
-                    self._quick_namespaces_list.Append( ( namespace, regex ), ( namespace, regex ) )
-                    
-                    self._RefreshFileList()
+                    self._refresh_callable()
                     
                 
             
-        
-        def EventDeleteQuickNamespace( self, event ): self.DeleteQuickNamespaces()
-        
-        def EventEditQuickNamespace( self, event ):
-            
-            for index in self._quick_namespaces_list.GetAllSelected():
+            def EventAddQuickNamespace( self, event ):
                 
-                ( namespace, regex ) = self._quick_namespaces_list.GetClientData( index = index )
-                
-                with DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
+                with DialogInputNamespaceRegex( self ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
                         ( namespace, regex ) = dlg.GetInfo()
                         
-                        self._quick_namespaces_list.UpdateRow( index, ( namespace, regex ), ( namespace, regex ) )
+                        self._quick_namespaces_list.Append( ( namespace, regex ), ( namespace, regex ) )
+                        
+                        self._refresh_callable()
                         
                     
                 
             
-            self._RefreshFileList()
+            def EventDeleteQuickNamespace( self, event ): self.DeleteQuickNamespaces()
             
-        
-        def EventItemSelected( self, event ):
-            
-            single_tags = set()
-            
-            indices = self._paths_list.GetAllSelected()
-            
-            if len( indices ) > 0:
+            def EventEditQuickNamespace( self, event ):
                 
-                for index in indices:
+                for index in self._quick_namespaces_list.GetAllSelected():
                     
-                    path = self._paths_list.GetClientData( index )[1]
+                    ( namespace, regex ) = self._quick_namespaces_list.GetClientData( index = index )
                     
-                    if path in self._paths_to_single_tags:
+                    with DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
                         
-                        single_tags.update( self._paths_to_single_tags[ path ] )
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            ( namespace, regex ) = dlg.GetInfo()
+                            
+                            self._quick_namespaces_list.UpdateRow( index, ( namespace, regex ), ( namespace, regex ) )
+                            
                         
                     
                 
-                self._single_tag_box.Enable()
+                self._refresh_callable()
                 
-            else: self._single_tag_box.Disable()
             
-            self._single_tags.SetTags( single_tags )
+            def EventNumNamespaceChanged( self, event ):
+                
+                self._refresh_callable()
+                
+            
+            def EventRecalcNum( self, event ):
+                
+                self._refresh_callable()
+                
+            
+            def EventRemoveRegex( self, event ):
+                
+                selection = self._regexes.GetSelection()
+                
+                if selection != wx.NOT_FOUND:
+                    
+                    if len( self._regex_box.GetValue() ) == 0: self._regex_box.SetValue( self._regexes.GetString( selection ) )
+                    
+                    self._regexes.Delete( selection )
+                    
+                    self._refresh_callable()
+                    
+                
+            
+            def GetTags( self, index, path ):
+                
+                tags = []
+                
+                for regex in self._regexes.GetStrings():
+                    
+                    try:
+                        
+                        result = re.findall( regex, path )
+                        
+                        for match in result: tags.append( match )
+                        
+                    except: pass
+                    
+                
+                for ( namespace, regex ) in self._quick_namespaces_list.GetClientData():
+                    
+                    try:
+                        
+                        result = re.findall( regex, path )
+                        
+                        for match in result: tags.append( namespace + ':' + match )
+                        
+                    except: pass
+                    
+                
+                num_namespace = self._num_namespace.GetValue()
+                
+                if num_namespace != '':
+                    
+                    num_base = self._num_base.GetValue()
+                    num_step = self._num_step.GetValue()
+                    
+                    tag_num = num_base + index * num_step
+                    
+                    tags.append( num_namespace + ':' + str( tag_num ) )
+                    
+                
+                return tags
+                
             
         
-        def EventLoadFromTextFiles( self, event ):
+        class _SimplePanel( wx.Panel ):
             
-            self._load_from_txt_files = self._load_from_txt_files_checkbox.IsChecked()
-            
-            self._RefreshFileList()
-            
-        
-        def EventNumNamespaceChanged( self, event ): self._RefreshFileList()
-        
-        def EventRecalcNum( self, event ):
-            
-            num_base = self._num_base.GetValue()
-            num_step = self._num_step.GetValue()
-            
-            for ( index, ( ( original_num, processed_num ), path, tags ) ) in enumerate( self._paths_list.GetClientData() ):
+            def __init__( self, parent, service_key, refresh_callable ):
                 
-                processed_num = num_base + original_num * num_step
+                wx.Panel.__init__( self, parent )
                 
-                pretty_num = HydrusData.ConvertIntToPrettyString( processed_num )
+                self._service_key = service_key
+                self._refresh_callable = refresh_callable
                 
-                tags_string = ', '.join( tags )
+                #
                 
-                self._paths_list.UpdateRow( index, ( pretty_num, path, tags_string ), ( ( original_num, processed_num ), path, tags ) )
+                self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
+                
+                self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagsRemoved )
+                
+                expand_parents = True
+                
+                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+                
+                #
+                
+                self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for selected files' )
+                
+                self._paths_to_single_tags = collections.defaultdict( set )
+                
+                self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagsRemoved )
+                
+                expand_parents = True
+                
+                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+                
+                self.SetSelectedPaths( [] )
+                
+                #
+                
+                self._checkboxes_panel = ClientGUICommon.StaticBox( self, 'misc' )
+                
+                self._load_from_txt_files_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'try to load tags from neighbouring .txt files' )
+                self._load_from_txt_files_checkbox.SetToolTipString( 'This looks for a [path].txt file, and will try to load line-separated tags from it. Look at thumbnail->share->export->files\'s txt file checkbox for an example.' )
+                self._load_from_txt_files_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+                
+                self._filename_namespace = wx.TextCtrl( self._checkboxes_panel )
+                self._filename_namespace.Bind( wx.EVT_TEXT, self.EventRefresh )
+                
+                self._filename_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'add filename? [namespace]' )
+                self._filename_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+                
+                self._dir_namespace_1 = wx.TextCtrl( self._checkboxes_panel )
+                self._dir_namespace_1.Bind( wx.EVT_TEXT, self.EventRefresh )
+                
+                self._dir_checkbox_1 = wx.CheckBox( self._checkboxes_panel, label = 'add first directory? [namespace]' )
+                self._dir_checkbox_1.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+                
+                self._dir_namespace_2 = wx.TextCtrl( self._checkboxes_panel )
+                self._dir_namespace_2.Bind( wx.EVT_TEXT, self.EventRefresh )
+                
+                self._dir_checkbox_2 = wx.CheckBox( self._checkboxes_panel, label = 'add second directory? [namespace]' )
+                self._dir_checkbox_2.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+                
+                self._dir_namespace_3 = wx.TextCtrl( self._checkboxes_panel )
+                self._dir_namespace_3.Bind( wx.EVT_TEXT, self.EventRefresh )
+                
+                self._dir_checkbox_3 = wx.CheckBox( self._checkboxes_panel, label = 'add third directory? [namespace]' )
+                self._dir_checkbox_3.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+                
+                #
+                
+                self._tags_panel.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._tags_panel.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                self._single_tags_panel.AddF( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._single_tags_panel.AddF( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                filename_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                filename_hbox.AddF( self._filename_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+                filename_hbox.AddF( self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                dir_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
+                
+                dir_hbox_1.AddF( self._dir_checkbox_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+                dir_hbox_1.AddF( self._dir_namespace_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                dir_hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
+                
+                dir_hbox_2.AddF( self._dir_checkbox_2, CC.FLAGS_EXPAND_BOTH_WAYS )
+                dir_hbox_2.AddF( self._dir_namespace_2, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                dir_hbox_3 = wx.BoxSizer( wx.HORIZONTAL )
+                
+                dir_hbox_3.AddF( self._dir_checkbox_3, CC.FLAGS_EXPAND_BOTH_WAYS )
+                dir_hbox_3.AddF( self._dir_namespace_3, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._checkboxes_panel.AddF( self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._checkboxes_panel.AddF( filename_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._checkboxes_panel.AddF( dir_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._checkboxes_panel.AddF( dir_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._checkboxes_panel.AddF( dir_hbox_3, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._checkboxes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self.SetSizer( hbox )
                 
             
-        
-        def EventRemoveRegex( self, event ):
-            
-            selection = self._regexes.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
+            def EnterTags( self, tags ):
                 
-                if len( self._regex_box.GetValue() ) == 0: self._regex_box.SetValue( self._regexes.GetString( selection ) )
+                tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
                 
-                self._regexes.Delete( selection )
+                parents = set()
                 
-                self._RefreshFileList()
+                for tag in tags:
+                    
+                    some_parents = tag_parents_manager.GetParents( self._service_key, tag )
+                    
+                    parents.update( some_parents )
+                    
                 
-            
-        
-        def GetInfo( self ):
-            
-            paths_to_tags = { path : tags for ( ( original_num, processed_num ), path, tags ) in self._paths_list.GetClientData() }
-            
-            return ( self._service_key, paths_to_tags )
-            
-        
-        def SetTagBoxFocus( self ): self._tag_box.SetFocus()
-        
-        def SingleTagsRemoved( self, tags ):
-            
-            indices = self._paths_list.GetAllSelected()
-            
-            for index in indices:
-                
-                ( ( original_num, processed_num ), path, old_tags ) = self._paths_list.GetClientData( index )
-                
-                current_tags = self._paths_to_single_tags[ path ]
-                
-                current_tags.difference_update( tags )
+                if len( tags ) > 0:
+                    
+                    self._tags.AddTags( tags )
+                    self._tags.AddTags( parents )
+                    
+                    self._refresh_callable()
+                    
                 
             
-            self._RefreshFileList()
+            def EnterTagsSingle( self, tags ):
+                
+                tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                
+                parents = set()
+                
+                for tag in tags:
+                    
+                    some_parents = tag_parents_manager.GetParents( self._service_key, tag )
+                    
+                    parents.update( some_parents )
+                    
+                
+                if len( tags ) > 0:
+                    
+                    self._single_tags.AddTags( tags )
+                    self._single_tags.AddTags( parents )
+                    
+                    for path in self._selected_paths:
+                        
+                        current_tags = self._paths_to_single_tags[ path ]
+                        
+                        current_tags.update( tags )
+                        current_tags.update( parents )
+                        
+                    
+                    self._refresh_callable()
+                    
+                
             
-        
-        def TagsRemoved( self, tag ):
+            def EventRefresh( self, event ):
+                
+                self._refresh_callable()
+                
             
-            self._RefreshFileList()
+            def GetTags( self, index, path ):
+                
+                tags = []
+                
+                tags.extend( self._tags.GetTags() )
+                
+                if path in self._paths_to_single_tags:
+                    
+                    tags.extend( list( self._paths_to_single_tags[ path ] ) )
+                    
+                
+                if self._load_from_txt_files_checkbox.IsChecked():
+                    
+                    txt_path = path + '.txt'
+                    
+                    if os.path.exists( txt_path ):
+                        
+                        with open( txt_path, 'rb' ) as f:
+                            
+                            txt_tags_string = f.read()
+                            
+                        
+                        try:
+                            
+                            txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
+                            
+                            tags.extend( txt_tags )
+                            
+                        except:
+                            
+                            HydrusData.Print( 'Could not parse the tags from ' + txt_path + '!' )
+                            
+                        
+                    
+                
+                ( base, filename ) = os.path.split( path )
+                
+                if self._filename_checkbox.IsChecked():
+                    
+                    namespace = self._filename_namespace.GetValue()
+                    
+                    if namespace != '':
+                        
+                        tag = namespace + ':' + filename
+                        
+                    else:
+                        
+                        tag = filename
+                        
+                    
+                    tags.append( tag )
+                    
+                
+                ( drive, dirs ) = os.path.splitdrive( base )
+                
+                while dirs.startswith( os.path.sep ):
+                    
+                    dirs = dirs[1:]
+                    
+                
+                dirs = dirs.split( os.path.sep )
+                
+                if len( dirs ) > 0 and self._dir_checkbox_1.IsChecked():
+                    
+                    namespace = self._dir_namespace_1.GetValue()
+                    
+                    if namespace != '':
+                        
+                        tag = namespace + ':' + dirs[0]
+                        
+                    else:
+                        
+                        tag = dirs[0]
+                        
+                    
+                    tags.append( tag )
+                    
+                
+                if len( dirs ) > 1 and self._dir_checkbox_2.IsChecked():
+                    
+                    namespace = self._dir_namespace_2.GetValue()
+                    
+                    if namespace != '':
+                        
+                        tag = namespace + ':' + dirs[1]
+                        
+                    else:
+                        
+                        tag = dirs[1]
+                        
+                    
+                    tags.append( tag )
+                    
+                
+                if len( dirs ) > 2 and self._dir_checkbox_3.IsChecked():
+                    
+                    namespace = self._dir_namespace_3.GetValue()
+                    
+                    if namespace != '':
+                        
+                        tag = namespace + ':' + dirs[2]
+                        
+                    else:
+                        
+                        tag = dirs[2]
+                        
+                    
+                    tags.append( tag )
+                    
+                
+                return tags
+                
+            
+            def SingleTagsRemoved( self, tags ):
+                
+                for path in self._selected_paths:
+                    
+                    current_tags = self._paths_to_single_tags[ path ]
+                    
+                    current_tags.difference_update( tags )
+                    
+                
+                self._refresh_callable()
+                
+            
+            def SetSelectedPaths( self, paths ):
+                
+                self._selected_paths = paths
+                
+                single_tags = set()
+                
+                if len( paths ) > 0:
+                    
+                    for path in self._selected_paths:
+                        
+                        if path in self._paths_to_single_tags:
+                            
+                            single_tags.update( self._paths_to_single_tags[ path ] )
+                            
+                        
+                    
+                    self._single_tag_box.Enable()
+                    
+                else:
+                    
+                    self._single_tag_box.Disable()
+                    
+                
+                self._single_tags.SetTags( single_tags )
+                
+            
+            def TagsRemoved( self, tag ):
+                
+                self._refresh_callable()
+                
             
         
     
@@ -4469,7 +4598,7 @@ class DialogShortcuts( Dialog ):
             
             for ( key, action ) in key_dict.items():
                 
-                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'remove' ):
+                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove' ):
                     
                     service_key = None
                     

@@ -1103,7 +1103,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             ipfs_service = HydrusGlobals.client_controller.GetServicesManager().GetService( file_service_key )
             
-            HydrusGlobals.client_controller.CallToThread( ipfs_service.PinDirectory, hashes )
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter a note to describe this directory.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                note = dlg.GetValue()
+                
+                HydrusGlobals.client_controller.CallToThread( ipfs_service.PinDirectory, hashes, note )
+                
             
         
     
@@ -2288,11 +2296,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if multiple_selected:
                     
-                    uploaded_phrase = 'selected uploaded to'
-                    pending_phrase = 'selected pending to'
-                    petitioned_phrase = 'selected petitioned from'
-                    deleted_phrase = 'selected deleted from'
-                    
                     download_phrase = 'download all possible selected'
                     rescind_download_phrase = 'cancel downloads for all possible selected'
                     upload_phrase = 'upload all possible selected to'
@@ -2301,8 +2304,6 @@ class MediaPanelThumbnails( MediaPanel ):
                     rescind_petition_phrase = 'rescind selected petitions for'
                     remote_delete_phrase = 'delete all possible selected from'
                     modify_account_phrase = 'modify the accounts that uploaded selected to'
-                    
-                    pinned_phrase = 'selected pinned to'
                     
                     pin_phrase = 'pin all to'
                     rescind_pin_phrase = 'rescind pin to'
@@ -2324,11 +2325,6 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 else:
                     
-                    uploaded_phrase = 'uploaded to'
-                    pending_phrase = 'pending to'
-                    petitioned_phrase = 'petitioned from'
-                    deleted_phrase = 'deleted from'
-                    
                     download_phrase = 'download'
                     rescind_download_phrase = 'cancel download'
                     upload_phrase = 'upload to'
@@ -2337,8 +2333,6 @@ class MediaPanelThumbnails( MediaPanel ):
                     rescind_petition_phrase = 'rescind petition for'
                     remote_delete_phrase = 'delete from'
                     modify_account_phrase = 'modify the account that uploaded this to'
-                    
-                    pinned_phrase = 'pinned to'
                     
                     pin_phrase = 'pin to'
                     rescind_pin_phrase = 'rescind pin to'
@@ -2486,27 +2480,33 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( disparate_current_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_current_file_service_keys, 'some uploaded to', CC.ID_NULL )
                 
-                if len( common_current_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_current_file_service_keys, uploaded_phrase, CC.ID_NULL )
+                if multiple_selected:
+                    
+                    if len( common_current_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_current_file_service_keys, 'selected uploaded to', CC.ID_NULL )
+                    
                 
                 if len( disparate_pending_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_pending_file_service_keys, 'some pending to', CC.ID_NULL )
                 
-                if len( common_pending_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_pending_file_service_keys, pending_phrase, CC.ID_NULL )
+                if len( common_pending_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_pending_file_service_keys, 'pending to', CC.ID_NULL )
                 
                 if len( disparate_petitioned_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_petitioned_file_service_keys, 'some petitioned from', CC.ID_NULL )
                 
-                if len( common_petitioned_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_petitioned_file_service_keys, petitioned_phrase, CC.ID_NULL )
+                if len( common_petitioned_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_petitioned_file_service_keys, 'petitioned from', CC.ID_NULL )
                 
                 if len( disparate_deleted_file_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_deleted_file_service_keys, 'some deleted from', CC.ID_NULL )
                 
-                if len( common_deleted_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_deleted_file_service_keys, deleted_phrase, CC.ID_NULL )
+                if len( common_deleted_file_service_keys ) > 0: AddServiceKeysToMenu( menu, common_deleted_file_service_keys, 'deleted from', CC.ID_NULL )
                 
                 if len( disparate_current_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_current_ipfs_service_keys, 'some pinned to', CC.ID_NULL )
                 
-                if len( common_current_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, common_current_ipfs_service_keys, pinned_phrase, CC.ID_NULL )
+                if multiple_selected:
+                    
+                    if len( common_current_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, common_current_ipfs_service_keys, 'selected pinned to', CC.ID_NULL )
+                    
                 
                 if len( disparate_pending_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_pending_ipfs_service_keys, 'some to be pinned to', CC.ID_NULL )
                 
-                if len( common_pending_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, common_pending_ipfs_service_keys, pending_phrase, CC.ID_NULL )
+                if len( common_pending_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, common_pending_ipfs_service_keys, 'to be pinned to', CC.ID_NULL )
                 
                 if len( disparate_petitioned_ipfs_service_keys ) > 0: AddServiceKeysToMenu( menu, disparate_petitioned_ipfs_service_keys, 'some to be unpinned from', CC.ID_NULL )
                 

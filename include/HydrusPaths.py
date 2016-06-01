@@ -116,6 +116,8 @@ def CopyAndMergeTree( source, dest ):
         os.makedirs( dest )
         
     
+    num_errors = 0
+    
     for ( root, dirnames, filenames ) in os.walk( source ):
         
         dest_root = root.replace( source, dest )
@@ -137,14 +139,21 @@ def CopyAndMergeTree( source, dest ):
         
         for filename in filenames:
             
+            if num_errors > 5:
+                
+                raise Exception( 'Too many errors, directory copy abandoned.' )
+                
+            
             pauser.Pause()
             
             source_path = os.path.join( root, filename )
             dest_path = os.path.join( dest_root, filename )
             
-            if not PathsHaveSameSizeAndDate( source, dest ):
+            ok = MirrorFile( source_path, dest_path )
+            
+            if not ok:
                 
-                shutil.copy2( source_path, dest_path )
+                num_errors += 1
                 
             
         
@@ -259,6 +268,26 @@ def MakeFileWritable( path ):
     try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
     except: pass
     
+def MirrorFile( source, dest ):
+    
+    if not PathsHaveSameSizeAndDate( source, dest ):
+        
+        try:
+            
+            shutil.copy2( source, dest )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'Trying to copy ' + source + ' to ' + dest + ' caused the following problem:' )
+            
+            HydrusData.ShowException( e )
+            
+            return False
+            
+        
+    
+    return True
+    
 def MirrorTree( source, dest ):
     
     pauser = HydrusData.BigJobPauser()
@@ -267,6 +296,8 @@ def MirrorTree( source, dest ):
         
         os.makedirs( dest )
         
+    
+    num_errors = 0
     
     for ( root, dirnames, filenames ) in os.walk( source ):
         
@@ -293,6 +324,11 @@ def MirrorTree( source, dest ):
         
         for filename in filenames:
             
+            if num_errors > 5:
+                
+                raise Exception( 'Too many errors, directory copy abandoned.' )
+                
+            
             pauser.Pause()
             
             source_path = os.path.join( root, filename )
@@ -301,9 +337,11 @@ def MirrorTree( source, dest ):
             
             surplus_dest_paths.discard( dest_path )
             
-            if not PathsHaveSameSizeAndDate( source_path, dest_path ):
+            ok = MirrorFile( source_path, dest_path )
+            
+            if not ok:
                 
-                shutil.copy2( source_path, dest_path )
+                num_errors += 1
                 
             
         

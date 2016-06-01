@@ -93,7 +93,10 @@ def HasVideoStream( path ):
         info = Hydrusffmpeg_parse_infos( path )
         
     except IOError as e:
+        
+        HydrusData.ShowException( 'Determining the mime for the file at ' + path + ' caused the following problem:' )
         HydrusData.ShowException( e )
+        
         return False
         
     
