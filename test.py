@@ -50,16 +50,16 @@ class Controller( object ):
         
         HC.DB_DIR = tempfile.mkdtemp()
         
-        HC.CLIENT_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'client_thumbnails' )
         HC.CLIENT_UPDATES_DIR = os.path.join( HC.DB_DIR, 'client_updates' )
         
         HC.SERVER_FILES_DIR = os.path.join( HC.DB_DIR, 'server_files' )
-        HC.SERVER_THUMBNAILS_DIR = os.path.join( HC.DB_DIR, 'server_thumbnails' )
         HC.SERVER_UPDATES_DIR = os.path.join( HC.DB_DIR, 'server_updates' )
         
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
         
         os.makedirs( client_files_default )
+        
+        HydrusGlobals.is_first_start = True
         
         HydrusGlobals.controller = self
         HydrusGlobals.client_controller = self
@@ -284,18 +284,42 @@ if __name__ == '__main__':
         
         threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
-        controller = Controller()
-        
         app = wx.App()
         
-        win = wx.Frame( None )
+        controller = Controller()
         
-        wx.CallAfter( controller.Run )
-        #threading.Thread( target = controller.Run ).start()
-        
-        wx.CallAfter( win.Destroy )
-        
-        app.MainLoop()
+        try:
+            
+            win = wx.Frame( None )
+            
+            wx.CallAfter( controller.Run )
+            #threading.Thread( target = controller.Run ).start()
+            
+            wx.CallAfter( win.Destroy )
+            
+            app.MainLoop()
+            
+        except:
+            
+            import traceback
+            
+            traceback.print_exc()
+            
+        finally:
+            
+            HydrusGlobals.view_shutdown = True
+            
+            controller.pubimmediate( 'wake_daemons' )
+            
+            HydrusGlobals.model_shutdown = True
+            
+            controller.pubimmediate( 'wake_daemons' )
+            
+            if HC.DB_DIR != original_db_dir:
+                
+                controller.TidyUp()
+                
+            
         
     except:
         
@@ -305,21 +329,9 @@ if __name__ == '__main__':
         
     finally:
         
-        HydrusGlobals.view_shutdown = True
-        
-        controller.pubimmediate( 'wake_daemons' )
-        
-        HydrusGlobals.model_shutdown = True
-        
-        controller.pubimmediate( 'wake_daemons' )
-        
-        if HC.DB_DIR != original_db_dir:
-            
-            controller.TidyUp()
-            
-        
         reactor.callFromThread( reactor.stop )
+        
+        print( 'This was version ' + str( HC.SOFTWARE_VERSION ) )
         
         raw_input()
         
-    

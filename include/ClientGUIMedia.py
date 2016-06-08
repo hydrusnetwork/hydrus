@@ -126,6 +126,17 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HydrusGlobals.client_controller.pub( 'clipboard', 'bmp', media )
         
     
+    def _CopyFilesToClipboard( self ):
+        
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL )
+        
+        paths = [ client_files_manager.GetFilePath( hash ) for hash in hashes ]
+        
+        HydrusGlobals.client_controller.pub( 'clipboard', 'paths', paths )
+        
+    
     def _CopyHashToClipboard( self, hash_type ):
         
         display_media = self._focussed_media.GetDisplayMedia()
@@ -2009,8 +2020,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if command == 'archive': self._Archive()
             elif command == 'copy_bmp': self._CopyBMPToClipboard()
-            elif command == 'copy_files':
-                with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL ) )
+            elif command == 'copy_files': self._CopyFilesToClipboard()
             elif command == 'copy_hash': self._CopyHashToClipboard( data )
             elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
             elif command == 'copy_known_urls': self._CopyKnownURLsToClipboard()

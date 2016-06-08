@@ -97,7 +97,7 @@ def ConvertPortablePathToAbsPath( portable_path ):
         
     else:
         
-        abs_path = os.path.join( HC.BASE_DIR, portable_path )
+        abs_path = os.path.normpath( os.path.join( HC.BASE_DIR, portable_path ) )
         
     
     if not HC.PLATFORM_WINDOWS and not os.path.exists( abs_path ):
@@ -168,16 +168,24 @@ def DeletePath( path ):
         
         MakeFileWritable( path )
         
-        if os.path.isdir( path ):
+        try:
             
-            shutil.rmtree( path )
+            if os.path.isdir( path ):
+                
+                shutil.rmtree( path )
+                
+            else:
+                
+                os.remove( path )
+                
             
-        else:
+        except Exception as e:
             
-            os.remove( path )
+            HydrusData.ShowText( 'Trying to delete ' + path + ' caused the following error:' )
+            HydrusData.ShowException( e )
             
         
-
+    
 def GetDevice( path ):
     
     path = path.lower()
@@ -268,6 +276,26 @@ def MakeFileWritable( path ):
     try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
     except: pass
     
+def MergeFile( source, dest ):
+    
+    if not PathsHaveSameSizeAndDate( source, dest ):
+        
+        try:
+            
+            shutil.move( source, dest )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'Trying to move ' + source + ' to ' + dest + ' caused the following problem:' )
+            
+            HydrusData.ShowException( e )
+            
+            return False
+            
+        
+    
+    return True
+    
 def MirrorFile( source, dest ):
     
     if not PathsHaveSameSizeAndDate( source, dest ):
@@ -353,6 +381,59 @@ def MirrorTree( source, dest ):
             
         
     
+def MoveAndMergeTree( source, dest ):
+    
+    pauser = HydrusData.BigJobPauser()
+    
+    if not os.path.exists( dest ):
+        
+        os.makedirs( dest )
+        
+    
+    num_errors = 0
+    
+    for ( root, dirnames, filenames ) in os.walk( source ):
+        
+        dest_root = root.replace( source, dest )
+        
+        for dirname in dirnames:
+            
+            pauser.Pause()
+            
+            source_path = os.path.join( root, dirname )
+            dest_path = os.path.join( dest_root, dirname )
+            
+            if not os.path.exists( dest_path ):
+                
+                os.makedirs( dest_path )
+                
+            
+            shutil.copystat( source_path, dest_path )
+            
+        
+        for filename in filenames:
+            
+            if num_errors > 5:
+                
+                raise Exception( 'Too many errors, directory move abandoned.' )
+                
+            
+            pauser.Pause()
+            
+            source_path = os.path.join( root, filename )
+            dest_path = os.path.join( dest_root, filename )
+            
+            ok = MergeFile( source_path, dest_path )
+            
+            if not ok:
+                
+                num_errors += 1
+                
+            
+        
+    
+    DeletePath( source )
+    
 def PathsHaveSameSizeAndDate( path1, path2 ):
     
     if os.path.exists( path1 ) and os.path.exists( path2 ):
@@ -395,7 +476,7 @@ def RecyclePath( path ):
                 
             except:
                 
-                HydrusData.Print( 'Trying to prepare a file for recycling created this error:' )
+                HydrusData.Print( 'Trying to prepare ' + path + ' for recycling created this error:' )
                 traceback.print_exc()
                 
                 return
@@ -413,7 +494,7 @@ def RecyclePath( path ):
             
         except:
             
-            HydrusData.Print( 'Trying to recycle a file created this error:' )
+            HydrusData.Print( 'Trying to recycle ' + path + ' created this error:' )
             traceback.print_exc()
             
             HydrusData.Print( 'It has been fully deleted instead.' )

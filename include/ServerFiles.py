@@ -1,20 +1,28 @@
 import HydrusConstants as HC
+import HydrusData
 import HydrusExceptions
 import itertools
 import os
 
 def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
 
-def GetExpectedPath( file_type, hash ):
-    
-    if file_type == 'file': directory = HC.SERVER_FILES_DIR
-    elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
+def GetExpectedFilePath( hash ):
     
     hash_encoded = hash.encode( 'hex' )
     
     first_two_chars = hash_encoded[:2]
     
-    path = os.path.join( directory, first_two_chars, hash_encoded )
+    path = os.path.join( HC.SERVER_FILES_DIR, first_two_chars, hash_encoded )
+    
+    return path
+    
+def GetExpectedThumbnailPath( hash ):
+    
+    hash_encoded = hash.encode( 'hex' )
+    
+    first_two_chars = hash_encoded[:2]
+    
+    path = os.path.join( HC.SERVER_FILES_DIR, first_two_chars, hash_encoded + '.thumbnail' )
     
     return path
     
@@ -33,17 +41,6 @@ def GetExpectedServiceUpdatePackagePath( service_key, begin ):
 def GetExpectedUpdateDir( service_key ):
     
     return os.path.join( HC.SERVER_UPDATES_DIR, service_key.encode( 'hex' ) )
-    
-def GetPath( file_type, hash ):
-    
-    path = GetExpectedPath( file_type, hash )
-    
-    if not os.path.exists( path ):
-        
-        raise HydrusExceptions.NotFoundException( file_type + ' not found!' )
-        
-    
-    return path
     
 def GetContentUpdatePackagePath( service_key, begin, subindex ):
     
@@ -67,22 +64,48 @@ def GetServiceUpdatePackagePath( service_key, begin ):
     
     return path
     
+def GetFilePath( hash ):
+    
+    path = GetExpectedFilePath( hash )
+    
+    if not os.path.exists( path ):
+        
+        raise HydrusExceptions.NotFoundException( 'File not found!' )
+        
+    
+    return path
+    
+def GetThumbnailPath( hash ):
+    
+    path = GetExpectedThumbnailPath( hash )
+    
+    if not os.path.exists( path ):
+        
+        raise HydrusExceptions.NotFoundException( 'Thumbnail not found!' )
+        
+    
+    return path
+    
 def IterateAllPaths( file_type ):
     
-    if file_type == 'file': directory = HC.SERVER_FILES_DIR
-    elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
-    
-    hex_chars = '0123456789abcdef'
-    
-    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+    for prefix in HydrusData.IterateHexPrefixes():
         
-        dir = os.path.join( directory, one + two )
+        dir = os.path.join( HC.SERVER_FILES_DIR, prefix )
         
-        next_paths = os.listdir( dir )
+        filenames = os.listdir( dir )
         
-        for path in next_paths:
+        for filename in filenames:
             
-            yield os.path.join( dir, path )
+            if file_type == 'file' and filename.endswith( '.thumbnail' ):
+                
+                continue
+                
+            elif file_type == 'thumbnail' and not filename.endswith( '.thumbnail' ):
+                
+                continue
+                
+            
+            yield os.path.join( dir, filename )
             
         
     

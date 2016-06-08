@@ -1065,7 +1065,6 @@ class DB( HydrusDB.HydrusDB ):
             
             num_files = len( valid_hash_ids )
             delta_size = sum( ( size for ( size, mime ) in info ) )
-            num_thumbnails = sum( ( 1 for ( size, mime ) in info if mime in HC.MIMES_WITH_THUMBNAILS ) )
             num_inbox = len( valid_hash_ids.intersection( self._inbox_hash_ids ) )
             
             service_info_updates = []
@@ -1073,17 +1072,11 @@ class DB( HydrusDB.HydrusDB ):
             service_info_updates.append( ( -num_deleted, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
             service_info_updates.append( ( delta_size, service_id, HC.SERVICE_INFO_TOTAL_SIZE ) )
             service_info_updates.append( ( num_files, service_id, HC.SERVICE_INFO_NUM_FILES ) )
-            service_info_updates.append( ( num_thumbnails, service_id, HC.SERVICE_INFO_NUM_THUMBNAILS ) )
             service_info_updates.append( ( num_inbox, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
             
             self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
             
             self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + splayed_valid_hash_ids + ';', ( service_id, ) )
-            
-            if num_thumbnails > 0:
-                
-                self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
-                
             
             if service_id == self._local_file_service_id:
                 
@@ -1249,38 +1242,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _AddThumbnails( self, thumbnails ):
-        
-        for ( hash, thumbnail ) in thumbnails:
-            
-            thumbnail_path = ClientFiles.GetExpectedThumbnailPath( hash, True )
-            
-            with open( thumbnail_path, 'wb' ) as f:
-                
-                f.write( thumbnail )
-                
-            
-            try:
-                
-                phash = ClientImageHandling.GeneratePerceptualHash( thumbnail_path )
-                
-                hash_id = self._GetHashId( hash )
-                
-                self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
-                
-            except:
-                
-                pass
-                
-            
-        
-        self._c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL, ) )
-        
-        hashes = { hash for ( hash, thumbnail ) in thumbnails }
-        
-        self.pub_after_commit( 'new_thumbnails', hashes )
-        
-    
     def _AddWebSession( self, name, cookies, expires ):
         
         self._c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
@@ -1429,10 +1390,6 @@ class DB( HydrusDB.HydrusDB ):
             job_key.SetVariable( 'popup_text_1', 'copying files directory' )
             
             HydrusPaths.MirrorTree( client_files_default, os.path.join( path, 'client_files' ) )
-            
-            job_key.SetVariable( 'popup_text_1', 'copying thumbnails directory' )
-            
-            HydrusPaths.MirrorTree( os.path.join( self._db_dir, 'client_thumbnails' ), os.path.join( path, 'client_thumbnails' ) )
             
             job_key.SetVariable( 'popup_text_1', 'copying updates directory' )
             
@@ -1926,7 +1883,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             except HydrusExceptions.FileMissingException:
                 
-                print( 'Could not find the file at ' + client_files_manager.GetExpectedFilePath( hash, mime ) + '!' )
+                print( 'Could not find the file for ' + hash.encode( 'hex' ) + '!' )
                 
                 deletee_hash_ids.append( hash_id )
                 
@@ -2001,282 +1958,6 @@ class DB( HydrusDB.HydrusDB ):
         self._tag_archives = {}
         
     
-    def _ClearOrphans( self, move_location = None ):
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        job_key.SetVariable( 'popup_title', 'clearing orphans' )
-        job_key.SetVariable( 'popup_text_1', 'preparing' )
-        
-        self._controller.pub( 'message', job_key )
-        
-        orphan_paths = []
-        orphan_thumbnails = []
-        
-        client_files_manager = self._controller.GetClientFilesManager()
-        
-        for ( i, path ) in enumerate( client_files_manager.IterateAllFilePaths() ):
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return
-                
-            
-            if i % 100 == 0:
-                
-                status = 'reviewed ' + HydrusData.ConvertIntToPrettyString( i ) + ' files, found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans'
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
-            
-            try:
-                
-                is_an_orphan = False
-                
-                ( directory, filename ) = os.path.split( path )
-                
-                if '.' in filename:
-                    
-                    ( should_be_a_hex_hash, ext ) = filename.split( '.', 1 )
-                    
-                    hash = should_be_a_hex_hash.decode( 'hex' )
-                    
-                    if self._HashExists( hash ):
-                        
-                        hash_id = self._GetHashId( hash )
-                        
-                        result = self._c.execute( 'SELECT 1 FROM current_files WHERE service_id IN ( ?, ? ) AND hash_id = ?;', ( self._local_file_service_id, self._trash_service_id, hash_id ) ).fetchone()
-                        
-                        if result is None:
-                            
-                            is_an_orphan = True
-                            
-                        
-                    else:
-                        
-                        is_an_orphan = True
-                        
-                    
-                else:
-                    
-                    is_an_orphan = True
-                    
-                
-            except:
-                
-                is_an_orphan = True
-                
-            
-            if is_an_orphan:
-                
-                orphan_paths.append( path )
-                
-            
-        
-        time.sleep( 2 )
-        
-        for ( i, path ) in enumerate( ClientFiles.IterateAllThumbnailPaths() ):
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return
-                
-            
-            if i % 100 == 0:
-                
-                status = 'reviewed ' + HydrusData.ConvertIntToPrettyString( i ) + ' thumbnails, found ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphans'
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
-            
-            try:
-                
-                is_an_orphan = False
-                
-                ( directory, filename ) = os.path.split( path )
-                
-                if filename.endswith( '_resized' ):
-                    
-                    should_be_a_hex_hash = filename.replace( '_resized', '' )
-                    
-                else:
-                    
-                    should_be_a_hex_hash = filename
-                    
-                
-                hash = should_be_a_hex_hash.decode( 'hex' )
-                
-                if self._HashExists( hash ):
-                    
-                    hash_id = self._GetHashId( hash )
-                    
-                    result = self._c.execute( 'SELECT 1 FROM current_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                    
-                    if result is None:
-                        
-                        is_an_orphan = True
-                        
-                    
-                else:
-                    
-                    is_an_orphan = True
-                    
-                
-            except:
-                
-                is_an_orphan = True
-                
-            
-            if is_an_orphan:
-                
-                orphan_thumbnails.append( path )
-                
-            
-        
-        time.sleep( 2 )
-        
-        if len( orphan_paths ) > 0:
-            
-            if move_location is None:
-                
-                status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now deleting'
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
-                time.sleep( 5 )
-                
-                for path in orphan_paths:
-                    
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        return
-                        
-                    
-                    HydrusData.Print( 'Deleting the orphan ' + path )
-                    
-                    status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
-                    
-                    job_key.SetVariable( 'popup_text_1', status )
-                    
-                    HydrusPaths.DeletePath( path )
-                    
-                
-            else:
-                
-                status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now moving to ' + move_location
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
-                time.sleep( 5 )
-                
-                for path in orphan_paths:
-                    
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        return
-                        
-                    
-                    ( source_dir, filename ) = os.path.split( path )
-                    
-                    dest = os.path.join( move_location, filename )
-                    
-                    dest = HydrusPaths.AppendPathUntilNoConflicts( dest )
-                    
-                    HydrusData.Print( 'Moving the orphan ' + path + ' to ' + dest )
-                    
-                    status = 'moving orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
-                    
-                    job_key.SetVariable( 'popup_text_1', status )
-                    
-                    shutil.move( path, dest )
-                    
-                
-            
-        
-        if len( orphan_thumbnails ) > 0:
-            
-            status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
-            
-            job_key.SetVariable( 'popup_text_1', status )
-            
-            time.sleep( 5 )
-            
-            for ( i, path ) in enumerate( orphan_thumbnails ):
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                if should_quit:
-                    
-                    return
-                    
-                
-                status = 'deleting orphan thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
-                HydrusData.Print( 'Deleting the orphan ' + path )
-                
-                HydrusPaths.DeletePath( path )
-                
-            
-        
-        if len( orphan_paths ) == 0 and len( orphan_thumbnails ) == 0:
-            
-            final_text = 'no orphans found!'
-            
-        else:
-            
-            final_text = HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphan files and ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
-            
-        
-        job_key.SetVariable( 'popup_text_1', final_text )
-        
-        HydrusData.Print( job_key.ToString() )
-        
-        job_key.Finish()
-        
-    
-    def _CopyFiles( self, hashes ):
-        
-        client_files_manager = self._controller.GetClientFilesManager()
-        
-        if len( hashes ) > 0:
-            
-            error_messages = set()
-            
-            paths = []
-            
-            for hash in hashes:
-                
-                try:
-                    
-                    path = client_files_manager.GetFilePath( hash )
-                    
-                    paths.append( path )
-                    
-                except Exception as e:
-                    
-                    error_messages.add( HydrusData.ToUnicode( e ) )
-                    
-                
-            
-            self.pub_after_commit( 'clipboard', 'paths', paths )
-            
-            if len( error_messages ) > 0:
-                
-                raise Exception( 'Some of the file copies failed with the following error message(s):' + os.linesep + os.linesep.join( error_messages ) )
-                
-            
-        
-    
     def _CreateDB( self ):
         
         HydrusGlobals.is_first_start = True
@@ -2288,19 +1969,11 @@ class DB( HydrusDB.HydrusDB ):
         other_dirs = []
         
         other_dirs.append( os.path.join( self._db_dir, 'client_archives' ) )
-        other_dirs.append( os.path.join( self._db_dir, 'client_thumbnails' ) )
         other_dirs.append( os.path.join( self._db_dir, 'client_updates' ) )
         
         for path in other_dirs:
             
             if not os.path.exists( path ): os.makedirs( path )
-            
-        
-        for prefix in HydrusData.IterateHexPrefixes():
-            
-            dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
-            
-            if not os.path.exists( dir ): os.makedirs( dir )
             
         
         HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
@@ -2511,14 +2184,12 @@ class DB( HydrusDB.HydrusDB ):
             
             num_files = len( valid_hash_ids )
             delta_size = sum( ( size for ( size, mime ) in info ) )
-            num_thumbnails = sum( ( 1 for ( size, mime ) in info if mime in HC.MIMES_WITH_THUMBNAILS ) )
             num_inbox = len( valid_hash_ids.intersection( self._inbox_hash_ids ) )
             
             service_info_updates = []
             
             service_info_updates.append( ( -delta_size, service_id, HC.SERVICE_INFO_TOTAL_SIZE ) )
             service_info_updates.append( ( -num_files, service_id, HC.SERVICE_INFO_NUM_FILES ) )
-            service_info_updates.append( ( -num_thumbnails, service_id, HC.SERVICE_INFO_NUM_THUMBNAILS ) )
             service_info_updates.append( ( -num_inbox, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
             
             if not files_being_undeleted:
@@ -2531,11 +2202,6 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
-            
-            if num_thumbnails > 0:
-                
-                self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ' + str( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) + ';', ( service_id, ) )
-                
             
             self._c.execute( 'DELETE FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
             self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
@@ -2637,55 +2303,19 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeletePhysicalFiles( self, hash_ids ):
         
-        def DeletePaths( paths ):
-            
-            time.sleep( 5 )
-            
-            for path in paths:
-                
-                try:
-                    
-                    ClientData.DeletePath( path )
-                    
-                except OSError:
-                    
-                    HydrusData.Print( 'In trying to delete the orphan ' + path + ', this error was encountered:' )
-                    HydrusData.Print( traceback.format_exc() )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
-                
-            
-        
         hash_ids = set( hash_ids )
-        
-        deletee_paths = set()
         
         potentially_pending_upload_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers;', ) }
         
         deletable_file_hash_ids = hash_ids.difference( potentially_pending_upload_hash_ids )
         
+        client_files_manager = self._controller.GetClientFilesManager()
+        
         if len( deletable_file_hash_ids ) > 0:
             
             file_hashes = self._GetHashes( deletable_file_hash_ids )
             
-            client_files_manager = self._controller.GetClientFilesManager()
-            
-            for hash in file_hashes:
-                
-                try:
-                    
-                    path = client_files_manager.GetFilePath( hash )
-                    
-                except HydrusExceptions.FileMissingException:
-                    
-                    continue
-                    
-                
-                deletee_paths.add( path )
-                
+            client_files_manager.DeleteFiles( file_hashes )
             
         
         useful_thumbnail_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id != ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( self._trash_service_id, ) ) }
@@ -2696,26 +2326,8 @@ class DB( HydrusDB.HydrusDB ):
             
             thumbnail_hashes = self._GetHashes( deletable_thumbnail_hash_ids )
             
-            for hash in thumbnail_hashes:
-                
-                path = ClientFiles.GetExpectedThumbnailPath( hash, True )
-                resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
-                
-                if os.path.exists( path ):
-                    
-                    deletee_paths.add( path )
-                    
-                
-                if os.path.exists( resized_path ):
-                    
-                    deletee_paths.add( resized_path )
-                    
-                
+            client_files_manager.DeleteThumbnails( thumbnail_hashes )
             
-            self._c.execute( 'DELETE from perceptual_hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( deletable_thumbnail_hash_ids ) + ';' )
-            
-        
-        self._controller.CallToThread( DeletePaths, deletee_paths )
         
     
     def _DeleteService( self, service_id, delete_update_dir = True ):
@@ -4694,7 +4306,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetService( self, service_id ):
         
-        if service_id in self._service_cache: service = self._service_cache[ service_id ]
+        if service_id in self._service_cache:
+            
+            service = self._service_cache[ service_id ]
+            
         else:
             
             ( service_key, service_type, name, info ) = self._c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
@@ -4816,7 +4431,7 @@ class DB( HydrusDB.HydrusDB ):
             
         elif service_type == HC.FILE_REPOSITORY:
             
-            info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES, HC.SERVICE_INFO_NUM_THUMBNAILS, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL }
+            info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES }
             
         elif service_type == HC.IPFS:
             
@@ -4891,27 +4506,6 @@ class DB( HydrusDB.HydrusDB ):
                     elif info_type == HC.SERVICE_INFO_NUM_DELETED_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM deleted_files WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PENDING_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM file_petitions where service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = self._c.execute( 'SELECT COUNT( * ) FROM current_files, files_info USING ( hash_id ) WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL:
-                        
-                        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files, files_info USING ( hash_id ) WHERE mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
-                        
-                        thumbnails_i_should_have = self._GetHashes( hash_ids )
-                        
-                        num_local = 0
-                        
-                        for hash in thumbnails_i_should_have:
-                            
-                            path = ClientFiles.GetExpectedThumbnailPath( hash )
-                            
-                            if os.path.exists( path ):
-                                
-                                num_local += 1
-                                
-                            
-                        
-                        result = ( num_local, )
-                        
                     elif info_type == HC.SERVICE_INFO_NUM_INBOX: result = self._c.execute( 'SELECT COUNT( * ) FROM file_inbox, current_files USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
                 elif service_type in HC.TAG_SERVICES:
@@ -5313,15 +4907,7 @@ class DB( HydrusDB.HydrusDB ):
             
             client_files_manager = self._controller.GetClientFilesManager()
             
-            dest_path = client_files_manager.GetExpectedFilePath( hash, mime )
-            
-            if not os.path.exists( dest_path ):
-                
-                shutil.copy2( path, dest_path )
-                
-                try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
-                except: pass
-                
+            dest_path = client_files_manager.AddFile( hash, mime, path )
             
             # I moved the file copy up because passing an original filename with unicode chars to getfileinfo
             # was causing problems in windows.
@@ -5359,7 +4945,21 @@ class DB( HydrusDB.HydrusDB ):
                 
                 thumbnail = HydrusFileHandling.GenerateThumbnail( dest_path )
                 
-                self._AddThumbnails( [ ( hash, thumbnail ) ] )
+                client_files_manager.AddThumbnail( hash, thumbnail )
+                
+            
+            if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
+                
+                try:
+                    
+                    phash = ClientImageHandling.GeneratePerceptualHash( dest_path )
+                    
+                    self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                    
+                except:
+                    
+                    pass
+                    
                 
             
             self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
@@ -5482,6 +5082,69 @@ class DB( HydrusDB.HydrusDB ):
         self._db_filenames[ 'external_caches' ] = 'client.caches.db'
         self._db_filenames[ 'external_mappings' ] = 'client.mappings.db'
         self._db_filenames[ 'external_master' ] = 'client.master.db'
+        
+    
+    def _IsAnOrphan( self, test_type, possible_hash ):
+        
+        if self._HashExists( possible_hash ):
+            
+            hash = possible_hash
+            
+            if test_type == 'file':
+                
+                hash_id = self._GetHashId( hash )
+                
+                result = self._c.execute( 'SELECT 1 FROM current_files WHERE service_id IN ( ?, ? ) AND hash_id = ?;', ( self._local_file_service_id, self._trash_service_id, hash_id ) ).fetchone()
+                
+                if result is None:
+                    
+                    return True
+                    
+                else:
+                    
+                    return False
+                    
+                
+            elif test_type == 'thumbnail':
+                
+                hash_id = self._GetHashId( hash )
+                
+                result = self._c.execute( 'SELECT 1 FROM current_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                
+                if result is None:
+                    
+                    return True
+                    
+                else:
+                    
+                    return False
+                    
+                
+            
+        else:
+            
+            return True
+            
+        
+    
+    def _LoadIntoDiskCache( self ):
+        
+        self._CloseDBCursor()
+        
+        for filename in self._db_filenames.values():
+            
+            path = os.path.join( self._db_dir, filename )
+            
+            with open( path, 'rb' ) as f:
+                
+                while f.read( HC.READ_BLOCK_SIZE ) != '':
+                    
+                    pass
+                    
+                
+            
+        
+        self._InitDBCursor()
         
     
     def _MaintenanceDue( self ):
@@ -5878,7 +5541,7 @@ class DB( HydrusDB.HydrusDB ):
                                     self._c.execute( 'INSERT INTO temp_operation ( namespace_id, tag_id, hash_id ) SELECT namespace_id, tag_id, hash_id FROM ' + source_table_name + ';' )
                                     
                                 else:
-                                    HydrusData.ShowText( 'INSERT INTO temp_operation ( namespace_id, tag_id, hash_id ) SELECT namespace_id, tag_id, hash_id FROM ' + source_table_name + ' WHERE ' + ' AND '.join( predicates ) + ';' )
+                                    
                                     self._c.execute( 'INSERT INTO temp_operation ( namespace_id, tag_id, hash_id ) SELECT namespace_id, tag_id, hash_id FROM ' + source_table_name + ' WHERE ' + ' AND '.join( predicates ) + ';' )
                                     
                                 
@@ -6328,7 +5991,9 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'filter_hashes': result = self._FilterHashes( *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+        elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
         elif action == 'known_urls': result = self._GetKnownURLs( *args, **kwargs )
+        elif action == 'load_into_disk_cache': result = self._LoadIntoDiskCache( *args, **kwargs )
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
@@ -6370,7 +6035,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if os.path.exists( full_source ):
             
-            HydrusPaths.CopyAndMergeTree( full_source, full_dest )
+            HydrusPaths.MoveAndMergeTree( full_source, full_dest )
             
         elif not os.path.exists( full_dest ):
             
@@ -7523,37 +7188,6 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 182:
             
-            hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime = ?;', ( HC.APPLICATION_FLASH, ) ) }
-            
-            num_done = 0
-            
-            num_to_do = len( hash_ids )
-            
-            client_files_default = os.path.join( self._db_dir, 'client_files' )
-            
-            for hash_id in hash_ids:
-                
-                num_done += 1
-                
-                if num_done % 10 == 0:
-                    
-                    self._controller.pub( 'splash_set_status_text', 'updating flash thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
-                    
-                
-                hash = self._GetHash( hash_id )
-                
-                file_path = ClientFiles.GetExpectedFilePath( client_files_default, hash, HC.APPLICATION_FLASH )
-                
-                if os.path.exists( file_path ):
-                    
-                    thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
-                    
-                    self._AddThumbnails( [ ( hash, thumbnail ) ] )
-                    
-                
-            
-            #
-            
             self._c.execute( 'DELETE FROM service_info WHERE info_type IN ( ?, ? );', ( HC.SERVICE_INFO_NUM_THUMBNAILS, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
             
         
@@ -8219,6 +7853,66 @@ class DB( HydrusDB.HydrusDB ):
             self._c.executemany( 'INSERT INTO service_directories ( service_id, directory_id, num_files, total_size, note ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, directory_id, num_files, total_size, '' ) for ( service_id, directory_id, num_files, total_size ) in info ) )
             
         
+        if version == 208:
+            
+            result = self._c.execute( 'SELECT prefix, location FROM client_files_locations;' ).fetchall()
+            
+            result.sort()
+            
+            old_thumbnail_dir = os.path.join( self._db_dir, 'client_thumbnails' )
+            
+            for ( i, ( prefix, location ) ) in enumerate( result ):
+                
+                self._controller.pub( 'splash_set_status_text', 'moving thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, 256 ) )
+                
+                source_dir = os.path.join( old_thumbnail_dir, prefix )
+                dest_dir = os.path.join( location, prefix )
+                
+                source_filenames = os.listdir( source_dir )
+                
+                for source_filename in source_filenames:
+                    
+                    source_path = os.path.join( source_dir, source_filename )
+                    
+                    if source_filename.endswith( '_resized' ):
+                        
+                        encoded_hash = source_filename[:64]
+                        
+                        dest_filename = encoded_hash + '.thumbnail.resized'
+                        
+                    else:
+                        
+                        encoded_hash = source_filename
+                        
+                        dest_filename = encoded_hash + '.thumbnail'
+                        
+                    
+                    dest_path = os.path.join( dest_dir, dest_filename )
+                    
+                    try:
+                        
+                        shutil.move( source_path, dest_path )
+                        
+                    except:
+                        
+                        HydrusData.Print( 'Problem moving thumbnail from ' + source_path + ' to ' + dest_path + '.' )
+                        HydrusData.Print( 'Abandoning thumbnail transfer for ' + source_dir + '.' )
+                        
+                        break
+                        
+                    
+                
+            
+            try:
+                
+                HydrusPaths.DeletePath( old_thumbnail_dir )
+                
+            except:
+                
+                HydrusData.Print( 'Could not delete old thumbnail directory at ' + old_thumbnail_dir )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -8744,11 +8438,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'COMMIT;' )
             
-            job_key = ClientThreading.JobKey()
-            
-            job_key.SetVariable( 'popup_title', 'database maintenance - vacuum' )
-            
-            self._controller.pub( 'message', job_key )
+            job_key = None
             
             self._CloseDBCursor()
             
@@ -8758,14 +8448,23 @@ class DB( HydrusDB.HydrusDB ):
             
             for name in due_names:
                 
-                self._controller.pub( 'splash_set_status_text', 'vacuuming ' + name )
-                job_key.SetVariable( 'popup_text_1', 'vacuuming ' + name )
-                
                 try:
                     
                     db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
                     
                     if HydrusDB.CanVacuum( db_path, stop_time = stop_time ):
+                        
+                        if job_key is None:
+                            
+                            job_key = ClientThreading.JobKey()
+                            
+                            job_key.SetVariable( 'popup_title', 'database maintenance - vacuum' )
+                            
+                            self._controller.pub( 'message', job_key )
+                            
+                        
+                        self._controller.pub( 'splash_set_status_text', 'vacuuming ' + name )
+                        job_key.SetVariable( 'popup_text_1', 'vacuuming ' + name )
                         
                         started = HydrusData.GetNowPrecise()
                         
@@ -8826,10 +8525,8 @@ class DB( HydrusDB.HydrusDB ):
         
         if action == 'analyze': result = self._Analyze( *args, **kwargs )
         elif action == 'backup': result = self._Backup( *args, **kwargs )
-        elif action == 'clear_orphans': result = self._ClearOrphans( *args, **kwargs )
         elif action == 'content_update_package':result = self._ProcessContentUpdatePackage( *args, **kwargs )
         elif action == 'content_updates':result = self._ProcessContentUpdates( *args, **kwargs )
-        elif action == 'copy_files': result = self._CopyFiles( *args, **kwargs )
         elif action == 'db_integrity': result = self._CheckDBIntegrity( *args, **kwargs )
         elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )
         elif action == 'delete_imageboard': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
@@ -8855,7 +8552,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'set_password': result = self._SetPassword( *args, **kwargs )
         elif action == 'sync_hashes_to_tag_archive': result = self._SyncHashesToTagArchive( *args, **kwargs )
         elif action == 'tag_censorship': result = self._SetTagCensorship( *args, **kwargs )
-        elif action == 'thumbnails': result = self._AddThumbnails( *args, **kwargs )
         elif action == 'update_server_services': result = self._UpdateServerServices( *args, **kwargs )
         elif action == 'update_services': result = self._UpdateServices( *args, **kwargs )
         elif action == 'vacuum': result = self._Vacuum( *args, **kwargs )
@@ -8891,7 +8587,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusPaths.MirrorTree( os.path.join( path, 'client_archives' ), os.path.join( self._db_dir, 'client_archives' ) )
         HydrusPaths.MirrorTree( os.path.join( path, 'client_files' ), client_files_default )
-        HydrusPaths.MirrorTree( os.path.join( path, 'client_thumbnails' ), os.path.join( self._db_dir, 'client_thumbnails' ) )
         HydrusPaths.MirrorTree( os.path.join( path, 'client_updates' ), os.path.join( self._db_dir, 'client_updates' ) )
         
     

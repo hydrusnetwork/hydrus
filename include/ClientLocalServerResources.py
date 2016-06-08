@@ -245,7 +245,12 @@ class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
         
         mime = media_result.GetMime()
         
-        if mime in HC.MIMES_WITH_THUMBNAILS: path = ClientFiles.GetThumbnailPath( hash, full_size = False )
+        if mime in HC.MIMES_WITH_THUMBNAILS:
+            
+            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+            
+            path = client_files_manager.GetThumbnailPath( hash, True )
+            
         elif mime in HC.AUDIO: path = os.path.join( HC.STATIC_DIR, 'audio.png' )
         elif mime == HC.APPLICATION_PDF: path = os.path.join( HC.STATIC_DIR, 'pdf.png' )
         else: path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
@@ -276,7 +281,9 @@ class HydrusResourceCommandLocalThumbnail( HydrusServerResources.HydrusResourceC
         
         hash = request.hydrus_args[ 'hash' ]
         
-        path = ClientFiles.GetThumbnailPath( hash )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetThumbnailPath( hash, True )
         
         response_context = HydrusServerResources.ResponseContext( 200, path = path )
         

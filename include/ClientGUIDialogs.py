@@ -333,32 +333,31 @@ class DialogAdvancedContentUpdate( Dialog ):
         Dialog.__init__( self, parent, 'Advanced Content Update' )
         
         self._service_key = service_key
-        self._tag = ''
         self._hashes = hashes
         
-        self._internal_actions = ClientGUICommon.StaticBox( self, 'internal' )
+        service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
         
-        self._action_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
+        self._service_name = service.GetName()
+        
+        self._command_panel = ClientGUICommon.StaticBox( self, 'database commands' )
+        
+        self._action_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
         self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
-        self._tag_type_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
-        self._service_key_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
+        self._tag_type_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
+        self._action_text = wx.StaticText( self._command_panel, label = 'initialising' )
+        self._service_key_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
         
-        self._go = wx.Button( self._internal_actions, label = 'Go!' )
+        self._go = wx.Button( self._command_panel, label = 'Go!' )
         self._go.Bind( wx.EVT_BUTTON, self.EventGo )
-        
-        expand_parents = False
-        
-        self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._internal_actions, self.SetSomeTags, expand_parents, CC.COMBINED_FILE_SERVICE_KEY, self._service_key )
-        self._specific_tag = wx.StaticText( self._internal_actions, label = '', size = ( 100, -1 ) )
-        
-        self._import_from_hta = wx.Button( self._internal_actions, label = 'one-time mass import or delete using a hydrus tag archive' )
-        self._import_from_hta.Bind( wx.EVT_BUTTON, self.EventImportFromHTA )
         
         #
         
-        self._external_actions = ClientGUICommon.StaticBox( self, 'external' )
+        self._hta_panel = ClientGUICommon.StaticBox( self, 'hydrus tag archives' )
         
-        self._export_to_hta = wx.Button( self._external_actions, label = 'export to hydrus tag archive' )
+        self._import_from_hta = wx.Button( self._hta_panel, label = 'one-time mass import or delete using a hydrus tag archive' )
+        self._import_from_hta.Bind( wx.EVT_BUTTON, self.EventImportFromHTA )
+        
+        self._export_to_hta = wx.Button( self._hta_panel, label = 'export to hydrus tag archive' )
         self._export_to_hta.Bind( wx.EVT_BUTTON, self.EventExportToHTA )
         
         #
@@ -403,60 +402,79 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         hbox.AddF( self._action_dropdown, CC.FLAGS_MIXED )
         hbox.AddF( self._tag_type_dropdown, CC.FLAGS_MIXED )
-        hbox.AddF( wx.StaticText( self._internal_actions, label = 'to' ), CC.FLAGS_MIXED )
+        hbox.AddF( self._action_text, CC.FLAGS_MIXED )
         hbox.AddF( self._service_key_dropdown, CC.FLAGS_MIXED )
         hbox.AddF( self._go, CC.FLAGS_MIXED )
         
-        self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.AddF( wx.StaticText( self._internal_actions, label = 'set specific tag or namespace: ' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._specific_tag, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.AddF( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
-        
-        self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._command_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
-        self._external_actions.AddF( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
+        self._hta_panel.AddF( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
+        self._hta_panel.AddF( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        message = 'Regarding '
+        
+        if self._hashes is None:
+            
+            message += 'all'
+            
+        else:
+            
+            message += HydrusData.ConvertIntToPrettyString( len( self._hashes ) )
+            
+        
+        message += ' files on ' + self._service_name
+        
+        title_st = wx.StaticText( self, label = message)
+        
+        title_st.Wrap( 540 )
+        
         message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable. You may need to refresh your existing searches to see their effect.' 
         
         st = wx.StaticText( self, label = message )
         
-        st.Wrap( 360 )
+        st.Wrap( 540 )
         
-        vbox.AddF( st, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._internal_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._external_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( title_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._command_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._hta_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._done, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         
         ( x, y ) = self.GetEffectiveMinSize()
         
-        if x < 360: x = 360
+        if x < 540: x = 540
         
         self.SetInitialSize( ( x, y ) )
+        
+        self.EventChoice( None )
         
     
     def EventChoice( self, event ):
         
         data = self._action_dropdown.GetChoice()
         
-        if data in ( self.DELETE, self.DELETE_DELETED ): self._service_key_dropdown.Disable()
-        else: self._service_key_dropdown.Enable()
+        if data in ( self.DELETE, self.DELETE_DELETED ):
+            
+            self._action_text.SetLabelText( 'from ' + self._service_name )
+            
+            self._service_key_dropdown.Hide()
+            
+        else:
+            
+            self._action_text.SetLabelText( 'from ' + self._service_name + ' to')
+            
+            self._service_key_dropdown.Show()
+            
+        
+        self.Layout()
         
     
     def EventExportToHTA( self, event ):
@@ -469,11 +487,6 @@ class DialogAdvancedContentUpdate( Dialog ):
         # at some point, rewrite this to cope with multiple tags. setsometag is ready to go on that front
         # this should prob be with a listbox so people can enter their new multiple tags in several separate goes, rather than overwriting every time
         
-        with DialogYesNo( self, 'Are you sure?' ) as dlg:
-            
-            if dlg.ShowModal() != wx.ID_YES: return
-            
-        
         action = self._action_dropdown.GetChoice()
         
         tag_type = self._tag_type_dropdown.GetChoice()
@@ -484,15 +497,37 @@ class DialogAdvancedContentUpdate( Dialog ):
             
         elif tag_type == self.SPECIFIC_MAPPINGS:
             
-            tag = ( 'tag', self._tag )
+            with DialogTextEntry( self, 'Enter tag' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    entry = dlg.GetValue()
+                    
+                    tag = ( 'tag', entry )
+                    
+                else:
+                    
+                    return
+                    
+                
             
         elif tag_type == self.SPECIFIC_NAMESPACE:
             
-            tag = self._tag
-            
-            if tag.endswith( ':' ): tag = tag[:-1]
-            
-            tag = ( 'namespace', tag )
+            with DialogTextEntry( self, 'Enter namespace' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    entry = dlg.GetValue()
+                    
+                    if entry.endswith( ':' ): entry = entry[:-1]
+                    
+                    tag = ( 'namespace', entry )
+                    
+                else:
+                    
+                    return
+                    
+                
             
         elif tag_type == self.NAMESPACED:
             
@@ -503,12 +538,12 @@ class DialogAdvancedContentUpdate( Dialog ):
             tag = ( 'unnamespaced', None )
             
         
-        if tag == '':
-            
-            return
-            
-        
         service_key_target = self._service_key_dropdown.GetChoice()
+        
+        with DialogYesNo( self, 'Are you sure?' ) as dlg:
+            
+            if dlg.ShowModal() != wx.ID_YES: return
+            
         
         if action == self.COPY:
             
@@ -540,16 +575,6 @@ class DialogAdvancedContentUpdate( Dialog ):
                 
                 ImportFromHTA( self, path, self._service_key )
                 
-            
-        
-    
-    def SetSomeTags( self, tags ):
-        
-        if len( tags ) > 0:
-            
-            self._tag = list( tags )[0]
-            
-            self._specific_tag.SetLabelText( HydrusTags.RenderTag( self._tag ) )
             
         
     
@@ -2605,62 +2630,51 @@ class DialogNews( Dialog ):
     
     def __init__( self, parent, service_key ):
         
-        def InitialiseControls():
-            
-            self._news = wx.TextCtrl( self, style = wx.TE_READONLY | wx.TE_MULTILINE )
-            
-            self._previous = wx.Button( self, label = '<' )
-            self._previous.Bind( wx.EVT_BUTTON, self.EventPrevious )
-            
-            self._news_position = wx.TextCtrl( self )
-            
-            self._next = wx.Button( self, label = '>' )
-            self._next.Bind( wx.EVT_BUTTON, self.EventNext )
-            
-            self._done = wx.Button( self, id = wx.ID_CANCEL, label = 'Done' )
-            
-    
-        def PopulateControls():
-            
-            self._newslist = HydrusGlobals.client_controller.Read( 'news', service_key )
-            
-            self._current_news_position = len( self._newslist )
-            
-            self._ShowNews()
-            
-        
-        def ArrangeControls():
-            
-            buttonbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttonbox.AddF( self._previous, CC.FLAGS_MIXED )
-            buttonbox.AddF( self._news_position, CC.FLAGS_MIXED )
-            buttonbox.AddF( self._next, CC.FLAGS_MIXED )
-            
-            donebox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            donebox.AddF( self._done, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._news, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
-            vbox.AddF( donebox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x + 200, 580 ) )
-            
-        
         Dialog.__init__( self, parent, 'news' )
         
-        InitialiseControls()
+        self._news = wx.TextCtrl( self, style = wx.TE_READONLY | wx.TE_MULTILINE )
         
-        PopulateControls()
+        self._previous = wx.Button( self, label = '<' )
+        self._previous.Bind( wx.EVT_BUTTON, self.EventPrevious )
         
-        ArrangeControls()
+        self._news_position = wx.TextCtrl( self )
+        
+        self._next = wx.Button( self, label = '>' )
+        self._next.Bind( wx.EVT_BUTTON, self.EventNext )
+        
+        self._done = wx.Button( self, id = wx.ID_CANCEL, label = 'Done' )
+        
+        #
+        
+        self._newslist = HydrusGlobals.client_controller.Read( 'news', service_key )
+        
+        self._current_news_position = len( self._newslist )
+        
+        self._ShowNews()
+        
+        #
+        
+        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttonbox.AddF( self._previous, CC.FLAGS_MIXED )
+        buttonbox.AddF( self._news_position, CC.FLAGS_MIXED )
+        buttonbox.AddF( self._next, CC.FLAGS_MIXED )
+        
+        donebox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        donebox.AddF( self._done, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._news, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( donebox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x + 200, 580 ) )
         
         wx.CallAfter( self._done.SetFocus )
         
@@ -3720,64 +3734,53 @@ class DialogRegisterService( Dialog ):
     
     def __init__( self, parent, service_type ):
         
-        def InitialiseControls():
-            
-            self._address = wx.TextCtrl( self )
-            self._registration_key = wx.TextCtrl( self )
-            
-            self._register_button = wx.Button( self, label = 'register' )
-            self._register_button.Bind( wx.EVT_BUTTON, self.EventRegister )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            
-        
-        def PopulateControls():
-            
-            self._address.SetValue( 'hostname:port' )
-            self._registration_key.SetValue( 'r0000000000000000000000000000000000000000000000000000000000000000' )
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( wx.StaticText( self, label = 'Please fill out the forms with the appropriate information for your service.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'address' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._address, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'registration key' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._registration_key, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            buttonbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttonbox.AddF( self._register_button, CC.FLAGS_MIXED )
-            buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'register account', position = 'center' )
         
         self._service_type = service_type
         
-        InitialiseControls()
+        self._address = wx.TextCtrl( self )
+        self._registration_key = wx.TextCtrl( self )
         
-        PopulateControls()
+        self._register_button = wx.Button( self, label = 'register' )
+        self._register_button.Bind( wx.EVT_BUTTON, self.EventRegister )
         
-        ArrangeControls()
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        
+        #
+        
+        self._address.SetValue( 'hostname:port' )
+        self._registration_key.SetValue( 'r0000000000000000000000000000000000000000000000000000000000000000' )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( wx.StaticText( self, label = 'Please fill out the forms with the appropriate information for your service.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'address' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._address, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.AddF( wx.StaticText( self, label = 'registration key' ), CC.FLAGS_MIXED )
+        gridbox.AddF( self._registration_key, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttonbox.AddF( self._register_button, CC.FLAGS_MIXED )
+        buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         self._register = False
         
@@ -4174,56 +4177,45 @@ class DialogSelectYoutubeURL( Dialog ):
     
     def __init__( self, parent, info ):
         
-        def InitialiseControls():
-            
-            self._urls = ClientGUICommon.SaneListCtrl( self, 360, [ ( 'format', 150 ), ( 'resolution', 150 ) ] )
-            self._urls.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventOK )
-            
-            self._urls.SetMinSize( ( 360, 200 ) )
-            
-            self._ok = wx.Button( self, wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            for ( extension, resolution ) in self._info: self._urls.Append( ( extension, resolution ), ( extension, resolution ) )
-            
-            self._urls.SortListItems( 0 )
-            
-        
-        def ArrangeControls():
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, CC.FLAGS_MIXED )
-            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._urls, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         Dialog.__init__( self, parent, 'choose youtube format' )
         
         self._info = info
         
-        InitialiseControls()
+        self._urls = ClientGUICommon.SaneListCtrl( self, 360, [ ( 'format', 150 ), ( 'resolution', 150 ) ] )
+        self._urls.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventOK )
         
-        PopulateControls()
+        self._urls.SetMinSize( ( 360, 200 ) )
         
-        ArrangeControls()
+        self._ok = wx.Button( self, wx.ID_OK, label = 'ok' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        #
+        
+        for ( extension, resolution ) in self._info: self._urls.Append( ( extension, resolution ), ( extension, resolution ) )
+        
+        self._urls.SortListItems( 0 )
+        
+        #
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.AddF( self._ok, CC.FLAGS_MIXED )
+        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._urls, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
         

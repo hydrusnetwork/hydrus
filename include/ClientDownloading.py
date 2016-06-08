@@ -1664,7 +1664,7 @@ class GalleryPixivArtistID( GalleryPixiv ):
         
         artist_id = query
         
-        gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + str( artist_id )
+        gallery_url = 'http://www.pixiv.net/member_illust.php?type=illust&id=' + str( artist_id )
         
         return gallery_url + '&p=' + str( page_index + 1 )
         

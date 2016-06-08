@@ -454,6 +454,14 @@ class FileSystemPredicates( object ):
                 ( operator, ratio_width, ratio_height ) = value
                 
                 if operator == '=': self._common_info[ 'ratio' ] = ( ratio_width, ratio_height )
+                elif operator == 'wider than':
+                    
+                    self._common_info[ 'min_ratio' ] = ( ratio_width, ratio_height )
+                    
+                elif operator == 'taller than':
+                    
+                    self._common_info[ 'max_ratio' ] = ( ratio_width, ratio_height )
+                    
                 elif operator == u'\u2248':
                     
                     self._common_info[ 'min_ratio' ] = ( ratio_width * 0.85, ratio_height )

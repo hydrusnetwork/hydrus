@@ -733,6 +733,15 @@ class Canvas( wx.Window ):
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', local_url )
         
     
+    def _CopyFileToClipboard( self ):
+        
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        paths = [ client_files_manager.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() ) ]
+        
+        HydrusGlobals.client_controller.pub( 'clipboard', 'paths', paths )
+        
+    
     def _CopyPathToClipboard( self ):
         
         client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
@@ -1536,8 +1545,7 @@ class CanvasPanel( Canvas ):
                 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_bmp': self._CopyBMPToClipboard()
-                elif command == 'copy_files':
-                    with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                elif command == 'copy_files': self._CopyFileToClipboard()
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
@@ -2244,8 +2252,7 @@ class CanvasMediaListFilter( CanvasMediaList ):
             elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self.EventBack( event )
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
             elif modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self.EventDelete( event )
-            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
             elif not event.ShiftDown() and key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
             else:
                 
@@ -2561,8 +2568,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
             elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
-            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
             else:
                 
                 key_dict = HC.options[ 'shortcuts' ][ modifier ]
@@ -2592,8 +2598,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_bmp': self._CopyBMPToClipboard()
-                elif command == 'copy_files':
-                    with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                elif command == 'copy_files': self._CopyFileToClipboard()
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
@@ -2770,7 +2775,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         menu.AppendMenu( CC.ID_NULL, 'start slideshow', slideshow )
         
-        if self._timer_slideshow.IsRunning(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow_pause_play' ), 'stop slideshow' )
+        if self._timer_slideshow.IsRunning():
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow_pause_play' ), 'stop slideshow' )
+            
         
         menu.AppendSeparator()
         
@@ -2783,18 +2791,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'fullscreen_switch' ), 'go fullscreen' )
             
         
-        if self._timer_slideshow.IsRunning():
-            
-            self._timer_slideshow.Stop()
-            
-            HydrusGlobals.client_controller.PopupMenu( self, menu )
-            
-            self._timer_slideshow.Start()
-            
-        else:
-            
-            HydrusGlobals.client_controller.PopupMenu( self, menu )
-            
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
         event.Skip()
         
@@ -2805,7 +2802,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._media_container is not None:
                 
-                if self._media_container.ReadyToSlideshow():
+                if self._media_container.ReadyToSlideshow() and not HydrusGlobals.client_controller.MenuIsOpen():
                     
                     self._ShowNext()
                     
@@ -2813,7 +2810,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                 else:
                     
-                    self._timer_slideshow.Start( 250, wx.TIMER_CONTINUOUS )
+                    self._timer_slideshow.Start( 1000, wx.TIMER_CONTINUOUS )
                     
                 
             
@@ -3014,8 +3011,7 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                 elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
                 elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
                 elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
-                elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                    with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
                 else:
                     
                     key_dict = HC.options[ 'shortcuts' ][ modifier ]
@@ -3046,8 +3042,7 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_bmp': self._CopyBMPToClipboard()
-                elif command == 'copy_files':
-                    with wx.BusyCursor(): HydrusGlobals.client_controller.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
+                elif command == 'copy_files': self._CopyFileToClipboard()
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()

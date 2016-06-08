@@ -626,7 +626,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices = [ '=', u'\u2248' ] )
+        self._sign = wx.Choice( self, choices = [ '=', 'wider than', 'taller than', u'\u2248' ] )
         
         self._width = wx.SpinCtrl( self, max = 50000, size = ( 60, -1 ) )
         

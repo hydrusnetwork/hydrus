@@ -117,8 +117,12 @@ class TestServer( unittest.TestCase ):
         #
         
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+
+        hash_encoded = self._file_hash.encode( 'hex' )
         
-        path = ClientFiles.GetExpectedFilePath( client_files_default, self._file_hash, HC.IMAGE_JPEG )
+        prefix = hash_encoded[:2]
+        
+        path =  os.path.join( client_files_default, prefix, hash_encoded + '.jpg' )
         
         with open( path, 'wb' ) as f: f.write( 'file' )
         
@@ -135,7 +139,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        path = ClientFiles.GetExpectedThumbnailPath( self._file_hash )
+        path = os.path.join( client_files_default, prefix, hash_encoded + '.thumbnail' )
         
         with open( path, 'wb' ) as f: f.write( 'thumb' )
         
@@ -159,7 +163,7 @@ class TestServer( unittest.TestCase ):
         
         # file
         
-        path = ServerFiles.GetExpectedPath( 'file', self._file_hash )
+        path = ServerFiles.GetExpectedFilePath( self._file_hash )
         
         with open( path, 'wb' ) as f: f.write( 'file' )
         
@@ -202,7 +206,7 @@ class TestServer( unittest.TestCase ):
         
         # thumbnail
         
-        path = ServerFiles.GetExpectedPath( 'thumbnail', self._file_hash )
+        path = ServerFiles.GetExpectedThumbnailPath( self._file_hash )
         
         with open( path, 'wb' ) as f: f.write( 'thumb' )
         
@@ -242,8 +246,15 @@ class TestServer( unittest.TestCase ):
         
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
         
-        with open( ClientFiles.GetExpectedFilePath( client_files_default, hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
-        with open( ClientFiles.GetExpectedThumbnailPath( hashes[0], False ), 'wb' ) as f: f.write( 'thumbnail' )
+        hash_encoded = hashes[0].encode( 'hex' )
+        
+        prefix = hash_encoded[:2]
+        
+        file_path =  os.path.join( client_files_default, prefix, hash_encoded + '.jpg' )
+        thumbnail_path = os.path.join( client_files_default, prefix, hash_encoded + '.thumbnail' )
+        
+        with open( file_path, 'wb' ) as f: f.write( 'file' )
+        with open( thumbnail_path, 'wb' ) as f: f.write( 'thumbnail' )
         
         local_booru_manager = HydrusGlobals.test_controller.GetManager( 'local_booru' )
         

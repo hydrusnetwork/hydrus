@@ -109,17 +109,6 @@ def GetAllPaths( raw_paths ):
     
     return file_paths
     
-def GetAllThumbnailHashes():
-    
-    thumbnail_hashes = set()
-    
-    for hash in IterateAllThumbnailHashes():
-        
-        thumbnail_hashes.add( hash )
-        
-    
-    return thumbnail_hashes
-    
 def GetExportPath():
     
     options = HydrusGlobals.client_controller.GetOptions()
@@ -142,155 +131,6 @@ def GetExportPath():
     
     return path
     
-def GetExpectedFilePath( location, hash, mime ):
-    
-    hash_encoded = hash.encode( 'hex' )
-    
-    prefix = hash_encoded[:2]
-    
-    return os.path.join( location, prefix, hash_encoded + HC.mime_ext_lookup[ mime ] )
-    
-def GetExpectedThumbnailPath( hash, full_size = True ):
-    
-    hash_encoded = hash.encode( 'hex' )
-    
-    first_two_chars = hash_encoded[:2]
-    
-    path = os.path.join( HC.CLIENT_THUMBNAILS_DIR, first_two_chars, hash_encoded )
-    
-    if not full_size:
-        
-        path += '_resized'
-        
-    
-    return path
-    
-def GetFilePath( location, hash, mime = None ):
-    
-    if mime is None:
-        
-        path = None
-        
-        for potential_mime in HC.ALLOWED_MIMES:
-            
-            potential_path = GetExpectedFilePath( location, hash, potential_mime )
-            
-            if os.path.exists( potential_path ):
-                
-                path = potential_path
-                
-                break
-                
-            
-        
-    else:
-        
-        path = GetExpectedFilePath( location, hash, mime )
-        
-    
-    if path is None:
-        
-        raise HydrusExceptions.FileMissingException( 'File not found in directory ' + location + '!' )
-        
-    elif not os.path.exists( path ):
-        
-        raise HydrusExceptions.FileMissingException( 'File not found in path + ' + path + '!' )
-        
-    
-    return path
-    
-def GetThumbnailPath( hash, full_size = True ):
-    
-    if not full_size:
-        
-        options = HydrusGlobals.client_controller.GetOptions()
-        
-        thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
-        
-        if tuple( thumbnail_dimensions ) == HC.UNSCALED_THUMBNAIL_DIMENSIONS:
-            
-            full_size = True
-            
-        
-    
-    path = GetExpectedThumbnailPath( hash, full_size )
-    
-    if not os.path.exists( path ):
-        
-        if full_size:
-            
-            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
-            
-            try:
-                
-                file_path = client_files_manager.GetFilePath( hash )
-                
-            except HydrusExceptions.FileMissingException:
-                
-                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
-                
-            
-            try:
-                
-                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
-                
-            
-            try:
-                
-                with open( path, 'wb' ) as f:
-                    
-                    f.write( thumbnail )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
-                
-            
-            HydrusData.ShowText( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok.' )
-            
-        else:
-            
-            full_size_path = GetThumbnailPath( hash, True )
-            
-            try:
-                
-                thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
-                
-            except:
-                
-                try:
-                    
-                    os.remove( full_size_path )
-                    
-                except:
-                    
-                    raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
-                    
-                
-                full_size_path = GetThumbnailPath( hash, True )
-                
-                thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
-                
-            
-            with open( path, 'wb' ) as f:
-                
-                f.write( thumbnail_resized )
-                
-            
-            
-        
-    
-    return path
-    
 def GetExpectedContentUpdatePackagePath( service_key, begin, subindex ):
     
     return os.path.join( GetExpectedUpdateDir( service_key ), str( begin ) + '_' + str( subindex ) + '.json' )
@@ -302,35 +142,6 @@ def GetExpectedServiceUpdatePackagePath( service_key, begin ):
 def GetExpectedUpdateDir( service_key ):
     
     return os.path.join( HC.CLIENT_UPDATES_DIR, service_key.encode( 'hex' ) )
-    
-def IterateAllThumbnailHashes():
-    
-    for path in IterateAllThumbnailPaths():
-        
-        ( base, filename ) = os.path.split( path )
-        
-        if not filename.endswith( '_resized' ):
-            
-            try: hash = filename.decode( 'hex' )
-            except TypeError: continue
-            
-            yield hash
-            
-        
-    
-def IterateAllThumbnailPaths():
-    
-    for prefix in HydrusData.IterateHexPrefixes():
-        
-        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
-        
-        next_paths = os.listdir( dir )
-        
-        for path in next_paths:
-            
-            yield os.path.join( dir, path )
-            
-        
     
 def ParseExportPhrase( phrase ):
     

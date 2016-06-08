@@ -388,7 +388,7 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
         
         # don't I need to check that we aren't stealing the file from another service?
         
-        path = ServerFiles.GetPath( 'file', hash )
+        path = ServerFiles.GetFilePath( hash )
         
         response_context = HydrusServerResources.ResponseContext( 200, path = path )
         
@@ -422,7 +422,7 @@ class HydrusResourceCommandRestrictedRepositoryThumbnail( HydrusResourceCommandR
         
         # don't I need to check that we aren't stealing the file from another service?
         
-        path = ServerFiles.GetPath( 'thumbnail', hash )
+        path = ServerFiles.GetThumbnailPath( hash )
         
         response_context = HydrusServerResources.ResponseContext( 200, path = path )
         

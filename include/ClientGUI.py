@@ -131,8 +131,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         client_files_manager = self._controller.GetClientFilesManager()
         
-        wx.CallLater( 0.5, client_files_manager.TestLocations )
-        
         if HC.options[ 'default_gui_session' ] == 'just a blank page':
             
             wx.CallLater( 1, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
@@ -518,12 +516,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     def _ClearOrphans( self ):
         
         text = 'This will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
+        text += os.linesep * 2
+        text += 'Files and thumbnails will be inaccessible while this occurs, so it is best to leave the client alone until it is done.'
         
         with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
                 text = 'What would you like to do with the orphaned files? Note that all orphaned thumbnails will be deleted.'
+                
+                client_files_manager = self._controller.GetClientFilesManager()
                 
                 with ClientGUIDialogs.DialogYesNo( self, text, title = 'Choose what do to with the orphans.', yes_label = 'move them somewhere', no_label = 'delete them' ) as dlg_2:
                     
@@ -537,13 +539,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                                 path = HydrusData.ToUnicode( dlg_3.GetPath() )
                                 
-                                self._controller.Write( 'clear_orphans', path )
+                                self._controller.CallToThread( client_files_manager.ClearOrphans, path )
                                 
                             
                         
                     elif result == wx.ID_NO:
                         
-                        self._controller.Write( 'clear_orphans' )
+                        self._controller.CallToThread( client_files_manager.ClearOrphans )
                         
                     
                 
@@ -924,7 +926,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'analyze_db' ), p( '&Analyze' ), p( 'Reanalyze the Database.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'rebalance_client_files' ), p( '&Rebalance File Storage' ), p( 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_ac_cache' ), p( '&Regenerate Autocomplete Cache' ), p( 'Delete and recreate the tag autocomplete cache.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
+            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'check_db_integrity' ), p( 'Check Database Integrity' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
             submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_orphans' ), p( '&Clear Orphans' ), p( 'Clear out surplus files that have found their way into the database.' ) )
@@ -1161,6 +1163,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'load_into_disk_cache' ), p( 'Engage Turbo Mode (testing)' ) )
             
             menu.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'help_shortcuts' ), p( '&Shortcuts' ) )
@@ -1664,103 +1667,25 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _RegenerateThumbnails( self ):
         
-        text = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
+        client_files_manager = self._controller.GetClientFilesManager()
         
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+        text = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
+        text += os.linesep * 2
+        text += 'You can choose to only regenerate missing thumbnails, which is useful if you are rebuilding a fractured database, or you can force a complete refresh of all thumbnails, which is useful if some have been corrupted by a faulty hard drive.'
+        text += os.linesep * 2
+        text += 'Files and thumbnails will be inaccessible while this occurs, so it is best to leave the client alone until it is done.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'only do missing', no_label = 'force all' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
                 
-                def THREADRegenerateThumbnails():
-                    
-                    job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
-                    
-                    job_key.SetVariable( 'popup_title', 'regenerating thumbnails' )
-                    job_key.SetVariable( 'popup_text_1', 'creating directories' )
-                    
-                    self._controller.pub( 'message', job_key )
-                    
-                    if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.makedirs( HC.CLIENT_THUMBNAILS_DIR )
-                    
-                    for p in HydrusData.IterateHexPrefixes():
-                        
-                        dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, p )
-                        
-                        if not os.path.exists( dir ):
-                            
-                            os.makedirs( dir )
-                            
-                        
-                    
-                    num_broken = 0
-                    
-                    for ( i, path ) in enumerate( self._controller.GetClientFilesManager().IterateAllFilePaths() ):
-                        
-                        try:
-                            
-                            while job_key.IsPaused() or job_key.IsCancelled():
-                                
-                                time.sleep( 0.1 )
-                                
-                                if job_key.IsCancelled():
-                                    
-                                    job_key.SetVariable( 'popup_text_1', 'cancelled' )
-                                    
-                                    HydrusData.Print( job_key.ToString() )
-                                    
-                                    return
-                                    
-                                
-                            
-                            mime = HydrusFileHandling.GetMime( path )
-                            
-                            if mime in HC.MIMES_WITH_THUMBNAILS:
-                                
-                                job_key.SetVariable( 'popup_text_1', HydrusData.ConvertIntToPrettyString( i ) + ' done' )
-                                
-                                ( base, filename ) = os.path.split( path )
-                                
-                                ( hash_encoded, ext ) = filename.split( '.', 1 )
-                                
-                                hash = hash_encoded.decode( 'hex' )
-                                
-                                thumbnail = HydrusFileHandling.GenerateThumbnail( path )
-                                
-                                thumbnail_path = ClientFiles.GetExpectedThumbnailPath( hash, True )
-                                
-                                with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
-                                
-                                thumbnail_resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
-                                
-                                if os.path.exists( thumbnail_resized_path ):
-                                    
-                                    ClientData.DeletePath( thumbnail_resized_path )
-                                    
-                                
-                            
-                        except:
-                            
-                            HydrusData.Print( path )
-                            HydrusData.Print( traceback.format_exc() )
-                            
-                            num_broken += 1
-                            
-                        
-                    
-                    if num_broken > 0:
-                        
-                        job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
-                        
-                    else:
-                        
-                        job_key.SetVariable( 'popup_text_1', 'done!' )
-                        
-                    
-                    HydrusData.Print( job_key.ToString() )
-                    
-                    job_key.Finish()
-                    
+                self._controller.CallToThread( client_files_manager.RegenerateThumbnails, only_do_missing = True )
                 
-                self._controller.CallToThread( THREADRegenerateThumbnails )
+            elif result == wx.ID_NO:
+                
+                self._controller.CallToThread( client_files_manager.RegenerateThumbnails )
                 
             
         
@@ -2426,6 +2351,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'import_files': self._ImportFiles()
             elif command == 'import_tags': self._ImportTags()
             elif command == 'load_gui_session': self._LoadGUISession( data )
+            elif command == 'load_into_disk_cache':
+                
+                self._controller.Read( 'load_into_disk_cache' )
+                
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
             elif command == 'manage_boorus': self._ManageBoorus()
             elif command == 'manage_export_folders': self._ManageExportFolders()
@@ -3009,16 +2938,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                    if service_type == HC.FILE_REPOSITORY:
-                        
-                        self._num_thumbs = 0
-                        self._num_local_thumbs = 0
-                        
-                        self._thumbnails = ClientGUICommon.Gauge( self._info_panel )
-                        
-                        self._thumbnails_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
-                    
                 elif service_type in HC.TAG_SERVICES:
                     
                     self._tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
@@ -3120,7 +3039,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if service_type in HC.TAG_SERVICES:
                 
-                self._service_wide_update = wx.Button( self, label = 'perform a service-wide operation' )
+                self._service_wide_update = wx.Button( self, label = 'advanced service-wide operation' )
                 self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
                 
             
@@ -3169,12 +3088,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._info_panel.AddF( self._files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                     self._info_panel.AddF( self._deleted_files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                    if service_type == HC.FILE_REPOSITORY:
-                        
-                        self._info_panel.AddF( self._thumbnails, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        self._info_panel.AddF( self._thumbnails_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                        
                     
                 elif service_type in HC.TAG_SERVICES:
                     
@@ -3301,7 +3214,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
             self._controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
-            self._controller.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
             if service_type == HC.LOCAL_BOORU: self._controller.sub( self, 'RefreshLocalBooruShares', 'refresh_local_booru_shares' )
             
         
@@ -3435,14 +3347,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
         
-        def _DisplayNumThumbs( self ):
-            
-            self._thumbnails.SetRange( self._num_thumbs )
-            self._thumbnails.SetValue( min( self._num_local_thumbs, self._num_thumbs ) )
-            
-            self._thumbnails_text.SetLabelText( HydrusData.ConvertValueRangeToPrettyString( self._num_local_thumbs, self._num_thumbs ) + ' thumbnails downloaded' )
-            
-        
         def _DisplayService( self ):
             
             service_type = self._service.GetServiceType()
@@ -3463,14 +3367,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                     
                     self._deleted_files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
-                    
-                    if service_type == HC.FILE_REPOSITORY:
-                        
-                        self._num_thumbs = service_info[ HC.SERVICE_INFO_NUM_THUMBNAILS ]
-                        self._num_local_thumbs = service_info[ HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ]
-                        
-                        self._DisplayNumThumbs()
-                        
                     
                 elif service_type in HC.TAG_SERVICES:
                     
@@ -3549,16 +3445,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._init.Show()
                     self._refresh.Hide()
                     
-                
-            
-        
-        def AddThumbnailCount( self, service_key, count ):
-            
-            if service_key == self._service_key:
-                
-                self._num_local_thumbs += count
-                
-                self._DisplayNumThumbs()
                 
             
         

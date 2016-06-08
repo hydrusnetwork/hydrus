@@ -150,7 +150,7 @@ class DB( HydrusDB.HydrusDB ):
             
             source_path = file_dict[ 'path' ]
             
-            dest_path = ServerFiles.GetExpectedPath( 'file', hash )
+            dest_path = ServerFiles.GetExpectedFilePath( hash )
             
             with open( source_path, 'rb' ) as f_source:
                 
@@ -162,7 +162,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if 'thumbnail' in file_dict:
                 
-                thumbnail_dest_path = ServerFiles.GetExpectedPath( 'thumbnail', hash )
+                thumbnail_dest_path = ServerFiles.GetExpectedThumbnailPath( hash )
                 
                 thumbnail = file_dict[ 'thumbnail' ]
                 
@@ -497,9 +497,6 @@ class DB( HydrusDB.HydrusDB ):
             HydrusData.Print( 'backing up: copying files' )
             HydrusPaths.MirrorTree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
             
-            HydrusData.Print( 'backing up: copying thumbnails' )
-            HydrusPaths.MirrorTree( HC.SERVER_THUMBNAILS_DIR, os.path.join( backup_path, 'server_thumbnails' ) )
-            
             HydrusData.Print( 'backing up: copying updates' )
             HydrusPaths.MirrorTree( HC.SERVER_UPDATES_DIR, os.path.join( backup_path, 'server_updates' ) )
             
@@ -620,7 +617,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CreateDB( self ):
         
-        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_UPDATES_DIR )
+        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_UPDATES_DIR )
         
         for dir in dirs:
             
@@ -630,7 +627,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR )
+        dirs = ( HC.SERVER_FILES_DIR, )
         
         for dir in dirs:
             
@@ -817,14 +814,14 @@ class DB( HydrusDB.HydrusDB ):
             
             for hash in local_files_hashes & deletee_hashes:
                 
-                path = ServerFiles.GetPath( 'file', hash )
+                path = ServerFiles.GetFilePath( hash )
                 
                 HydrusPaths.RecyclePath( path )
                 
             
             for hash in thumbnails_hashes & deletee_hashes:
                 
-                path = ServerFiles.GetPath( 'thumbnail', hash )
+                path = ServerFiles.GetThumbnailPath( hash )
                 
                 HydrusPaths.RecyclePath( path )
                 
@@ -1254,7 +1251,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetFile( self, hash ):
         
-        path = ServerFiles.GetPath( 'file', hash )
+        path = ServerFiles.GetFilePath( hash )
         
         with open( path, 'rb' ) as f: file = f.read()
         
@@ -1670,7 +1667,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetThumbnail( self, hash ):
         
-        path = ServerFiles.GetPath( 'thumbnail', hash )
+        path = ServerFiles.GetThumbnailPath( hash )
         
         with open( path, 'rb' ) as f: thumbnail = f.read()
         
@@ -2447,7 +2444,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    file_path = ServerFiles.GetPath( 'file', hash )
+                    file_path = ServerFiles.GetFilePath( hash )
                     
                 except HydrusExceptions.NotFoundException:
                     
@@ -2456,7 +2453,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
                 
-                thumbnail_path = ServerFiles.GetExpectedPath( 'thumbnail', hash )
+                thumbnail_path = ServerFiles.GetExpectedThumbnailPath( hash )
                 
                 with open( thumbnail_path, 'wb' ) as f:
                     
@@ -2601,6 +2598,51 @@ class DB( HydrusDB.HydrusDB ):
             #
             
             self._c.execute( 'DROP TABLE mapping_petitions;' )
+            
+        
+        if version == 208:
+            
+            old_thumbnail_dir = os.path.join( self._db_dir, 'server_thumbnails' )
+            
+            for prefix in HydrusData.IterateHexPrefixes():
+                
+                HydrusData.Print( 'moving thumbnails: ' + prefix )
+                
+                source_dir = os.path.join( old_thumbnail_dir, prefix )
+                dest_dir = os.path.join( HC.SERVER_FILES_DIR, prefix )
+                
+                source_filenames = os.listdir( source_dir )
+                
+                for source_filename in source_filenames:
+                    
+                    source_path = os.path.join( source_dir, source_filename )
+                    
+                    dest_filename = source_filename + '.thumbnail'
+                    
+                    dest_path = os.path.join( dest_dir, dest_filename )
+                    
+                    try:
+                        
+                        shutil.move( source_path, dest_path )
+                        
+                    except:
+                        
+                        HydrusData.Print( 'Problem moving thumbnail from ' + source_path + ' to ' + dest_path + '.' )
+                        HydrusData.Print( 'Abandoning thumbnail transfer for ' + source_dir + '.' )
+                        
+                        break
+                        
+                    
+                
+            
+            try:
+                
+                HydrusPaths.DeletePath( old_thumbnail_dir )
+                
+            except:
+                
+                HydrusData.Print( 'Could not delete old thumbnail directory at ' + old_thumbnail_dir )
+                
             
         
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )

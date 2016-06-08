@@ -1800,28 +1800,19 @@ class ServiceRepository( ServiceRestricted ):
             
             remote_thumbnail_hashes_i_should_have = HydrusGlobals.client_controller.Read( 'remote_thumbnail_hashes_i_should_have', self._service_key )
             
+            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+            
             thumbnail_hashes_i_need = set()
             
             for hash in remote_thumbnail_hashes_i_should_have:
                 
-                path = ClientFiles.GetExpectedThumbnailPath( hash )
-                
-                if not os.path.exists( path ):
+                if not client_files_manager.HaveThumbnail( hash ):
                     
                     thumbnail_hashes_i_need.add( hash )
                     
                 
             
             if len( thumbnail_hashes_i_need ) > 0:
-                
-                def SaveThumbnails( batch_of_thumbnails ):
-                    
-                    job_key.SetVariable( 'popup_text_1', 'saving thumbnails to database' )
-                    
-                    HydrusGlobals.client_controller.WriteSynchronous( 'thumbnails', batch_of_thumbnails )
-                    
-                    HydrusGlobals.client_controller.pub( 'add_thumbnail_count', self._service_key, len( batch_of_thumbnails ) )
-                    
                 
                 thumbnails = []
                 
@@ -1846,21 +1837,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     thumbnail = self.Request( HC.GET, 'thumbnail', request_args = request_args )
                     
-                    thumbnails.append( ( hash, thumbnail ) )
-                    
-                    if i % 50 == 0:
-                        
-                        SaveThumbnails( thumbnails )
-                        
-                        thumbnails = []
-                        
-                    
-                    HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
-                    
-                
-                if len( thumbnails ) > 0:
-                    
-                    SaveThumbnails( thumbnails )
+                    client_files_manager.AddThumbnail( hash, thumbnail )
                     
                 
                 job_key.DeleteVariable( 'popup_gauge_1' )

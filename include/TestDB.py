@@ -623,20 +623,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( page_names, [ 'hf download page', 'hdd download page', 'thread watcher', 'url download page', 'petition page', 'files', 'files', 'files', 'files', 'files' ] )
         
     
-    def test_imageboard( self ):
-        
-        [ ( site_name_4chan, read_imageboards ) ] = self._read( 'imageboards' ).items()
-        
-        self.assertEqual( site_name_4chan, '4chan' )
-        
-        [ ( site_name_4chan, imageboards ) ] = ClientDefaults.GetDefaultImageboards()
-        
-        read_imageboards = { imageboard.GetName() : imageboard for imageboard in read_imageboards }
-        imageboards = { imageboard.GetName() : imageboard for imageboard in imageboards }
-        
-        self.assertItemsEqual( imageboards, read_imageboards )
-        
-    
     def test_import( self ):
         
         self._clear_db()
@@ -737,15 +723,9 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertTrue( os.path.exists( client_files_default ) )
         
-        self.assertTrue( os.path.exists( HC.CLIENT_THUMBNAILS_DIR ) )
-        
         for prefix in HydrusData.IterateHexPrefixes():
             
             dir = os.path.join( client_files_default, prefix )
-            
-            self.assertTrue( os.path.exists( dir ) )
-            
-            dir = os.path.join( HC.CLIENT_THUMBNAILS_DIR, prefix )
             
             self.assertTrue( os.path.exists( dir ) )
             

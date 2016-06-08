@@ -587,152 +587,141 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
             
-            def InitialiseControls():
+            self._booru_panel = ClientGUICommon.StaticBox( self, 'booru' )
+            
+            #
+            
+            self._search_panel = ClientGUICommon.StaticBox( self._booru_panel, 'search' )
+            
+            self._search_url = wx.TextCtrl( self._search_panel )
+            self._search_url.Bind( wx.EVT_TEXT, self.EventHTML )
+            
+            self._search_separator = wx.Choice( self._search_panel, choices = [ '+', '&', '%20' ] )
+            self._search_separator.Bind( wx.EVT_CHOICE, self.EventHTML )
+            
+            self._advance_by_page_num = wx.CheckBox( self._search_panel )
+            
+            self._thumb_classname = wx.TextCtrl( self._search_panel )
+            self._thumb_classname.Bind( wx.EVT_TEXT, self.EventHTML )
+            
+            self._example_html_search = wx.StaticText( self._search_panel, style = wx.ST_NO_AUTORESIZE )
+            
+            #
+            
+            self._image_panel = ClientGUICommon.StaticBox( self._booru_panel, 'image' )
+            
+            self._image_info = wx.TextCtrl( self._image_panel )
+            self._image_info.Bind( wx.EVT_TEXT, self.EventHTML )
+            
+            self._image_id = wx.RadioButton( self._image_panel, style = wx.RB_GROUP )
+            self._image_id.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
+            
+            self._image_data = wx.RadioButton( self._image_panel )
+            self._image_data.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
+            
+            self._example_html_image = wx.StaticText( self._image_panel, style = wx.ST_NO_AUTORESIZE )
+            
+            #
+            
+            self._tag_panel = ClientGUICommon.StaticBox( self._booru_panel, 'tags' )
+            
+            self._tag_classnames_to_namespaces = wx.ListBox( self._tag_panel )
+            self._tag_classnames_to_namespaces.Bind( wx.EVT_LEFT_DCLICK, self.EventRemove )
+            
+            self._tag_classname = wx.TextCtrl( self._tag_panel )
+            self._namespace = wx.TextCtrl( self._tag_panel )
+            
+            self._add = wx.Button( self._tag_panel, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            
+            self._example_html_tags = wx.StaticText( self._tag_panel, style = wx.ST_NO_AUTORESIZE )
+            
+            #
+            
+            self._search_url.SetValue( search_url )
+            
+            self._search_separator.Select( self._search_separator.FindString( search_separator ) )
+            
+            self._advance_by_page_num.SetValue( advance_by_page_num )
+            
+            self._thumb_classname.SetValue( thumb_classname )
+            
+            #
+            
+            if image_id is None:
                 
-                self._booru_panel = ClientGUICommon.StaticBox( self, 'booru' )
+                self._image_info.SetValue( image_data )
+                self._image_data.SetValue( True )
                 
-                #
+            else:
                 
-                self._search_panel = ClientGUICommon.StaticBox( self._booru_panel, 'search' )
-                
-                self._search_url = wx.TextCtrl( self._search_panel )
-                self._search_url.Bind( wx.EVT_TEXT, self.EventHTML )
-                
-                self._search_separator = wx.Choice( self._search_panel, choices = [ '+', '&', '%20' ] )
-                self._search_separator.Bind( wx.EVT_CHOICE, self.EventHTML )
-                
-                self._advance_by_page_num = wx.CheckBox( self._search_panel )
-                
-                self._thumb_classname = wx.TextCtrl( self._search_panel )
-                self._thumb_classname.Bind( wx.EVT_TEXT, self.EventHTML )
-                
-                self._example_html_search = wx.StaticText( self._search_panel, style = wx.ST_NO_AUTORESIZE )
-                
-                #
-                
-                self._image_panel = ClientGUICommon.StaticBox( self._booru_panel, 'image' )
-                
-                self._image_info = wx.TextCtrl( self._image_panel )
-                self._image_info.Bind( wx.EVT_TEXT, self.EventHTML )
-                
-                self._image_id = wx.RadioButton( self._image_panel, style = wx.RB_GROUP )
-                self._image_id.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
-                
-                self._image_data = wx.RadioButton( self._image_panel )
-                self._image_data.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
-                
-                self._example_html_image = wx.StaticText( self._image_panel, style = wx.ST_NO_AUTORESIZE )
-                
-                #
-                
-                self._tag_panel = ClientGUICommon.StaticBox( self._booru_panel, 'tags' )
-                
-                self._tag_classnames_to_namespaces = wx.ListBox( self._tag_panel )
-                self._tag_classnames_to_namespaces.Bind( wx.EVT_LEFT_DCLICK, self.EventRemove )
-                
-                self._tag_classname = wx.TextCtrl( self._tag_panel )
-                self._namespace = wx.TextCtrl( self._tag_panel )
-                
-                self._add = wx.Button( self._tag_panel, label = 'add' )
-                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-                
-                self._example_html_tags = wx.StaticText( self._tag_panel, style = wx.ST_NO_AUTORESIZE )
+                self._image_info.SetValue( image_id )
+                self._image_id.SetValue( True )
                 
             
-            def PopulateControls():
-                
-                self._search_url.SetValue( search_url )
-                
-                self._search_separator.Select( self._search_separator.FindString( search_separator ) )
-                
-                self._advance_by_page_num.SetValue( advance_by_page_num )
-                
-                self._thumb_classname.SetValue( thumb_classname )
-                
-                #
-                
-                if image_id is None:
-                    
-                    self._image_info.SetValue( image_data )
-                    self._image_data.SetValue( True )
-                    
-                else:
-                    
-                    self._image_info.SetValue( image_id )
-                    self._image_id.SetValue( True )
-                    
-                
-                #
-                
-                for ( tag_classname, namespace ) in tag_classnames_to_namespaces.items(): self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
-                
+            #
             
-            def ArrangeControls():
-                
-                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-                
-                gridbox = wx.FlexGridSizer( 0, 2 )
-                
-                gridbox.AddGrowableCol( 1, 1 )
-                
-                gridbox.AddF( wx.StaticText( self._search_panel, label = 'search url' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._search_url, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._search_panel, label = 'search tag separator' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._search_separator, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._search_panel, label = 'advance by page num' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._advance_by_page_num, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._search_panel, label = 'thumbnail classname' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._thumb_classname, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                self._search_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                self._search_panel.AddF( self._example_html_search, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                #
-                
-                gridbox = wx.FlexGridSizer( 0, 2 )
-                
-                gridbox.AddGrowableCol( 1, 1 )
-                
-                gridbox.AddF( wx.StaticText( self._image_panel, label = 'text' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._image_info, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._image_panel, label = 'id of <img>' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._image_id, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._image_panel, label = 'text of <a>' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._image_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                self._image_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                self._image_panel.AddF( self._example_html_image, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                #
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( self._tag_classname, CC.FLAGS_MIXED )
-                hbox.AddF( self._namespace, CC.FLAGS_MIXED )
-                hbox.AddF( self._add, CC.FLAGS_MIXED )
-                
-                self._tag_panel.AddF( self._tag_classnames_to_namespaces, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._tag_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                self._tag_panel.AddF( self._example_html_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                #
-                
-                self._booru_panel.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_panel.AddF( self._image_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_panel.AddF( self._tag_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( self._booru_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                self.SetSizer( vbox )
-                
+            for ( tag_classname, namespace ) in tag_classnames_to_namespaces.items(): self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
             
-            InitialiseControls()
+            #
             
-            PopulateControls()
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            ArrangeControls()
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._search_panel, label = 'search url' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._search_url, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self._search_panel, label = 'search tag separator' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._search_separator, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self._search_panel, label = 'advance by page num' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._advance_by_page_num, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self._search_panel, label = 'thumbnail classname' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._thumb_classname, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._search_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._search_panel.AddF( self._example_html_search, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._image_panel, label = 'text' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._image_info, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self._image_panel, label = 'id of <img>' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._image_id, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self._image_panel, label = 'text of <a>' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._image_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._image_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._image_panel.AddF( self._example_html_image, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._tag_classname, CC.FLAGS_MIXED )
+            hbox.AddF( self._namespace, CC.FLAGS_MIXED )
+            hbox.AddF( self._add, CC.FLAGS_MIXED )
+            
+            self._tag_panel.AddF( self._tag_classnames_to_namespaces, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._tag_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._tag_panel.AddF( self._example_html_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            self._booru_panel.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._booru_panel.AddF( self._image_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._booru_panel.AddF( self._tag_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._booru_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.SetSizer( vbox )
             
         
         def _GetInfo( self ):
@@ -9283,7 +9272,10 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 HydrusGlobals.client_controller.Write( 'save_options', HC.options )
                 
             
-        finally: self.EndModal( wx.ID_OK )
+        finally:
+            
+            self.EndModal( wx.ID_OK )
+            
         
     
     def EventPrevious( self, event ):
@@ -9354,7 +9346,10 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.Ok )
             
-            self._modify_mappers = wx.Button( self, label = 'Modify mappers' )
+            self._advanced_content_update_button = wx.Button( self, label = 'advanced operation' )
+            self._advanced_content_update_button.Bind( wx.EVT_BUTTON, self.EventAdvancedContentUpdate )
+            
+            self._modify_mappers = wx.Button( self, label = 'modify mappers' )
             self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
             
             self._copy_tags = wx.Button( self, label = 'copy tags' )
@@ -9381,10 +9376,16 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            if self._i_am_local_tag_service: self._modify_mappers.Hide()
+            if self._i_am_local_tag_service:
+                
+                self._modify_mappers.Hide()
+                
             else:
                 
-                if not self._account.HasPermission( HC.MANAGE_USERS ): self._modify_mappers.Hide()
+                if not self._account.HasPermission( HC.MANAGE_USERS ):
+                    
+                    self._modify_mappers.Hide()
+                    
                 
             
             copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -9392,13 +9393,14 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             copy_paste_hbox.AddF( self._copy_tags, CC.FLAGS_MIXED )
             copy_paste_hbox.AddF( self._paste_tags, CC.FLAGS_MIXED )
             copy_paste_hbox.AddF( self._remove_tags, CC.FLAGS_MIXED )
+            copy_paste_hbox.AddF( self._advanced_content_update_button, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._add_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( copy_paste_hbox, CC.FLAGS_BUTTON_SIZER )
-            vbox.AddF( self._modify_mappers, CC.FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._modify_mappers, CC.FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
             
@@ -9631,6 +9633,23 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             if len( tags ) > 0:
                 
                 self._AddTags( tags )
+                
+            
+        
+        def EventAdvancedContentUpdate( self, event ):
+            
+            hashes = set()
+            
+            for m in self._media:
+                
+                hashes.update( m.GetHashes() )
+                
+            
+            self.GetParent().GetParent().EventOK( event )
+            
+            with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._tag_service_key, hashes ) as dlg:
+                
+                dlg.ShowModal()
                 
             
         
