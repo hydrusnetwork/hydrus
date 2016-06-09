@@ -8438,86 +8438,93 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'COMMIT;' )
             
-            job_key = None
+            job_key_pubbed = False
+            
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetVariable( 'popup_title', 'database maintenance - vacuum' )
             
             self._CloseDBCursor()
             
-            time.sleep( 1 )
-            
-            names_done = []
-            
-            for name in due_names:
+            try:
                 
-                try:
+                time.sleep( 1 )
+                
+                names_done = []
+                
+                for name in due_names:
                     
-                    db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
-                    
-                    if HydrusDB.CanVacuum( db_path, stop_time = stop_time ):
+                    try:
                         
-                        if job_key is None:
+                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+                        
+                        if HydrusDB.CanVacuum( db_path, stop_time = stop_time ):
                             
-                            job_key = ClientThreading.JobKey()
+                            if not job_key_pubbed:
+                                
+                                self._controller.pub( 'message', job_key )
+                                
+                                job_key_pubbed = True
+                                
                             
-                            job_key.SetVariable( 'popup_title', 'database maintenance - vacuum' )
+                            self._controller.pub( 'splash_set_status_text', 'vacuuming ' + name )
+                            job_key.SetVariable( 'popup_text_1', 'vacuuming ' + name )
                             
-                            self._controller.pub( 'message', job_key )
+                            started = HydrusData.GetNowPrecise()
+                            
+                            HydrusDB.VacuumDB( db_path )
+                            
+                            time_took = HydrusData.GetNowPrecise() - started
+                            
+                            HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+                            
+                            names_done.append( name )
                             
                         
-                        self._controller.pub( 'splash_set_status_text', 'vacuuming ' + name )
-                        job_key.SetVariable( 'popup_text_1', 'vacuuming ' + name )
+                    except Exception as e:
                         
-                        started = HydrusData.GetNowPrecise()
+                        HydrusData.Print( 'vacuum failed:' )
                         
-                        HydrusDB.VacuumDB( db_path )
+                        HydrusData.ShowException( e )
                         
-                        time_took = HydrusData.GetNowPrecise() - started
+                        size = os.path.getsize( db_path )
                         
-                        HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+                        pretty_size = HydrusData.ConvertIntToBytes( size )
                         
-                        names_done.append( name )
+                        text = 'An attempt to vacuum the database failed.'
+                        text += os.linesep * 2
+                        text += 'For now, automatic vacuuming has been disabled. If the error is not obvious, please contact the hydrus developer.'
                         
-                    
-                except Exception as e:
-                    
-                    HydrusData.Print( 'vacuum failed:' )
-                    
-                    HydrusData.ShowException( e )
-                    
-                    size = os.path.getsize( db_path )
-                    
-                    pretty_size = HydrusData.ConvertIntToBytes( size )
-                    
-                    text = 'An attempt to vacuum the database failed.'
-                    text += os.linesep * 2
-                    text += 'For now, automatic vacuuming has been disabled. If the error is not obvious, please contact the hydrus developer.'
-                    
-                    HydrusData.ShowText( text )
-                    
-                    self._InitDBCursor()
-                    
-                    self._c.execute( 'BEGIN IMMEDIATE;' )
-                    
-                    HC.options[ 'maintenance_vacuum_period' ] = None
-                    
-                    self._SaveOptions( HC.options )
-                    
-                    return
+                        HydrusData.ShowText( text )
+                        
+                        self._InitDBCursor()
+                        
+                        self._c.execute( 'BEGIN IMMEDIATE;' )
+                        
+                        HC.options[ 'maintenance_vacuum_period' ] = None
+                        
+                        self._SaveOptions( HC.options )
+                        
+                        return
+                        
                     
                 
-            
-            job_key.SetVariable( 'popup_text_1', 'cleaning up' )
-            
-            self._InitDBCursor()
-            
-            self._c.execute( 'BEGIN IMMEDIATE;' )
-            
-            self._c.executemany( 'DELETE FROM vacuum_timestamps WHERE name = ?;', ( ( name, ) for name in names_done ) )
-            
-            self._c.executemany( 'INSERT OR IGNORE INTO vacuum_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( ( name, HydrusData.GetNow() ) for name in names_done ) )
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            
-            wx.CallLater( 1000 * 30, job_key.Delete )
+                job_key.SetVariable( 'popup_text_1', 'cleaning up' )
+                
+            finally:
+                
+                self._InitDBCursor()
+                
+                self._c.execute( 'BEGIN IMMEDIATE;' )
+                
+                self._c.executemany( 'DELETE FROM vacuum_timestamps WHERE name = ?;', ( ( name, ) for name in names_done ) )
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO vacuum_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( ( name, HydrusData.GetNow() ) for name in names_done ) )
+                
+                job_key.SetVariable( 'popup_text_1', 'done!' )
+                
+                wx.CallLater( 1000 * 30, job_key.Delete )
+                
             
         
     
