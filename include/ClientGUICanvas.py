@@ -1431,8 +1431,6 @@ class CanvasWithDetails( Canvas ):
             
             # ratings
             
-            ( local_ratings, remote_ratings ) = self._current_display_media.GetRatings()
-            
             services_manager = HydrusGlobals.client_controller.GetServicesManager()
             
             like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
@@ -1453,7 +1451,6 @@ class CanvasWithDetails( Canvas ):
                 
             
             if len( like_services ) > 0: current_y += 20
-            
             
             numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
             

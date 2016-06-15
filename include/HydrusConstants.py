@@ -27,7 +27,6 @@ CLIENT_UPDATES_DIR = os.path.join( DB_DIR, 'client_updates' )
 SERVER_UPDATES_DIR = os.path.join( DB_DIR, 'server_updates' )
 HELP_DIR = os.path.join( BASE_DIR, 'help' )
 INCLUDE_DIR = os.path.join( BASE_DIR, 'include' )
-LOGS_DIR = os.path.join( BASE_DIR, 'logs' )
 STATIC_DIR = os.path.join( BASE_DIR, 'static' )
 
 #
@@ -49,7 +48,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 209
+SOFTWARE_VERSION = 210
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

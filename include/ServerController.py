@@ -38,7 +38,7 @@ def GetStartingAction():
             
         else:
             
-            already_running = HydrusData.IsAlreadyRunning( 'server' )
+            already_running = HydrusData.IsAlreadyRunning( HC.DB_DIR, 'server' )
             
             if command == 'start':
                 
@@ -77,7 +77,7 @@ def GetStartingAction():
         
     else:
         
-        already_running = HydrusData.IsAlreadyRunning( 'server' )
+        already_running = HydrusData.IsAlreadyRunning( HC.DB_DIR, 'server' )
         
         if not already_running:
             
@@ -111,7 +111,7 @@ def ShutdownSiblingInstance():
     
     port_found = False
     
-    ports = HydrusData.GetSiblingProcessPorts( 'server' )
+    ports = HydrusData.GetSiblingProcessPorts( HC.DB_DIR, 'server' )
     
     if ports is None:
         
@@ -164,7 +164,7 @@ def ShutdownSiblingInstance():
             
             time_waited = 0
             
-            while HydrusData.IsAlreadyRunning( 'server' ):
+            while HydrusData.IsAlreadyRunning( HC.DB_DIR, 'server' ):
                 
                 time.sleep( 1 )
                 
@@ -300,6 +300,8 @@ class Controller( HydrusController.HydrusController ):
         
         self.ShutdownModel()
         
+        HydrusData.CleanRunningFile( HC.DB_DIR, 'server' )
+        
     
     def GetServerSessionManager( self ):
         
@@ -356,7 +358,7 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        HydrusData.RecordRunningStart( 'server' )
+        HydrusData.RecordRunningStart( HC.DB_DIR, 'server' )
         
         HydrusData.Print( 'Initialising db...' )
         

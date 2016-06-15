@@ -654,7 +654,7 @@ class TestClientDB( unittest.TestCase ):
             
             ( media_result, ) = self._read( 'media_results', ( written_hash, ) )
             
-            ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+            ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_ratings_manager ) = media_result.ToTuple()
             
             now = HydrusData.GetNow()
             
@@ -788,7 +788,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( media_result, ) = self._read( 'media_results', ( hash, ) )
         
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_ratings_manager ) = media_result.ToTuple()
         
         now = HydrusData.GetNow()
         
@@ -805,7 +805,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( media_result, ) = self._read( 'media_results_from_ids', ( 1, ) )
         
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_ratings_manager ) = media_result.ToTuple()
         
         now = HydrusData.GetNow()
         

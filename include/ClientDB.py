@@ -27,6 +27,7 @@ import HydrusThreading
 import ClientConstants as CC
 import lz4
 import os
+import psutil
 import Queue
 import random
 import shutil
@@ -3963,14 +3964,13 @@ class DB( HydrusDB.HydrusDB ):
             
             current_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ] }
             
-            file_service_keys_cdpp = ClientMedia.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys, urls = urls, service_keys_to_filenames = service_keys_to_filenames, current_to_timestamps = current_file_service_keys_to_timestamps )
+            locations_manager = ClientMedia.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys, urls = urls, service_keys_to_filenames = service_keys_to_filenames, current_to_timestamps = current_file_service_keys_to_timestamps )
             
             #
             
             local_ratings = { service_ids_to_service_keys[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
             
-            local_ratings = ClientRatings.LocalRatingsManager( local_ratings )
-            remote_ratings = {}
+            ratings_manager = ClientRatings.RatingsManager( local_ratings )
             
             #
             
@@ -3983,7 +3983,7 @@ class DB( HydrusDB.HydrusDB ):
                 ( size, mime, width, height, duration, num_frames, num_words ) = ( None, HC.APPLICATION_UNKNOWN, None, None, None, None, None )
                 
             
-            media_results.append( ClientMedia.MediaResult( ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, file_service_keys_cdpp, local_ratings, remote_ratings ) ) )
+            media_results.append( ClientMedia.MediaResult( ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) ) )
             
         
         return media_results
@@ -5036,6 +5036,11 @@ class DB( HydrusDB.HydrusDB ):
         
         archives_dir = os.path.join( self._db_dir, 'client_archives' )
         
+        if not os.path.exists( archives_dir ):
+            
+            os.makedirs( archives_dir )
+            
+        
         for filename in os.listdir( archives_dir ):
             
             if filename.endswith( '.db' ):
@@ -5060,6 +5065,14 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _InitCaches( self ):
+        
+        HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing disk cache' )
+        
+        stop_time = HydrusData.GetNow() + 10
+        
+        self._LoadIntoDiskCache( stop_time = stop_time )
+        
+        HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing db caches' )
         
         self._local_file_service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
         self._trash_service_id = self._GetServiceId( CC.TRASH_SERVICE_KEY )
@@ -5127,24 +5140,61 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _LoadIntoDiskCache( self ):
+    def _LoadIntoDiskCache( self, stop_time = None, caller_limit = None ):
         
         self._CloseDBCursor()
         
-        for filename in self._db_filenames.values():
+        try:
             
-            path = os.path.join( self._db_dir, filename )
+            approx_disk_cache_size = psutil.virtual_memory().available * 4 / 5
             
-            with open( path, 'rb' ) as f:
-                
-                while f.read( HC.READ_BLOCK_SIZE ) != '':
-                    
-                    pass
-                    
-                
+            disk_cache_limit = approx_disk_cache_size * 2 / 3
+            
+        except psutil.Error:
+            
+            disk_cache_limit = 1024 * 1024 * 1024
             
         
-        self._InitDBCursor()
+        so_far_read = 0
+        
+        try:
+            
+            paths = [ os.path.join( HC.DB_DIR, filename ) for filename in self._db_filenames.values() ]
+            
+            paths.sort( key = os.path.getsize )
+            
+            for path in paths:
+                
+                with open( path, 'rb' ) as f:
+                    
+                    while f.read( HC.READ_BLOCK_SIZE ) != '':
+                        
+                        if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
+                            
+                            return False
+                            
+                        
+                        so_far_read += HC.READ_BLOCK_SIZE
+                        
+                        if so_far_read > disk_cache_limit:
+                            
+                            return True
+                            
+                        
+                        if caller_limit is not None and so_far_read > caller_limit:
+                            
+                            return False
+                            
+                        
+                    
+                
+            
+        finally:
+            
+            self._InitDBCursor()
+            
+        
+        return True
         
     
     def _MaintenanceDue( self ):
@@ -6436,214 +6486,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
         
-        if version == 150:
-            
-            options = self._GetOptions()
-            
-            options[ 'file_system_predicates' ][ 'hamming_distance' ] = 5
-            
-            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
-            
-        
-        if version == 151:
-            
-            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) ).fetchall()
-            
-            for ( dump_type, dump_name, dump ) in results:
-                
-                dump[ 'initial_limit' ] = 500
-                
-                self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
-                
-            
-        
-        if version == 152:
-            
-            options = self._GetOptions()
-            
-            options[ 'file_system_predicates' ][ 'num_pixels' ] = ( 1, 2, 2 )
-            
-            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
-            
-        
-        if version == 153:
-            
-            options = self._GetOptions()
-            
-            options[ 'file_system_predicates' ] = ClientDefaults.GetClientDefaultOptions()[ 'file_system_predicates' ]
-            
-            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
-            
-            #
-            
-            self._c.execute( 'CREATE TABLE json_dumps ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );' )
-            self._c.execute( 'CREATE TABLE json_dumps_named ( dump_type INTEGER, dump_name TEXT, version INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name ) );' )
-            
-            #
-            
-            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, ) ).fetchall()
-            
-            objs = []
-            
-            for ( dump_type, dump_name, dump ) in results:
-                
-                shortcuts = ClientData.Shortcuts( dump_name )
-                
-                actions = dump
-                
-                for ( modifier, key, service_key, data ) in actions:
-                    
-                    if isinstance( service_key, ClientData.ClientServiceIdentifier ): service_key = service_key.GetServiceKey()
-                    
-                    action = ( service_key, data )
-                    
-                    shortcuts.SetKeyboardAction( modifier, key, action )
-                    
-                
-                objs.append( shortcuts )
-                
-            
-            for obj in objs:
-                
-                ( dump_type, dump_name, dump_version, serialisable_info ) = obj.GetSerialisableTuple()
-                
-                dump = json.dumps( serialisable_info )
-                
-                self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, dump ) VALUES ( ?, ?, ?, ? );', ( dump_type, dump_name, dump_version, sqlite3.Binary( dump ) ) )
-                
-            
-            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, ) )
-            
-        
-        if version == 156:
-            
-            results = self._c.execute( 'SELECT dump_type, dump_name, dump FROM json_dumps_named;' ).fetchall()
-            
-            for ( dump_type, dump_name, dump ) in results:
-                
-                try:
-                    
-                    dump = lz4.loads( dump )
-                    
-                    self._c.execute( 'UPDATE json_dumps_named SET dump = ? WHERE dump_type = ? AND dump_name = ?;', ( sqlite3.Binary( dump ), dump_type, dump_name ) )
-                    
-                except:
-                    
-                    continue
-                    
-                
-            
-        
-        if version == 157:
-            
-            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) ).fetchall()
-            
-            for ( dump_type, dump_name, dump ) in results:
-                
-                dump[ 'get_tags_if_redundant' ] = False
-                
-                a_i_o = dump[ 'advanced_import_options' ]
-                
-                if 'auto_archive' not in a_i_o:
-                    
-                    a_i_o[ 'auto_archive' ] = False
-                    
-                
-                if 'exclude_deleted_files' not in a_i_o:
-                    
-                    a_i_o[ 'exclude_deleted_files' ] = False
-                    
-                
-                if 'min_resolution' not in a_i_o:
-                    
-                    a_i_o[ 'min_resolution' ] = None
-                    
-                
-                if 'min_size' not in a_i_o:
-                    
-                    a_i_o[ 'min_size' ] = None
-                    
-                
-                self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
-                
-            
-            #
-            
-            results = self._c.execute( 'SELECT service_id, service_type, info FROM services WHERE service_type IN ( ?, ? );', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ).fetchall()
-            
-            for ( service_id, service_type, info ) in results:
-                
-                if service_type == HC.LOCAL_RATING_LIKE:
-                    
-                    del info[ 'like' ]
-                    del info[ 'dislike' ]
-                    
-                    info[ 'colours' ] = ClientRatings.default_like_colours
-                    
-                else:
-                    
-                    upper = info[ 'upper' ]
-                    lower = info[ 'lower' ]
-                    
-                    del info[ 'upper' ]
-                    del info[ 'lower' ]
-                    
-                    info[ 'num_stars' ] = upper - lower
-                    
-                    info[ 'colours' ] = ClientRatings.default_numerical_colours
-                    
-                
-                info[ 'shape' ] = ClientRatings.CIRCLE
-                
-                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                
-            
-            #
-            
-            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_EXPORT_FOLDER, ) ).fetchall()
-            
-            for ( dump_type, dump_name, dump ) in results:
-                
-                details = dump
-                
-                details[ 'type' ] = HC.EXPORT_FOLDER_TYPE_REGULAR
-                
-                self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
-                
-            
-        
-        if version == 158:
-            
-            results = self._c.execute( 'SELECT service_id, service_type, info FROM services WHERE service_type IN ( ?, ? );', ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY ) ).fetchall()
-            
-            for ( service_id, service_type, info ) in results:
-                
-                info[ 'first_timestamp' ] = None
-                info[ 'next_download_timestamp' ] = 0
-                
-                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                
-            
-            for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
-                
-                path = os.path.join( HC.CLIENT_UPDATES_DIR, filename )
-                
-                ClientData.DeletePath( path )
-                
-            
-        
-        if version == 159:
-            
-            results = self._c.execute( 'SELECT service_id, service_type, info FROM services WHERE service_type = ?;', ( HC.LOCAL_RATING_NUMERICAL, ) ).fetchall()
-            
-            for ( service_id, service_type, info ) in results:
-                
-                info[ 'allow_zero' ] = True
-                
-                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                
-            
-        
         if version == 160:
             
             self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'e621', ClientDefaults.GetDefaultBoorus()[ 'e621' ] ) )
@@ -7509,29 +7351,34 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._CloseDBCursor()
                 
-                for filename in self._db_filenames.values():
+                try:
                     
-                    self._controller.pub( 'splash_set_status_text', 'vacuuming ' + filename )
-                    
-                    db_path = os.path.join( self._db_dir, filename )
-                    
-                    try:
+                    for filename in self._db_filenames.values():
                         
-                        if HydrusDB.CanVacuum( db_path ):
+                        self._controller.pub( 'splash_set_status_text', 'vacuuming ' + filename )
+                        
+                        db_path = os.path.join( self._db_dir, filename )
+                        
+                        try:
                             
-                            HydrusDB.VacuumDB( db_path )
+                            if HydrusDB.CanVacuum( db_path ):
+                                
+                                HydrusDB.VacuumDB( db_path )
+                                
+                            
+                        except Exception as e:
+                            
+                            HydrusData.Print( 'Vacuum failed!' )
+                            HydrusData.PrintException( e )
                             
                         
-                    except Exception as e:
-                        
-                        HydrusData.Print( 'Vacuum failed!' )
-                        HydrusData.PrintException( e )
-                        
                     
-                
-                self._InitDBCursor()
-                
-                self._c.execute( 'BEGIN IMMEDIATE;' )
+                finally:
+                    
+                    self._InitDBCursor()
+                    
+                    self._c.execute( 'BEGIN IMMEDIATE;' )
+                    
                 
             
         
@@ -7787,29 +7634,34 @@ class DB( HydrusDB.HydrusDB ):
             
             self._CloseDBCursor()
             
-            for filename in self._db_filenames.values():
+            try:
                 
-                self._controller.pub( 'splash_set_status_text', 'vacuuming ' + filename )
-                
-                db_path = os.path.join( self._db_dir, filename )
-                
-                try:
+                for filename in self._db_filenames.values():
                     
-                    if HydrusDB.CanVacuum( db_path ):
+                    self._controller.pub( 'splash_set_status_text', 'vacuuming ' + filename )
+                    
+                    db_path = os.path.join( self._db_dir, filename )
+                    
+                    try:
                         
-                        HydrusDB.VacuumDB( db_path )
+                        if HydrusDB.CanVacuum( db_path ):
+                            
+                            HydrusDB.VacuumDB( db_path )
+                            
+                        
+                    except Exception as e:
+                        
+                        HydrusData.Print( 'Vacuum failed!' )
+                        HydrusData.PrintException( e )
                         
                     
-                except Exception as e:
-                    
-                    HydrusData.Print( 'Vacuum failed!' )
-                    HydrusData.PrintException( e )
-                    
                 
-            
-            self._InitDBCursor()
-            
-            self._c.execute( 'BEGIN IMMEDIATE;' )
+            finally:
+                
+                self._InitDBCursor()
+                
+                self._c.execute( 'BEGIN IMMEDIATE;' )
+                
             
         
         if version == 204:
@@ -7910,6 +7762,47 @@ class DB( HydrusDB.HydrusDB ):
             except:
                 
                 HydrusData.Print( 'Could not delete old thumbnail directory at ' + old_thumbnail_dir )
+                
+            
+        
+        if version == 209:
+            
+            update_dirnames = os.listdir( HC.CLIENT_UPDATES_DIR )
+            
+            for update_dirname in update_dirnames:
+                
+                update_dir = os.path.join( HC.CLIENT_UPDATES_DIR, update_dirname )
+                
+                if os.path.isdir( update_dir ):
+                    
+                    update_filenames = os.listdir( update_dir )
+                    
+                    for update_filename in update_filenames:
+                        
+                        update_path = os.path.join( update_dir, update_filename )
+                        
+                        try:
+                            
+                            with open( update_path, 'rb' ) as f:
+                                
+                                content = f.read()
+                                
+                            
+                            obj = HydrusSerialisable.CreateFromString( content )
+                            
+                            compressed_content = obj.DumpToNetworkString()
+                            
+                            with open( update_path, 'wb' ) as f:
+                                
+                                f.write( compressed_content )
+                                
+                            
+                        except:
+                            
+                            HydrusData.Print( 'The path ' + update_path + ' failed to convert to a network string.' )
+                            
+                        
+                    
                 
             
         

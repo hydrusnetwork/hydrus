@@ -728,7 +728,7 @@ class Imageboard( HydrusData.HydrusYAMLBase ):
     
     def IsOkToPost( self, media_result ):
         
-        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = media_result.ToTuple()
         
         if CC.RESTRICTION_MIN_RESOLUTION in self._restrictions:
             
@@ -1529,7 +1529,7 @@ class ServiceRepository( ServiceRestricted ):
                             
                             content_update_package = self.Request( HC.GET, 'content_update_package', { 'begin' : begin, 'subindex' : subindex } )
                             
-                            obj_string = content_update_package.DumpToString()
+                            obj_string = content_update_package.DumpToNetworkString()
                             
                             job_key.SetVariable( 'popup_text_1', update_index_string + subupdate_index_string + 'saving to disk' )
                             
@@ -1541,7 +1541,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     path = ClientFiles.GetExpectedServiceUpdatePackagePath( self._service_key, begin )
                     
-                    obj_string = service_update_package.DumpToString()
+                    obj_string = service_update_package.DumpToNetworkString()
                     
                     with open( path, 'wb' ) as f: f.write( obj_string )
                     
@@ -1575,6 +1575,33 @@ class ServiceRepository( ServiceRestricted ):
                 else:
                     
                     raise
+                    
+                
+            
+            if self.CanProcessUpdate():
+                
+                HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing disk cache' )
+                job_key.SetVariable( 'popup_text_1', 'preparing disk cache' )
+                
+                loaded_into_disk_cache = False
+                
+                while not loaded_into_disk_cache:
+                    
+                    if options[ 'pause_repo_sync' ]:
+                        
+                        break
+                        
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        break
+                        
+                    
+                    stop_time = HydrusData.GetNow() + 15
+                    
+                    loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = stop_time )
                     
                 
             
@@ -1618,7 +1645,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 try:
                     
-                    service_update_package = HydrusSerialisable.CreateFromString( obj_string )
+                    service_update_package = HydrusSerialisable.CreateFromNetworkString( obj_string )
                     
                     if not isinstance( service_update_package, HydrusData.ServerToClientServiceUpdatePackage ):
                         
@@ -1673,7 +1700,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     try:
                         
-                        content_update_package = HydrusSerialisable.CreateFromString( obj_string )
+                        content_update_package = HydrusSerialisable.CreateFromNetworkString( obj_string )
                         
                         if not isinstance( content_update_package, HydrusData.ServerToClientContentUpdatePackage ):
                             
@@ -2304,32 +2331,4 @@ def GetShortcutFromEvent( event ):
     key = event.KeyCode
     
     return ( modifier, key )
-
-class ClientServiceIdentifier( HydrusData.HydrusYAMLBase ):
     
-    yaml_tag = u'!ClientServiceIdentifier'
-    
-    def __init__( self, service_key, service_type, name ):
-        
-        HydrusData.HydrusYAMLBase.__init__( self )
-        
-        self._service_key = service_key
-        self._type = service_type
-        self._name = name
-        
-    
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
-    
-    def __hash__( self ): return self._service_key.__hash__()
-    
-    def __ne__( self, other ): return self.__hash__() != other.__hash__()
-    
-    def __repr__( self ): return 'Client Service Identifier: ' + HydrusData.ToUnicode( ( self._name, HC.service_string_lookup[ self._type ] ) )
-    
-    def GetInfo( self ): return ( self._service_key, self._type, self._name )
-    
-    def GetName( self ): return self._name
-    
-    def GetServiceKey( self ): return self._service_key
-    
-    def GetServiceType( self ): return self._type

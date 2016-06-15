@@ -18,6 +18,24 @@ import HydrusExceptions
 import HydrusGlobals
 import itertools
 
+def FlattenMedia( media_list ):
+    
+    flat_media = []
+    
+    for media in media_list:
+        
+        if media.IsCollection():
+            
+            flat_media.extend( media.GetFlatMedia() )
+            
+        else:
+            
+            flat_media.append( media )
+            
+        
+    
+    return flat_media
+    
 def MergeTagsManagers( tags_managers ):
     
     def CurrentAndPendingFilter( items ):
@@ -97,6 +115,19 @@ class LocationsManager( object ):
         
         self._pending.discard( service_key )
         self._petitioned.discard( service_key )
+        
+    
+    def Duplicate( self ):
+        
+        current = set( self._current )
+        deleted = set( self._deleted )
+        pending = set( self._pending )
+        petitioned = set( self._petitioned )
+        urls = list( self._urls )
+        service_keys_to_filenames = dict( self._service_keys_to_filenames )
+        current_to_timestamps = dict( self._current_to_timestamps )
+        
+        return LocationsManager( current, deleted, pending, petitioned, urls = urls, service_keys_to_filenames = service_keys_to_filenames, current_to_timestamps = current_to_timestamps )
         
     
     def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
@@ -298,29 +329,27 @@ class MediaList( object ):
         
         services_manager = HydrusGlobals.client_controller.GetServicesManager()
         
-        local_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
-        remote_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetServiceType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
-        
         keys_to_medias = collections.defaultdict( list )
         
         for media in medias:
             
-            if len( namespaces_to_collect_by ) > 0: namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by, collapse_siblings = True )
-            else: namespace_key = None
+            if len( namespaces_to_collect_by ) > 0:
+                
+                namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by, collapse_siblings = True )
+                
+            else:
+                
+                namespace_key = None
+                
             
             if len( ratings_to_collect_by ) > 0:
                 
-                ( local_ratings, remote_ratings ) = media.GetRatings()
+                rating_key = media.GetRatingsManager().GetRatingSlice( ratings_to_collect_by )
                 
-                if len( local_ratings_to_collect_by ) > 0: local_rating_key = local_ratings.GetRatingSlice( local_ratings_to_collect_by )
-                else: local_rating_key = None
+            else:
                 
-                if len( remote_ratings_to_collect_by ) > 0: remote_rating_key = remote_ratings.GetRatingSlice( remote_ratings_to_collect_by )
-                else: remote_rating_key = None
+                rating_key = None
                 
-                rating_key = ( local_rating_key, remote_rating_key )
-                
-            else: rating_key = None
             
             keys_to_medias[ ( namespace_key, rating_key ) ].append( media )
             
@@ -566,9 +595,12 @@ class MediaList( object ):
                 
                 if unrated is not None:
                     
-                    ( local_ratings, remote_ratings ) = media.GetRatings()
+                    ratings_manager = media.GetRatingsManager()
                     
-                    if local_ratings.GetRating( unrated ) is not None: continue
+                    if ratings_manager.GetRating( unrated ) is not None:
+                        
+                        continue
+                        
                     
                 
                 if for_media_viewer:
@@ -731,14 +763,14 @@ class MediaList( object ):
             
             def ratings_sort_function( service_key, reverse, x ):
                 
-                ( x_local_ratings, x_remote_ratings ) = x.GetRatings()
+                x_ratings_manager = x.GetRatingsManager()
                 
-                service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                rating = deal_with_none( x_ratings_manager.GetRating( service_key ) )
                 
-                if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = deal_with_none( x_local_ratings.GetRating( service_key ) )
-                else: rating = deal_with_none( x_remote_ratings.GetScore( service_key ) )
-                
-                if reverse: rating *= -1
+                if reverse:
+                    
+                    rating *= -1
+                    
                 
                 return rating
                 
@@ -830,8 +862,14 @@ class MediaCollection( MediaList, Media ):
         self._tags_manager = MergeTagsManagers( tags_managers )
         
         # horrible compromise
-        if len( self._sorted_media ) > 0: self._ratings = self._sorted_media[0].GetRatings()
-        else: self._ratings = ( ClientRatings.LocalRatingsManager( {} ), ClientRatings.CPRemoteRatingsServiceKeys( {} ) )
+        if len( self._sorted_media ) > 0:
+            
+            self._ratings_manager = self._sorted_media[0].GetRatingsManager()
+            
+        else:
+            
+            self._ratings_manager = ClientRatings.RatingsManager( {} )
+            
         
         all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
         
@@ -916,7 +954,10 @@ class MediaCollection( MediaList, Media ):
         return [ info_string ]
         
     
-    def GetRatings( self ): return self._ratings
+    def GetRatingsManager( self ):
+        
+        return self._ratings_manager
+        
     
     def GetResolution( self ): return ( self._width, self._height )
     
@@ -972,6 +1013,11 @@ class MediaSingleton( Media ):
         Media.__init__( self )
         
         self._media_result = media_result
+        
+    
+    def Duplicate( self ):
+        
+        return MediaSingleton( self._media_result.Duplicate() )
         
     
     def GetDisplayMedia( self ): return self
@@ -1070,7 +1116,7 @@ class MediaSingleton( Media ):
     
     def GetPrettyInfoLines( self ):
         
-        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._media_result.ToTuple()
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = self._media_result.ToTuple()
         
         info_string = HydrusData.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         
@@ -1130,7 +1176,7 @@ class MediaSingleton( Media ):
         return lines
         
     
-    def GetRatings( self ): return self._media_result.GetRatings()
+    def GetRatingsManager( self ): return self._media_result.GetRatingsManager()
     
     def GetResolution( self ):
         
@@ -1275,14 +1321,14 @@ class MediaResult( object ):
     
     def __init__( self, tuple ):
         
-        # hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings
+        # hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager
         
         self._tuple = tuple
         
     
     def DeletePending( self, service_key ):
         
-        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = self._tuple
         
         service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
@@ -1290,6 +1336,19 @@ class MediaResult( object ):
         
         if service_type == HC.TAG_REPOSITORY: tags_manager.DeletePending( service_key )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ): locations_manager.DeletePending( service_key )
+        
+    
+    def Duplicate( self ):
+        
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = self._tuple
+        
+        tags_manager = tags_manager.Duplicate()
+        locations_manager = locations_manager.Duplicate()
+        ratings_manager = ratings_manager.Duplicate()
+        
+        tuple = ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager )
+        
+        return MediaResult( tuple )
         
     
     def GetHash( self ): return self._tuple[0]
@@ -1306,7 +1365,7 @@ class MediaResult( object ):
     
     def GetNumWords( self ): return self._tuple[8]
     
-    def GetRatings( self ): return ( self._tuple[11], self._tuple[12] )
+    def GetRatingsManager( self ): return self._tuple[11]
     
     def GetResolution( self ): return ( self._tuple[4], self._tuple[5] )
     
@@ -1318,19 +1377,28 @@ class MediaResult( object ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = self._tuple
         
         service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
         
         service_type = service.GetServiceType()
         
-        if service_type in HC.TAG_SERVICES: tags_manager.ProcessContentUpdate( service_key, content_update )
+        if service_type in HC.TAG_SERVICES:
+            
+            tags_manager.ProcessContentUpdate( service_key, content_update )
+            
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.IPFS ):
             
             if service_type == HC.LOCAL_FILE:
                 
-                if action == HC.CONTENT_UPDATE_ARCHIVE: inbox = False
-                elif action == HC.CONTENT_UPDATE_INBOX: inbox = True
+                if action == HC.CONTENT_UPDATE_ARCHIVE:
+                    
+                    inbox = False
+                    
+                elif action == HC.CONTENT_UPDATE_INBOX:
+                    
+                    inbox = True
+                    
                 
                 if service_key == CC.LOCAL_FILE_SERVICE_KEY:
                     
@@ -1347,21 +1415,20 @@ class MediaResult( object ):
                         
                     
                 
-                self._tuple = ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings )
+                self._tuple = ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager )
                 
             
             locations_manager.ProcessContentUpdate( service_key, content_update )
             
         elif service_type in HC.RATINGS_SERVICES:
             
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): local_ratings.ProcessContentUpdate( service_key, content_update )
-            else: remote_ratings.ProcessContentUpdate( service_key, content_update )
+            ratings_manager.ProcessContentUpdate( service_key, content_update )
             
         
     
     def ResetService( self, service_key ):
         
-        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = self._tuple
         
         tags_manager.ResetService( service_key )
         locations_manager.ResetService( service_key )
@@ -1502,6 +1569,25 @@ class TagsManagerSimple( object ):
         self._combined_namespaces_cache = None
         
     
+    def Duplicate( self ):
+        
+        dupe_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
+            
+            dupe_statuses_to_tags = HydrusData.default_dict_set()
+            
+            for ( status, tags ) in statuses_to_tags.items():
+                
+                dupe_statuses_to_tags[ status ] = set( tags )
+                
+            
+            dupe_service_keys_to_statuses_to_tags[ service_key ] = dupe_statuses_to_tags
+            
+        
+        return TagsManagerSimple( dupe_service_keys_to_statuses_to_tags )
+        
+    
     def GetCombinedNamespaces( self, namespaces ):
         
         if self._combined_namespaces_cache is None:
@@ -1610,6 +1696,25 @@ class TagsManager( TagsManagerSimple ):
             
             self._RecalcCombined()
             
+        
+    
+    def Duplicate( self ):
+        
+        dupe_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+        
+        for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
+            
+            dupe_statuses_to_tags = HydrusData.default_dict_set()
+            
+            for ( status, tags ) in statuses_to_tags.items():
+                
+                dupe_statuses_to_tags[ status ] = set( tags )
+                
+            
+            dupe_service_keys_to_statuses_to_tags[ service_key ] = dupe_statuses_to_tags
+            
+        
+        return TagsManager( dupe_service_keys_to_statuses_to_tags )
         
     
     def GetCurrent( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):

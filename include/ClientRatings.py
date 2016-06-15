@@ -100,13 +100,22 @@ def GetLikeStateFromMedia( media, service_key ):
     
     for m in media:
         
-        ( local_ratings, remote_ratings ) = m.GetRatings()
+        ratings_manager = m.GetRatingsManager()
         
-        rating = local_ratings.GetRating( service_key )
+        rating = ratings_manager.GetRating( service_key )
         
-        if rating == 1: on_exists = True
-        elif rating == 0: off_exists = True
-        elif rating is None: null_exists = True
+        if rating == 1:
+            
+            on_exists = True
+            
+        elif rating == 0:
+            
+            off_exists = True
+            
+        elif rating is None:
+            
+            null_exists = True
+            
         
     
     if len( [ b for b in ( on_exists, off_exists, null_exists ) if b ] ) == 1:
@@ -130,9 +139,9 @@ def GetNumericalStateFromMedia( media, service_key ):
     
     for m in media:
         
-        ( local_ratings, remote_ratings ) = m.GetRatings()
+        ratings_manager = m.GetRatingsManager()
         
-        rating = local_ratings.GetRating( service_key )
+        rating = ratings_manager.GetRating( service_key )
         
         if rating is None:
             
@@ -248,83 +257,28 @@ def GetStars( service_key, rating_state, rating ):
     
     return ( shape, stars )
     
-class CPRemoteRatingsServiceKeys( object ):
-    
-    def __init__( self, service_keys_to_cp ):
-        
-        self._service_keys_to_cp = service_keys_to_cp
-        
-    
-    def GetCP( self, service_key ):
-        
-        if service_key in self._service_keys_to_cp: return self._service_keys_to_cp[ service_key ]
-        else: return ( None, None )
-        
-    
-    def GetRatingSlice( self, service_keys ):
-        
-        # this doesn't work yet. it should probably use self.GetScore( service_key ) like I think Sort by remote rating does
-        
-        return frozenset( { self._service_keys_to_cp[ service_key ] for service_key in service_keys if service_key in self._service_keys_to_cp } )
-        
-    
-    def GetServiceKeysToRatingsCP( self ): return self._service_keys_to_cp
-    
-    def ProcessContentUpdate( self, service_key, content_update ):
-        
-        ( data_type, action, row ) = content_update.ToTuple()
-        
-        if service_key in self._service_keys_to_cp: ( current, pending ) = self._service_keys_to_cp[ service_key ]
-        else:
-            
-            ( current, pending ) = ( None, None )
-            
-            self._service_keys_to_cp[ service_key ] = ( current, pending )
-            
-        
-        # this may well need work; need to figure out how to set the pending back to None after an upload. rescind seems ugly
-        
-        if action == HC.CONTENT_UPDATE_ADD:
-            
-            rating = content_update.GetInfo()
-            
-            current = rating
-            
-        elif action == HC.CONTENT_UPDATE_DELETE:
-            
-            current = None
-            
-        elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
-            
-            pending = None
-            
-        elif action == HC.CONTENT_UPDATE_DELETE:
-            
-            rating = content_update.GetInfo()
-            
-            pending = rating
-            
-        
-    
-    def ResetService( self, service_key ):
-        
-        if service_key in self._service_keys_to_cp:
-            
-            ( current, pending ) = self._service_keys_to_cp[ service_key ]
-            
-            self._service_keys_to_cp[ service_key ] = ( None, None )
-
-class LocalRatingsManager( object ):
+class RatingsManager( object ):
     
     def __init__( self, service_keys_to_ratings ):
         
         self._service_keys_to_ratings = service_keys_to_ratings
         
     
+    def Duplicate( self ):
+        
+        return RatingsManager( dict( self._service_keys_to_ratings ) )
+        
+    
     def GetRating( self, service_key ):
         
-        if service_key in self._service_keys_to_ratings: return self._service_keys_to_ratings[ service_key ]
-        else: return None
+        if service_key in self._service_keys_to_ratings:
+            
+            return self._service_keys_to_ratings[ service_key ]
+            
+        else:
+            
+            return None
+            
         
     
     def GetRatingSlice( self, service_keys ): return frozenset( { self._service_keys_to_ratings[ service_key ] for service_key in service_keys if service_key in self._service_keys_to_ratings } )

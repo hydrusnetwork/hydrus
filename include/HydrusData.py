@@ -56,6 +56,19 @@ def CalculateScoreFromRating( count, rating ):
     
     return score
     
+def CleanRunningFile( db_path, instance ):
+    
+    path = os.path.join( db_path, instance + '_running' )
+    
+    try:
+        
+        os.remove( path )
+        
+    except:
+        
+        pass
+        
+    
 def ConvertContentsToClientToServerContentUpdatePackage( action, contents, reason = None ):
     
     hashes_to_hash_ids = {}
@@ -636,9 +649,9 @@ def GetNowPrecise():
     if HC.PLATFORM_WINDOWS: return time.clock()
     else: return time.time()
     
-def GetSiblingProcessPorts( instance ):
+def GetSiblingProcessPorts( db_path, instance ):
     
-    path = os.path.join( HC.BASE_DIR, instance + '_running' )
+    path = os.path.join( db_path, instance + '_running' )
     
     if os.path.exists( path ):
         
@@ -727,9 +740,9 @@ def IntelligentMassIntersect( sets_to_reduce ):
     if answer is None: return set()
     else: return answer
     
-def IsAlreadyRunning( instance ):
+def IsAlreadyRunning( db_path, instance ):
     
-    path = os.path.join( HC.BASE_DIR, instance + '_running' )
+    path = os.path.join( db_path, instance + '_running' )
     
     if os.path.exists( path ):
         
@@ -870,9 +883,9 @@ def Profile( code, g, l ):
     
     DebugPrint( output.read() )
     
-def RecordRunningStart( instance ):
+def RecordRunningStart( db_path, instance ):
     
-    path = os.path.join( HC.BASE_DIR, instance + '_running' )
+    path = os.path.join( db_path, instance + '_running' )
     
     record_string = ''
     

@@ -580,7 +580,7 @@ class DialogAdvancedContentUpdate( Dialog ):
     
 class DialogButtonChoice( Dialog ):
     
-    def __init__( self, parent, intro, choices ):
+    def __init__( self, parent, intro, choices, show_always_checkbox = False ):
         
         Dialog.__init__( self, parent, 'choose what to do', position = 'center' )
         
@@ -600,11 +600,23 @@ class DialogButtonChoice( Dialog ):
             i += 1
             
         
+        self._always_do_checkbox = wx.CheckBox( self, label = 'do this for all' )
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        for button in self._buttons: vbox.AddF( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        for button in self._buttons:
+            
+            vbox.AddF( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        vbox.AddF( self._always_do_checkbox, CC.FLAGS_LONE_BUTTON )
+        
+        if not show_always_checkbox:
+            
+            self._always_do_checkbox.Hide()
+            
         
         self.SetSizer( vbox )
         
@@ -630,7 +642,10 @@ class DialogButtonChoice( Dialog ):
             
         
     
-    def GetData( self ): return self._data
+    def GetData( self ):
+        
+        return ( self._always_do_checkbox.GetValue(), self._data )
+        
     
 class DialogChooseNewServiceMethod( Dialog ):
     
@@ -3877,7 +3892,16 @@ class DialogSelectBooru( Dialog ):
         
         self.SetInitialSize( ( x, y ) )
         
-        wx.CallAfter( self._ok.SetFocus )
+        if len( boorus ) == 1:
+            
+            self._boorus.Select( 0 )
+            
+            wx.CallAfter( self.EventOK, None )
+            
+        else:
+            
+            wx.CallAfter( self._ok.SetFocus )
+            
         
     
     def EventDoubleClick( self, event ): self.EndModal( wx.ID_OK )
@@ -4166,7 +4190,10 @@ class DialogSelectFromListOfStrings( Dialog ):
         
         selection = self._strings.GetSelection()
         
-        if selection != wx.NOT_FOUND: self.EndModal( wx.ID_OK )
+        if selection != wx.NOT_FOUND:
+            
+            self.EndModal( wx.ID_OK )
+            
         
     
     def EventSelect( self, event ): self.EndModal( wx.ID_OK )

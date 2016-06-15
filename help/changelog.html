@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 210</h3></li>
+				<ul>
+					<li>manage tags dialog now launches much faster when thousands of thumbs are selected</li>
+					<li>manage tags dialog now has a prototype 'do this for all' checkbox to make mass selected-tag editing a bit quicker</li>
+					<li>polished the new disk cache turbo mode, added free memory limits and more options</li>
+					<li>a bit of disk cache population now runs on client boot, just to kick things off</li>
+					<li>a full disk cache population now runs before repo sync</li>
+					<li>the client now keeps about 200MB of itself in the disk cache during idle maintenance</li>
+					<li>the update files in client_updates are now stored compressed</li>
+					<li>the log files and 'already running' files are now stored in the db folder, meaning hydrus shouldn't have to write to anything but db dir and temp dir</li>
+					<li>'already running' files now delete themselves on program close if they can</li>
+					<li>the log directory is no longer needed</li>
+					<li>if there is only one booru to select, it will be auto-selected</li>
+					<li>client failed exit is less likely to hang, more likely to log error</li>
+					<li>client won't bother to save lest session regularly or on exit if this is not the default startup session</li>
+					<li>hotfixed an auto-vacuum bug</li>
+					<li>added a catch for any future vacuum mess-ups to save the db from collapse</li>
+					<li>added other catches for other close/reinit db calls</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 209</h3></li>
 				<ul>
 					<li>the advanced content update dialog can now be !aunched from manage tags, and will only affect the files the dialog was launched for</li>

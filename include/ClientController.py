@@ -139,7 +139,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CheckAlreadyRunning( self ):
     
-        while HydrusData.IsAlreadyRunning( 'client' ):
+        while HydrusData.IsAlreadyRunning( HC.DB_DIR, 'client' ):
             
             self.pub( 'splash_set_status_text', 'client already running' )
             
@@ -162,7 +162,7 @@ class Controller( HydrusController.HydrusController ):
             
             for i in range( 10, 0, -1 ):
                 
-                if not HydrusData.IsAlreadyRunning( 'client' ):
+                if not HydrusData.IsAlreadyRunning( HC.DB_DIR, 'client' ):
                     
                     break
                     
@@ -616,6 +616,8 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
+        loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = stop_time, caller_limit = 200 * 1024 * 1024 )
+        
         self.WriteInterruptable( 'vacuum', stop_time = stop_time )
         
         self.pub( 'splash_set_status_text', 'analyzing' )
@@ -1038,7 +1040,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.CheckAlreadyRunning()
             
-            HydrusData.RecordRunningStart( 'client' )
+            HydrusData.RecordRunningStart( HC.DB_DIR, 'client' )
             
             self.InitModel()
             
@@ -1084,6 +1086,8 @@ class Controller( HydrusController.HydrusController ):
             self.pub( 'splash_set_title_text', 'shutting down db...' )
             
             self.ShutdownModel()
+            
+            HydrusData.CleanRunningFile( HC.DB_DIR, 'client' )
             
         except HydrusExceptions.PermissionException: pass
         except HydrusExceptions.ShutdownException: pass

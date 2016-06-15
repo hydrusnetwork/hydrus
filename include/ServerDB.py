@@ -152,13 +152,7 @@ class DB( HydrusDB.HydrusDB ):
             
             dest_path = ServerFiles.GetExpectedFilePath( hash )
             
-            with open( source_path, 'rb' ) as f_source:
-                
-                with open( dest_path, 'wb' ) as f_dest:
-                    
-                    HydrusPaths.CopyFileLikeToFileLike( f_source, f_dest )
-                    
-                
+            HydrusPaths.MirrorFile( source_path, dest_path )
             
             if 'thumbnail' in file_dict:
                 
@@ -2308,39 +2302,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusData.Print( 'The server is updating to version ' + str( version + 1 ) )
         
-        if version == 155:
-            
-            results = self._c.execute( 'SELECT service_id, account_type_id, account_type FROM account_types;' ).fetchall()
-            
-            for ( service_id, account_type_id, account_type ) in results:
-                
-                title = account_type.GetTitle()
-                
-                self._c.execute( 'UPDATE account_types SET title = ? WHERE service_id = ? AND account_type_id = ?;', ( title, service_id, account_type_id ) )
-                
-            
-        
-        if version == 158:
-            
-            first_ends = self._c.execute( 'SELECT service_id, end FROM update_cache WHERE begin = ?;', ( 0, ) ).fetchall()
-            
-            self._c.execute( 'DELETE FROM update_cache;' )
-            
-            for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
-                
-                path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
-                
-                HydrusPaths.RecyclePath( path )
-                
-            
-            for ( service_id, end ) in first_ends:
-                
-                service_key = self._GetServiceKey( service_id )
-                
-                self._CreateUpdate( service_key, 0, end )
-                
-            
-        
         if version == 161:
             
             for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
@@ -2555,21 +2516,26 @@ class DB( HydrusDB.HydrusDB ):
             
             self._CloseDBCursor()
             
-            for filename in self._db_filenames.values():
+            try:
                 
-                HydrusData.Print( 'vacuuming ' + filename )
-                
-                db_path = os.path.join( self._db_dir, filename )
-                
-                if HydrusDB.CanVacuum( db_path ):
+                for filename in self._db_filenames.values():
                     
-                    HydrusDB.VacuumDB( db_path )
+                    HydrusData.Print( 'vacuuming ' + filename )
+                    
+                    db_path = os.path.join( self._db_dir, filename )
+                    
+                    if HydrusDB.CanVacuum( db_path ):
+                        
+                        HydrusDB.VacuumDB( db_path )
+                        
                     
                 
-            
-            self._InitDBCursor()
-            
-            self._c.execute( 'BEGIN IMMEDIATE;' )
+            finally:
+                
+                self._InitDBCursor()
+                
+                self._c.execute( 'BEGIN IMMEDIATE;' )
+                
             
         
         if version == 202:

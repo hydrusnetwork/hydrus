@@ -27,7 +27,9 @@ try:
     from include import HydrusLogger
     import traceback
     
-    with HydrusLogger.HydrusLogger( 'client.log' ) as logger:
+    log_path = os.path.join( HC.DB_DIR, 'client.log' )
+    
+    with HydrusLogger.HydrusLogger( log_path ) as logger:
         
         try:
             

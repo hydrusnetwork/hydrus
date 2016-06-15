@@ -43,7 +43,9 @@ try:
         
     else:
         
-        with HydrusLogger.HydrusLogger( 'server.log' ) as logger:
+        log_path = os.path.join( HC.DB_DIR, 'server.log' )
+        
+        with HydrusLogger.HydrusLogger( log_path ) as logger:
             
             try:
                 

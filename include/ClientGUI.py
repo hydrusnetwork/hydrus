@@ -1163,7 +1163,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'load_into_disk_cache' ), p( 'Engage Turbo Mode (testing)' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'load_into_disk_cache' ), p( 'Load db into disk cache' ) )
             
             menu.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'help_shortcuts' ), p( '&Shortcuts' ) )
@@ -2134,7 +2134,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             service.Request( HC.POST, 'file', { 'file' : file } )
                             
-                            ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
+                            ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = media_result.ToTuple()
                             
                             timestamp = HydrusData.GetNow()
                             
@@ -2353,7 +2353,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'load_gui_session': self._LoadGUISession( data )
             elif command == 'load_into_disk_cache':
                 
-                self._controller.Read( 'load_into_disk_cache' )
+                self._controller.CallToThread( self._controller.Read, 'load_into_disk_cache' )
                 
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
             elif command == 'manage_boorus': self._ManageBoorus()
@@ -2530,25 +2530,32 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HydrusGlobals.restart = True
             
         
-        if not self._loading_session:
+        try:
             
-            self._SaveGUISession( 'last session' )
+            if HC.options[ 'default_gui_session' ] == 'last session' and not self._loading_session:
+                
+                self._SaveGUISession( 'last session' )
+                
             
-        
-        self._message_manager.CleanBeforeDestroy()
-        
-        self._message_manager.Hide()
-        
-        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
-        
-        page = self._notebook.GetCurrentPage()
-        
-        if page is not None:
+            self._message_manager.CleanBeforeDestroy()
             
-            ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+            self._message_manager.Hide()
             
-        
-        self._controller.WriteSynchronous( 'save_options', HC.options )
+            for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
+            
+            page = self._notebook.GetCurrentPage()
+            
+            if page is not None:
+                
+                ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+                
+            
+            self._controller.WriteSynchronous( 'save_options', HC.options )
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
+            
         
         self.Hide()
         
@@ -2714,8 +2721,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             old_menu_index = self._menubar.FindMenu( old_label )
             
-            if show: self._menubar.Replace( old_menu_index, menu, label )
-            else: self._menubar.Remove( old_menu_index )
+            if show:
+                
+                self._menubar.Replace( old_menu_index, menu, label )
+                
+            else:
+                
+                self._menubar.Remove( old_menu_index )
+                
             
         else:
             
@@ -2729,7 +2742,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     ( temp_menu, temp_label, temp_show ) = self._menus[ temp_name ]
                     
-                    if temp_show: insert_index += 1
+                    if temp_show:
+                        
+                        insert_index += 1
+                        
                     
                 
                 self._menubar.Insert( insert_index, menu, label )
@@ -2745,7 +2761,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def SaveLastSession( self ):
         
-        self._SaveGUISession( 'last session' )
+        if HC.options[ 'default_gui_session' ] == 'last session':
+            
+            self._SaveGUISession( 'last session' )
+            
         
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
         

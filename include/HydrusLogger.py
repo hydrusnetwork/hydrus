@@ -8,9 +8,9 @@ import time
 # I guess I am sending bad characters or something to the 'windowised' environment of pythonw
 class HydrusLogger( object ):
     
-    def __init__( self, log_filename ):
+    def __init__( self, log_path ):
         
-        self._log_filename = log_filename
+        self._log_path = log_path
         
     
     def __enter__( self ):
@@ -23,7 +23,7 @@ class HydrusLogger( object ):
         sys.stdout = self
         sys.stderr = self
         
-        self._log_file = open( os.path.join( HC.LOGS_DIR, self._log_filename ), 'a' )
+        self._log_file = open( self._log_path, 'a' )
         
         return self
         

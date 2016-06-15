@@ -9010,13 +9010,18 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         self._file_service_key = file_service_key
         
-        self._hashes = set()
-        
         self._canvas_key = canvas_key
         
-        self._current_media = media
+        media = ClientMedia.FlattenMedia( media )
         
-        for m in media: self._hashes.update( m.GetHashes() )
+        self._current_media = [ m.Duplicate() for m in media ]
+        
+        self._hashes = set()
+        
+        for m in self._current_media:
+            
+            self._hashes.update( m.GetHashes() )
+            
         
         ( remember, position ) = HC.options[ 'tag_dialog_position' ]
         
@@ -9065,7 +9070,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             service_type = service.GetServiceType()
             name = service.GetName()
             
-            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), media )
+            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media )
             
             self._tag_repositories.AddPage( name, service_key, page )
             
@@ -9531,7 +9536,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                 
             
+            forced_choice_actions = []
+            
             for choices in sets_of_choices:
+                
+                always_do = False
                 
                 if len( choices ) == 1:
                     
@@ -9539,19 +9548,46 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                 else:
                     
-                    intro = 'What would you like to do?'
+                    choice = None
                     
-                    with ClientGUIDialogs.DialogButtonChoice( self, intro, choices ) as dlg:
+                    for forced_choice_action in forced_choice_actions:
                         
-                        result = dlg.ShowModal()
+                        for possible_choice in choices:
+                            
+                            ( text_gumpf, ( choice_action, choice_tag ) ) = possible_choice
+                            
+                            if choice_action == forced_choice_action:
+                                
+                                choice = ( choice_action, choice_tag )
+                                
+                                break
+                                
+                            
                         
-                        if result == wx.ID_OK:
-                            
-                            choice = dlg.GetData()
-                            
-                        else:
+                        if choice is not None:
                             
                             break
+                            
+                        
+                    
+                    if choice is None:
+                        
+                        intro = 'What would you like to do?'
+                        
+                        show_always_checkbox = len( sets_of_choices ) > 1
+                        
+                        with ClientGUIDialogs.DialogButtonChoice( self, intro, choices, show_always_checkbox = show_always_checkbox ) as dlg:
+                            
+                            result = dlg.ShowModal()
+                            
+                            if result == wx.ID_OK:
+                                
+                                ( always_do, choice ) = dlg.GetData()
+                                
+                            else:
+                                
+                                break
+                                
                             
                         
                     
@@ -9562,6 +9598,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                 
                 ( choice_action, choice_tag ) = choice
+                
+                if always_do:
+                    
+                    forced_choice_actions.append( choice_action )
+                    
                 
                 if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
                 elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
@@ -9745,15 +9786,12 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._content_updates = []
             
-            if media is None: media = []
+            if media is None:
+                
+                media = []
+                
             
-            hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
-            
-            if len( hashes ) > 0: media_results = HydrusGlobals.client_controller.Read( 'media_results', hashes )
-            else: media_results = []
-            
-            # this should now be a nice clean copy of the original media
-            self._media = [ ClientMedia.MediaSingleton( media_result ) for media_result in media_results ]
+            self._media = media
             
             self._tags_box.SetTagsByMedia( self._media )
             
