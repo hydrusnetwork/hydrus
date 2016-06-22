@@ -8,6 +8,17 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 211</h3></li>
+				<ul>
+					<li>added options for disk cache init and maintenance to 'speed and memory' page of options</li>
+					<li>abstracted the manage tags dialog into a general purpose 'apply' dialog and a scrollable manage tags panel</li>
+					<li>the 'auto-replace entered siblings' checkbox now remembers how it was last set</li>
+					<li>uncertain sibling tag counts will now appear like 'tag (1,234-1,456)', showing the range of possible results they represent</li>
+					<li>fixed a bug where siblings would be collapsed inside the tag manager object if a specific tag search domain was set</li>
+					<li>altering the search text on an autocomplete from 'tag' to '-tag' or vice versa should graphically update more reliably, and an exact-matching predicate will be promoted to the top of the list correctly either way</li>
+					<li>calls to upnpc will now kill the process and raise an exception if it hangs for more than thirty seconds</li>
+					<li>misc improvements and cleanup</li>
+				</ul>
 				<li><h3>version 210</h3></li>
 				<ul>
 					<li>manage tags dialog now launches much faster when thousands of thumbs are selected</li>
