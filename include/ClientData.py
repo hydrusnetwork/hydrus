@@ -453,9 +453,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
         
+        self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
+        
         self._dictionary[ 'noneable_integers' ] = {}
         
         self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
+        
+        self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
+        self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
         
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
         
@@ -1578,7 +1583,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                 
             
-            if self.CanProcessUpdate():
+            if self._service_type == HC.TAG_REPOSITORY and self.CanProcessUpdate():
                 
                 HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing disk cache' )
                 job_key.SetVariable( 'popup_text_1', 'preparing disk cache' )

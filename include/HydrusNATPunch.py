@@ -33,7 +33,7 @@ def GetExternalIP():
         
         p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
         
-        p.wait()
+        HydrusData.WaitForProcessToFinish( p, 30 )
         
         ( output, error ) = p.communicate()
         
@@ -75,7 +75,7 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
-    p.wait()
+    HydrusData.WaitForProcessToFinish( p, 30 )
     
     ( output, error ) = p.communicate()
     
@@ -97,11 +97,14 @@ def GetUPnPMappings():
     
     p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
-    p.wait()
+    HydrusData.WaitForProcessToFinish( p, 30 )
     
     ( output, error ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
+    if error is not None and len( error ) > 0:
+        
+        raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
+        
     else:
         
         try:
@@ -165,7 +168,7 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
-    p.wait()
+    HydrusData.WaitForProcessToFinish( p, 30 )
     
     ( output, error ) = p.communicate()
     

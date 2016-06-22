@@ -616,7 +616,12 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = stop_time, caller_limit = 200 * 1024 * 1024 )
+        disk_cache_maintenance_mb = self._new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
+        
+        if disk_cache_maintenance_mb is not None:
+            
+            loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
+            
         
         self.WriteInterruptable( 'vacuum', stop_time = stop_time )
         

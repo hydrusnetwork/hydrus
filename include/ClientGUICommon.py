@@ -900,11 +900,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if sibling is None:
             
-            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
+            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive )
             
         else:
             
-            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, sibling, inclusive = inclusive )
+            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, sibling, inclusive )
             
         
         return ( inclusive, search_text, entry_predicate )
@@ -941,7 +941,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             must_do_a_search = False
             
-            if '*' in search_text: must_do_a_search = True
+            if '*' in search_text:
+                
+                must_do_a_search = True
+                
             
             if ':' in search_text:
                 
@@ -986,7 +989,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     can_fetch_from_media = media is not None and len( media ) > 0
                     
-                    if can_fetch_from_media and self._synchronised.IsOn(): fetch_from_db = False
+                    if can_fetch_from_media and self._synchronised.IsOn():
+                        
+                        fetch_from_db = False
+                        
                     
                 
                 if fetch_from_db:
@@ -996,7 +1002,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
                         
-                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
+                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
                         
                         predicates = siblings_manager.CollapsePredicates( predicates )
                         
@@ -1008,7 +1014,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cache_text = search_text
                             
-                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
+                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
                             
                             self._cached_results = siblings_manager.CollapsePredicates( self._cached_results )
                             
@@ -1062,7 +1068,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         tags_to_do.update( pending_tags_to_count.keys() )
                         
                     
-                    predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
+                    predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]
                     
                     predicates = siblings_manager.CollapsePredicates( predicates )
                     
@@ -1080,21 +1086,26 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if '*' not in self._current_namespace and half_complete_tag == '':
                         
-                        matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
+                        matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive ) )
                         
                     
                     if half_complete_tag != '':
                         
                         if '*' in self._current_namespace or ( '*' in half_complete_tag and half_complete_tag != '*' ):
                             
-                            matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                            matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive ) )
                             
                         
                     
                 elif '*' in search_text:
                     
-                    matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
+                    matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive ) )
                     
+                
+            
+            for match in matches:
+                
+                if match.GetInclusive() != inclusive: match.SetInclusive( inclusive )
                 
             
             try:
@@ -1111,11 +1122,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 pass
                 
-            
-        
-        for match in matches:
-            
-            if match.GetType() == HC.PREDICATE_TYPE_TAG: match.SetInclusive( inclusive )
             
         
         return matches
@@ -2426,7 +2432,7 @@ class ListBox( wx.ScrolledWindow ):
                     value = term.GetValue()
                     
                     include_predicates.append( ClientSearch.Predicate( predicate_type, value ) )
-                    exclude_predicates.append( ClientSearch.Predicate( predicate_type, value, inclusive = False ) )
+                    exclude_predicates.append( ClientSearch.Predicate( predicate_type, value, False ) )
                     
                 else:
                     
@@ -2438,7 +2444,7 @@ class ListBox( wx.ScrolledWindow ):
                 s = term
                 
                 include_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
-                exclude_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term, inclusive = False ) )
+                exclude_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term, False ) )
                 
             
         
@@ -3307,11 +3313,15 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
                     
                 
             
-        else: they_are_the_same = False
+        else:
+            
+            they_are_the_same = False
+            
         
         if not they_are_the_same:
             
-            self._predicates = predicates
+            # important to make own copy, as same object originals can be altered (e.g. set non-inclusive) in cache, and we need to notice that change just above
+            self._predicates = [ predicate.GetCopy() for predicate in predicates ]
             
             self._ordered_strings = []
             self._strings_to_terms = {}
@@ -4289,6 +4299,16 @@ class NoneableSpinCtrl( wx.Panel ):
             
             if self._num_dimensions == 2: return ( self._one.GetValue() * self._multiplier, self._two.GetValue() * self._multiplier )
             else: return self._one.GetValue() * self._multiplier
+            
+        
+    
+    def SetToolTipString( self, text ):
+        
+        wx.Panel.SetToolTipString( self, text )
+        
+        for c in self.GetChildren():
+            
+            c.SetToolTipString( text )
             
         
     

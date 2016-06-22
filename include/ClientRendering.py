@@ -9,7 +9,6 @@ import HydrusGlobals
 import HydrusThreading
 import HydrusVideoHandling
 import lz4
-import subprocess
 import threading
 import time
 import wx

@@ -403,16 +403,16 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'tag' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 2 )
         
         self.assertEqual( p.GetUnicode( with_count = False ), u'tag' )
         self.assertEqual( p.GetUnicode( with_count = True ), u'tag (1) (+2)' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', False )
         
         self.assertEqual( p.GetUnicode(), u'-tag' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False, counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', False, 1, 2 )
         
         self.assertEqual( p.GetUnicode( with_count = False ), u'-tag' )
         self.assertEqual( p.GetUnicode( with_count = True ), u'-tag (1) (+2)' )
@@ -431,7 +431,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:age > 1y2m3d4h' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : 1000 } )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 1000 )
         
         self.assertEqual( p.GetUnicode(), u'system:archive (1,000)' )
         
@@ -439,7 +439,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:duration < 200 milliseconds' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : 2000 } )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 2000 )
         
         self.assertEqual( p.GetUnicode(), u'system:everything (2,000)' )
         
@@ -459,7 +459,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:height < 2,000' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : 1000 } )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1000 )
         
         self.assertEqual( p.GetUnicode(), u'system:inbox (1,000)' )
         
@@ -467,7 +467,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:limit is 2,000' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, counts = { HC.CURRENT : 100 } )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = 100 )
         
         self.assertEqual( p.GetUnicode(), u'system:local (100)' )
         
@@ -483,7 +483,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'system:mime is video/webm, image/gif' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : 100 } )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = 100 )
         
         self.assertEqual( p.GetUnicode(), u'system:not local (100)' )
         
@@ -525,7 +525,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'series:*anything*' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series', inclusive = False )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series', False )
         
         self.assertEqual( p.GetUnicode(), u'-series' )
         
@@ -535,7 +535,7 @@ class TestTagObjects( unittest.TestCase ):
         
         self.assertEqual( p.GetUnicode(), u'a*i:o*' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', inclusive = False )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', False )
         
         self.assertEqual( p.GetUnicode(), u'-a*i:o*' )
         
@@ -587,19 +587,19 @@ class TestTagParents( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'grandmother', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'grandfather', counts = { HC.CURRENT : 15 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'not_exist', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'grandmother', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'grandfather', min_current_count = 15 ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'not_exist', min_current_count = 20 ) )
         
         self.assertEqual( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
         
         results = []
         
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
@@ -610,18 +610,18 @@ class TestTagParents( unittest.TestCase ):
         predicates = []
         
         predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', min_current_count = 5 ) )
         
         results = []
         
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', counts = { HC.CURRENT : 10 } ) )
+        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'child', min_current_count = 10 ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
-        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', counts = { HC.CURRENT : 5 } ) )
+        results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'cousin', min_current_count = 5 ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'aunt' ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'uncle' ) )
         results.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
@@ -748,23 +748,24 @@ class TestTagSiblings( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', min_current_count = 5 ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20 ) )
         
-        results = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 35 } ) ]
+        results = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20, max_current_count = 35 ) ]
         
         self.assertEqual( self._tag_siblings_manager.CollapsePredicates( predicates ), results )
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', counts = { HC.CURRENT : 10 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', counts = { HC.CURRENT : 5 } ) )
-        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', counts = { HC.CURRENT : 20 } ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_a', min_current_count = 10 ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_b', min_current_count = 5 ) )
+        predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'chain_c', min_current_count = 20 ) )
         
         ( result, ) = self._tag_siblings_manager.CollapsePredicates( predicates )
         
-        self.assertEqual( result.GetCount(), 35 )
+        self.assertEqual( result.GetCount(), 20 )
+        self.assertEqual( result.GetUnicode(), u'chain_c (20-35)' )
         
     
     def test_chain( self ):
@@ -781,8 +782,6 @@ class TestTagSiblings( unittest.TestCase ):
         
         self.assertEqual( set( self._tag_siblings_manager.CollapseTags( [ 'chain_a', 'chain_b' ] ) ), set( [ 'chain_c' ] ) )
         self.assertEqual( set( self._tag_siblings_manager.CollapseTags( [ 'chain_a', 'chain_b', 'chain_c' ] ) ), set( [ 'chain_c' ] ) )
-        
-        # collapsetagstocount
         
     
     def test_current_overwrite( self ):

@@ -7,6 +7,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIHoverFrames
+import ClientGUIPanels
 import ClientMedia
 import ClientRatings
 import collections
@@ -883,7 +884,14 @@ class Canvas( wx.Window ):
         
         if self._current_display_media is not None:
             
-            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key ) as dlg:
+            title = 'manage tags'
+            dialog_key = 'manage_tags'
+            
+            with ClientGUIDialogs.DialogManageApply( self, title, dialog_key ) as dlg:
+                
+                panel = ClientGUIPanels.ManageTagsPanel( dlg, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key )
+                
+                dlg.SetPanel( panel )
                 
                 dlg.ShowModal()
                 

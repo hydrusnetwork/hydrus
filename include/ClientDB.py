@@ -2754,7 +2754,7 @@ class DB( HydrusDB.HydrusDB ):
         return namespace_id_tag_ids
         
     
-    def _GetAutocompletePredicates( self, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, include_current = True, include_pending = True, add_namespaceless = False ):
+    def _GetAutocompletePredicates( self, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, inclusive = True, include_current = True, include_pending = True, add_namespaceless = False ):
         
         namespace_id_tag_ids = self._GetAutocompleteNamespaceIdTagIds( search_text, exact_match )
         
@@ -2782,7 +2782,7 @@ class DB( HydrusDB.HydrusDB ):
         
         filtered_tags = tag_censorship_manager.FilterTags( tag_service_key, tags_to_do )
         
-        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, counts = { HC.CURRENT : current_count, HC.PENDING : pending_count } ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
         
         return predicates
         
@@ -2853,7 +2853,7 @@ class DB( HydrusDB.HydrusDB ):
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
+            predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
             
             predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
             
@@ -2874,7 +2874,7 @@ class DB( HydrusDB.HydrusDB ):
                 num_archive = num_local - num_inbox
                 
             
-            predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, counts = { HC.CURRENT : num_everything } ) )
+            predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
             
             show_inbox_and_archive = True
             
@@ -2887,23 +2887,23 @@ class DB( HydrusDB.HydrusDB ):
             
             if show_inbox_and_archive:
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, None, counts = { HC.CURRENT : num_inbox } ) )
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, counts = { HC.CURRENT : num_archive } ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = num_inbox ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = num_archive ) )
                 
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, None, counts = { HC.CURRENT : num_local } ) )
-                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, None, counts = { HC.CURRENT : num_not_local } ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = num_local ) )
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             ratings_service_ids = self._GetServiceIds( HC.RATINGS_SERVICES )
             
-            if len( ratings_service_ids ) > 0: predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, None ) )
+            if len( ratings_service_ids ) > 0: predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
             
         
         return predicates
@@ -5066,11 +5066,18 @@ class DB( HydrusDB.HydrusDB ):
     
     def _InitCaches( self ):
         
-        HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing disk cache' )
+        new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
         
-        stop_time = HydrusData.GetNow() + 10
+        disk_cache_init_period = new_options.GetNoneableInteger( 'disk_cache_init_period' )
         
-        self._LoadIntoDiskCache( stop_time = stop_time )
+        if disk_cache_init_period is not None:
+            
+            HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing disk cache' )
+            
+            stop_time = HydrusData.GetNow() + disk_cache_init_period
+            
+            self._LoadIntoDiskCache( stop_time = stop_time )
+            
         
         HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing db caches' )
         

@@ -628,9 +628,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, predicate_type = None, value = None, inclusive = True, counts = None ):
-        
-        if counts is None: counts = {}
+    def __init__( self, predicate_type = None, value = None, inclusive = True, min_current_count = 0, min_pending_count = 0, max_current_count = None, max_pending_count = None ):
         
         if isinstance( value, list ):
             
@@ -641,12 +639,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._value = value
         
         self._inclusive = inclusive
-        self._counts = {}
         
-        self._counts[ HC.CURRENT ] = 0
-        self._counts[ HC.PENDING ] = 0
-        
-        for ( current_or_pending, count ) in counts.items(): self.AddToCount( current_or_pending, count )
+        self._min_current_count = min_current_count
+        self._min_pending_count = min_pending_count
+        self._max_current_count = max_current_count
+        self._max_pending_count = max_pending_count
         
     
     def __eq__( self, other ):
@@ -666,7 +663,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Predicate: ' + HydrusData.ToUnicode( ( self._predicate_type, self._value, self._inclusive, self._counts ) )
+        return 'Predicate: ' + HydrusData.ToUnicode( ( self._predicate_type, self._value, self._inclusive, self.GetCount() ) )
         
     
     def _GetSerialisableInfo( self ):
@@ -730,16 +727,75 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddToCount( self, current_or_pending, count ): self._counts[ current_or_pending ] += count
+    def AddToCount( self, current_or_pending, count ):
+        
+        if count == 0:
+            
+            return
+            
+        
+        if current_or_pending == HC.CURRENT:
+            
+            if self._min_current_count == 0:
+                
+                self._min_current_count = count
+                
+            else:
+                
+                if self._max_current_count is None:
+                    
+                    self._max_current_count = self._min_current_count
+                    
+                
+                self._max_current_count += count
+                
+                if count > self._min_current_count:
+                    
+                    self._min_current_count = count
+                    
+                
+            
+        elif current_or_pending == HC.PENDING:
+            
+            if self._min_pending_count == 0:
+                
+                self._min_pending_count = count
+                
+            else:
+                
+                if self._max_pending_count is None:
+                    
+                    self._max_pending_count = self._min_pending_count
+                    
+                
+                self._max_pending_count += count
+                
+                if count > self._min_pending_count:
+                    
+                    self._min_pending_count = count
+                    
+                
+            
+        
     
-    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive, self._counts )
+    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
     
     def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive )
     
     def GetCount( self, current_or_pending = None ):
         
-        if current_or_pending is None: return sum( self._counts.values() )
-        else: return self._counts[ current_or_pending ]
+        if current_or_pending is None:
+            
+            return self._min_current_count + self._min_pending_count
+            
+        elif current_or_pending == HC.CURRENT:
+            
+            return self._min_current_count
+            
+        elif current_or_pending == HC.PENDING:
+            
+            return self._min_pending_count
+            
         
     
     def GetInclusive( self ):
@@ -802,8 +858,29 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if with_count:
             
-            if self._counts[ HC.CURRENT ] > 0: count_text += u' (' + HydrusData.ConvertIntToPrettyString( self._counts[ HC.CURRENT ] ) + u')'
-            if self._counts[ HC.PENDING ] > 0: count_text += u' (+' + HydrusData.ConvertIntToPrettyString( self._counts[ HC.PENDING ] ) + u')'
+            if self._min_current_count > 0:
+                
+                number_text = HydrusData.ConvertIntToPrettyString( self._min_current_count )
+                
+                if self._max_current_count is not None:
+                    
+                    number_text += u'-' + HydrusData.ConvertIntToPrettyString( self._max_current_count )
+                    
+                
+                count_text += u' (' + number_text + u')'
+                
+            
+            if self._min_pending_count > 0:
+                
+                number_text = HydrusData.ConvertIntToPrettyString( self._min_pending_count )
+                
+                if self._max_pending_count is not None:
+                    
+                    number_text += u'-' + HydrusData.ConvertIntToPrettyString( self._max_pending_count )
+                    
+                
+                count_text += u' (+' + number_text + u')'
+                
             
         
         if self._predicate_type in HC.SYSTEM_PREDICATES:

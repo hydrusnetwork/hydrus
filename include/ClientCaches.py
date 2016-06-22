@@ -2309,7 +2309,7 @@ class TagSiblingsManager( object ):
                         
                         ( old_pred_type, old_value, old_inclusive ) = old_predicate.GetInfo()
                         
-                        new_predicate = ClientSearch.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
+                        new_predicate = ClientSearch.Predicate( old_pred_type, new_tag, old_inclusive )
                         
                         tags_to_predicates[ new_tag ] = new_predicate
                         
@@ -2360,12 +2360,14 @@ class TagSiblingsManager( object ):
             
             statuses = statuses_to_tags.keys()
             
+            new_statuses_to_tags = HydrusData.default_dict_set()
+            
             for status in statuses:
                 
-                statuses_to_tags[ status ] = self._CollapseTags( statuses_to_tags[ status ] )
+                new_statuses_to_tags[ status ] = self._CollapseTags( statuses_to_tags[ status ] )
                 
             
-            return statuses_to_tags
+            return new_statuses_to_tags
             
         
     

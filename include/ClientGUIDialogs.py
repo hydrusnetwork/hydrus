@@ -269,7 +269,7 @@ class Dialog( wx.Dialog ):
             
             ( pos_x, pos_y ) = parent_tlp.GetPositionTuple()
             
-            pos = ( pos_x + 50, pos_y + 100 )
+            pos = ( pos_x + 50, pos_y + 50 )
             
         else:
             
@@ -314,6 +314,132 @@ class Dialog( wx.Dialog ):
         min_height = min( 240, height )
         
         self.SetMinSize( ( min_width, min_height ) )
+        
+    
+class DialogManageApply( Dialog ):
+    
+    def __init__( self, parent, title, dialog_key ):
+        
+        self._dialog_key = dialog_key
+        
+        # use the dialog key to figure out default position and size from options
+        
+        ( remember, position ) = HC.options[ 'tag_dialog_position' ]
+        
+        if not remember:
+            
+            position = 'topleft'
+            
+        
+        Dialog.__init__( self, parent, title, position = position )
+        
+        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
+        self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
+        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+    
+    def EventMenu( self, event ):
+        
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'ok':
+                
+                self.EventOk( None )
+                
+            else:
+                
+                event.Skip()
+                
+            
+        
+    
+    def EventOk( self, event ):
+        
+        self._panel.CommitChanges()
+        
+        # use dialog key to figure this out
+        
+        ( remember, size ) = HC.options[ 'tag_dialog_size' ]
+        
+        current_size = self.GetSizeTuple()
+        
+        if remember and size != current_size:
+            
+            HC.options[ 'tag_dialog_size' ] = ( remember, current_size )
+            
+            HydrusGlobals.client_controller.Write( 'save_options', HC.options )
+            
+        
+        ( remember, position ) = HC.options[ 'tag_dialog_position' ]
+        
+        current_position = self.GetPositionTuple()
+        
+        if remember and position != current_position:
+            
+            HC.options[ 'tag_dialog_position' ] = ( remember, current_position )
+            
+            HydrusGlobals.client_controller.Write( 'save_options', HC.options )
+            
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def SetPanel( self, panel ):
+        
+        self._panel = panel
+        
+        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttonbox.AddF( self._apply, CC.FLAGS_MIXED )
+        buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+
+        vbox.AddF( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        # use the dialog key to figure out default position and size from options
+        
+        ( remember, size ) = HC.options[ 'tag_dialog_size' ]
+        
+        if size is not None:
+            
+            ( ideal_width, ideal_height ) = size
+            
+        else:
+            
+            ( ideal_width, ideal_height ) = self.GetEffectiveMinSize()
+            
+            ideal_width += 20
+            ideal_height += 20
+            
+        
+        ( parent_window_width, parent_window_height ) = self.GetParent().GetTopLevelParent().GetSize()
+        
+        width = min( ideal_width, parent_window_width - 100 )
+        height = min( ideal_height, parent_window_height - 100 )
+        
+        self.SetInitialSize( ( width, height ) )
+        
+        ( remember, position ) = HC.options[ 'tag_dialog_position' ]
+        
+        if remember:
+            
+            self.SetPosition( position )
+            
+        
+        self._panel.SetupScrolling()
         
     
 class DialogAdvancedContentUpdate( Dialog ):

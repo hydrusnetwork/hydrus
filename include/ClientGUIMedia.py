@@ -7,6 +7,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUICanvas
+import ClientGUIPanels
 import ClientMedia
 import collections
 import HydrusExceptions
@@ -779,7 +780,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( self._selected_media ) > 0:
             
-            with ClientGUIDialogsManage.DialogManageTags( self.GetTopLevelParent(), self._file_service_key, self._selected_media ) as dlg: dlg.ShowModal()
+            num_files = self._GetNumSelected()
+            
+            title = 'manage tags for ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
+            dialog_key = 'manage_tags'
+            
+            with ClientGUIDialogs.DialogManageApply( self, title, dialog_key ) as dlg:
+                
+                panel = ClientGUIPanels.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
             
             self.SetFocus()
             

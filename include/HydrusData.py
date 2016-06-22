@@ -1036,6 +1036,22 @@ def ToUnicode( text_producing_object ):
     
     return text
     
+def WaitForProcessToFinish( p, timeout ):
+    
+    started = GetNow()
+    
+    while p.poll() is None:
+        
+        if TimeHasPassed( started + timeout ):
+            
+            p.kill()
+            
+            raise Exception( 'Process did not finish within ' + ConvertIntToPrettyString( timeout ) + ' seconds!' )
+            
+        
+        time.sleep( 2 )
+        
+    
 class HydrusYAMLBase( yaml.YAMLObject ):
     
     yaml_loader = yaml.SafeLoader

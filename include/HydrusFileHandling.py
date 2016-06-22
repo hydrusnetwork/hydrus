@@ -18,7 +18,6 @@ import tempfile
 import threading
 import traceback
 import cStringIO
-import subprocess
 import HydrusData
 
 # Mime
