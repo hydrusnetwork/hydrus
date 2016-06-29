@@ -8,6 +8,27 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 212</h3></li>
+				<ul>
+					<li>wrote a neat flexible system for recording and restoring a variety of window size and position information</li>
+					<li>moved the manage tags dialog to the new size and position system</li>
+					<li>moved the main gui and the media viewer to the new size and position system</li>
+					<li>the manage tags window launched from a media viewer is now a non-modal frame, allowing interation with the underlying media viewer while floating on top of it</li>
+					<li>the new manage tags frame commits changes immediately!</li>
+					<li>review services and file import status will now stay on top of the main gui</li>
+					<li>fixed some bad advanced content update dialog launch code</li>
+					<li>the hydrus tag archives in hta syncs can now be anywhere, not just in the client_archives folder</li>
+					<li>whole bunch of hta sync cleanup</li>
+					<li>paletted images are now dequantized to RGB(A) before thumbnail generation, enhancing scale quality</li>
+					<li>'LA' (greyscale+transparency) images will now render with correct transparency</li>
+					<li>png files will now always generate png thumbnails (previously it was just ones with transparency)</li>
+					<li>trivial options changes are less frequently saved</li>
+					<li>rule34@booru.org now parses namespaced tags</li>
+					<li>fixed a bug in thumbnail resize error recovery code</li>
+					<li>fixed a bug in file repository petitions</li>
+					<li>updated to Pillow 3.2.0</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 211</h3></li>
 				<ul>
 					<li>added options for disk cache init and maintenance to 'speed and memory' page of options</li>
