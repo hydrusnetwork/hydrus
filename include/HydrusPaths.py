@@ -273,7 +273,7 @@ def LaunchFile( path ):
     
 def MakeFileWritable( path ):
     
-    try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
+    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
     except: pass
     
 def MergeFile( source, dest ):

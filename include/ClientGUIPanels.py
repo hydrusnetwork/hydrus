@@ -21,12 +21,13 @@ import wx.lib.scrolledpanel
 
 class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
-    def __init__( self, parent, file_service_key, media, canvas_key = None ):
+    def __init__( self, parent, file_service_key, media, immediate_commit = False, canvas_key = None ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent )
         
         self._file_service_key = file_service_key
         
+        self._immediate_commit = immediate_commit
         self._canvas_key = canvas_key
         
         media = ClientMedia.FlattenMedia( media )
@@ -52,7 +53,7 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
             service_key = service.GetServiceKey()
             name = service.GetName()
             
-            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media )
+            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit )
             
             self._tag_repositories.AddPage( name, service_key, page )
             
@@ -70,29 +71,13 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self.SetSizer( vbox )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         self.RefreshAcceleratorTable()
         
         if self._canvas_key is not None:
             
             HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
-            
-        
-    
-    def _CommitCurrentChanges( self ):
-        
-        service_keys_to_content_updates = {}
-        
-        for page in self._tag_repositories.GetActivePages():
-            
-            ( service_key, content_updates ) = page.GetContentUpdates()
-            
-            if len( content_updates ) > 0: service_keys_to_content_updates[ service_key ] = content_updates
-            
-        
-        if len( service_keys_to_content_updates ) > 0:
-            
-            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
         
     
@@ -107,8 +92,6 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         if canvas_key == self._canvas_key:
             
-            self._CommitCurrentChanges()
-            
             self._current_media = ( new_media_singleton.Duplicate(), )
             
             for page in self._tag_repositories.GetActivePages():
@@ -120,7 +103,41 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def CommitChanges( self ):
         
-        self._CommitCurrentChanges()
+        service_keys_to_content_updates = {}
+        
+        for page in self._tag_repositories.GetActivePages():
+            
+            ( service_key, content_updates ) = page.GetContentUpdates()
+            
+            if len( content_updates ) > 0:
+                
+                service_keys_to_content_updates[ service_key ] = content_updates
+                
+            
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+    
+    def EventCharHook( self, event ):
+        
+        if not HC.PLATFORM_LINUX:
+            
+            # If I let this go uncaught, it propagates to the media viewer above, so an Enter or a '+' closes the window or zooms in!
+            # The DoAllowNextEvent tells wx to gen regular key_down/char events so our text box gets them like normal, despite catching the event here
+            
+            event.DoAllowNextEvent()
+            
+        else:
+            
+            # Top jej, the events weren't being generated after all in Linux, so here's a possibly borked patch for that:
+            
+            HydrusGlobals.do_not_catch_char_hook = True
+            
+            event.Skip()
+            
         
     
     def EventMenu( self, event ):
@@ -135,8 +152,28 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
                 
                 wx.PostEvent( self.GetParent(), wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
                 
-            elif command == 'set_search_focus': self._SetSearchFocus()
-            else: event.Skip()
+            elif command == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            elif command == 'canvas_show_next':
+                
+                if self._canvas_key is not None:
+                    
+                    HydrusGlobals.client_controller.pub( 'canvas_show_next', self._canvas_key )
+                    
+                
+            elif command == 'canvas_show_previous':
+                
+                if self._canvas_key is not None:
+                    
+                    HydrusGlobals.client_controller.pub( 'canvas_show_previous', self._canvas_key )
+                    
+                
+            else:
+                
+                event.Skip()
+                
             
         
     
@@ -163,12 +200,15 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, file_service_key, tag_service_key, media ):
+        def __init__( self, parent, file_service_key, tag_service_key, media, immediate_commit ):
             
             wx.Panel.__init__( self, parent )
             
             self._file_service_key = file_service_key
             self._tag_service_key = tag_service_key
+            self._immediate_commit = immediate_commit
+            
+            self._content_updates = []
             
             self._i_am_local_tag_service = self._tag_service_key == CC.LOCAL_TAG_SERVICE_KEY
             
@@ -514,7 +554,19 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
                         
                     
                 
-                self._content_updates.extend( content_updates )
+                if self._immediate_commit:
+                    
+                    if len( content_updates ) > 0:
+                        
+                        service_keys_to_content_updates = { self._tag_service_key : content_updates }
+                        
+                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                        
+                    
+                else:
+                    
+                    self._content_updates.extend( content_updates )
+                    
                 
             
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
@@ -538,10 +590,12 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
                 
             
             self.Ok()
+        
+            parent = self.GetTopLevelParent().GetParent()
             
             def do_it():
                 
-                with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._tag_service_key, hashes ) as dlg:
+                with ClientGUIDialogs.DialogAdvancedContentUpdate( parent, self._tag_service_key, hashes ) as dlg:
                     
                     dlg.ShowModal()
                     
@@ -553,8 +607,6 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         def EventCheckCollapseSiblings( self, event ):
             
             self._new_options.SetBoolean( 'replace_siblings_on_manage_tags', self._collapse_siblings_checkbox.GetValue() )
-            
-            HydrusGlobals.client_controller.Write( 'serialisable', self._new_options )
             
         
         def EventCopyTags( self, event ):
@@ -636,9 +688,10 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         def GetContentUpdates( self ): return ( self._tag_service_key, self._content_updates )
         
-        def GetServiceKey( self ): return self._tag_service_key
-        
-        def HasChanges( self ): return len( self._content_updates ) > 0
+        def HasChanges( self ):
+            
+            return len( self._content_updates ) > 0
+            
         
         def Ok( self ):
             
@@ -646,8 +699,6 @@ class ManageTagsPanel( wx.lib.scrolledpanel.ScrolledPanel ):
             
         
         def SetMedia( self, media ):
-            
-            self._content_updates = []
             
             if media is None:
                 

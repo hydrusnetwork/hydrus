@@ -441,6 +441,18 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
         
+        #
+        
+        self._dictionary[ 'frame_locations' ] = {}
+        
+        # remember size, remember position, last_size, last_pos, default gravity, default position, maximised, fullscreen
+        self._dictionary[ 'frame_locations' ][ 'main_gui' ] = ( True, True, ( 640, 480 ), ( 20, 20 ), ( -1, -1 ), 'topleft', True, False )
+        self._dictionary[ 'frame_locations' ][ 'media_viewer' ] = ( True, True, ( 640, 480 ), ( 70, 70 ), ( -1, -1 ), 'topleft', True, True )
+        self._dictionary[ 'frame_locations' ][ 'manage_tags_dialog' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_tags_frame' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
+        
+        #
+        
         self._dictionary[ 'booleans' ] = {}
         
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
@@ -455,12 +467,16 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
         
+        #
+        
         self._dictionary[ 'noneable_integers' ] = {}
         
         self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
         
         self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
         self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
+        
+        #
         
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
         
@@ -593,6 +609,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFrameLocation( self, frame_key ):
+        
+        return self._dictionary[ 'frame_locations' ][ frame_key ]
+        
+    
     def GetNoneableInteger( self, name ):
         
         with self._lock:
@@ -625,6 +646,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = import_tag_options
             
+        
+    
+    def SetFrameLocation( self, frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ):
+        
+        self._dictionary[ 'frame_locations' ][ frame_key ] = ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
         
     
     def SetNoneableInteger( self, name, value ):

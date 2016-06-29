@@ -854,9 +854,19 @@ class Canvas( wx.Window ):
     
     def _HydrusShouldNotProcessInput( self ):
         
+        if HydrusGlobals.do_not_catch_char_hook:
+            
+            HydrusGlobals.do_not_catch_char_hook = False
+            
+            return True
+            
+        
         if self._current_display_media.GetMime() == HC.APPLICATION_FLASH:
             
-            if self.MouseIsOverMedia(): return True
+            if self.MouseIsOverMedia():
+                
+                return True
+                
             
         
         return False
@@ -885,16 +895,13 @@ class Canvas( wx.Window ):
         if self._current_display_media is not None:
             
             title = 'manage tags'
-            dialog_key = 'manage_tags'
+            frame_key = 'manage_tags_frame'
             
-            with ClientGUIDialogs.DialogManageApply( self, title, dialog_key ) as dlg:
-                
-                panel = ClientGUIPanels.ManageTagsPanel( dlg, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key )
-                
-                dlg.SetPanel( panel )
-                
-                dlg.ShowModal()
-                
+            manage_tags = ClientGUICommon.FrameThatResizesAndTakesPanel( self, title, frame_key )
+            
+            panel = ClientGUIPanels.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_display_media, ), immediate_commit = True, canvas_key = self._canvas_key )
+            
+            manage_tags.SetPanel( panel )
             
         
     
@@ -918,7 +925,10 @@ class Canvas( wx.Window ):
             
         
     
-    def _PrefetchNeighbours( self ): pass
+    def _PrefetchNeighbours( self ):
+        
+        pass
+        
     
     def _RecalcZoom( self ):
         
@@ -1692,7 +1702,7 @@ class CanvasFrame( ClientGUICommon.FrameThatResizes ):
     
     def __init__( self, parent ):
         
-        ClientGUICommon.FrameThatResizes.__init__( self, parent, resize_option_prefix = 'fs_', title = 'hydrus client media viewer' )
+        ClientGUICommon.FrameThatResizes.__init__( self, parent, 'hydrus client media viewer', 'media_viewer', float_on_parent = False )
         
     
     def Close( self ):
@@ -1726,6 +1736,8 @@ class CanvasFrame( ClientGUICommon.FrameThatResizes ):
         vbox.AddF( self._canvas_window, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+        self._SetSizeAndPosition( self._frame_key )
         
         self.Show( True )
         

@@ -22,6 +22,7 @@ import HydrusGlobals
 import HydrusNATPunch
 import HydrusPaths
 import HydrusSerialisable
+import HydrusTagArchive
 import HydrusTags
 import itertools
 import multipart
@@ -4216,13 +4217,11 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._gui_capitalisation.SetValue( HC.options[ 'gui_capitalisation' ] )
             
-            ( remember, size ) = HC.options[ 'tag_dialog_size' ]
+            remember_tuple = self._new_options.GetFrameLocation( 'manage_tags_dialog' )
             
-            self._tag_dialog_size.SetValue( remember )
+            self._tag_dialog_size.SetValue( remember_tuple[0] )
             
-            ( remember, position ) = HC.options[ 'tag_dialog_position' ]
-            
-            self._tag_dialog_position.SetValue( remember )
+            self._tag_dialog_position.SetValue( remember_tuple[1] )
             
             ( remember, position ) = HC.options[ 'rating_dialog_position' ]
             
@@ -4288,31 +4287,13 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
             HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
             
-            ( remember, size ) = HC.options[ 'tag_dialog_size' ]
+            ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( 'manage_tags_dialog' )
             
-            remember = self._tag_dialog_size.GetValue()
+            remember_size = self._tag_dialog_size.GetValue()
             
-            if remember:
-                
-                HC.options[ 'tag_dialog_size' ] = ( remember, size )
-                
-            else:
-                
-                HC.options[ 'tag_dialog_size' ] = ( remember, None )
-                
+            remember_position = self._tag_dialog_position.GetValue()
             
-            ( remember, position ) = HC.options[ 'tag_dialog_position' ]
-            
-            remember = self._tag_dialog_position.GetValue()
-            
-            if remember:
-                
-                HC.options[ 'tag_dialog_position' ] = ( remember, position )
-                
-            else:
-                
-                HC.options[ 'tag_dialog_position' ] = ( remember, None )
-                
+            self._new_options.SetFrameLocation( 'manage_tags_dialog', remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
             
             ( remember, position ) = HC.options[ 'rating_dialog_position' ]
             
@@ -6481,8 +6462,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_type in HC.TAG_SERVICES:
                 
-                self._archive_info = HydrusGlobals.client_controller.Read( 'tag_archive_info' )
-                
                 self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
                 
                 self._archive_sync = wx.ListBox( self._archive_panel, size = ( -1, 100 ) )
@@ -6522,14 +6501,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_type in HC.TAG_SERVICES:
                 
-                for ( archive_name, namespaces ) in info[ 'tag_archive_sync' ].items():
+                for ( portable_hta_path, namespaces ) in info[ 'tag_archive_sync' ].items():
                     
-                    name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
+                    name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
                     
-                    self._archive_sync.Append( name_to_display, ( archive_name, namespaces ) )
+                    self._archive_sync.Append( name_to_display, ( portable_hta_path, namespaces ) )
                     
-                
-                self._UpdateArchiveButtons()
                 
             
             if service_type in HC.RATINGS_SERVICES:
@@ -6683,36 +6660,14 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             self.SetSizer( vbox )
             
         
-        def _GetArchiveNameToDisplay( self, archive_name, namespaces ):
+        def _GetArchiveNameToDisplay( self, portable_hta_path, namespaces ):
             
-            if len( namespaces ) == 0: name_to_display = archive_name
-            else: name_to_display = archive_name + ' (' + ', '.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
+            hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
+            
+            if len( namespaces ) == 0: name_to_display = hta_path
+            else: name_to_display = hta_path + ' (' + ', '.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
             
             return name_to_display
-            
-        
-        def _GetPotentialArchives( self ):
-            
-            existing_syncs = set()
-            
-            for i in range( self._archive_sync.GetCount() ):
-                
-                ( archive_name, namespaces ) = self._archive_sync.GetClientData( i )
-                
-                existing_syncs.add( archive_name )
-                
-            
-            potential_archives = { archive_name for archive_name in self._archive_info.keys() if archive_name not in existing_syncs }
-            
-            return potential_archives
-            
-        
-        def _UpdateArchiveButtons( self ):
-            
-            potential_archives = self._GetPotentialArchives()
-            
-            if len( potential_archives ) == 0: self._archive_sync_add.Disable()
-            else: self._archive_sync_add.Enable()
             
         
         def DoOnOKStuff( self ):
@@ -6736,26 +6691,23 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 wx.MessageBox( 'Be careful with this tool! Syncing a lot of files to a large archive can take a very long time to initialise.' )
                 
             
-            potential_archives = self._GetPotentialArchives()
+            text = 'Select the Hydrus Tag Archive\'s location.'
             
-            if len( potential_archives ) == 1:
+            with wx.FileDialog( self, message = text, style = wx.FD_OPEN ) as dlg_file:
                 
-                ( archive_name, ) = potential_archives
-                
-                wx.MessageBox( 'There is only one tag archive, ' + archive_name + ', to select, so I am selecting it for you.' )
-                
-            else:
-                
-                with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'Select the tag archive to add', potential_archives ) as dlg:
+                if dlg_file.ShowModal() == wx.ID_OK:
                     
-                    if dlg.ShowModal() == wx.ID_OK: archive_name = dlg.GetString()
-                    else: return
+                    hta_path = HydrusData.ToUnicode( dlg_file.GetPath() )
+                    
+                    portable_hta_path = HydrusPaths.ConvertAbsPathToPortablePath( hta_path )
                     
                 
             
-            potential_namespaces = self._archive_info[ archive_name ]
+            hta = HydrusTagArchive.HydrusTagArchive( hta_path )
             
-            with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( potential_namespaces ) ) as dlg:
+            archive_namespaces = hta.GetNamespaces()
+        
+            with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ) ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
@@ -6767,11 +6719,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                 
             
-            name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
+            name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
             
-            self._archive_sync.Append( name_to_display, ( archive_name, namespaces ) )
-            
-            self._UpdateArchiveButtons()
+            self._archive_sync.Append( name_to_display, ( portable_hta_path, namespaces ) )
             
         
         def EventArchiveEdit( self, event ):
@@ -6780,16 +6730,20 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if selection != wx.NOT_FOUND:
                 
-                ( archive_name, existing_namespaces ) = self._archive_sync.GetClientData( selection )
+                ( portable_hta_path, existing_namespaces ) = self._archive_sync.GetClientData( selection )
                 
-                if archive_name not in self._archive_info.keys():
+                hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
+                
+                if not os.path.exists( hta_path ):
                     
                     wx.MessageBox( 'This archive does not seem to exist any longer!' )
                     
                     return
                     
                 
-                archive_namespaces = self._archive_info[ archive_name ]
+                hta = HydrusTagArchive.HydrusTagArchive( hta_path )
+                
+                archive_namespaces = hta.GetNamespaces()
                 
                 with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ), HydrusData.ConvertUglyNamespacesToPrettyStrings( existing_namespaces ) ) as dlg:
                     
@@ -6797,13 +6751,16 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
                         
-                    else: return
+                    else:
+                        
+                        return
+                        
                     
                 
-                name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
+                name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
                 
                 self._archive_sync.SetString( selection, name_to_display )
-                self._archive_sync.SetClientData( selection, ( archive_name, namespaces ) )
+                self._archive_sync.SetClientData( selection, ( portable_hta_path, namespaces ) )
                 
             
         
@@ -6811,9 +6768,10 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             selection = self._archive_sync.GetSelection()
             
-            if selection != wx.NOT_FOUND: self._archive_sync.Delete( selection )
-            
-            self._UpdateArchiveButtons()
+            if selection != wx.NOT_FOUND:
+                
+                self._archive_sync.Delete( selection )
+                
             
         
         def EventCheckIPFS( self, event ):
@@ -6976,9 +6934,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 for i in range( self._archive_sync.GetCount() ):
                     
-                    ( archive_name, namespaces ) = self._archive_sync.GetClientData( i )
+                    ( portable_hta_path, namespaces ) = self._archive_sync.GetClientData( i )
                     
-                    tag_archives[ archive_name ] = namespaces
+                    tag_archives[ portable_hta_path ] = namespaces
                     
                 
                 info[ 'tag_archive_sync' ] = tag_archives

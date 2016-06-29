@@ -1384,10 +1384,6 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusPaths.MirrorFile( source, dest )
                 
             
-            job_key.SetVariable( 'popup_text_1', 'copying archives directory' )
-            
-            HydrusPaths.MirrorTree( os.path.join( self._db_dir, 'client_archives' ), os.path.join( path, 'client_archives' ) ) 
-            
             job_key.SetVariable( 'popup_text_1', 'copying files directory' )
             
             HydrusPaths.MirrorTree( client_files_default, os.path.join( path, 'client_files' ) )
@@ -1956,8 +1952,6 @@ class DB( HydrusDB.HydrusDB ):
         self._subscriptions_cache = {}
         self._service_cache = {}
         
-        self._tag_archives = {}
-        
     
     def _CreateDB( self ):
         
@@ -1965,16 +1959,21 @@ class DB( HydrusDB.HydrusDB ):
         
         client_files_default = os.path.join( self._db_dir, 'client_files' )
         
-        if not os.path.exists( client_files_default ): os.makedirs( client_files_default )
+        if not os.path.exists( client_files_default ):
+            
+            os.makedirs( client_files_default )
+            
         
         other_dirs = []
         
-        other_dirs.append( os.path.join( self._db_dir, 'client_archives' ) )
         other_dirs.append( os.path.join( self._db_dir, 'client_updates' ) )
         
         for path in other_dirs:
             
-            if not os.path.exists( path ): os.makedirs( path )
+            if not os.path.exists( path ):
+                
+                os.makedirs( path )
+                
             
         
         HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
@@ -4240,7 +4239,9 @@ class DB( HydrusDB.HydrusDB ):
                 return media_result
                 
             
-            petitioned = [ ( hash_ids, reason ) for ( reason, hash_ids ) in HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason, hash_id FROM reasons, file_petitions USING ( reason_id ) WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items() ]
+            petitioned = [ ( hash_ids, reason_id ) for ( reason_id, hash_ids ) in HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason_id, hash_id FROM file_petitions WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items() ]
+            
+            petitioned = [ ( hash_ids, self._GetText( reason_id ) ) for ( hash_ids, reason_id ) in petitioned ]
             
             if len( petitioned ) > 0:
                 
@@ -4564,49 +4565,6 @@ class DB( HydrusDB.HydrusDB ):
         else: ( site_id, ) = result
         
         return site_id
-        
-    
-    def _GetTagArchiveInfo( self ):
-        
-        return { archive_name : hta.GetNamespaces() for ( archive_name, ( hta_path, hta ) ) in self._tag_archives.items() }
-        
-    
-    def _GetTagArchiveTags( self, hashes ):
-        
-        result = {}
-        
-        for ( archive_name, ( hta_path, hta ) ) in self._tag_archives.items():
-            
-            hash_type = hta.GetHashType()
-            
-            sha256_to_archive_hashes = {}
-            
-            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
-                
-                sha256_to_archive_hashes = { hash : hash for hash in hashes }
-                
-            else:
-                
-                if hash_type == HydrusTagArchive.HASH_TYPE_MD5: h = 'md5'
-                elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
-                elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
-                
-                for hash in hashes:
-                    
-                    hash_id = self._GetHashId( hash )
-                    
-                    ( archive_hash, ) = self._c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                    
-                    sha256_to_archive_hashes[ hash ] = archive_hash
-                    
-                
-            
-            hashes_to_tags = { hash : hta.GetTags( sha256_to_archive_hashes[ hash ] ) for hash in hashes }
-            
-            result[ archive_name ] = hashes_to_tags
-            
-        
-        return result
         
     
     def _GetTagCensorship( self, service_key = None ):
@@ -4995,17 +4953,14 @@ class DB( HydrusDB.HydrusDB ):
             
             tag_archive_sync = info[ 'tag_archive_sync' ]
             
-            for ( archive_name, namespaces ) in tag_archive_sync.items():
+            for ( portable_hta_path, namespaces ) in tag_archive_sync.items():
                 
-                if archive_name in self._tag_archives:
-                    
-                    ( hta_path, hta ) = self._tag_archives[ archive_name ]
-                    
-                    adding = True
-                    
-                    try: self._SyncHashesToTagArchive( [ hash ], hta_path, service_key, adding, namespaces )
-                    except: pass
-                    
+                hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
+                
+                adding = True
+                
+                try: self._SyncHashesToTagArchive( [ hash ], hta_path, service_key, adding, namespaces )
+                except: pass
                 
             
         
@@ -5027,40 +4982,6 @@ class DB( HydrusDB.HydrusDB ):
             self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', [ ( count, service_id, HC.SERVICE_INFO_NUM_INBOX ) for ( service_id, count ) in updates ] )
             
             self._inbox_hash_ids.update( hash_ids )
-            
-        
-    
-    def _InitArchives( self ):
-        
-        self._tag_archives = {}
-        
-        archives_dir = os.path.join( self._db_dir, 'client_archives' )
-        
-        if not os.path.exists( archives_dir ):
-            
-            os.makedirs( archives_dir )
-            
-        
-        for filename in os.listdir( archives_dir ):
-            
-            if filename.endswith( '.db' ):
-                
-                try:
-                    
-                    hta_path = os.path.join( archives_dir, filename )
-                    
-                    hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-                    
-                    archive_name = filename[:-3]
-                    
-                    self._tag_archives[ archive_name ] = ( hta_path, hta )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowText( 'An archive failed to load on boot.' )
-                    HydrusData.ShowException( e )
-                    
-                
             
         
     
@@ -5093,8 +5014,6 @@ class DB( HydrusDB.HydrusDB ):
         ( self._null_namespace_id, ) = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( '', ) ).fetchone()
         
         self._inbox_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM file_inbox;' ) }
-        
-        self._InitArchives()
         
     
     def _InitExternalDatabases( self ):
@@ -6037,9 +5956,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Read( self, action, *args, **kwargs ):
         
-        if action == 'tag_archive_info': result = self._GetTagArchiveInfo( *args, **kwargs )
-        elif action == 'tag_archive_tags': result = self._GetTagArchiveTags( *args, **kwargs )
-        elif action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
+        if action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
         elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
@@ -6381,20 +6298,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SyncHashesToTagArchive( self, hashes, hta_path, tag_service_key, adding, namespaces ):
         
-        hta = None
-        
-        for ( potential_hta_path, potential_hta ) in self._tag_archives.items():
-            
-            if hta_path == potential_hta_path:
-                
-                hta = potential_hta
-                
-            
-        
-        if hta is None:
-            
-            hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-            
+        hta = HydrusTagArchive.HydrusTagArchive( hta_path )
         
         hash_type = hta.GetHashType()
         
@@ -7813,6 +7717,38 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 211:
+            
+            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'rule34@booru.org', ClientDefaults.GetDefaultBoorus()[ 'rule34@booru.org' ] ) )
+            
+            #
+            
+            try:
+                
+                service_data = self._c.execute( 'SELECT service_id, info FROM services;' ).fetchall()
+                
+                client_archives_folder = os.path.join( self._db_dir, 'client_archives' )
+                
+                for ( service_id, info ) in service_data:
+                    
+                    if 'tag_archive_sync' in info:
+                        
+                        tas_flat = info[ 'tag_archive_sync' ].items()
+                        
+                        info[ 'tag_archive_sync' ] = { HydrusPaths.ConvertAbsPathToPortablePath( os.path.join( client_archives_folder, archive_name + '.db' ) ) : namespaces for ( archive_name, namespaces ) in tas_flat }
+                        
+                        self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Trying to update tag archive location caused the following problem:' )
+                
+                HydrusData.PrintException( e )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -8256,13 +8192,13 @@ class DB( HydrusDB.HydrusDB ):
                     old_tag_archive_sync = old_info[ 'tag_archive_sync' ]
                     new_tag_archive_sync = info_update[ 'tag_archive_sync' ]
                     
-                    for archive_name in new_tag_archive_sync.keys():
+                    for portable_hta_path in new_tag_archive_sync.keys():
                         
-                        namespaces = set( new_tag_archive_sync[ archive_name ] )
+                        namespaces = set( new_tag_archive_sync[ portable_hta_path ] )
                         
-                        if archive_name in old_tag_archive_sync:
+                        if portable_hta_path in old_tag_archive_sync:
                             
-                            old_namespaces = old_tag_archive_sync[ archive_name ]
+                            old_namespaces = old_tag_archive_sync[ portable_hta_path ]
                             
                             namespaces.difference_update( old_namespaces )
                             
@@ -8272,7 +8208,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                             
                         
-                        ( hta_path, hta ) = self._tag_archives[ archive_name ]
+                        hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
                         
                         file_service_key = CC.LOCAL_FILE_SERVICE_KEY
                         
@@ -8492,7 +8428,6 @@ class DB( HydrusDB.HydrusDB ):
         
         client_files_default = os.path.join( self._db_dir, 'client_files' )
         
-        HydrusPaths.MirrorTree( os.path.join( path, 'client_archives' ), os.path.join( self._db_dir, 'client_archives' ) )
         HydrusPaths.MirrorTree( os.path.join( path, 'client_files' ), client_files_default )
         HydrusPaths.MirrorTree( os.path.join( path, 'client_updates' ), os.path.join( self._db_dir, 'client_updates' ) )
         

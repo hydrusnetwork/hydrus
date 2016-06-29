@@ -773,7 +773,7 @@ class ClientFilesManager( object ):
             
             try:
                 
-                HydrusPaths.DeletePath( path )
+                HydrusPaths.DeletePath( full_size_path )
                 
             except:
                 

@@ -156,8 +156,16 @@ class AutoCompleteDropdown( wx.Panel ):
         # There's a big bug in wx where FRAME_FLOAT_ON_PARENT Frames don't get passed their mouse events if their parent is a Dialog jej
         # I think it is something to do with the initialisation order; if the frame is init'ed before the ShowModal call, but whatever.
         
-        if isinstance( tlp, wx.Dialog ) or HC.options[ 'always_embed_autocompletes' ]: self._float_mode = False
-        else: self._float_mode = True
+        # This turned out to be ugly when I added the manage tags frame, so I've set it to if the tlp has a parent, which basically means "not the main gui"
+        
+        if tlp.GetParent() is not None  or HC.options[ 'always_embed_autocompletes' ]:
+            
+            self._float_mode = False
+            
+        else:
+            
+            self._float_mode = True
+            
         
         self._text_ctrl = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
         
@@ -478,7 +486,12 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 self._text_ctrl.ProcessEvent( new_event )
                 
-            else: self._dropdown_list.ProcessEvent( event )
+                wx.CallLater( 50, self._text_ctrl.SetFocus )
+                
+            else:
+                
+                self._dropdown_list.ProcessEvent( event )
+                
             
         else:
             
@@ -1791,15 +1804,195 @@ class FitResistantStaticText( wx.StaticText ):
     
 class Frame( wx.Frame ):
     
-    def __init__( self, *args, **kwargs ):
+    def __init__( self, parent, title, float_on_parent = True ):
         
         HydrusGlobals.client_controller.ResetIdleTimer()
         
-        wx.Frame.__init__( self, *args, **kwargs )
+        if parent is None:
+            
+            pos = wx.DefaultPosition
+            style = wx.DEFAULT_FRAME_STYLE
+            
+        else:
+            
+            if isinstance( parent, wx.TopLevelWindow ):
+                
+                parent_tlp = parent
+                
+            else:
+                
+                parent_tlp = parent.GetTopLevelParent()
+                
+            
+            ( tlp_x, tlp_y ) = parent_tlp.GetPositionTuple()
+            
+            pos = ( tlp_x + 50, tlp_y + 50 )
+            
+            if float_on_parent:
+                
+                style = wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT
+                
+            else:
+                
+                style = wx.DEFAULT_FRAME_STYLE
+                
+            
+        
+        wx.Frame.__init__( self, parent, title = title, pos = pos, style = style )
+        
+        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
         self.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
+        
+    
+    def _GetSafePosition( self, position ):
+        
+        display_index = wx.Display.GetFromPoint( position )
+        
+        if display_index == wx.NOT_FOUND:
+            
+            position = wx.DefaultPosition
+            
+        else:
+            
+            display = wx.Display( display_index )
+            
+            geometry = display.GetGeometry()
+            
+            ( p_x, p_y ) = position
+            
+            x_bad = p_x < geometry.x or p_x > geometry.x + geometry.width
+            y_bad = p_y < geometry.y or p_y > geometry.y + geometry.height
+            
+            if x_bad or y_bad:
+                
+                position = wx.DefaultPosition
+                
+            
+        
+        return position
+        
+    
+    def _SaveSizeAndPosition( self, frame_key ):
+        
+        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
+        
+        maximised = self.IsMaximized()
+        fullscreen = self.IsFullScreen()
+        
+        if not ( maximised or fullscreen ):
+            
+            # when dragging window up to be maximised, reported position is sometimes a bit dodgy
+            # so, filter out the invalid answers
+            
+            display_index = wx.Display.GetFromPoint( self.GetPosition() )
+            
+            if display_index != wx.NOT_FOUND:
+                
+                last_size = self.GetSizeTuple()
+                last_position = self._GetSafePosition( self.GetPositionTuple() )
+                
+            
+        
+        self._new_options.SetFrameLocation( frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+        
+    
+    def _SetSizeAndPosition( self, frame_key ):
+        traceback.print_stack()
+        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
+        
+        parent = self.GetParent()
+        
+        if remember_size and last_size is not None:
+            
+            ( width, height ) = last_size
+            
+        else:
+            
+            ( min_width, min_height ) = self.GetEffectiveMinSize()
+            
+            if parent is None:
+                
+                width = min_width + 20
+                height = min_height + 20
+                
+            else:
+                
+                ( parent_window_width, parent_window_height ) = self.GetParent().GetTopLevelParent().GetSize()
+                
+                max_width = parent_window_width - 100
+                max_height = parent_window_height - 100
+                
+                ( width_gravity, height_gravity ) = default_gravity
+                
+                if width_gravity == -1:
+                    
+                    width = min_width
+                    
+                else:
+                    
+                    width = int( width_gravity * max_width )
+                    
+                
+                if height_gravity == -1:
+                    
+                    height = min_height
+                    
+                else:
+                    
+                    height = int( height_gravity * max_height )
+                    
+                
+            
+        
+        self.SetInitialSize( ( width, height ) )
+        
+        if maximised:
+            
+            self.Maximize()
+            
+        
+        if fullscreen:
+            
+            wx.CallAfter( self.ShowFullScreen, True, wx.FULLSCREEN_ALL )
+            
+        
+        #
+        
+        pos = None
+        
+        if remember_position and last_position is not None:
+            
+            pos = last_position
+            
+        elif default_position == 'topleft' and parent is not None:
+            
+            if isinstance( parent, wx.TopLevelWindow ):
+                
+                parent_tlp = parent
+                
+            else:
+                
+                parent_tlp = parent.GetTopLevelParent()
+                
+            
+            ( pos_x, pos_y ) = parent_tlp.GetPositionTuple()
+            
+            pos = ( pos_x + 50, pos_y + 50 )
+            
+        elif default_position == 'center':
+            
+            wx.CallAfter( self.Center )
+            
+        
+        if pos is not None:
+            
+            pos = self._GetSafePosition( pos )
+            
+            self.SetPosition( pos )
+            
         
     
     def SetInitialSize( self, ( width, height ) ):
@@ -1819,86 +2012,85 @@ class Frame( wx.Frame ):
     
 class FrameThatResizes( Frame ):
     
-    def __init__( self, *args, **kwargs ):
+    def __init__( self, parent, title, frame_key, float_on_parent = True ):
         
-        self._resize_option_prefix = kwargs[ 'resize_option_prefix' ]
+        self._frame_key = frame_key
         
-        del kwargs[ 'resize_option_prefix' ]
-        
-        Frame.__init__( self, *args, **kwargs )
-        
-        self._InitialiseSizeAndPosition()
+        Frame.__init__( self, parent, title, float_on_parent )
         
         self.Bind( wx.EVT_SIZE, self.EventSpecialResize )
         self.Bind( wx.EVT_MOVE, self.EventSpecialMove )
         
     
-    def _InitialiseSizeAndPosition( self ):
-        
-        client_size = HC.options[ 'client_size' ]
-        
-        self.SetInitialSize( client_size[ self._resize_option_prefix + 'restored_size' ] )
-        
-        position = client_size[ self._resize_option_prefix + 'restored_position' ]
-        
-        display_index = wx.Display.GetFromPoint( position )
-        
-        if display_index == wx.NOT_FOUND: client_size[ self._resize_option_prefix + 'restored_position' ] = ( 20, 20 )
-        else:
-            
-            display = wx.Display( display_index )
-            
-            geometry = display.GetGeometry()
-            
-            ( p_x, p_y ) = position
-            
-            x_bad = p_x < geometry.x or p_x > geometry.x + geometry.width
-            y_bad = p_y < geometry.y or p_y > geometry.y + geometry.height
-            
-            if x_bad or y_bad: client_size[ self._resize_option_prefix + 'restored_position' ] = ( 20, 20 )
-            
-        
-        self.SetPosition( client_size[ self._resize_option_prefix + 'restored_position' ] )
-        
-        if client_size[ self._resize_option_prefix + 'maximised' ]: self.Maximize()
-        
-        if client_size[ self._resize_option_prefix + 'fullscreen' ]: wx.CallAfter( self.ShowFullScreen, True, wx.FULLSCREEN_ALL )
-        
-    
-    def _RecordSizeAndPosition( self ):
-        
-        client_size = HC.options[ 'client_size' ]
-        
-        client_size[ self._resize_option_prefix + 'maximised' ] = self.IsMaximized()
-        client_size[ self._resize_option_prefix + 'fullscreen' ] = self.IsFullScreen()
-        
-        if not ( self.IsMaximized() or self.IsFullScreen() ):
-            
-            # when dragging window up to be maximised, reported position is sometimes a bit dodgy
-            
-            display_index = wx.Display.GetFromPoint( self.GetPosition() )
-            
-            if display_index != wx.NOT_FOUND:
-                
-                client_size[ self._resize_option_prefix + 'restored_size' ] = tuple( self.GetSize() )
-                
-                client_size[ self._resize_option_prefix + 'restored_position' ] = tuple( self.GetPosition() )
-                
-            
-        
-    
     def EventSpecialMove( self, event ):
         
-        self._RecordSizeAndPosition()
+        self._SaveSizeAndPosition( self._frame_key )
         
         event.Skip()
         
     
     def EventSpecialResize( self, event ):
         
-        self._RecordSizeAndPosition()
+        self._SaveSizeAndPosition( self._frame_key )
         
         event.Skip()
+        
+    
+class FrameThatResizesAndTakesPanel( FrameThatResizes ):
+    
+    def __init__( self, parent, title, frame_key, float_on_parent = True ):
+        
+        FrameThatResizes.__init__( self, parent, title, frame_key, float_on_parent )
+        
+        self._ok = wx.Button( self, label = 'close' )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventClose )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        self.Bind( wx.EVT_CLOSE, self.EventClose )
+        
+    
+    def EventMenu( self, event ):
+        
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'ok':
+                
+                self.EventClose( None )
+                
+            else:
+                
+                event.Skip()
+                
+            
+        
+    
+    def EventClose( self, event ):
+        
+        self._SaveSizeAndPosition( self._frame_key )
+        
+        self.Destroy()
+        
+    
+    def SetPanel( self, panel ):
+        
+        self._panel = panel
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+        self._SetSizeAndPosition( self._frame_key )
+        
+        self.Show( True )
+        
+        self._panel.SetupScrolling()
         
     
 class Gauge( wx.Gauge ):
@@ -6518,7 +6710,7 @@ class ShowKeys( Frame ):
         elif key_type == 'access': title = 'Access Keys'
         
         # give it no parent, so this doesn't close when the dialog is closed!
-        Frame.__init__( self, None, title = HydrusGlobals.client_controller.PrepStringForDisplay( title ) )
+        Frame.__init__( self, None, HydrusGlobals.client_controller.PrepStringForDisplay( title ) )
         
         self._key_type = key_type
         self._keys = keys

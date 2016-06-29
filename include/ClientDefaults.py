@@ -204,21 +204,6 @@ def GetClientDefaultOptions():
     
     options[ 'processing_phase' ] = 0
     
-    client_size = {}
-    
-    client_size[ 'gui_fullscreen' ] = False
-    client_size[ 'gui_maximised' ] = True
-    client_size[ 'gui_restored_size' ] = [ 640, 480 ]
-    client_size[ 'gui_restored_position' ] = [ 20, 20 ]
-    client_size[ 'fs_fullscreen' ] = True
-    client_size[ 'fs_maximised' ] = True
-    client_size[ 'fs_restored_size' ] = [ 640, 480 ]
-    client_size[ 'fs_restored_position' ] = [ 20, 20 ]
-    
-    options[ 'client_size' ] = client_size
-    
-    options[ 'tag_dialog_size' ] = ( False, None )
-    options[ 'tag_dialog_position' ] = ( False, None )
     options[ 'rating_dialog_position' ] = ( False, None )
     
     options[ 'local_port' ] = None
@@ -428,7 +413,7 @@ def GetDefaultBoorus():
     thumb_classname = 'thumb'
     image_id = None
     image_data = 'Original image'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '' }
+    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
     
     boorus[ 'rule34@booru.org' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     

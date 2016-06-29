@@ -45,14 +45,7 @@ def GenerateNumpyImage( path ):
     
 def GenerateNumPyImageFromPILImage( pil_image ):
     
-    if pil_image.mode == 'RGBA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
-        
-        if pil_image.mode == 'P': pil_image = pil_image.convert( 'RGBA' )
-        
-    else:
-        
-        if pil_image.mode != 'RGB': pil_image = pil_image.convert( 'RGB' )
-        
+    pil_image = HydrusImageHandling.Dequantize( pil_image )
     
     ( w, h ) = pil_image.size
     

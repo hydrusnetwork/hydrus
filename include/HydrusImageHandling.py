@@ -43,6 +43,22 @@ def ConvertToPngIfBmp( path ):
             
         
     
+def Dequantize( pil_image ):
+    
+    if pil_image.mode not in ( 'RGBA', 'RGB' ):
+        
+        if pil_image.mode == 'LA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
+            
+            pil_image = pil_image.convert( 'RGBA' )
+            
+        else:
+            
+            pil_image = pil_image.convert( 'RGB' )
+            
+        
+    
+    return pil_image
+    
 def EfficientlyResizePILImage( pil_image, ( target_x, target_y ) ):
     
     ( im_x, im_y ) = pil_image.size

@@ -89,19 +89,23 @@ class GIFRenderer( object ):
             
         else:
             
-            if self._pil_image.mode == 'P' and 'transparency' in self._pil_image.info:
+            current_frame = pil_image = HydrusImageHandling.Dequantize( self._pil_image )
+            
+            if current_frame.mode == 'RGBA':
                 
-                # The gif problems seem to be here.
-                # I think that while some transparent animated gifs expect their frames to be pasted over each other, the others expect them to be fresh every time.
-                # Determining which is which doesn't seem to be available in PIL, and PIL's internal calculations seem to not be 100% correct.
-                # Just letting PIL try to do it on its own with P rather than converting to RGBA sometimes produces artifacts
+                if self._pil_canvas is None:
+                    
+                    self._pil_canvas = current_frame
+                    
+                else:
+                    
+                    self._pil_canvas.paste( current_frame, None, current_frame ) # use the rgba image as its own mask
+                    
                 
-                current_frame = self._pil_image.convert( 'RGBA' )
+            elif current_frame.mode == 'RGB':
                 
-                if self._pil_canvas is None: self._pil_canvas = current_frame
-                else: self._pil_canvas.paste( current_frame, None, current_frame ) # use the rgba image as its own mask
+                self._pil_canvas = current_frame
                 
-            else: self._pil_canvas = self._pil_image
             
             numpy_image = ClientImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas )
             

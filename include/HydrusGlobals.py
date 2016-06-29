@@ -17,3 +17,5 @@ do_idle_shutdown_work = False
 shutdown_complete = False
 restart = False
 emergency_exit = False
+
+do_not_catch_char_hook = False

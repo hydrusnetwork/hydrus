@@ -55,7 +55,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         title = self._controller.PrepStringForDisplay( 'Hydrus Client' )
         
-        ClientGUICommon.FrameThatResizes.__init__( self, None, resize_option_prefix = 'gui_', title = title )
+        ClientGUICommon.FrameThatResizes.__init__( self, None, title, 'main_gui' )
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles ) )
         
@@ -113,17 +113,19 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._menus = {}
         
-        self._InitialiseMenubar()
-        
-        self._RefreshStatusBar()
-        
         vbox = wx.BoxSizer( wx.HORIZONTAL )
         
         vbox.AddF( self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
+        self._SetSizeAndPosition( self._frame_key )
+        
         self.Show( True )
+        
+        self._InitialiseMenubar()
+        
+        self._RefreshStatusBar()
         
         # as we are in oninit, callafter and calllater( 0 ) are different
         # later waits until the mainloop is running, I think.
@@ -1712,7 +1714,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ReviewServices( self ):
         
-        FrameReviewServices( self._controller )
+        FrameReviewServices( self, self._controller )
         
     
     def _SaveGUISession( self, name = None ):
@@ -2552,6 +2554,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._controller.WriteSynchronous( 'save_options', HC.options )
             
+            self._controller.WriteSynchronous( 'serialisable', self._new_options )
+            
         except Exception as e:
             
             HydrusData.PrintException( e )
@@ -2786,7 +2790,7 @@ class FrameComposeMessage( ClientGUICommon.Frame ):
     
     def __init__( self, empty_draft_message ):
         
-        ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'Compose Message' ) )
+        ClientGUICommon.Frame.__init__( self, None, HC.app.PrepStringForDisplay( 'Compose Message' ) )
         
         self.SetInitialSize( ( 920, 600 ) )
         
@@ -2816,17 +2820,11 @@ class FrameComposeMessage( ClientGUICommon.Frame ):
     '''
 class FrameReviewServices( ClientGUICommon.Frame ):
     
-    def __init__( self, controller ):
+    def __init__( self, parent, controller ):
         
         self._controller = controller
         
-        ( pos_x, pos_y ) = self._controller.GetGUI().GetPositionTuple()
-        
-        pos = ( pos_x + 25, pos_y + 50 )
-        
-        tlp = wx.GetApp().GetTopWindow()
-        
-        ClientGUICommon.Frame.__init__( self, tlp, title = self._controller.PrepStringForDisplay( 'Review Services' ), pos = pos )
+        ClientGUICommon.Frame.__init__( self, parent, self._controller.PrepStringForDisplay( 'Review Services' ) )
         
         self._notebook = wx.Notebook( self )
         
@@ -3859,13 +3857,9 @@ class FrameSeedCache( ClientGUICommon.Frame ):
         
         self._controller = controller
         
-        ( pos_x, pos_y ) = self._controller.GetGUI().GetPositionTuple()
-        
-        pos = ( pos_x + 25, pos_y + 50 )
-        
         tlp = wx.GetApp().GetTopWindow()
         
-        ClientGUICommon.Frame.__init__( self, tlp, title = self._controller.PrepStringForDisplay( 'File Import Status' ), pos = pos )
+        ClientGUICommon.Frame.__init__( self, tlp, self._controller.PrepStringForDisplay( 'File Import Status' ) )
         
         self._seed_cache = seed_cache
         

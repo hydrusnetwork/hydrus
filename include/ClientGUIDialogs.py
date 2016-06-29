@@ -105,9 +105,9 @@ def ExportToHTA( parent, service_key, hashes ):
         HydrusGlobals.client_controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
         
     
-def ImportFromHTA( parent, path, tag_service_key ):
+def ImportFromHTA( parent, hta_path, tag_service_key ):
     
-    hta = HydrusTagArchive.HydrusTagArchive( path )
+    hta = HydrusTagArchive.HydrusTagArchive( hta_path )
     
     potential_namespaces = hta.GetNamespaces()
     
@@ -213,7 +213,7 @@ def ImportFromHTA( parent, path, tag_service_key ):
                 
                 if dlg_final.ShowModal() == wx.ID_YES:
                     
-                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', path, tag_service_key, file_service_key, adding, namespaces )
+                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', hta_path, tag_service_key, file_service_key, adding, namespaces )
                     
                 
             
@@ -283,6 +283,8 @@ class Dialog( wx.Dialog ):
         
         wx.Dialog.__init__( self, parent, title = title, style = style, pos = pos )
         
+        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
         #self.SetDoubleBuffered( True )
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
@@ -297,6 +299,141 @@ class Dialog( wx.Dialog ):
             
         
         HydrusGlobals.client_controller.ResetIdleTimer()
+        
+    
+    def _GetSafePosition( self, position ):
+        
+        display_index = wx.Display.GetFromPoint( position )
+        
+        if display_index == wx.NOT_FOUND:
+            
+            position = wx.DefaultPosition
+            
+        else:
+            
+            display = wx.Display( display_index )
+            
+            geometry = display.GetGeometry()
+            
+            ( p_x, p_y ) = position
+            
+            x_bad = p_x < geometry.x or p_x > geometry.x + geometry.width
+            y_bad = p_y < geometry.y or p_y > geometry.y + geometry.height
+            
+            if x_bad or y_bad:
+                
+                position = wx.DefaultPosition
+                
+            
+        
+        return position
+        
+    
+    def _SaveSizeAndPosition( self, frame_key ):
+        
+        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
+        
+        last_size = self.GetSizeTuple()
+        
+        last_position = self._GetSafePosition( self.GetPositionTuple() )
+        
+        self._new_options.SetFrameLocation( frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+        
+    
+    def _SetSizeAndPosition( self, frame_key ):
+        
+        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
+        
+        parent = self.GetParent()
+        
+        if remember_size and last_size is not None:
+            
+            ( width, height ) = last_size
+            
+        else:
+            
+            ( min_width, min_height ) = self.GetEffectiveMinSize()
+            
+            if parent is None:
+                
+                width = min_width + 20
+                height = min_height + 20
+                
+            else:
+                
+                ( parent_window_width, parent_window_height ) = self.GetParent().GetTopLevelParent().GetSize()
+                
+                max_width = parent_window_width - 100
+                max_height = parent_window_height - 100
+                
+                ( width_gravity, height_gravity ) = default_gravity
+                
+                if width_gravity == -1:
+                    
+                    width = min_width
+                    
+                else:
+                    
+                    width = int( width_gravity * max_width )
+                    
+                
+                if height_gravity == -1:
+                    
+                    height = min_height
+                    
+                else:
+                    
+                    height = int( height_gravity * max_height )
+                    
+                
+            
+        
+        self.SetInitialSize( ( width, height ) )
+        
+        if maximised:
+            
+            self.Maximize()
+            
+        
+        if fullscreen:
+            
+            wx.CallAfter( self.ShowFullScreen, True, wx.FULLSCREEN_ALL )
+            
+        
+        #
+        
+        pos = None
+        
+        if remember_position and last_position is not None:
+            
+            pos = last_position
+            
+        elif default_position == 'topleft' and parent is not None:
+            
+            if isinstance( parent, wx.TopLevelWindow ):
+                
+                parent_tlp = parent
+                
+            else:
+                
+                parent_tlp = parent.GetTopLevelParent()
+                
+            
+            ( pos_x, pos_y ) = parent_tlp.GetPositionTuple()
+            
+            pos = ( pos_x + 50, pos_y + 50 )
+            
+        elif default_position == 'center':
+            
+            wx.CallAfter( self.Center )
+            
+        
+        if pos is not None:
+            
+            pos = self._GetSafePosition( pos )
+            
+            self.SetPosition( pos )
+            
         
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
@@ -318,20 +455,11 @@ class Dialog( wx.Dialog ):
     
 class DialogManageApply( Dialog ):
     
-    def __init__( self, parent, title, dialog_key ):
+    def __init__( self, parent, title, frame_key ):
         
-        self._dialog_key = dialog_key
+        self._frame_key = frame_key
         
-        # use the dialog key to figure out default position and size from options
-        
-        ( remember, position ) = HC.options[ 'tag_dialog_position' ]
-        
-        if not remember:
-            
-            position = 'topleft'
-            
-        
-        Dialog.__init__( self, parent, title, position = position )
+        Dialog.__init__( self, parent, title )
         
         self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
         self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -366,29 +494,7 @@ class DialogManageApply( Dialog ):
         
         self._panel.CommitChanges()
         
-        # use dialog key to figure this out
-        
-        ( remember, size ) = HC.options[ 'tag_dialog_size' ]
-        
-        current_size = self.GetSizeTuple()
-        
-        if remember and size != current_size:
-            
-            HC.options[ 'tag_dialog_size' ] = ( remember, current_size )
-            
-            HydrusGlobals.client_controller.Write( 'save_options', HC.options )
-            
-        
-        ( remember, position ) = HC.options[ 'tag_dialog_position' ]
-        
-        current_position = self.GetPositionTuple()
-        
-        if remember and position != current_position:
-            
-            HC.options[ 'tag_dialog_position' ] = ( remember, current_position )
-            
-            HydrusGlobals.client_controller.Write( 'save_options', HC.options )
-            
+        self._SaveSizeAndPosition( self._frame_key )
         
         self.EndModal( wx.ID_OK )
         
@@ -403,41 +509,13 @@ class DialogManageApply( Dialog ):
         buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
-
+        
         vbox.AddF( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
-        # use the dialog key to figure out default position and size from options
-        
-        ( remember, size ) = HC.options[ 'tag_dialog_size' ]
-        
-        if size is not None:
-            
-            ( ideal_width, ideal_height ) = size
-            
-        else:
-            
-            ( ideal_width, ideal_height ) = self.GetEffectiveMinSize()
-            
-            ideal_width += 20
-            ideal_height += 20
-            
-        
-        ( parent_window_width, parent_window_height ) = self.GetParent().GetTopLevelParent().GetSize()
-        
-        width = min( ideal_width, parent_window_width - 100 )
-        height = min( ideal_height, parent_window_height - 100 )
-        
-        self.SetInitialSize( ( width, height ) )
-        
-        ( remember, position ) = HC.options[ 'tag_dialog_position' ]
-        
-        if remember:
-            
-            self.SetPosition( position )
-            
+        self._SetSizeAndPosition( self._frame_key )
         
         self._panel.SetupScrolling()
         
@@ -1639,7 +1717,7 @@ class DialogInputLocalFiles( Dialog ):
         
         self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
         
-        self._delete_after_success = wx.CheckBox( self, label = 'delete files after successful import' )
+        self._delete_after_success = wx.CheckBox( self, label = 'delete original files after successful import' )
         
         self._add_button = wx.Button( self, label = 'Import now' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )

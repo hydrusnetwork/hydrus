@@ -783,9 +783,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             num_files = self._GetNumSelected()
             
             title = 'manage tags for ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
-            dialog_key = 'manage_tags'
+            frame_key = 'manage_tags_dialog'
             
-            with ClientGUIDialogs.DialogManageApply( self, title, dialog_key ) as dlg:
+            with ClientGUIDialogs.DialogManageApply( self, title, frame_key ) as dlg:
                 
                 panel = ClientGUIPanels.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
                 

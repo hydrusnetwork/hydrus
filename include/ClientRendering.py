@@ -38,15 +38,13 @@ def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
     
 def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
-    if pil_image.mode == 'RGBA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
-        
-        if pil_image.mode == 'P': pil_image = pil_image.convert( 'RGBA' )
+    pil_image = HydrusImageHandling.Dequantize( pil_image )
+    
+    if pil_image.mode == 'RGBA':
         
         buffer_format = wx.BitmapBufferFormat_RGBA
         
-    else:
-        
-        if pil_image.mode != 'RGB': pil_image = pil_image.convert( 'RGB' )
+    elif pil_image.mode == 'RGB':
         
         buffer_format = wx.BitmapBufferFormat_RGB
         
