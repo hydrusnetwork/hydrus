@@ -262,25 +262,37 @@ class RasterContainerVideo( RasterContainer ):
                     
                     frame_index = self._next_render_index # keep this before the get call, as it increments in a clock arithmetic way afterwards
                     
-                    try: numpy_image = self._renderer.read_frame()
+                    try:
+                        
+                        numpy_image = self._renderer.read_frame()
+                        
                     except Exception as e:
                         
                         HydrusData.ShowException( e )
                         
                         break
                         
-                    finally: self._next_render_index = ( self._next_render_index + 1 ) % num_frames
+                    finally:
+                        
+                        self._next_render_index = ( self._next_render_index + 1 ) % num_frames
+                        
                     
                     frame = GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = False )
                     
-                    wx.wx.CallAfter( self.AddFrame, frame_index, frame )
+                    wx.CallAfter( self.AddFrame, frame_index, frame )
                     
-                else: break
+                else:
+                    
+                    break
+                    
                 
             
         
     
-    def AddFrame( self, index, frame ): self._frames[ index ] = frame
+    def AddFrame( self, index, frame ):
+        
+        self._frames[ index ] = frame
+        
     
     def GetDuration( self, index ):
         

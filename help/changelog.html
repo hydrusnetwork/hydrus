@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 213</h3></li>
+				<ul>
+					<li>created a new tag listbox for the new suggested tags control</li>
+					<li>added a extremely basic and prototype suggested tags control for favourite tags to options->tags and manage tags dialog</li>
+					<li>off-screen position detection is now more lenient to account for window managers that position slightly off screen to cut off border</li>
+					<li>new dialog sizing code adds a little more fuzzy padding on all min size calcs, reducing superfluous scrollbars</li>
+					<li>hydrus's custom listbook now informs parent scrollable panels of need to recalc scrollbars on page change</li>
+					<li>the new flexible dialog and frame now catch these events and will expand their size if they need to and have the space</li>
+					<li>the client options dialog now works on the new sizing system--it will automatically resize when you change pages</li>
+					<li>some frame resize save event code is improved</li>
+					<li>the media viewer is no longer aggressive about claiming focus</li>
+					<li>stacked manage tags panel buttons to allow for thinner dialog</li>
+					<li>misc dialog cleanup</li>
+					<li>corrected some bad logic that was excluding transparent gifs from the new thumbnail handling</li>
+					<li>all gifs and pngs will have their thumbnails regenerated on both the client and server, taking advantage of the recent thumbnail improvements</li>
+					<li>fixed a bug if you click cancel when choosing an hta path to sync a tag service with on manage tags dialog</li>
+					<li>fixed a bug where noneditable services (local tags and local booru) could sometimes become editable on manage services dialog. the edit buttons should now disable correctly on init, and there's an additional check in the add code in case of future problems</li>
+					<li>any superfluous local files/booru services will be deleted on update</li>
+				</ul>
 				<li><h3>version 212</h3></li>
 				<ul>
 					<li>wrote a neat flexible system for recording and restoring a variety of window size and position information</li>

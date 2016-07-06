@@ -104,7 +104,10 @@ class Controller( HydrusController.HydrusController ):
                 HydrusData.Print( 'CallBlockingToWx just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
-            finally: job_key.Finish()
+            finally:
+                
+                job_key.Finish()
+                
             
         
         job_key = ClientThreading.JobKey()

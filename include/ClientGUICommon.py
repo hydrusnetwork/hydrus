@@ -403,7 +403,7 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventCloseDropdown( self, event ):
         
-        HydrusGlobals.client_controller.GetGUI().EventExit( event )
+        HydrusGlobals.client_controller.GetGUI().Close()
         
     
     def EventKeyDown( self, event ):
@@ -485,8 +485,6 @@ class AutoCompleteDropdown( wx.Panel ):
                 new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
                 
                 self._text_ctrl.ProcessEvent( new_event )
-                
-                wx.CallLater( 50, self._text_ctrl.SetFocus )
                 
             else:
                 
@@ -1847,13 +1845,73 @@ class Frame( wx.Frame ):
         self.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
         
     
+    def _ExpandSizeIfPossible( self, frame_key, desired_size_delta ):
+        
+        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
+        
+        parent = self.GetParent()
+        
+        if not self.IsMaximized() and not self.IsFullScreen():
+            
+            ( current_width, current_height ) = self.GetSize()
+            
+            ( desired_delta_width, desired_delta_height ) = desired_size_delta
+            
+            min_width = current_width + desired_delta_width
+            min_height = current_height + desired_delta_height
+            
+            if parent is None:
+                
+                width = min_width + 20
+                height = min_height + 20
+                
+            else:
+                
+                ( parent_window_width, parent_window_height ) = self.GetParent().GetTopLevelParent().GetSize()
+                
+                max_width = parent_window_width - 100
+                max_height = parent_window_height - 100
+                
+                ( width_gravity, height_gravity ) = default_gravity
+                
+                if width_gravity == -1:
+                    
+                    width = min_width
+                    
+                else:
+                    
+                    width = int( width_gravity * max_width )
+                    
+                
+                if height_gravity == -1:
+                    
+                    height = min_height
+                    
+                else:
+                    
+                    height = int( height_gravity * max_height )
+                    
+                
+            
+            if width > current_width or height > current_height:
+                
+                self.SetSize( ( width, height ) )
+                
+            
+        
+    
     def _GetSafePosition( self, position ):
         
-        display_index = wx.Display.GetFromPoint( position )
+        ( p_x, p_y ) = position
+        
+        # some window managers size the windows just off screen to cut off borders
+        ( test_x, test_y ) = ( p_x + 20, p_y + 20 )
+        
+        display_index = wx.Display.GetFromPoint( ( test_x, test_y ) )
         
         if display_index == wx.NOT_FOUND:
             
-            position = wx.DefaultPosition
+            return wx.DefaultPosition
             
         else:
             
@@ -1861,18 +1919,18 @@ class Frame( wx.Frame ):
             
             geometry = display.GetGeometry()
             
-            ( p_x, p_y ) = position
-            
-            x_bad = p_x < geometry.x or p_x > geometry.x + geometry.width
-            y_bad = p_y < geometry.y or p_y > geometry.y + geometry.height
+            x_bad = test_x < geometry.x or test_x > geometry.x + geometry.width
+            y_bad = test_y < geometry.y or test_y > geometry.y + geometry.height
             
             if x_bad or y_bad:
                 
-                position = wx.DefaultPosition
+                return wx.DefaultPosition
+                
+            else:
+                
+                return position
                 
             
-        
-        return position
         
     
     def _SaveSizeAndPosition( self, frame_key ):
@@ -1887,9 +1945,7 @@ class Frame( wx.Frame ):
             # when dragging window up to be maximised, reported position is sometimes a bit dodgy
             # so, filter out the invalid answers
             
-            display_index = wx.Display.GetFromPoint( self.GetPosition() )
-            
-            if display_index != wx.NOT_FOUND:
+            if self._GetSafePosition( self.GetPositionTuple() ) != wx.DefaultPosition:
                 
                 last_size = self.GetSizeTuple()
                 last_position = self._GetSafePosition( self.GetPositionTuple() )
@@ -1900,7 +1956,7 @@ class Frame( wx.Frame ):
         
     
     def _SetSizeAndPosition( self, frame_key ):
-        traceback.print_stack()
+        
         ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
         
         parent = self.GetParent()
@@ -1913,10 +1969,13 @@ class Frame( wx.Frame ):
             
             ( min_width, min_height ) = self.GetEffectiveMinSize()
             
+            min_width += 30
+            min_height += 30
+            
             if parent is None:
                 
-                width = min_width + 20
-                height = min_height + 20
+                width = min_width
+                height = min_height
                 
             else:
                 
@@ -2018,18 +2077,13 @@ class FrameThatResizes( Frame ):
         
         Frame.__init__( self, parent, title, float_on_parent )
         
-        self.Bind( wx.EVT_SIZE, self.EventSpecialResize )
-        self.Bind( wx.EVT_MOVE, self.EventSpecialMove )
+        self.Bind( wx.EVT_SIZE, self.EventSizeInfoChanged )
+        self.Bind( wx.EVT_MOVE, self.EventSizeInfoChanged )
+        self.Bind( wx.EVT_CLOSE, self.EventSizeInfoChanged )
+        self.Bind( wx.EVT_MAXIMIZE, self.EventSizeInfoChanged )
         
     
-    def EventSpecialMove( self, event ):
-        
-        self._SaveSizeAndPosition( self._frame_key )
-        
-        event.Skip()
-        
-    
-    def EventSpecialResize( self, event ):
+    def EventSizeInfoChanged( self, event ):
         
         self._SaveSizeAndPosition( self._frame_key )
         
@@ -2040,13 +2094,15 @@ class FrameThatResizesAndTakesPanel( FrameThatResizes ):
     
     def __init__( self, parent, title, frame_key, float_on_parent = True ):
         
+        self._panel = None
+        
         FrameThatResizes.__init__( self, parent, title, frame_key, float_on_parent )
         
         self._ok = wx.Button( self, label = 'close' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventClose )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventCloseButton )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
-        self.Bind( wx.EVT_CLOSE, self.EventClose )
+        self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
         
     
     def EventMenu( self, event ):
@@ -2059,7 +2115,7 @@ class FrameThatResizesAndTakesPanel( FrameThatResizes ):
             
             if command == 'ok':
                 
-                self.EventClose( None )
+                self.Close()
                 
             else:
                 
@@ -2068,11 +2124,26 @@ class FrameThatResizesAndTakesPanel( FrameThatResizes ):
             
         
     
-    def EventClose( self, event ):
+    def EventCloseButton( self, event ):
         
-        self._SaveSizeAndPosition( self._frame_key )
+        self.Close()
         
-        self.Destroy()
+    
+    def EventChildSizeChanged( self, event ):
+        
+        if self._panel is not None:
+            
+            ( current_panel_width, current_panel_height ) = self._panel.GetSize()
+            ( desired_panel_width, desired_panel_height ) = self._panel.GetVirtualSize()
+            
+            desired_delta_width = max( 0, desired_panel_width - current_panel_width )
+            desired_delta_height = max( 0, desired_panel_height - current_panel_height )
+            
+            if desired_delta_width > 0 or desired_delta_height > 0:
+                
+                self._ExpandSizeIfPossible( self._frame_key, ( desired_delta_width, desired_delta_height ) )
+                
+            
         
     
     def SetPanel( self, panel ):
@@ -2174,6 +2245,8 @@ class ListBook( wx.Panel ):
         
         del self._keys_to_proto_pages[ key ]
         
+        self._panel_sizer.CalcMin()
+        
         self._RecalcListBoxWidth()
         
     
@@ -2192,7 +2265,10 @@ class ListBook( wx.Panel ):
         return wx.NOT_FOUND
         
     
-    def _RecalcListBoxWidth( self ): self.Layout()
+    def _RecalcListBoxWidth( self ):
+        
+        self.Layout()
+        
     
     def _Select( self, selection ):
         
@@ -2229,9 +2305,19 @@ class ListBook( wx.Panel ):
         
         self.Refresh()
         
+        # this tells any parent scrolled panel to recalc its scrollbars
+        event = wx.NotifyEvent( wx.wxEVT_SIZE, -1 )
+        
+        wx.CallAfter( self.ProcessEvent, event )
+        
+        # this tells parent resizing frame/dialog that is interested in resizing that now is the time
+        event = CC.SizeChangedEvent( -1 )
+        
+        wx.CallAfter( self.ProcessEvent, event )
+        
         event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED, -1 )
         
-        self.ProcessEvent( event )
+        wx.CallAfter( self.ProcessEvent, event )
         
     
     def AddPage( self, display_name, key, page, select = False ):
@@ -3711,11 +3797,10 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
 class ListBoxTagsStrings( ListBoxTags ):
     
-    def __init__( self, parent, removed_callable = None, show_sibling_text = True ):
+    def __init__( self, parent, show_sibling_text = True ):
         
         ListBoxTags.__init__( self, parent )
         
-        self._removed_callable = removed_callable
         self._show_sibling_text = show_sibling_text
         self._tags = set()
         
@@ -3734,7 +3819,10 @@ class ListBoxTagsStrings( ListBoxTags ):
                 
                 sibling = siblings_manager.GetSibling( tag )
                 
-                if sibling is not None: tag_string += ' (will display as ' + HydrusTags.RenderTag( sibling ) + ')'
+                if sibling is not None:
+                    
+                    tag_string += ' (will display as ' + HydrusTags.RenderTag( sibling ) + ')'
+                    
                 
             
             self._strings_to_terms[ tag_string ] = tag
@@ -3745,6 +3833,27 @@ class ListBoxTagsStrings( ListBoxTags ):
         self._ordered_strings.sort()
         
         self._TextsHaveChanged()
+        
+    
+    def GetTags( self ):
+        
+        return self._tags
+        
+    
+    def SetTags( self, tags ):
+        
+        self._tags = set( tags )
+        
+        self._RecalcTags()
+        
+    
+class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
+    
+    def __init__( self, parent, removed_callable = None, show_sibling_text = True ):
+        
+        ListBoxTagsStrings.__init__( self, parent, show_sibling_text = show_sibling_text )
+        
+        self._removed_callable = removed_callable
         
     
     def _Activate( self ):
@@ -3814,26 +3923,28 @@ class ListBoxTagsStrings( ListBoxTags ):
             
         
     
-    def GetTags( self ):
-        
-        return self._tags
-        
-    
     def RemoveTags( self, tags ):
         
         self._RemoveTags( tags )
         
     
-    def SetTags( self, tags ):
+class ListBoxTagsSuggestions( ListBoxTagsStrings ):
+    
+    def __init__( self, parent, activate_callable ):
         
-        self._tags = set()
+        ListBoxTagsStrings.__init__( self, parent )
         
-        for tag in tags:
+        self._activate_callable = activate_callable
+        
+    
+    def _Activate( self ):
+        
+        if len( self._selected_terms ) > 0:
             
-            self._tags.add( tag )
+            tags = set( self._selected_terms )
             
-        
-        self._RecalcTags()
+            self._activate_callable( tags )
+            
         
     
 class ListBoxTagsPredicates( ListBoxTags ):

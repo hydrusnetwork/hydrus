@@ -156,7 +156,7 @@ class GIFRenderer( object ):
         
         self._pil_global_palette = self._pil_image.palette
         
-        if self._pil_global_palette is not None:
+        if self._pil_global_palette is not None and False:
             
             self._pil_dirty = self._pil_image.palette.dirty
             self._pil_mode = self._pil_image.palette.mode
@@ -191,7 +191,10 @@ class GIFRenderer( object ):
                     
                     numpy_image = self._RenderCurrentFrame()
                     
-                else: numpy_image = self._last_frame
+                else:
+                    
+                    numpy_image = self._last_frame
+                    
                 
             
         else:
@@ -223,7 +226,10 @@ class GIFRenderer( object ):
         self._next_render_index = 0
         
     
-    def read_frame( self ): return self._RenderCurrentFrame()
+    def read_frame( self ):
+        
+        return self._RenderCurrentFrame()
+        
     
     def set_position( self, index ):
         

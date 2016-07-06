@@ -7749,6 +7749,84 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 212:
+            
+            prefixes_to_locations = dict( self._c.execute( 'SELECT prefix, location FROM client_files_locations;' ).fetchall() )
+            
+            for ( i, ( hash, mime ) ) in enumerate( self._c.execute( 'SELECT hash, mime FROM files_info, hashes USING ( hash_id ) WHERE mime IN ( ?, ? );', ( HC.IMAGE_PNG, HC.IMAGE_GIF ) ) ):
+                
+                if ( i + 1 ) % 50 == 0:
+                    
+                    self._controller.pub( 'splash_set_status_text', 'regenerating thumbnails: ' + HydrusData.ConvertIntToPrettyString( i + 1 ) )
+                    
+                
+                hash_hex = hash.encode( 'hex' )
+                
+                prefix = hash_hex[:2]
+                
+                ext = HC.mime_ext_lookup[ mime ]
+                
+                path_base = os.path.join( prefixes_to_locations[ prefix ], prefix, hash_hex )
+                
+                file_path = path_base + ext
+                
+                if os.path.exists( file_path ):
+                    
+                    try:
+                        
+                        thumbnail_path = path_base + '.thumbnail'
+                        resized_thumbnail_path = path_base + '.thumbnail.resized'
+                        
+                        if os.path.exists( thumbnail_path ):
+                            
+                            os.remove( thumbnail_path )
+                            
+                        
+                        if os.path.exists( resized_thumbnail_path ):
+                            
+                            os.remove( resized_thumbnail_path )
+                            
+                        
+                        thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+                        
+                        with open( thumbnail_path, 'wb' ) as f:
+                            
+                            f.write( thumbnail )
+                            
+                        
+                    except Exception as e:
+                        
+                        HydrusData.Print( 'Failed to regen thumbnail for ' + file_path + '! Error was:' )
+                        HydrusData.PrintException( e )
+                        
+                    
+                
+            
+            #
+            
+            # manage services was accidentally sometimes allowing people to create noneditable services
+            
+            local_booru_service_id = self._GetServiceId( CC.LOCAL_BOORU_SERVICE_KEY )
+            local_tag_service_id = self._GetServiceId( CC.LOCAL_TAG_SERVICE_KEY )
+            
+            local_service_ids = self._GetServiceIds( ( HC.LOCAL_BOORU, HC.LOCAL_TAG ) )
+            
+            bad_local_service_ids = [ local_service_id for local_service_id in local_service_ids if local_service_id not in ( local_booru_service_id, local_tag_service_id ) ]
+            
+            for bad_local_service_id in bad_local_service_ids:
+                
+                try:
+                    
+                    self._DeleteService( bad_local_service_id )
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Failed to delete service ' + bad_local_service_id + '! Error was:' )
+                    HydrusData.PrintException( e )
+                    
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

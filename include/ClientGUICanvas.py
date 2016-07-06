@@ -648,13 +648,12 @@ class Canvas( wx.Window ):
     
     BORDER = wx.SIMPLE_BORDER
     
-    def __init__( self, parent, image_cache, claim_focus = True ):
+    def __init__( self, parent, image_cache ):
         
         wx.Window.__init__( self, parent, style = self.BORDER )
         
         self._file_service_key = CC.LOCAL_FILE_SERVICE_KEY
         self._image_cache = image_cache
-        self._claim_focus = claim_focus
         
         self._canvas_key = HydrusData.GenerateKey()
         
@@ -798,7 +797,6 @@ class Canvas( wx.Window ):
                     
                 
             
-            
             self.SetFocus() # annoying bug because of the modal dialog
             
         
@@ -829,7 +827,10 @@ class Canvas( wx.Window ):
         
         if my_width > 0 and my_height > 0:
             
-            if self._current_media is not None: self._SizeAndPositionMediaContainer()
+            if self._current_media is not None:
+                
+                self._SizeAndPositionMediaContainer()
+                
             
         
     
@@ -1272,8 +1273,6 @@ class Canvas( wx.Window ):
                     
                     self._media_container = MediaContainer( self, self._image_cache, self._current_display_media, initial_size, initial_position )
                     
-                    if self._claim_focus: self._media_container.SetFocus()
-                    
                     self._PrefetchNeighbours()
                     
                 else:
@@ -1532,7 +1531,7 @@ class CanvasPanel( Canvas ):
     
     def __init__( self, parent, page_key ):
         
-        Canvas.__init__( self, parent, HydrusGlobals.client_controller.GetCache( 'preview' ), claim_focus = False )
+        Canvas.__init__( self, parent, HydrusGlobals.client_controller.GetCache( 'preview' ) )
         
         self._page_key = page_key
         
@@ -1969,8 +1968,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
     def EventDrag( self, event ):
         
         CC.CAN_HIDE_MOUSE = True
-        
-        self._focus_holder.SetFocus()
         
         ( x, y ) = event.GetPosition()
         

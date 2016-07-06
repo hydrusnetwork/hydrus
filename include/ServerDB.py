@@ -2611,6 +2611,46 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 212:
+            
+            for prefix in HydrusData.IterateHexPrefixes():
+                
+                dir = os.path.join( HC.SERVER_FILES_DIR, prefix )
+                
+                for filename in os.listdir( dir ):
+                    
+                    if not filename.endswith( '.thumbnail' ):
+                        
+                        try:
+                            
+                            file_path = os.path.join( dir, filename )
+                            thumbnail_path = file_path + '.thumbnail'
+                            
+                            if HydrusFileHandling.GetMime( file_path ) in ( HC.IMAGE_PNG, HC.IMAGE_GIF ):
+                                
+                                if os.path.exists( thumbnail_path ):
+                                    
+                                    os.remove( thumbnail_path )
+                                    
+                                
+                                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+                                
+                                with open( thumbnail_path, 'wb' ) as f:
+                                    
+                                    f.write( thumbnail )
+                                    
+                                
+                            
+                        except Exception as e:
+                            
+                            HydrusData.Print( 'Failed to regen thumbnail for ' + file_path + '! Error was:' )
+                            HydrusData.PrintException( e )
+                            
+                        
+                    
+                
+            
+        
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

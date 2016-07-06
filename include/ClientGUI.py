@@ -10,6 +10,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIManagement
 import ClientGUIPages
+import ClientGUIPanels
 import ClientDownloading
 import ClientMedia
 import ClientSearch
@@ -84,8 +85,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._message_manager = ClientGUICommon.PopupMessageManager( self )
         
+        self.Bind( wx.EVT_CLOSE, self.EventClose )
         self.Bind( wx.EVT_MENU, self.EventMenu )
-        self.Bind( wx.EVT_CLOSE, self.EventExit )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         
         self._controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
@@ -1347,7 +1348,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ManageOptions( self ):
         
-        with ClientGUIDialogsManage.DialogManageOptions( self ) as dlg: dlg.ShowModal()
+        title = 'manage options'
+        frame_key = 'manage_options_dialog'
+        
+        with ClientGUIDialogs.DialogManageApply( self, title, frame_key ) as dlg:
+            
+            panel = ClientGUIPanels.ManageOptionsPanel( dlg )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
         self._controller.pub( 'wake_daemons' )
         self._controller.pub( 'refresh_status' )
@@ -2250,16 +2261,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         HydrusData.ShowText( message )
         
     
-    def EventExit( self, event ):
+    def EventClose( self, event ):
         
         if not event.CanVeto():
             
             HydrusGlobals.emergency_exit = True
             
         
-        result = self.Exit()
+        exit_allowed = self.Exit()
         
-        if not result:
+        if not exit_allowed:
             
             event.Veto()
             
@@ -2339,7 +2350,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'delete_service_info': self._DeleteServiceInfo()
-            elif command == 'exit': self.Exit()
+            elif command == 'exit':
+                
+                self.Exit()
+                
             elif command == 'fetch_ip': self._FetchIP( data )
             elif command == 'force_idle_mode':
                 
@@ -2412,7 +2426,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'regenerate_ac_cache': self._RegenerateACCache()
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
-            elif command == 'restart': self.Exit( restart = True )
+            elif command == 'restart':
+                
+                self.Exit( restart = True )
+                
             elif command == 'restore_database': self._controller.RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()
@@ -2551,6 +2568,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
                 
+            
+            self._SaveSizeAndPosition( self._frame_key )
             
             self._controller.WriteSynchronous( 'save_options', HC.options )
             

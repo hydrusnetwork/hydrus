@@ -301,6 +301,61 @@ class Dialog( wx.Dialog ):
         HydrusGlobals.client_controller.ResetIdleTimer()
         
     
+    def _ExpandSizeIfPossible( self, frame_key, desired_size_delta ):
+        
+        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
+        
+        parent = self.GetParent()
+        
+        if not self.IsMaximized() and not self.IsFullScreen():
+            
+            ( current_width, current_height ) = self.GetSize()
+            
+            ( desired_delta_width, desired_delta_height ) = desired_size_delta
+            
+            min_width = current_width + desired_delta_width
+            min_height = current_height + desired_delta_height
+            
+            if parent is None:
+                
+                width = min_width + 20
+                height = min_height + 20
+                
+            else:
+                
+                ( parent_window_width, parent_window_height ) = self.GetParent().GetTopLevelParent().GetSize()
+                
+                max_width = parent_window_width - 100
+                max_height = parent_window_height - 100
+                
+                ( width_gravity, height_gravity ) = default_gravity
+                
+                if width_gravity == -1:
+                    
+                    width = min_width
+                    
+                else:
+                    
+                    width = int( width_gravity * max_width )
+                    
+                
+                if height_gravity == -1:
+                    
+                    height = min_height
+                    
+                else:
+                    
+                    height = int( height_gravity * max_height )
+                    
+                
+            
+            if width > current_width or height > current_height:
+                
+                self.SetSize( ( width, height ) )
+                
+            
+        
+    
     def _GetSafePosition( self, position ):
         
         display_index = wx.Display.GetFromPoint( position )
@@ -354,10 +409,13 @@ class Dialog( wx.Dialog ):
             
             ( min_width, min_height ) = self.GetEffectiveMinSize()
             
+            min_width += 30
+            min_height += 30
+            
             if parent is None:
                 
-                width = min_width + 20
-                height = min_height + 20
+                width = min_width
+                height = min_height
                 
             else:
                 
@@ -458,6 +516,7 @@ class DialogManageApply( Dialog ):
     def __init__( self, parent, title, frame_key ):
         
         self._frame_key = frame_key
+        self._panel = None
         
         Dialog.__init__( self, parent, title )
         
@@ -469,6 +528,24 @@ class DialogManageApply( Dialog ):
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
+        self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
+        
+    
+    def EventChildSizeChanged( self, event ):
+        
+        if self._panel is not None:
+            
+            ( current_panel_width, current_panel_height ) = self._panel.GetSize()
+            ( desired_panel_width, desired_panel_height ) = self._panel.GetVirtualSize()
+            
+            desired_delta_width = max( 0, desired_panel_width - current_panel_width )
+            desired_delta_height = max( 0, desired_panel_height - current_panel_height )
+            
+            if desired_delta_width > 0 or desired_delta_height > 0:
+                
+                self._ExpandSizeIfPossible( self._frame_key, ( desired_delta_width, desired_delta_height ) )
+                
+            
         
     
     def EventMenu( self, event ):
@@ -2448,7 +2525,7 @@ class DialogInputTags( Dialog ):
         
         self._service_key = service_key
         
-        self._tags = ClientGUICommon.ListBoxTagsStrings( self )
+        self._tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self )
         
         expand_parents = True
         
@@ -3639,7 +3716,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
                 
-                self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagsRemoved )
+                self._tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self._tags_panel, self.TagsRemoved )
                 
                 expand_parents = True
                 
@@ -3651,7 +3728,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._paths_to_single_tags = collections.defaultdict( set )
                 
-                self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagsRemoved )
+                self._single_tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self._single_tags_panel, self.SingleTagsRemoved )
                 
                 expand_parents = True
                 

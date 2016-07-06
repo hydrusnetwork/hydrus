@@ -45,13 +45,13 @@ def SaveThumbnailToStream( pil_image, dimensions, f ):
     
     # when the palette is limited, the thumbnail antialias won't add new colours, so you get nearest-neighbour-like behaviour
     
-    save_to_png = pil_image.format == 'PNG'
+    original_file_was_png = pil_image.format == 'PNG'
     
     pil_image = HydrusImageHandling.Dequantize( pil_image )
     
     HydrusImageHandling.EfficientlyThumbnailPILImage( pil_image, dimensions )
     
-    if save_to_png:
+    if original_file_was_png or pil_image.mode == 'RGBA':
         
         pil_image.save( f, 'PNG' )
         

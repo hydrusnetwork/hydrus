@@ -237,7 +237,10 @@ class VideoRendererFFMPEG( object ):
         
         self.fps = float( self._num_frames ) / self._duration
         
-        if self.fps == 0: self.fps = 24
+        if self.fps == 0:
+            
+            self.fps = 24
+            
         
         self.pix_fmt = pix_fmt
         
@@ -328,7 +331,10 @@ class VideoRendererFFMPEG( object ):
         
         if self.pos == self._num_frames: self.initialize()
         
-        if self.process is None: result = self.lastread
+        if self.process is None:
+            
+            result = self.lastread
+            
         else:
             
             ( w, h ) = self._target_resolution

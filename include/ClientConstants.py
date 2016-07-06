@@ -6,6 +6,7 @@ import sys
 import threading
 import traceback
 import wx
+import wx.lib.newevent
 
 ID_NULL = wx.NewId()
 
@@ -207,6 +208,8 @@ media_viewer_capabilities[ HC.AUDIO_WMA] = no_support
 SHUTDOWN_TIMESTAMP_VACUUM = 0
 SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE = 1
 SHUTDOWN_TIMESTAMP_DELETE_ORPHANS = 2
+
+( SizeChangedEvent, EVT_SIZE_CHANGED ) = wx.lib.newevent.NewCommandEvent()
 
 SORT_BY_SMALLEST = 0
 SORT_BY_LARGEST = 1
