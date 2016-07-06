@@ -7806,6 +7806,8 @@ class DB( HydrusDB.HydrusDB ):
             
             # manage services was accidentally sometimes allowing people to create noneditable services
             
+            self._service_cache = {}
+            
             local_booru_service_id = self._GetServiceId( CC.LOCAL_BOORU_SERVICE_KEY )
             local_tag_service_id = self._GetServiceId( CC.LOCAL_TAG_SERVICE_KEY )
             
@@ -7821,7 +7823,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 except Exception as e:
                     
-                    HydrusData.Print( 'Failed to delete service ' + bad_local_service_id + '! Error was:' )
+                    HydrusData.Print( 'Failed to delete service ' + str( bad_local_service_id ) + '! Error was:' )
                     HydrusData.PrintException( e )
                     
                 
