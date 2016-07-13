@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 214</h3></li>
+				<ul>
+					<li>wrote a new resizing dialog 'edit' class for simple resizing dialogs</li>
+					<li>added comprehensive frame size and position options for the new system to the gui options panel</li>
+					<li>moved review services frame to the new sizing system</li>
+					<li>windows that initialise maximised will correctly return to their last remembered size and position on a restore event</li>
+					<li>maximising a window by dragging it to the top edge of the screen should remember last position as the initial drag start position more reliably</li>
+					<li>positioning code is a little safer</li>
+					<li>fixed some missing recalculation of best/min size for wx.notebooks after page change</li>
+					<li>fixed missing recalculation of scrolledpanel's virtualsize after child wx.notebook's page change</li>
+					<li>fixed bad parentage for file import status frames</li>
+					<li>hid file import status button in manage import folders and subscriptions dialogs for non-Windows, as this is very broken, and the parentage fix wasn't enough</li>
+					<li>improved fuzzy padding on size calculations</li>
+					<li>refactored and cleaned and harmonised a bunch of the new window resizing code</li>
+					<li>suggested tags - favourites tag entry in options is now a live autocomplete dropdown</li>
+					<li>cleaned suggested tags - favourites layout in options</li>
+					<li>suggested tags listbox now sets its width to exactly fit its tags</li>
+					<li>improved workflow logic of removing/petitioning siblings and parents (shouldn't get stuck in loops as much now)</li>
+					<li>tag listboxes will update when tag siblings change</li>
+					<li>the 'auto-replace siblings' state on manage tags will no longer incorrectly apply to removal actions</li>
+					<li>import status caches now display errors in a more straightforward way</li>
+					<li>errors sent to import status caches are now also printed to the log</li>
+					<li>simplified how database exceptions are caught and displayed</li>
+					<li>database exceptions now preserve the original exception type</li>
+					<li>fixed db-side traceback line spacing in database exceptions</li>
+					<li>improved general database exception rendering</li>
+					<li>fixed imports for videos with negative start time</li>
+					<li>deleting videos from the trash that are currently rendering should be more reliable</li>
+					<li>crash.log now goes to the db dir, unless that isn't determined yet or is unwritable, in which case the traceback goes to console</li>
+				</ul>
 				<li><h3>version 213</h3></li>
 				<ul>
 					<li>created a new tag listbox for the new suggested tags control</li>
