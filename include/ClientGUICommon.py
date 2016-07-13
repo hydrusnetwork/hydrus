@@ -1800,370 +1800,6 @@ class FitResistantStaticText( wx.StaticText ):
             
         
     
-class Frame( wx.Frame ):
-    
-    def __init__( self, parent, title, float_on_parent = True ):
-        
-        HydrusGlobals.client_controller.ResetIdleTimer()
-        
-        if parent is None:
-            
-            pos = wx.DefaultPosition
-            style = wx.DEFAULT_FRAME_STYLE
-            
-        else:
-            
-            if isinstance( parent, wx.TopLevelWindow ):
-                
-                parent_tlp = parent
-                
-            else:
-                
-                parent_tlp = parent.GetTopLevelParent()
-                
-            
-            ( tlp_x, tlp_y ) = parent_tlp.GetPositionTuple()
-            
-            pos = ( tlp_x + 50, tlp_y + 50 )
-            
-            if float_on_parent:
-                
-                style = wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT
-                
-            else:
-                
-                style = wx.DEFAULT_FRAME_STYLE
-                
-            
-        
-        wx.Frame.__init__( self, parent, title = title, pos = pos, style = style )
-        
-        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
-        
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-        
-        self.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
-        
-    
-    def _ExpandSizeIfPossible( self, frame_key, desired_size_delta ):
-        
-        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
-        
-        parent = self.GetParent()
-        
-        if not self.IsMaximized() and not self.IsFullScreen():
-            
-            ( current_width, current_height ) = self.GetSize()
-            
-            ( desired_delta_width, desired_delta_height ) = desired_size_delta
-            
-            min_width = current_width + desired_delta_width
-            min_height = current_height + desired_delta_height
-            
-            if parent is None:
-                
-                width = min_width + 20
-                height = min_height + 20
-                
-            else:
-                
-                ( parent_window_width, parent_window_height ) = self.GetParent().GetTopLevelParent().GetSize()
-                
-                max_width = parent_window_width - 100
-                max_height = parent_window_height - 100
-                
-                ( width_gravity, height_gravity ) = default_gravity
-                
-                if width_gravity == -1:
-                    
-                    width = min_width
-                    
-                else:
-                    
-                    width = int( width_gravity * max_width )
-                    
-                
-                if height_gravity == -1:
-                    
-                    height = min_height
-                    
-                else:
-                    
-                    height = int( height_gravity * max_height )
-                    
-                
-            
-            if width > current_width or height > current_height:
-                
-                self.SetSize( ( width, height ) )
-                
-            
-        
-    
-    def _GetSafePosition( self, position ):
-        
-        ( p_x, p_y ) = position
-        
-        # some window managers size the windows just off screen to cut off borders
-        ( test_x, test_y ) = ( p_x + 20, p_y + 20 )
-        
-        display_index = wx.Display.GetFromPoint( ( test_x, test_y ) )
-        
-        if display_index == wx.NOT_FOUND:
-            
-            return wx.DefaultPosition
-            
-        else:
-            
-            display = wx.Display( display_index )
-            
-            geometry = display.GetGeometry()
-            
-            x_bad = test_x < geometry.x or test_x > geometry.x + geometry.width
-            y_bad = test_y < geometry.y or test_y > geometry.y + geometry.height
-            
-            if x_bad or y_bad:
-                
-                return wx.DefaultPosition
-                
-            else:
-                
-                return position
-                
-            
-        
-    
-    def _SaveSizeAndPosition( self, frame_key ):
-        
-        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
-        
-        maximised = self.IsMaximized()
-        fullscreen = self.IsFullScreen()
-        
-        if not ( maximised or fullscreen ):
-            
-            # when dragging window up to be maximised, reported position is sometimes a bit dodgy
-            # so, filter out the invalid answers
-            
-            if self._GetSafePosition( self.GetPositionTuple() ) != wx.DefaultPosition:
-                
-                last_size = self.GetSizeTuple()
-                last_position = self._GetSafePosition( self.GetPositionTuple() )
-                
-            
-        
-        self._new_options.SetFrameLocation( frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
-        
-    
-    def _SetSizeAndPosition( self, frame_key ):
-        
-        ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._new_options.GetFrameLocation( frame_key )
-        
-        parent = self.GetParent()
-        
-        if remember_size and last_size is not None:
-            
-            ( width, height ) = last_size
-            
-        else:
-            
-            ( min_width, min_height ) = self.GetEffectiveMinSize()
-            
-            min_width += 30
-            min_height += 30
-            
-            if parent is None:
-                
-                width = min_width
-                height = min_height
-                
-            else:
-                
-                ( parent_window_width, parent_window_height ) = self.GetParent().GetTopLevelParent().GetSize()
-                
-                max_width = parent_window_width - 100
-                max_height = parent_window_height - 100
-                
-                ( width_gravity, height_gravity ) = default_gravity
-                
-                if width_gravity == -1:
-                    
-                    width = min_width
-                    
-                else:
-                    
-                    width = int( width_gravity * max_width )
-                    
-                
-                if height_gravity == -1:
-                    
-                    height = min_height
-                    
-                else:
-                    
-                    height = int( height_gravity * max_height )
-                    
-                
-            
-        
-        self.SetInitialSize( ( width, height ) )
-        
-        if maximised:
-            
-            self.Maximize()
-            
-        
-        if fullscreen:
-            
-            wx.CallAfter( self.ShowFullScreen, True, wx.FULLSCREEN_ALL )
-            
-        
-        #
-        
-        pos = None
-        
-        if remember_position and last_position is not None:
-            
-            pos = last_position
-            
-        elif default_position == 'topleft' and parent is not None:
-            
-            if isinstance( parent, wx.TopLevelWindow ):
-                
-                parent_tlp = parent
-                
-            else:
-                
-                parent_tlp = parent.GetTopLevelParent()
-                
-            
-            ( pos_x, pos_y ) = parent_tlp.GetPositionTuple()
-            
-            pos = ( pos_x + 50, pos_y + 50 )
-            
-        elif default_position == 'center':
-            
-            wx.CallAfter( self.Center )
-            
-        
-        if pos is not None:
-            
-            pos = self._GetSafePosition( pos )
-            
-            self.SetPosition( pos )
-            
-        
-    
-    def SetInitialSize( self, ( width, height ) ):
-        
-        ( display_width, display_height ) = wx.GetDisplaySize()
-        
-        width = min( display_width, width )
-        height = min( display_height, height )
-        
-        wx.Frame.SetInitialSize( self, ( width, height ) )
-        
-        min_width = min( 240, width )
-        min_height = min( 180, height )
-        
-        self.SetMinSize( ( min_width, min_height ) )
-        
-    
-class FrameThatResizes( Frame ):
-    
-    def __init__( self, parent, title, frame_key, float_on_parent = True ):
-        
-        self._frame_key = frame_key
-        
-        Frame.__init__( self, parent, title, float_on_parent )
-        
-        self.Bind( wx.EVT_SIZE, self.EventSizeInfoChanged )
-        self.Bind( wx.EVT_MOVE, self.EventSizeInfoChanged )
-        self.Bind( wx.EVT_CLOSE, self.EventSizeInfoChanged )
-        self.Bind( wx.EVT_MAXIMIZE, self.EventSizeInfoChanged )
-        
-    
-    def EventSizeInfoChanged( self, event ):
-        
-        self._SaveSizeAndPosition( self._frame_key )
-        
-        event.Skip()
-        
-    
-class FrameThatResizesAndTakesPanel( FrameThatResizes ):
-    
-    def __init__( self, parent, title, frame_key, float_on_parent = True ):
-        
-        self._panel = None
-        
-        FrameThatResizes.__init__( self, parent, title, frame_key, float_on_parent )
-        
-        self._ok = wx.Button( self, label = 'close' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventCloseButton )
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'ok':
-                
-                self.Close()
-                
-            else:
-                
-                event.Skip()
-                
-            
-        
-    
-    def EventCloseButton( self, event ):
-        
-        self.Close()
-        
-    
-    def EventChildSizeChanged( self, event ):
-        
-        if self._panel is not None:
-            
-            ( current_panel_width, current_panel_height ) = self._panel.GetSize()
-            ( desired_panel_width, desired_panel_height ) = self._panel.GetVirtualSize()
-            
-            desired_delta_width = max( 0, desired_panel_width - current_panel_width )
-            desired_delta_height = max( 0, desired_panel_height - current_panel_height )
-            
-            if desired_delta_width > 0 or desired_delta_height > 0:
-                
-                self._ExpandSizeIfPossible( self._frame_key, ( desired_delta_width, desired_delta_height ) )
-                
-            
-        
-    
-    def SetPanel( self, panel ):
-        
-        self._panel = panel
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
-        
-        self.SetSizer( vbox )
-        
-        self._SetSizeAndPosition( self._frame_key )
-        
-        self.Show( True )
-        
-        self._panel.SetupScrolling()
-        
-    
 class Gauge( wx.Gauge ):
     
     def __init__( self, *args, **kwargs ):
@@ -2613,6 +2249,7 @@ class ListBook( wx.Panel ):
     
 class ListBox( wx.ScrolledWindow ):
     
+    TEXT_X_PADDING = 3
     delete_key_activates = False
     
     def __init__( self, parent, min_height = 250 ):
@@ -2888,7 +2525,7 @@ class ListBox( wx.ScrolledWindow ):
             
             dc.SetTextForeground( text_colour )
             
-            ( x, y ) = ( 3, i * self._text_y )
+            ( x, y ) = ( self.TEXT_X_PADDING, i * self._text_y )
             
             dc.DrawText( text, x, y )
             
@@ -3074,6 +2711,11 @@ class ListBox( wx.ScrolledWindow ):
         else: return self._strings_to_terms[ s ]
         
     
+    def GetIdealHeight( self ):
+        
+        return self._text_y * len( self._ordered_strings ) + 20
+        
+    
     def SetTexts( self, ordered_strings ):
         
         if ordered_strings != self._ordered_strings:
@@ -3100,6 +2742,8 @@ class ListBoxTags( ListBox ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseMiddleClick )
         self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+        HydrusGlobals.client_controller.sub( self, 'SiblingsHaveChanged', 'notify_new_siblings_gui' )
         
     
     def _GetNamespaceColours( self ): return HC.options[ 'namespace_colours' ]
@@ -3404,6 +3048,11 @@ class ListBoxTags( ListBox ):
     def GetSelectedTags( self ):
         
         return self._selected_terms
+        
+    
+    def SiblingsHaveChanged( self ):
+        
+        pass
         
     
 class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
@@ -3847,6 +3496,11 @@ class ListBoxTagsStrings( ListBoxTags ):
         self._RecalcTags()
         
     
+    def SiblingsHaveChanged( self ):
+        
+        self._RecalcTags()
+        
+    
 class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
     def __init__( self, parent, removed_callable = None, show_sibling_text = True ):
@@ -3944,6 +3598,22 @@ class ListBoxTagsSuggestions( ListBoxTagsStrings ):
             tags = set( self._selected_terms )
             
             self._activate_callable( tags )
+            
+        
+    
+    def SetTags( self, tags ):
+        
+        ListBoxTagsStrings.SetTags( self, tags )
+        
+        if len( tags ) > 0:
+            
+            dc = wx.MemoryDC( self._client_bmp )
+            
+            dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+            
+            width = max( ( dc.GetTextExtent( s )[0] for s in self._ordered_strings ) )
+            
+            self.SetMinClientSize( ( width + 2 * self.TEXT_X_PADDING, -1 ) )
             
         
     
@@ -4394,6 +4064,11 @@ class ListBoxTagsSelection( ListBoxTags ):
             
         
         self._last_media = media
+        
+    
+    def SiblingsHaveChanged( self ):
+        
+        self.SetTagsByMedia( self._last_media, force_reload = True )
         
     
 class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
@@ -6271,7 +5946,7 @@ class SeedCacheControl( SaneListCtrl ):
         pretty_status = CC.status_string_lookup[ status ]
         pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp )
         pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp )
-        pretty_note = note
+        pretty_note = note.split( os.linesep )[0]
         
         return ( pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )
         
@@ -6812,75 +6487,6 @@ class RadioBox( StaticBox ):
     def SetSelection( self, index ): self._indices_to_radio_buttons[ index ].SetValue( True )
     
     def SetString( self, index, text ): self._indices_to_radio_buttons[ index ].SetLabelText( text )
-    
-class ShowKeys( Frame ):
-    
-    def __init__( self, key_type, keys ):
-        
-        if key_type == 'registration': title = 'Registration Keys'
-        elif key_type == 'access': title = 'Access Keys'
-        
-        # give it no parent, so this doesn't close when the dialog is closed!
-        Frame.__init__( self, None, HydrusGlobals.client_controller.PrepStringForDisplay( title ) )
-        
-        self._key_type = key_type
-        self._keys = keys
-        
-        #
-        
-        self._text_ctrl = wx.TextCtrl( self, style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_DONTWRAP )
-        
-        self._save_to_file = wx.Button( self, label = 'save to file' )
-        self._save_to_file.Bind( wx.EVT_BUTTON, self.EventSaveToFile )
-        
-        self._done = wx.Button( self, id = wx.ID_OK, label = 'done' )
-        self._done.Bind( wx.EVT_BUTTON, self.EventDone )
-        
-        #
-        
-        if key_type == 'registration': prepend = 'r'
-        else: prepend = ''
-        
-        self._text = os.linesep.join( [ prepend + key.encode( 'hex' ) for key in self._keys ] )
-        
-        self._text_ctrl.SetValue( self._text )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._text_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._save_to_file, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( self._done, CC.FLAGS_LONE_BUTTON )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        if x < 500: x = 500
-        if y < 200: y = 200
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        self.Show( True )
-        
-    
-    def EventDone( self, event ): self.Close()
-    
-    def EventSaveToFile( self, event ):
-        
-        filename = 'keys.txt'
-        
-        with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                path = HydrusData.ToUnicode( dlg.GetPath() )
-                
-                with open( path, 'wb' ) as f: f.write( HydrusData.ToByteString( self._text ) )
-                
-            
-        
     
 class WaitingPolitelyStaticText( wx.StaticText ):
     

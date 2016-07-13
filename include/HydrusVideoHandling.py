@@ -151,7 +151,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
         
         if 'start:' in line:
             
-            m = re.search( '(start\\: )' + '[0-9]\\.[0-9]*', line )
+            m = re.search( '(start\\: )' + '-?[0-9]\\.[0-9]*', line )
             
             start_offset = float( line[ m.start() + 7 : m.end() ] )
             

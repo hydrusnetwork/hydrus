@@ -10,6 +10,12 @@ import wx.lib.newevent
 
 ID_NULL = wx.NewId()
 
+# timers
+
+ID_TIMER_UPDATES = wx.NewId()
+
+#
+
 CAN_HIDE_MOUSE = True
 
 # Hue is generally 200, Sat and Lum changes based on need

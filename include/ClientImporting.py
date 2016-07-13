@@ -242,21 +242,15 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.MimeException as e:
             
-            error_text = HydrusData.ToUnicode( e )
-            
             status = CC.STATUS_UNINTERESTING_MIME
             
-            self._seed_cache.UpdateSeedStatus( url, status, note = error_text )
+            self._seed_cache.UpdateSeedStatus( url, status )
             
-        except Exception:
-            
-            error_text = traceback.format_exc()
-            
-            HydrusData.Print( error_text )
+        except Exception as e:
             
             status = CC.STATUS_FAILED
             
-            self._seed_cache.UpdateSeedStatus( url, status, note = error_text )
+            self._seed_cache.UpdateSeedStatus( url, status, exception = e )
             
         
         with self._lock:
@@ -720,20 +714,15 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.MimeException as e:
             
-            error_text = HydrusData.ToUnicode( e )
-            
             status = CC.STATUS_UNINTERESTING_MIME
             
-            self._paths_cache.UpdateSeedStatus( path, status, note = error_text )
+            self._paths_cache.UpdateSeedStatus( path, status )
             
         except Exception as e:
             
-            error_text = traceback.format_exc()
-            HydrusData.Print( error_text )
-            
             status = CC.STATUS_FAILED
             
-            self._paths_cache.UpdateSeedStatus( path, status, note = error_text )
+            self._paths_cache.UpdateSeedStatus( path, status, exception = e )
             
         
         with self._lock:
@@ -1141,14 +1130,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             self._path_cache.UpdateSeedStatus( path, CC.STATUS_UNINTERESTING_MIME )
                             
                         
-                    except Exception:
+                    except Exception as e:
                         
                         error_text = traceback.format_exc()
                         
                         HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' )
-                        HydrusData.Print( error_text )
                         
-                        self._path_cache.UpdateSeedStatus( path, CC.STATUS_FAILED, note = error_text )
+                        self._path_cache.UpdateSeedStatus( path, CC.STATUS_FAILED, exception = e )
                         
                     
                 
@@ -1345,20 +1333,15 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.MimeException as e:
             
-            error_text = HydrusData.ToUnicode( e )
-            
             status = CC.STATUS_UNINTERESTING_MIME
             
-            self._urls_cache.UpdateSeedStatus( file_url, status, note = error_text )
+            self._urls_cache.UpdateSeedStatus( file_url, status )
             
-        except Exception:
-            
-            error_text = traceback.format_exc()
-            HydrusData.Print( error_text )
+        except Exception as e:
             
             status = CC.STATUS_FAILED
             
-            self._urls_cache.UpdateSeedStatus( file_url, status, note = error_text )
+            self._urls_cache.UpdateSeedStatus( file_url, status, exception = e )
             
         
         with self._lock:
@@ -1956,9 +1939,21 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def UpdateSeedStatus( self, seed, status, note = '' ):
+    def UpdateSeedStatus( self, seed, status, note = '', exception = None ):
         
         with self._lock:
+            
+            if exception is not None:
+                
+                first_line = HydrusData.ToUnicode( exception ).split( os.linesep )[0]
+                
+                note = first_line + u'\u2026 (Copy note to see full error)'
+                note += os.linesep
+                note += traceback.format_exc()
+                
+                HydrusData.Print( 'Error when processing ' + seed + '!' )
+                HydrusData.Print( traceback.format_exc() )
+                
             
             note = HydrusData.ToUnicode( note )
             
@@ -2173,22 +2168,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except HydrusExceptions.MimeException as e:
                 
-                error_text = HydrusData.ToUnicode( e )
-                
                 status = CC.STATUS_UNINTERESTING_MIME
                 
-                self._seed_cache.UpdateSeedStatus( url, status, note = error_text )
+                self._seed_cache.UpdateSeedStatus( url, status )
                 
             except Exception as e:
                 
                 error_count += 1
                 
-                error_text = traceback.format_exc()
-                HydrusData.Print( error_text )
-                
                 status = CC.STATUS_FAILED
                 
-                self._seed_cache.UpdateSeedStatus( url, status, note = error_text )
+                self._seed_cache.UpdateSeedStatus( url, status, exception = e )
                 
                 time.sleep( 10 )
                 
@@ -2646,20 +2636,15 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.MimeException as e:
             
-            error_text = HydrusData.ToUnicode( e )
-            
             status = CC.STATUS_UNINTERESTING_MIME
             
-            self._urls_cache.UpdateSeedStatus( file_url, status, note = error_text )
+            self._urls_cache.UpdateSeedStatus( file_url, status )
             
         except Exception as e:
             
-            error_text = traceback.format_exc()
-            HydrusData.Print( error_text )
-            
             status = CC.STATUS_FAILED
             
-            self._urls_cache.UpdateSeedStatus( file_url, status, note = error_text )
+            self._urls_cache.UpdateSeedStatus( file_url, status, exception = e )
             
         
         with self._lock:

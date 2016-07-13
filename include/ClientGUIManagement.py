@@ -1822,7 +1822,9 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         seed_cache = self._gallery_import.GetSeedCache()
         
-        self._controller.pub( 'show_seed_cache', seed_cache )
+        import ClientGUI
+        
+        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
         
     
     def SetSearchFocus( self, page_key ):
@@ -1963,7 +1965,9 @@ class ManagementPanelHDDImport( ManagementPanel ):
         
         seed_cache = self._hdd_import.GetSeedCache()
         
-        self._controller.pub( 'show_seed_cache', seed_cache )
+        import ClientGUI
+        
+        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
         
     
     def TestAbleToClose( self ):
@@ -2333,7 +2337,9 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         seed_cache = self._page_of_images_import.GetSeedCache()
         
-        self._controller.pub( 'show_seed_cache', seed_cache )
+        import ClientGUI
+        
+        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
         
     
     def SetSearchFocus( self, page_key ):
@@ -3129,7 +3135,9 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         seed_cache = self._thread_watcher_import.GetSeedCache()
         
-        self._controller.pub( 'show_seed_cache', seed_cache )
+        import ClientGUI
+        
+        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
         
     
     def EventTimesToCheck( self, event ):

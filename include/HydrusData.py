@@ -1829,26 +1829,13 @@ class JobDatabase( object ):
         
         while True:
             
-            if self._result_ready.wait( 5 ) == True: break
+            if self._result_ready.wait( 2 ) == True: break
             elif HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
             
         
         if isinstance( self._result, Exception ):
             
-            if isinstance( self._result, HydrusExceptions.DBException ):
-                
-                ( text, gumpf, db_traceback ) = self._result.args
-                
-                trace_list = traceback.format_stack()
-                
-                caller_traceback = 'Stack Trace (most recent call last):' + os.linesep * 2 + os.linesep.join( trace_list )
-                
-                raise HydrusExceptions.DBException( text, caller_traceback, db_traceback )
-                
-            else:
-                
-                raise self._result
-                
+            raise self._result
             
         else:
             

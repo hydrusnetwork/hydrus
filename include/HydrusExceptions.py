@@ -1,6 +1,15 @@
+import os
+
 class CantRenderWithCVException( Exception ): pass
 class DataMissing( Exception ): pass
-class DBException( Exception ): pass
+
+class DBException( Exception ):
+    
+    def __str__( self ):
+        
+        return os.linesep.join( self.args )
+        
+
 class DBAccessException( Exception ): pass
 class FileMissingException( Exception ): pass
 class MimeException( Exception ): pass

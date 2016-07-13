@@ -39,26 +39,17 @@ def CatchExceptionClient( etype, value, tb ):
     
     try:
         
+        trace_list = traceback.format_tb( tb )
+        
+        trace = ''.join( trace_list )
+        
         job_key = ClientThreading.JobKey()
         
         if etype == HydrusExceptions.ShutdownException:
             
             return
             
-        elif etype == HydrusExceptions.DBException:
-            
-            ( text, caller_traceback, db_traceback ) = value
-            
-            job_key.SetVariable( 'popup_title', 'Database Error!' )
-            job_key.SetVariable( 'popup_text_1', text )
-            job_key.SetVariable( 'popup_caller_traceback', caller_traceback )
-            job_key.SetVariable( 'popup_db_traceback', db_traceback )
-            
         else:
-            
-            trace_list = traceback.format_tb( tb )
-            
-            trace = ''.join( trace_list )
             
             if etype == wx.PyDeadObjectError:
                 
@@ -69,9 +60,11 @@ def CatchExceptionClient( etype, value, tb ):
                 return
                 
             
+            first_line = HydrusData.ToUnicode( value ).split( os.linesep )[0]
+            
             try: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype.__name__ ) )
             except: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype ) )
-            job_key.SetVariable( 'popup_text_1', HydrusData.ToUnicode( value ) )
+            job_key.SetVariable( 'popup_text_1', first_line )
             job_key.SetVariable( 'popup_traceback', trace )
             
         
@@ -258,33 +251,27 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, coll
     
 def ShowExceptionClient( e ):
     
+    ( etype, value, tb ) = sys.exc_info()
+    
+    if etype is None:
+        
+        etype = type( e )
+        value = HydrusData.ToUnicode( e )
+        
+        trace = ''.join( traceback.format_stack() )
+        
+    else:
+        
+        trace = ''.join( traceback.format_exception( etype, value, tb ) )
+        
+    
     job_key = ClientThreading.JobKey()
     
     if isinstance( e, HydrusExceptions.ShutdownException ):
         
         return
         
-    elif isinstance( e, HydrusExceptions.DBException ):
-        
-        ( text, caller_traceback, db_traceback ) = e.args
-        
-        job_key.SetVariable( 'popup_title', 'Database Error!' )
-        job_key.SetVariable( 'popup_text_1', text )
-        job_key.SetVariable( 'popup_caller_traceback', caller_traceback )
-        job_key.SetVariable( 'popup_db_traceback', db_traceback )
-        
     else:
-        
-        ( etype, value, tb ) = sys.exc_info()
-        
-        if etype is None:
-            
-            etype = type( e )
-            value = HydrusData.ToUnicode( e )
-            
-            trace = ''.join( traceback.format_stack() )
-            
-        else: trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
         if etype == wx.PyDeadObjectError:
             
@@ -299,7 +286,10 @@ def ShowExceptionClient( e ):
         else: title = HydrusData.ToUnicode( etype )
         
         job_key.SetVariable( 'popup_title', title )
-        job_key.SetVariable( 'popup_text_1', HydrusData.ToUnicode( value ) )
+        
+        first_line = HydrusData.ToUnicode( value ).split( os.linesep )[0]
+        
+        job_key.SetVariable( 'popup_text_1', first_line )
         job_key.SetVariable( 'popup_traceback', trace )
         
     
@@ -457,6 +447,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ][ 'manage_tags_dialog' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'manage_tags_frame' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'media_viewer' ] = ( True, True, ( 640, 480 ), ( 70, 70 ), ( -1, -1 ), 'topleft', True, True )
+        self._dictionary[ 'frame_locations' ][ 'regular_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'review_services' ] = ( False, True, None, None, ( -1, -1 ), 'topleft', False, False )
         
         #
         
@@ -619,6 +611,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     def GetFrameLocation( self, frame_key ):
         
         return self._dictionary[ 'frame_locations' ][ frame_key ]
+        
+    
+    def GetFrameLocations( self ):
+        
+        return self._dictionary[ 'frame_locations' ].items()
         
     
     def GetNoneableInteger( self, name ):
@@ -1875,7 +1872,8 @@ class ServiceRepository( ServiceRestricted ):
         finally:
             
             HydrusGlobals.client_controller.pub( 'notify_new_pending' )
-            HydrusGlobals.client_controller.pub( 'notify_new_siblings' )
+            HydrusGlobals.client_controller.pub( 'notify_new_siblings_data' )
+            HydrusGlobals.client_controller.pub( 'notify_new_siblings_gui' )
             HydrusGlobals.client_controller.pub( 'notify_new_parents' )
             
         

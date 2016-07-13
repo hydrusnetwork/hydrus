@@ -1399,14 +1399,14 @@ class MessagePanel( wx.Panel ):
     
 # here starts the message reboot code
 
-class IMFrame( ClientGUICommon.Frame ):
+class IMFrame( ClientGUITopLevelWindows.Frame ):
     
     def __init__( self, parent, me_account, them_account, context ):
         
         me_name = me_account.GetNameBlah()
         them_name = them_account.GetNameBlah()
         
-        ClientGUICommon.Frame.__init__( self, parent, title = me_name + ' talking to ' + them_name )
+        ClientGUITopLevelWindows.Frame.__init__( self, parent, title = me_name + ' talking to ' + them_name )
         
         self._me_label = MeLabel( self, me_account ) # maybe these two should be the same, and infer me/them status itself
         self._them_label = ThemLabel( self, them_account )

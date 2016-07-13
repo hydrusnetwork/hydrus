@@ -8,6 +8,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIHoverFrames
 import ClientGUIPanels
+import ClientGUITopLevelWindows
 import ClientMedia
 import ClientRatings
 import collections
@@ -898,7 +899,7 @@ class Canvas( wx.Window ):
             title = 'manage tags'
             frame_key = 'manage_tags_frame'
             
-            manage_tags = ClientGUICommon.FrameThatResizesAndTakesPanel( self, title, frame_key )
+            manage_tags = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
             
             panel = ClientGUIPanels.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_display_media, ), immediate_commit = True, canvas_key = self._canvas_key )
             
@@ -1697,11 +1698,11 @@ class CanvasPanel( Canvas ):
             
         
     
-class CanvasFrame( ClientGUICommon.FrameThatResizes ):
+class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def __init__( self, parent ):
         
-        ClientGUICommon.FrameThatResizes.__init__( self, parent, 'hydrus client media viewer', 'media_viewer', float_on_parent = False )
+        ClientGUITopLevelWindows.FrameThatResizes.__init__( self, parent, 'hydrus client media viewer', 'media_viewer', float_on_parent = False )
         
     
     def Close( self ):
@@ -1736,7 +1737,7 @@ class CanvasFrame( ClientGUICommon.FrameThatResizes ):
         
         self.SetSizer( vbox )
         
-        self._SetSizeAndPosition( self._frame_key )
+        ClientGUITopLevelWindows.SetTLWSizeAndPosition( self, self._frame_key )
         
         self.Show( True )
         

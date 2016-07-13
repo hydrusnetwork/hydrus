@@ -2721,6 +2721,11 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
+        if not HC.PLATFORM_WINDOWS:
+            
+            self._seed_cache_button.Hide()
+            
+        
         #
         
         self._file_box = ClientGUICommon.StaticBox( self._panel, 'file options' )
@@ -3058,7 +3063,9 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         seed_cache = self._import_folder.GetSeedCache()
         
-        HydrusGlobals.client_controller.pub( 'show_seed_cache', seed_cache )
+        import ClientGUI
+        
+        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
         
     
     def GetInfo( self ):
@@ -5352,6 +5359,11 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
             self._seed_cache_button.SetToolTipString( 'open detailed url cache status' )
             
+            if not HC.PLATFORM_WINDOWS:
+                
+                self._seed_cache_button.Hide()
+                
+            
             self._reset_cache_button = wx.Button( self._info_panel, label = '     reset url cache on dialog ok     ' )
             self._reset_cache_button.Bind( wx.EVT_BUTTON, self.EventResetCache )
             
@@ -5565,7 +5577,9 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             seed_cache = self._original_subscription.GetSeedCache()
             
-            HydrusGlobals.client_controller.pub( 'show_seed_cache', seed_cache )
+            import ClientGUI
+            
+            ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
             
         
         def EventSiteChanged( self, event ): self._PresentForSiteType()
@@ -6179,7 +6193,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if potential_child == potential_parent: return False
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] ).difference( self._current_statuses_to_pairs[ HC.PETITIONED ] )
             
             current_children = { child for ( child, parent ) in current_pairs }
             
@@ -6770,7 +6784,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             ( potential_old, potential_new ) = potential_pair
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] ).difference( self._current_statuses_to_pairs[ HC.PETITIONED ] )
             
             current_olds = { old for ( old, new ) in current_pairs }
             
@@ -6862,7 +6876,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 do_it = True
                 
-                current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+                current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] ).difference( self._current_statuses_to_pairs[ HC.PETITIONED ] )
                 
                 current_olds = { current_old for ( current_old, current_new ) in current_pairs }
                 
@@ -6890,7 +6904,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                             
                         
                     
-                    current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+                    current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] ).difference( self._current_statuses_to_pairs[ HC.PETITIONED ] )
                     
                     current_olds = { current_old for ( current_old, current_new ) in current_pairs }
                     

@@ -2162,7 +2162,7 @@ class TagSiblingsManager( object ):
         
         self._lock = threading.Lock()
         
-        self._controller.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
+        self._controller.sub( self, 'RefreshSiblings', 'notify_new_siblings_data' )
         
     
     def _CollapseTags( self, tags ):

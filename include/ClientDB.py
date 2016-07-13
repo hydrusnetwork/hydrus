@@ -2295,7 +2295,8 @@ class DB( HydrusDB.HydrusDB ):
             
         
         self.pub_after_commit( 'notify_new_pending' )
-        self.pub_after_commit( 'notify_new_siblings' )
+        self.pub_after_commit( 'notify_new_siblings_data' )
+        self.pub_after_commit( 'notify_new_siblings_gui' )
         self.pub_after_commit( 'notify_new_parents' )
         
         self.pub_service_updates_after_commit( { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
@@ -5175,14 +5176,20 @@ class DB( HydrusDB.HydrusDB ):
             HydrusData.ShowText( 'The client is running out of memory! Restart it ASAP!' )
             
         
-        ( etype, value, tb ) = sys.exc_info()
-        
-        db_traceback = os.linesep.join( traceback.format_exception( etype, value, tb ) )
-        
-        new_e = HydrusExceptions.DBException( HydrusData.ToUnicode( e ), 'Unknown Caller, probably GUI.', db_traceback )
-        
-        if job.IsSynchronous(): job.PutResult( new_e )
-        else: HydrusData.ShowException( new_e )
+        if job.IsSynchronous():
+            
+            db_traceback = 'Database ' + traceback.format_exc()
+            
+            first_line = HydrusData.ToUnicode( type( e ).__name__ ) + ': ' + HydrusData.ToUnicode( e )
+            
+            new_e = HydrusExceptions.DBException( first_line, db_traceback )
+            
+            job.PutResult( new_e )
+            
+        else:
+            
+            HydrusData.ShowException( e )
+            
         
     
     def _ProcessContentUpdatePackage( self, service_key, content_update_package, job_key ):
@@ -5805,7 +5812,8 @@ class DB( HydrusDB.HydrusDB ):
             if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
             if notify_new_siblings:
                 
-                self.pub_after_commit( 'notify_new_siblings' )
+                self.pub_after_commit( 'notify_new_siblings_data' )
+                self.pub_after_commit( 'notify_new_siblings_gui' )
                 self.pub_after_commit( 'notify_new_parents' )
                 
             elif notify_new_parents:
@@ -7753,11 +7761,13 @@ class DB( HydrusDB.HydrusDB ):
             
             prefixes_to_locations = dict( self._c.execute( 'SELECT prefix, location FROM client_files_locations;' ).fetchall() )
             
+            ( total_to_do, ) = self._c.execute( 'SELECT COUNT( * ) FROM files_info WHERE mime IN ( ?, ? );', ( HC.IMAGE_PNG, HC.IMAGE_GIF ) ).fetchone()
+            
             for ( i, ( hash, mime ) ) in enumerate( self._c.execute( 'SELECT hash, mime FROM files_info, hashes USING ( hash_id ) WHERE mime IN ( ?, ? );', ( HC.IMAGE_PNG, HC.IMAGE_GIF ) ) ):
                 
                 if ( i + 1 ) % 50 == 0:
                     
-                    self._controller.pub( 'splash_set_status_text', 'regenerating thumbnails: ' + HydrusData.ConvertIntToPrettyString( i + 1 ) )
+                    self._controller.pub( 'splash_set_status_text', 'regenerating thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, total_to_do ) )
                     
                 
                 hash_hex = hash.encode( 'hex' )

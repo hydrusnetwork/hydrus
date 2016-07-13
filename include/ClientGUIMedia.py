@@ -8,6 +8,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUICanvas
 import ClientGUIPanels
+import ClientGUITopLevelWindows
 import ClientMedia
 import collections
 import HydrusExceptions
@@ -385,6 +386,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY )
                 
                 if file_service_key in local_file_services:
+                    
+                    if file_service_key == CC.TRASH_SERVICE_KEY:
+                        
+                        self._SetFocussedMedia( None )
+                        
                     
                     HydrusGlobals.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
                     
@@ -785,7 +791,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             title = 'manage tags for ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
             frame_key = 'manage_tags_dialog'
             
-            with ClientGUIDialogs.DialogManageApply( self, title, frame_key ) as dlg:
+            with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
                 
                 panel = ClientGUIPanels.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
                 
