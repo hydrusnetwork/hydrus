@@ -8,6 +8,29 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 215</h3></li>
+				<ul>
+					<li>you can now set different suggested favourite tags for different tag services</li>
+					<li>added an option to tags option panel to set fixed suggested tags control width</li>
+					<li>file import status now works on the new window sizing system, and when launched from main gui uses file_import_status frame key</li>
+					<li>file import status is now a generic apply/cancel dialog when launched from import folder or subscription dialogs</li>
+					<li>these file import status dialogs are reenabled for linux and os x, as they work properly now!</li>
+					<li>very large images will render faster and more beautifully on a freshly launched fullscreen media window</li>
+					<li>all zooming in will be higher quality, particularly for sharper images</li>
+					<li>better zooming in code also works for very large animations/video</li>
+					<li>started a framework for better html parsing</li>
+					<li>updated sankaku downloader to support 'medium' namespace</li>
+					<li>analyze calls no longer analyze sqlite_stat1, which isn't needed and sometimes gives awkward maintenance timings</li>
+					<li>fixed server's deleteorphans, which wasn't working with the new thumbnail names</li>
+					<li>improved speed and weight of server's deleteorphans</li>
+					<li>fixed a missing foreign key in file_petitions</li>
+					<li>improved thread worker creation and job processing scheduling</li>
+					<li>fixed os x media viewer window float_on_parent status</li>
+					<li>default gui session now defaults to 'last session'</li>
+					<li>gui recovers from missing default session on boot more gracefully</li>
+					<li>crash log code improvements now applied to all boot scripts</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 214</h3></li>
 				<ul>
 					<li>wrote a new resizing dialog 'edit' class for simple resizing dialogs</li>
