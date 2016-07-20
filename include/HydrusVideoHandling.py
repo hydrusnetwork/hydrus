@@ -329,7 +329,10 @@ class VideoRendererFFMPEG( object ):
     
     def read_frame( self ):
         
-        if self.pos == self._num_frames: self.initialize()
+        if self.pos == self._num_frames:
+            
+            self.initialize()
+            
         
         if self.process is None:
             

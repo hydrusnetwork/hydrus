@@ -246,6 +246,13 @@ class THREADCallToThread( DAEMON ):
         
         self._queue = Queue.Queue()
         
+        self._currently_working = False
+        
+    
+    def CurrentlyWorking( self ):
+        
+        return self._currently_working
+        
     
     def put( self, callable, *args, **kwargs ):
         
@@ -271,6 +278,8 @@ class THREADCallToThread( DAEMON ):
                 
                 ( callable, args, kwargs ) = self._queue.get()
                 
+                self._currently_working = True
+                
                 callable( *args, **kwargs )
                 
                 del callable
@@ -282,6 +291,10 @@ class THREADCallToThread( DAEMON ):
             except Exception as e:
                 
                 HydrusData.ShowException( e )
+                
+            finally:
+                
+                self._currently_working = False
                 
             
             time.sleep( 0.00001 )

@@ -4,8 +4,10 @@ import HydrusExceptions
 import itertools
 import os
 
-def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
-
+def GetAllHashes( file_type ):
+    
+    return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
+    
 def GetExpectedFilePath( hash ):
     
     hash_encoded = hash.encode( 'hex' )

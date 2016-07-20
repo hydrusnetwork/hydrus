@@ -133,6 +133,49 @@ class EditFrameLocationPanel( EditPanel ):
         return ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
         
     
+class EditSeedCachePanel( EditPanel ):
+    
+    def __init__( self, parent, controller, seed_cache ):
+        
+        EditPanel.__init__( self, parent )
+        
+        self._controller = controller
+        self._seed_cache = seed_cache
+        
+        self._text = wx.StaticText( self, label = 'initialising' )
+        self._seed_cache_control = ClientGUICommon.SeedCacheControl( self, self._seed_cache )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self._controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
+        
+        wx.CallAfter( self._UpdateText )
+        
+    
+    def _UpdateText( self ):
+        
+        ( status, ( total_processed, total ) ) = self._seed_cache.GetStatus()
+        
+        self._text.SetLabelText( status )
+        
+        self.Layout()
+        
+    
+    def GetValue( self ):
+        
+        return self._seed_cache
+        
+    
+    def NotifySeedUpdated( self, seed ):
+        
+        self._UpdateText()
+        
+    
 class ManagePanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def __init__( self, parent ):
@@ -1294,8 +1337,8 @@ class ManageOptionsPanel( ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( frame_locations_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( frame_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -2009,20 +2052,34 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._apply_all_parents_to_all_services = wx.CheckBox( self )
             
+            suggested_tags_panel = ClientGUICommon.StaticBox( self, 'suggested tags' )
             
-            suggested_tags_panel = ClientGUICommon.StaticBox( self, 'suggested tags - favourites' )
+            self._suggested_tags_width = ClientGUICommon.NoneableSpinCtrl( suggested_tags_panel, 'width of suggested tags control', min = 20, none_phrase = 'width of longest tag', unit = 'pixels' )
             
-            suggested_tags_panel.SetMinSize( ( 300, -1 ) )
+            suggested_tags_favourites_panel = ClientGUICommon.StaticBox( suggested_tags_panel, 'favourites' )
             
-            # this needs a live dropdown to select and update and remember changes for the service key--or something like that
-            # or could be a listbook--try to emulate what the tags dialog will look like in the end
-            # we'll stick with local tags for now to apply for everything
+            suggested_tags_favourites_panel.SetMinSize( ( 400, -1 ) )
             
-            self._suggested_favourites = ClientGUICommon.ListBoxTagsStringsAddRemove( suggested_tags_panel )
+            self._suggested_favourites_services = ClientGUICommon.BetterChoice( suggested_tags_favourites_panel )
+            
+            self._suggested_favourites_services.Append( CC.LOCAL_TAG_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
+            
+            tag_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            
+            for tag_service in tag_services:
+                
+                self._suggested_favourites_services.Append( tag_service.GetName(), tag_service.GetServiceKey() )
+                
+            
+            self._suggested_favourites = ClientGUICommon.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel )
+            
+            self._current_suggested_favourites_service = None
+            
+            self._suggested_favourites_dict = {}
             
             expand_parents = False
             
-            self._suggested_favourites_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( suggested_tags_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
+            self._suggested_favourites_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
             
             #
             
@@ -2045,9 +2102,9 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._apply_all_parents_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
             
-            favourites = self._new_options.GetSuggestedTagsFavourites( CC.LOCAL_TAG_SERVICE_KEY )
+            self._suggested_tags_width.SetValue( self._new_options.GetNoneableInteger( 'suggested_tags_width' ) )
             
-            self._suggested_favourites.SetTags( favourites )
+            self._suggested_favourites_services.SelectClientData( CC.LOCAL_TAG_SERVICE_KEY )
             
             #
             
@@ -2067,15 +2124,53 @@ class ManageOptionsPanel( ManagePanel ):
             gridbox.AddF( wx.StaticText( self, label = 'Apply all parents to all services: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._apply_all_parents_to_all_services, CC.FLAGS_MIXED )
             
-            suggested_tags_panel.AddF( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
-            suggested_tags_panel.AddF( self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+            suggested_tags_favourites_panel.AddF( self._suggested_favourites_services, CC.FLAGS_EXPAND_PERPENDICULAR )
+            suggested_tags_favourites_panel.AddF( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
+            suggested_tags_favourites_panel.AddF( self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            suggested_tags_panel.AddF( self._suggested_tags_width, CC.FLAGS_EXPAND_PERPENDICULAR )
+            suggested_tags_panel.AddF( suggested_tags_favourites_panel, CC.FLAGS_EXPAND_SIZER_DEPTH_ONLY )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( suggested_tags_panel, CC.FLAGS_EXPAND_DEPTH_ONLY )
+            vbox.AddF( suggested_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
+            
+            #
+            
+            self._suggested_favourites_services.Bind( wx.EVT_CHOICE, self.EventSuggestedFavouritesService )
+            
+            self.EventSuggestedFavouritesService( None )
+            
+        
+        def _SaveCurrentSuggestedFavourites( self ):
+            
+            if self._current_suggested_favourites_service is not None:
+                
+                self._suggested_favourites_dict[ self._current_suggested_favourites_service ] = self._suggested_favourites.GetTags()
+                
+            
+        
+        def EventSuggestedFavouritesService( self, event ):
+            
+            self._SaveCurrentSuggestedFavourites()
+            
+            self._current_suggested_favourites_service = self._suggested_favourites_services.GetChoice()
+            
+            if self._current_suggested_favourites_service in self._suggested_favourites_dict:
+                
+                favourites = self._suggested_favourites_dict[ self._current_suggested_favourites_service ]
+                
+            else:
+                
+                favourites = self._new_options.GetSuggestedTagsFavourites( self._current_suggested_favourites_service )
+                
+            
+            self._suggested_favourites.SetTags( favourites )
+            
+            self._suggested_favourites_input.SetTagService( self._current_suggested_favourites_service )
             
         
         def UpdateOptions( self ):
@@ -2084,9 +2179,16 @@ class ManageOptionsPanel( ManagePanel ):
             HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
             HC.options[ 'show_all_tags_in_autocomplete' ] = self._show_all_tags_in_autocomplete.GetValue()
             
+            self._new_options.SetNoneableInteger( 'suggested_tags_width', self._suggested_tags_width.GetValue() )
+            
             self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.GetValue() )
             
-            self._new_options.SetSuggestedTagsFavourites( CC.LOCAL_TAG_SERVICE_KEY, self._suggested_favourites.GetTags() )
+            self._SaveCurrentSuggestedFavourites()
+            
+            for ( service_key, favourites ) in self._suggested_favourites_dict.items():
+                
+                self._new_options.SetSuggestedTagsFavourites( service_key, favourites )
+                
             
         
     
@@ -2396,7 +2498,7 @@ class ManageTagsPanel( ManagePanel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            favourites = self._new_options.GetSuggestedTagsFavourites( CC.LOCAL_TAG_SERVICE_KEY )
+            favourites = self._new_options.GetSuggestedTagsFavourites( tag_service_key )
             
             if len( favourites ) > 0:
                 

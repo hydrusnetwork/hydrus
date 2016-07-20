@@ -177,18 +177,41 @@ class Animation( wx.Window ):
         
         ( frame_width, frame_height ) = current_frame.GetSize()
         
-        x_scale = my_width / float( frame_width )
-        y_scale = my_height / float( frame_height )
-        
-        dc.SetUserScale( x_scale, y_scale )
-        
         wx_bmp = current_frame.GetWxBitmap()
         
-        dc.DrawBitmap( wx_bmp, 0, 0 )
+        if HC.PLATFORM_OSX:
+            
+            # for some reason, stretchblit just draws white for os x
+            # maybe a wx.copy problem?
+            # or a mask?
+            # os x double buffering something?
+            # apparently some os x blit bindings might just be missing
+            
+            scale = float( my_width ) / frame_width
+            
+            dc.SetUserScale( scale, scale )
+            
+            dc.DrawBitmap( wx_bmp, 0, 0 )
+            
+            dc.SetUserScale( 1.0, 1.0 )
+            
+        else:
+            
+            # next step here is to deal with superzoom cleverly, by having a clipped bmp
+            # only blit from the clipped section of the src to our clipped bmp
+            # on resize, get the parent canvas, get its clienttoscreen size/pos, compare that with our own, clip a bmp, something like that.
+            # think we'll have to initialise the dc with that in mind, moving our smaller bmp to the correct virtual location on the window
+            # I think this is dc.SetDeviceOrigin
+            # and do something similar for staticimage
+            # will need to setdirty on drag that reveals offscreen region
+            # hence prob a good idea to give the bmp 100px or so spare offscreen buffer, to reduce redraw spam, if that can be neatly done
+            
+            mdc = wx.MemoryDC( wx_bmp )
+            
+            dc.StretchBlit( 0, 0, my_width, my_height, mdc, 0, 0, frame_width, frame_height )
+            
         
         wx.CallAfter( wx_bmp.Destroy )
-        
-        dc.SetUserScale( 1.0, 1.0 )
         
         if self._animation_bar is not None:
             
@@ -296,15 +319,21 @@ class Animation( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                ( image_width, image_height ) = self._video_container.GetSize()
+                ( renderer_width, renderer_height ) = self._video_container.GetSize()
                 
-                we_just_zoomed_in = my_width > image_width
+                we_just_zoomed_in = my_width > renderer_width or my_height > renderer_height
                 
-                if we_just_zoomed_in and self._video_container.IsScaled():
+                if we_just_zoomed_in:
                     
-                    full_resolution = self._video_container.GetResolution()
-                    
-                    self._video_container = ClientRendering.RasterContainerVideo( self._media, full_resolution )
+                    if self._video_container.IsScaled():
+                        
+                        ( media_width, media_height ) = self._media.GetResolution()
+                        
+                        target_width = min( media_width, my_width )
+                        target_height = min( media_height, my_height )
+                        
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ) )
+                        
                     
                 
                 self._video_container.SetFramePosition( self._current_frame_index )
@@ -1702,7 +1731,16 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def __init__( self, parent ):
         
-        ClientGUITopLevelWindows.FrameThatResizes.__init__( self, parent, 'hydrus client media viewer', 'media_viewer', float_on_parent = False )
+        if HC.PLATFORM_OSX:
+            
+            float_on_parent = True
+            
+        else:
+            
+            float_on_parent = False
+            
+        
+        ClientGUITopLevelWindows.FrameThatResizes.__init__( self, parent, 'hydrus client media viewer', 'media_viewer', float_on_parent = float_on_parent )
         
     
     def Close( self ):
@@ -3737,13 +3775,20 @@ class StaticImage( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                ( image_width, image_height ) = self._image_container.GetSize()
+                ( renderer_width, renderer_height ) = self._image_container.GetSize()
                 
-                we_just_zoomed_in = my_width > image_width or my_height > image_height
+                # replace all this garbage with resize the bmp and setdirty--the image renderer will do it on the fly in the paint event
+                
+                we_just_zoomed_in = my_width > renderer_width or my_height > renderer_height
                 
                 if we_just_zoomed_in and self._image_container.IsScaled():
                     
-                    self._image_container = self._image_cache.GetImage( self._media )
+                    ( media_width, media_height ) = self._media.GetResolution()
+                    
+                    target_width = min( media_width, my_width )
+                    target_height = min( media_height, my_height )
+                    
+                    self._image_container = self._image_cache.GetImage( self._media, ( target_width, target_height ) )
                     
                 
                 wx.CallAfter( self._canvas_bmp.Destroy )

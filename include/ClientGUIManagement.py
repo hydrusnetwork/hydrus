@@ -14,6 +14,8 @@ import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMedia
+import ClientGUIPanels
+import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
 import ClientRendering
@@ -1822,9 +1824,14 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         seed_cache = self._gallery_import.GetSeedCache()
         
-        import ClientGUI
+        title = 'file import status'
+        frame_key = 'file_import_status'
         
-        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def SetSearchFocus( self, page_key ):
@@ -1965,9 +1972,14 @@ class ManagementPanelHDDImport( ManagementPanel ):
         
         seed_cache = self._hdd_import.GetSeedCache()
         
-        import ClientGUI
+        title = 'file import status'
+        frame_key = 'file_import_status'
         
-        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def TestAbleToClose( self ):
@@ -2337,9 +2349,14 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         seed_cache = self._page_of_images_import.GetSeedCache()
         
-        import ClientGUI
+        title = 'file import status'
+        frame_key = 'file_import_status'
         
-        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def SetSearchFocus( self, page_key ):
@@ -3135,9 +3152,14 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         seed_cache = self._thread_watcher_import.GetSeedCache()
         
-        import ClientGUI
+        title = 'file import status'
+        frame_key = 'file_import_status'
         
-        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def EventTimesToCheck( self, event ):

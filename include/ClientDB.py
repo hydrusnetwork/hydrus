@@ -1263,6 +1263,8 @@ class DB( HydrusDB.HydrusDB ):
             all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master;' ) ) )
             
         
+        all_names.discard( 'sqlite_stat1' )
+        
         if force_reanalyze:
             
             names_to_analyze = list( all_names )
@@ -2023,7 +2025,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE file_trash ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER );' )
         self._c.execute( 'CREATE INDEX file_trash_timestamp ON file_trash ( timestamp );' )
         
-        self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ) );' )
+        self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ) );' )
         self._c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
         
         self._c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
@@ -5136,7 +5138,9 @@ class DB( HydrusDB.HydrusDB ):
             
             db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
             
-            due_names = [ name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+            due_names = { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
+            
+            due_names.discard( 'sqlite_stat1' )
             
             if len( due_names ) > 0:
                 
@@ -7837,6 +7841,26 @@ class DB( HydrusDB.HydrusDB ):
                     HydrusData.PrintException( e )
                     
                 
+            
+        
+        if version == 214:
+            
+            # missed foreign key, so clean out any orphan entries here
+            
+            service_ids = { service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services;' ) }
+            
+            info = [ ( service_id, hash_id, reason_id ) for ( service_id, hash_id, reason_id ) in self._c.execute( 'SELECT * FROM file_petitions;' ) if service_id in service_ids ]
+            
+            self._c.execute( 'DROP TABLE file_petitions;' )
+            
+            self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ) );' )
+            self._c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
+            
+            self._c.executemany( 'INSERT INTO file_petitions ( service_id, hash_id, reason_id ) VALUES ( ?, ?, ? );', info )
+            
+            #
+            
+            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'sankaku chan', ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ] ) )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

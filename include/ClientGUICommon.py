@@ -726,6 +726,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
     
+    def SetFileService( self, file_service_key ):
+        
+        self._ChangeFileService( file_service_key )
+        
+    
+    def SetTagService( self, tag_service_key ):
+        
+        self._ChangeTagService( tag_service_key )
+        
+    
     def EventFileButton( self, event ):
         
         services_manager = HydrusGlobals.client_controller.GetServicesManager()
@@ -765,11 +775,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                 
                 return # this is about select_up and select_down
                 
-            
-            self._cache_text = ''
-            self._current_namespace = ''
-            
-            self._UpdateList()
             
         
     
@@ -3539,6 +3544,13 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         self._RecalcTags()
         
     
+    def Clear( self ):
+        
+        self._tags = set()
+        
+        self._RecalcTags()
+        
+    
     def EnterTags( self, tags ):
         
         removed = set()
@@ -3605,15 +3617,24 @@ class ListBoxTagsSuggestions( ListBoxTagsStrings ):
         
         ListBoxTagsStrings.SetTags( self, tags )
         
-        if len( tags ) > 0:
+        width = HydrusGlobals.client_controller.GetNewOptions().GetNoneableInteger( 'suggested_tags_width' )
+        
+        if width is None:
             
-            dc = wx.MemoryDC( self._client_bmp )
+            if len( tags ) > 0:
+                
+                dc = wx.MemoryDC( self._client_bmp )
+                
+                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+                
+                width = max( ( dc.GetTextExtent( s )[0] for s in self._ordered_strings ) )
+                
+                self.SetMinClientSize( ( width + 2 * self.TEXT_X_PADDING, -1 ) )
+                
             
-            dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+        else:
             
-            width = max( ( dc.GetTextExtent( s )[0] for s in self._ordered_strings ) )
-            
-            self.SetMinClientSize( ( width + 2 * self.TEXT_X_PADDING, -1 ) )
+            self.SetMinSize( ( width, -1 ) )
             
         
     

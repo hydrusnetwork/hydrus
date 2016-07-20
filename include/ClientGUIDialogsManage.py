@@ -10,6 +10,8 @@ import ClientGUIDialogs
 import ClientDownloading
 import ClientGUIOptionsPanels
 import ClientGUIPredicates
+import ClientGUIPanels
+import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
 import ClientRatings
@@ -2721,11 +2723,6 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
-        if not HC.PLATFORM_WINDOWS:
-            
-            self._seed_cache_button.Hide()
-            
-        
         #
         
         self._file_box = ClientGUICommon.StaticBox( self._panel, 'file options' )
@@ -3063,9 +3060,19 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         seed_cache = self._import_folder.GetSeedCache()
         
-        import ClientGUI
+        dupe_seed_cache = seed_cache.Duplicate()
         
-        ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
+        with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
+            
+            panel = ClientGUIPanels.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._import_folder.SetSeedCache( dupe_seed_cache )
+                
+            
         
     
     def GetInfo( self ):
@@ -5359,11 +5366,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
             self._seed_cache_button.SetToolTipString( 'open detailed url cache status' )
             
-            if not HC.PLATFORM_WINDOWS:
-                
-                self._seed_cache_button.Hide()
-                
-            
             self._reset_cache_button = wx.Button( self._info_panel, label = '     reset url cache on dialog ok     ' )
             self._reset_cache_button.Bind( wx.EVT_BUTTON, self.EventResetCache )
             
@@ -5577,9 +5579,20 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             seed_cache = self._original_subscription.GetSeedCache()
             
-            import ClientGUI
+            dupe_seed_cache = seed_cache.Duplicate()
             
-            ClientGUI.FrameSeedCache( self, HydrusGlobals.client_controller, seed_cache )
+            with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
+                
+                panel = ClientGUIPanels.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._original_subscription.SetSeedCache( dupe_seed_cache )
+                    
+                
+            
             
         
         def EventSiteChanged( self, event ): self._PresentForSiteType()

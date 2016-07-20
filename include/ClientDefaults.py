@@ -23,7 +23,7 @@ def GetClientDefaultOptions():
     options[ 'password' ] = None
     options[ 'num_autocomplete_chars' ] = 2
     options[ 'gui_capitalisation' ] = False
-    options[ 'default_gui_session' ] = 'just a blank page'
+    options[ 'default_gui_session' ] = 'last session'
     options[ 'fetch_ac_results_automatically' ] = True
     options[ 'ac_timings' ] = ( 3, 500, 250 )
     options[ 'thread_checker_timings' ] = ( 3, 1200 )
@@ -479,7 +479,7 @@ def GetDefaultBoorus():
     thumb_classname = 'thumb'
     image_id = 'highres'
     image_data = None
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-medium' : 'medium' }
     
     boorus[ 'sankaku chan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     

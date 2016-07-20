@@ -1179,6 +1179,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._name, self._path, self._mimes, self._import_file_options, self._import_tag_options, self._txt_parse_tag_service_keys, self._actions, self._action_locations, self._period, self._open_popup, self._paused )
         
     
+    def SetSeedCache( self, seed_cache ):
+        
+        self._path_cache = seed_cache
+        
+    
     def SetTuple( self, name, path, mimes, import_file_options, import_tag_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ):
         
         if path != self._path:
@@ -1775,6 +1780,16 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         HydrusGlobals.client_controller.pub( 'seed_cache_seed_updated', seed )
+        
+    
+    def Duplicate( self ):
+        
+        new_seed_cache = SeedCache()
+        
+        new_seed_cache._seeds_ordered = list( self._seeds_ordered )
+        new_seed_cache._seeds_to_info = { seed : dict( info ) for ( seed, info ) in self._seeds_to_info.items() }
+        
+        return new_seed_cache
         
     
     def GetNextSeed( self, status ):
@@ -2402,6 +2417,26 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._seed_cache = SeedCache()
         
     
+    def SetSeedCache( self, seed_cache ):
+        
+        self._seed_cache = seed_cache
+        
+    
+    def SetTuple( self, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options ):
+        
+        self._gallery_identifier = gallery_identifier
+        self._gallery_stream_identifiers = gallery_stream_identifiers
+        self._query = query
+        self._period = period
+        self._get_tags_if_redundant = get_tags_if_redundant
+        self._initial_file_limit = initial_file_limit
+        self._periodic_file_limit = periodic_file_limit
+        self._paused = paused
+        
+        self._import_file_options = import_file_options
+        self._import_tag_options = import_tag_options
+        
+    
     def Sync( self ):
         
         p1 = not self._paused
@@ -2447,21 +2482,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 job_key.Delete()
                 
             
-        
-    
-    def SetTuple( self, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options ):
-        
-        self._gallery_identifier = gallery_identifier
-        self._gallery_stream_identifiers = gallery_stream_identifiers
-        self._query = query
-        self._period = period
-        self._get_tags_if_redundant = get_tags_if_redundant
-        self._initial_file_limit = initial_file_limit
-        self._periodic_file_limit = periodic_file_limit
-        self._paused = paused
-        
-        self._import_file_options = import_file_options
-        self._import_tag_options = import_tag_options
         
     
     def ToTuple( self ):

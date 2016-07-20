@@ -223,7 +223,7 @@ class TestDownloaders( unittest.TestCase ):
         
         info = ( data, tags )
         
-        expected_info = ('image file', [u'character:heinrike prinzessin zu sayn-wittgenstein', u'character:rosalie de hemricourt de grunne', u'2girls', u'alternative costume', u'anal beads', u'animal ears', u'anus', u'ass', u'ass cutout', u'backless panties', u'blonde', u'blue eyes', u'blush', u'braid', u'butt plug', u'butt plug tail', u'cameltoe', u'cat tail', u'cheerleader', u'dildo', u'fake animal ears', u'fang', u'green eyes', u'hands', u'happy', u'heart cutout', u'kneepits', u'long hair', u'looking at viewer', u'multiple girls', u'nekomimi', u'open mouth', u'pantsu', u'spread anus', u'sweat', u'tail', u'tape', u'underwear', u'white panties', u'creator:null (nyanpyoun)', u'series:strike witches'])
+        expected_info = ('image file', [ u'medium:uncensored', u'character:heinrike prinzessin zu sayn-wittgenstein', u'character:rosalie de hemricourt de grunne', u'2girls', u'alternative costume', u'anal beads', u'animal ears', u'anus', u'ass', u'ass cutout', u'backless panties', u'blonde', u'blue eyes', u'blush', u'braid', u'butt plug', u'butt plug tail', u'cameltoe', u'cat tail', u'cheerleader', u'dildo', u'fake animal ears', u'fang', u'green eyes', u'hands', u'happy', u'heart cutout', u'kneepits', u'long hair', u'looking at viewer', u'multiple girls', u'nekomimi', u'open mouth', u'pantsu', u'spread anus', u'sweat', u'tail', u'tape', u'underwear', u'white panties', u'creator:null (nyanpyoun)', u'series:strike witches'])
         
         self.assertEqual( info, expected_info )
         

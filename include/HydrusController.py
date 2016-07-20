@@ -48,7 +48,7 @@ class HydrusController( object ):
         self._caches = {}
         self._managers = {}
         
-        self._call_to_threads = [ HydrusThreading.THREADCallToThread( self ) for i in range( 10 ) ]
+        self._call_to_threads = []
         
         self._timestamps = collections.defaultdict( lambda: 0 )
         
@@ -56,6 +56,30 @@ class HydrusController( object ):
         
         self._just_woke_from_sleep = False
         self._system_busy = False
+        
+    
+    def _GetCallToThread( self ):
+        
+        for call_to_thread in self._call_to_threads:
+            
+            if not call_to_thread.CurrentlyWorking():
+                
+                return call_to_thread
+                
+            
+        
+        if len( self._call_to_threads ) > 100:
+            
+            raise Exception( 'Too many call to threads!' )
+            
+        
+        call_to_thread = HydrusThreading.THREADCallToThread( self )
+        
+        self._call_to_threads.append( call_to_thread )
+        
+        call_to_thread.start()
+        
+        return call_to_thread
         
     
     def _InitArgsBools( self ):
@@ -136,9 +160,7 @@ class HydrusController( object ):
     
     def CallToThread( self, callable, *args, **kwargs ):
         
-        call_to_thread = random.choice( self._call_to_threads )
-        
-        while call_to_thread == threading.current_thread: call_to_thread = random.choice( self._call_to_threads )
+        call_to_thread = self._GetCallToThread()
         
         call_to_thread.put( callable, *args, **kwargs )
         
@@ -175,11 +197,6 @@ class HydrusController( object ):
         
     
     def InitModel( self ):
-        
-        for thread in self._call_to_threads:
-            
-            thread.start()
-            
         
         self._db = self._InitDB()
         

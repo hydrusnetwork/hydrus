@@ -138,7 +138,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             name = HC.options[ 'default_gui_session' ]
             
-            wx.CallLater( 1, self._LoadGUISession, name )
+            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            
+            if name in existing_session_names:
+                
+                wx.CallLater( 1, self._LoadGUISession, name )
+                
+            else:
+                
+                wx.CallLater( 1, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
+                
             
         
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
@@ -2832,51 +2841,6 @@ class FrameComposeMessage( ClientGUITopLevelWindows.Frame ):
         if draft_key == self._draft_panel.GetDraftKey(): self.Close()
         
     '''
-class FrameSeedCache( ClientGUITopLevelWindows.Frame ):
-    
-    def __init__( self, parent, controller, seed_cache ):
-        
-        self._controller = controller
-        
-        ClientGUITopLevelWindows.Frame.__init__( self, parent, self._controller.PrepStringForDisplay( 'File Import Status' ) )
-        
-        self._seed_cache = seed_cache
-        
-        self._text = wx.StaticText( self, label = 'initialising' )
-        self._seed_cache_control = ClientGUICommon.SeedCacheControl( self, self._seed_cache )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-        self.SetInitialSize( ( 880, 620 ) )
-        
-        self.Show( True )
-        
-        self._controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
-        
-        wx.CallAfter( self._UpdateText )
-        
-        wx.CallAfter( self.Raise )
-        
-    
-    def _UpdateText( self ):
-        
-        ( status, ( total_processed, total ) ) = self._seed_cache.GetStatus()
-        
-        self._text.SetLabelText( status )
-        
-        self.Layout()
-        
-    
-    def NotifySeedUpdated( self, seed ):
-        
-        self._UpdateText()
-        
-    
 class FrameSplash( wx.Frame ):
     
     WIDTH = 420

@@ -78,7 +78,20 @@ except:
     
     import traceback
     
-    print( 'Critical error occured! Details written to crash.log!' )
-    
-    with open( 'crash.log', 'wb' ) as f: f.write( traceback.format_exc() )
-    
+    try:
+        
+        dest_path = os.path.join( HC.DB_DIR, 'crash.log' )
+        
+        with open( dest_path, 'wb' ) as f:
+            
+            f.write( traceback.format_exc() )
+            
+        
+        print( 'Critical error occured! Details written to crash.log!' )
+        
+    except NameError, IOError:
+        
+        print( 'Critical error occured!' )
+        
+        traceback.print_exc()
+        

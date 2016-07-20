@@ -74,14 +74,9 @@ class Controller( object ):
         
         HydrusData.ShowText = show_text
         
-        self._call_to_threads = [ HydrusThreading.THREADCallToThread( self ) for i in range( 10 ) ]
-        
-        for thread in self._call_to_threads:
-            
-            thread.start()
-            
-        
         self._http = ClientNetworking.HTTPConnectionManager()
+        
+        self._call_to_threads = []
         
         self._reads = {}
         
@@ -127,6 +122,30 @@ class Controller( object ):
         self._cookies = {}
         
     
+    def _GetCallToThread( self ):
+        
+        for call_to_thread in self._call_to_threads:
+            
+            if not call_to_thread.CurrentlyWorking():
+                
+                return call_to_thread
+                
+            
+        
+        if len( self._call_to_threads ) > 100:
+            
+            raise Exception( 'Too many call to threads!' )
+            
+        
+        call_to_thread = HydrusThreading.THREADCallToThread( self )
+        
+        self._call_to_threads.append( call_to_thread )
+        
+        call_to_thread.start()
+        
+        return call_to_thread
+        
+    
     def pub( self, topic, *args, **kwargs ):
         
         pass
@@ -144,9 +163,7 @@ class Controller( object ):
     
     def CallToThread( self, callable, *args, **kwargs ):
         
-        call_to_thread = random.choice( self._call_to_threads )
-        
-        while call_to_thread == threading.current_thread: call_to_thread = random.choice( self._call_to_threads )
+        call_to_thread = self._GetCallToThread()
         
         call_to_thread.put( callable, *args, **kwargs )
         

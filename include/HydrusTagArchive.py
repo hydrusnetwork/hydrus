@@ -176,7 +176,7 @@ class HydrusTagArchive( object ):
         try: hash_id = self._GetHashId( hash, read_only = True )
         except: return
         
-        self._c.execute( 'DELET FROM mappings WHERE hash_id = ?;', ( hash_id, ) )
+        self._c.execute( 'DELETE FROM mappings WHERE hash_id = ?;', ( hash_id, ) )
         
     
     def DeleteNamespaces( self ):

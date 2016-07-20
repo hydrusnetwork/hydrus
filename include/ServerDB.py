@@ -315,6 +315,8 @@ class DB( HydrusDB.HydrusDB ):
             all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master;' ) ) )
             
         
+        all_names.discard( 'sqlite_stat1' )
+        
         names_to_analyze = [ name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
         
         random.shuffle( names_to_analyze )
@@ -803,21 +805,21 @@ class DB( HydrusDB.HydrusDB ):
             
             deletee_hashes = set( self._GetHashes( deletees ) )
             
-            local_files_hashes = ServerFiles.GetAllHashes( 'file' )
-            thumbnails_hashes = ServerFiles.GetAllHashes( 'thumbnail' )
-            
-            for hash in local_files_hashes & deletee_hashes:
+            for hash in deletee_hashes:
                 
-                path = ServerFiles.GetFilePath( hash )
+                path = ServerFiles.GetExpectedFilePath( hash )
                 
-                HydrusPaths.RecyclePath( path )
+                if os.path.exists( path ):
+                    
+                    HydrusPaths.RecyclePath( path )
+                    
                 
-            
-            for hash in thumbnails_hashes & deletee_hashes:
+                path = ServerFiles.GetExpectedThumbnailPath( hash )
                 
-                path = ServerFiles.GetThumbnailPath( hash )
-                
-                HydrusPaths.RecyclePath( path )
+                if os.path.exists( path ):
+                    
+                    HydrusPaths.RecyclePath( path )
+                    
                 
             
             self._c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HydrusData.SplayListForDB( deletees ) + ';' )

@@ -442,6 +442,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ] = {}
         
         # remember size, remember position, last_size, last_pos, default gravity, default position, maximised, fullscreen
+        self._dictionary[ 'frame_locations' ][ 'file_import_status' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'main_gui' ] = ( True, True, ( 640, 480 ), ( 20, 20 ), ( -1, -1 ), 'topleft', True, False )
         self._dictionary[ 'frame_locations' ][ 'manage_options_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'manage_tags_dialog' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
@@ -474,6 +475,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
         self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
+        
+        self._dictionary[ 'noneable_integers' ][ 'suggested_tags_width' ] = None
         
         #
         

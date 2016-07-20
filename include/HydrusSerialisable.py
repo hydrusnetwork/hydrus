@@ -28,6 +28,7 @@ SERIALISABLE_TYPE_CONTENT = 23
 SERIALISABLE_TYPE_SERVER_TO_CLIENT_PETITION = 24
 SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER = 25
 SERIALISABLE_TYPE_LIST = 26
+SERIALISABLE_TYPE_HTML_PARSE_FORMULA = 27
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -81,7 +82,7 @@ class SerialisableBase( object ):
         
         return old_serialisable_info
         
-        
+    
     def DumpToNetworkString( self ):
         
         obj_string = self.DumpToString()
@@ -126,7 +127,7 @@ class SerialisableBaseNamed( SerialisableBase ):
         
         return ( self.SERIALISABLE_TYPE, self._name, self.SERIALISABLE_VERSION, self._GetSerialisableInfo() )
         
-
+    
     def GetName( self ): return self._name
     
     def SetName( self, name ): self._name = name
