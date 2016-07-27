@@ -10,7 +10,8 @@ def GetClientDefaultOptions():
     options = {}
     
     options[ 'play_dumper_noises' ] = True
-    options[ 'default_sort' ] = 0
+    options[ 'default_sort' ] = 0 # smallest
+    options[ 'sort_fallback' ] = 4 # newest
     options[ 'default_collect' ] = None
     options[ 'export_path' ] = None
     options[ 'hpos' ] = 400

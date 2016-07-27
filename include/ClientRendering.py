@@ -149,8 +149,6 @@ class RasterContainerImage( RasterContainer ):
     
 class RasterContainerVideo( RasterContainer ):
     
-    BUFFER_SIZE = 1024 * 1024 * 96
-    
     def __init__( self, media, target_resolution = None, init_position = 0 ):
         
         RasterContainer.__init__( self, media, target_resolution )
@@ -159,10 +157,29 @@ class RasterContainerVideo( RasterContainer ):
         self._last_index_asked_for = -1
         self._buffer_start_index = -1
         self._buffer_end_index = -1
+        self._renderer_awake = False
+        
+        self._stop = False
         
         ( x, y ) = self._target_resolution
         
-        frame_buffer_length = self.BUFFER_SIZE / ( x * y * 3 )
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        video_buffer_size_mb = new_options.GetInteger( 'video_buffer_size_mb' )
+        
+        duration = self._media.GetDuration()
+        num_frames = self._media.GetNumFrames()
+        
+        self._average_frame_duration = float( duration ) / num_frames
+        
+        frame_buffer_length = ( video_buffer_size_mb * 1024 * 1024 ) / ( x * y * 3 )
+        
+        # if we can't buffer the whole vid, then don't have a clunky massive buffer
+        
+        if num_frames * 0.1 < frame_buffer_length and frame_buffer_length < num_frames:
+            
+            frame_buffer_length = int( num_frames * 0.1 )
+            
         
         self._num_frames_backwards = frame_buffer_length * 2 / 3
         self._num_frames_forwards = frame_buffer_length / 3
@@ -174,9 +191,6 @@ class RasterContainerVideo( RasterContainer ):
         
         path = client_files_manager.GetFilePath( hash, mime )
         
-        duration = self._media.GetDuration()
-        num_frames = self._media.GetNumFrames()
-        
         if self._media.GetMime() == HC.IMAGE_GIF:
             
             self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
@@ -185,76 +199,104 @@ class RasterContainerVideo( RasterContainer ):
             
         else:
             
-            self._frame_duration = float( duration ) / num_frames
-            
             self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
             
         
         self._render_lock = threading.Lock()
+        self._buffer_lock = threading.Lock()
         
-        self._next_render_index = 0
+        self._next_render_index = -1
         self._render_to_index = -1
         self._rendered_first_frame = False
         
-        self.SetFramePosition( init_position )
+        self.GetReadyForFrame( init_position )
+        
+    
+    def _IndexOutOfRange( self, index, range_start, range_end ):
+        
+        before_start = index < range_start
+        after_end = range_end < index
+        
+        if range_start < range_end:
+            
+            if before_start or after_end:
+                
+                return True
+                
+            
+        else:
+            
+            if after_end and before_start:
+                
+                return True
+                
+            
+        
+        return False
         
     
     def _MaintainBuffer( self ):
         
-        deletees = []
-        
-        for index in self._frames.keys():
+        with self._buffer_lock:
             
-            if self._buffer_start_index < self._buffer_end_index:
+            deletees = [ index for index in self._frames.keys() if self._IndexOutOfRange( index, self._buffer_start_index, self._buffer_end_index ) ]
+            
+            for i in deletees:
                 
-                if index < self._buffer_start_index or self._buffer_end_index < index: deletees.append( index )
-                
-            else:
-                
-                if self._buffer_end_index < index and index < self._buffer_start_index: deletees.append( index )
+                del self._frames[ i ]
                 
             
-        
-        for i in deletees: del self._frames[ i ]
         
     
-    def _RENDERERSetRenderToPosition( self, index ):
+    def THREADMoveBuffer( self, render_to_index ):
         
         with self._render_lock:
             
-            if self._render_to_index != index:
+            if self._render_to_index != render_to_index:
                 
-                self._render_to_index = index
+                self._render_to_index = render_to_index
                 
-                HydrusGlobals.client_controller.CallToThread( self.THREADRender )
+                if not self._renderer_awake:
+                    
+                    HydrusGlobals.client_controller.CallToThread( self.THREADRender )
+                    
                 
             
         
     
-    def _RENDERERSetFramePosition( self, index ):
+    def THREADMoveRenderer( self, start_index, rush_to_index, render_to_index ):
         
         with self._render_lock:
             
-            if index == self._next_render_index: return
-            else:
+            if self._next_render_index != start_index:
                 
-                self._renderer.set_position( index )
+                self._renderer.set_position( start_index )
                 
-                self._next_render_index = index
-                self._render_to_index = index
+                self._next_render_index = start_index
+                
+                self._render_to_index = render_to_index
+                
+                HydrusGlobals.client_controller.CallToThread( self.THREADRender, rush_to_index )
                 
             
         
     
-    def THREADRender( self ):
+    def THREADRender( self, rush_to_index = None ):
         
         num_frames = self._media.GetNumFrames()
         
         while True:
             
-            time.sleep( 0.00001 ) # thread yield
+            if self._stop:
+                
+                self._renderer_awake = False
+                
+                return
+                
             
             with self._render_lock:
+                
+                self._renderer_awake = True
                 
                 if not self._rendered_first_frame or self._next_render_index != ( self._render_to_index + 1 ) % num_frames:
                     
@@ -270,7 +312,9 @@ class RasterContainerVideo( RasterContainer ):
                         
                         HydrusData.ShowException( e )
                         
-                        break
+                        self._renderer_awake = False
+                        
+                        return
                         
                     finally:
                         
@@ -279,34 +323,48 @@ class RasterContainerVideo( RasterContainer ):
                     
                     frame = GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = False )
                     
-                    wx.CallAfter( self.AddFrame, frame_index, frame )
+                    with self._buffer_lock:
+                        
+                        self._frames[ frame_index ] = frame
+                        
                     
                 else:
                     
-                    break
+                    self._renderer_awake = False
+                    
+                    return
                     
                 
             
-        
-    
-    def AddFrame( self, index, frame ):
-        
-        self._frames[ index ] = frame
+            if rush_to_index is not None and not self._IndexOutOfRange( rush_to_index, self._next_render_index, self._render_to_index ):
+                
+                time.sleep( 0.00001 )
+                
+            else:
+                
+                half_a_frame = ( self._average_frame_duration / 1000.0 ) * 0.5
+                
+                time.sleep( half_a_frame ) # just so we don't spam cpu
+                
+            
         
     
     def GetDuration( self, index ):
         
         if self._media.GetMime() == HC.IMAGE_GIF: return self._durations[ index ]
-        else: return self._frame_duration
+        else: return self._average_frame_duration
         
     
     def GetFrame( self, index ):
         
-        frame = self._frames[ index ]
+        with self._buffer_lock:
+            
+            frame = self._frames[ index ]
+            
         
         self._last_index_asked_for = index
         
-        self._MaintainBuffer()
+        self.GetReadyForFrame( self._last_index_asked_for + 1 )
         
         return frame
         
@@ -317,63 +375,41 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetNumFrames( self ): return self._media.GetNumFrames()
     
-    def GetResolution( self ): return self._media.GetResolution()
-    
-    def GetSize( self ): return self._target_resolution
-    
-    def GetTotalDuration( self ):
-        
-        if self._media.GetMime() == HC.IMAGE_GIF: return sum( self._durations )
-        else: return self._frame_duration * self.GetNumFrames()
-        
-    
-    def GetZoom( self ): return self._zoom
-    
-    def HasFrame( self, index ): return index in self._frames
-    
-    def IsScaled( self ): return self._zoom != 1.0
-    
-    def SetFramePosition( self, index ):
+    def GetReadyForFrame( self, next_index_to_expect ):
         
         num_frames = self.GetNumFrames()
         
         if num_frames > self._num_frames_backwards + 1 + self._num_frames_forwards:
             
-            new_buffer_start_index = max( 0, index - self._num_frames_backwards ) % num_frames
+            index_out_of_buffer = self._IndexOutOfRange( next_index_to_expect, self._buffer_start_index, self._buffer_end_index )
             
-            new_buffer_end_index = ( index + self._num_frames_forwards ) % num_frames
+            ideal_buffer_start_index = max( 0, next_index_to_expect - self._num_frames_backwards )
             
-            if index == self._last_index_asked_for: return
-            elif index < self._last_index_asked_for:
+            ideal_buffer_end_index = ( next_index_to_expect + self._num_frames_forwards ) % num_frames
+            
+            if not self._rendered_first_frame or index_out_of_buffer:
                 
-                if index < self._buffer_start_index:
-                    
-                    self._buffer_start_index = new_buffer_start_index
-                    
-                    self._RENDERERSetFramePosition( self._buffer_start_index )
-                    
-                    self._buffer_end_index = new_buffer_end_index
-                    
-                    self._RENDERERSetRenderToPosition( self._buffer_end_index )
-                    
+                self._buffer_start_index = ideal_buffer_start_index
                 
-            else: # index > self._last_index_asked_for
+                self._buffer_end_index = ideal_buffer_end_index
                 
-                currently_no_wraparound = self._buffer_start_index < self._buffer_end_index
+                HydrusGlobals.client_controller.CallToThread( self.THREADMoveRenderer, self._buffer_start_index, next_index_to_expect, self._buffer_end_index )
                 
-                self._buffer_start_index = new_buffer_start_index
+            else:
                 
-                if currently_no_wraparound:
+                # rendering can't go backwards, so dragging caret back shouldn't rewind either of these!
+                
+                if self.HasFrame( ideal_buffer_start_index ):
                     
-                    if index > self._buffer_end_index:
-                        
-                        self._RENDERERSetFramePosition( self._buffer_start_index )
-                        
+                    self._buffer_start_index = ideal_buffer_start_index
                     
                 
-                self._buffer_end_index = new_buffer_end_index
+                if not self._IndexOutOfRange( self._next_render_index + 1, self._buffer_start_index, ideal_buffer_end_index ):
+                    
+                    self._buffer_end_index = ideal_buffer_end_index
+                    
                 
-                self._RENDERERSetRenderToPosition( self._buffer_end_index )
+                HydrusGlobals.client_controller.CallToThread( self.THREADMoveBuffer, self._buffer_end_index )
                 
             
         else:
@@ -382,15 +418,49 @@ class RasterContainerVideo( RasterContainer ):
                 
                 self._buffer_start_index = 0
                 
-                self._RENDERERSetFramePosition( 0 )
-                
                 self._buffer_end_index = num_frames - 1
                 
-                self._RENDERERSetRenderToPosition( self._buffer_end_index )
+                HydrusGlobals.client_controller.CallToThread( self.THREADMoveRenderer, self._buffer_start_index, next_index_to_expect, self._buffer_end_index )
+                
+            else:
+                
+                if not self.HasFrame( next_index_to_expect ):
+                    
+                    # this rushes rendering to this point
+                    
+                    HydrusGlobals.client_controller.CallToThread( self.THREADRender, next_index_to_expect )
+                    
                 
             
         
         self._MaintainBuffer()
+        
+    
+    def GetResolution( self ): return self._media.GetResolution()
+    
+    def GetSize( self ): return self._target_resolution
+    
+    def GetTotalDuration( self ):
+        
+        if self._media.GetMime() == HC.IMAGE_GIF: return sum( self._durations )
+        else: return self._average_frame_duration * self.GetNumFrames()
+        
+    
+    def GetZoom( self ): return self._zoom
+    
+    def HasFrame( self, index ):
+        
+        with self._buffer_lock:
+            
+            return index in self._frames
+            
+        
+    
+    def IsScaled( self ): return self._zoom != 1.0
+    
+    def Stop( self ):
+        
+        self._stop = True
         
     
 class HydrusBitmap( object ):

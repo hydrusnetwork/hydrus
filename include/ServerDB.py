@@ -1071,23 +1071,32 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetAccountKeyFromAccessKey( self, service_key, access_key ):
         
-        try: ( account_key, ) = self._c.execute( 'SELECT account_key FROM accounts WHERE hashed_access_key = ?;', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) ).fetchone()
+        service_id = self._GetServiceId( service_key )
+        
+        try:
+            
+            ( account_key, ) = self._c.execute( 'SELECT account_key FROM accounts WHERE service_id = ? AND hashed_access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) ).fetchone()
+            
         except:
             
             # we do not delete the registration_key (and hence the raw unhashed access_key)
             # until the first attempt to create a session to make sure the user
             # has the access_key saved
             
-            try: ( account_type_id, account_key, expires ) = self._c.execute( 'SELECT account_type_id, account_key, expiry FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) ).fetchone()
-            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
+            try:
+                
+                ( account_type_id, account_key, expires ) = self._c.execute( 'SELECT account_type_id, account_key, expiry FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) ).fetchone()
+                
+            except:
+                
+                raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
+                
             
             self._c.execute( 'DELETE FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) )
             
             #
             
             now = HydrusData.GetNow()
-            
-            service_id = self._GetServiceId( service_key )
             
             self._c.execute( 'INSERT INTO accounts ( service_id, account_key, hashed_access_key, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( account_key ), sqlite3.Binary( hashlib.sha256( access_key ).digest() ), account_type_id, now, expires, 0, 0 ) )
             

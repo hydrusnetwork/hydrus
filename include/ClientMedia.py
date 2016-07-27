@@ -394,6 +394,64 @@ class MediaList( object ):
         else: return self._sorted_media[ previous_index ]
         
     
+    def _GetSortFunction( self, sort_by ):
+        
+        ( sort_by_type, sort_by_data ) = sort_by
+        
+        def deal_with_none( x ):
+            
+            if x is None: return -1
+            else: return x
+            
+        
+        if sort_by_type == 'system':
+            
+            if sort_by_data == CC.SORT_BY_RANDOM: sort_function = lambda x: random.random()
+            elif sort_by_data == CC.SORT_BY_SMALLEST: sort_function = lambda x: deal_with_none( x.GetSize() )
+            elif sort_by_data == CC.SORT_BY_LARGEST: sort_function = lambda x: -deal_with_none( x.GetSize() )
+            elif sort_by_data == CC.SORT_BY_SHORTEST: sort_function = lambda x: deal_with_none( x.GetDuration() )
+            elif sort_by_data == CC.SORT_BY_LONGEST: sort_function = lambda x: -deal_with_none( x.GetDuration() )
+            elif sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: deal_with_none( x.GetTimestamp( self._file_service_key ) )
+            elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -deal_with_none( x.GetTimestamp( self._file_service_key ) )
+            elif sort_by_data == CC.SORT_BY_MIME: sort_function = lambda x: x.GetMime()
+            
+        elif sort_by_type == 'namespaces':
+            
+            def namespace_sort_function( namespaces, x ):
+                
+                x_tags_manager = x.GetTagsManager()
+                
+                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), collapse_siblings = True ) for namespace in namespaces ]
+                
+            
+            sort_function = lambda x: namespace_sort_function( sort_by_data, x )
+            
+        elif sort_by_type in ( 'rating_descend', 'rating_ascend' ):
+            
+            service_key = sort_by_data
+            
+            def ratings_sort_function( service_key, reverse, x ):
+                
+                x_ratings_manager = x.GetRatingsManager()
+                
+                rating = deal_with_none( x_ratings_manager.GetRating( service_key ) )
+                
+                if reverse:
+                    
+                    rating *= -1
+                    
+                
+                return rating
+                
+            
+            reverse = sort_by_type == 'rating_descend'
+            
+            sort_function = lambda x: ratings_sort_function( service_key, reverse, x )
+            
+        
+        return sort_function
+        
+    
     def _RecalcHashes( self ):
         
         self._hashes = set()
@@ -721,64 +779,25 @@ class MediaList( object ):
     
     def Sort( self, sort_by = None ):
         
-        for media in self._collected_media: media.Sort( sort_by )
+        for media in self._collected_media:
+            
+            media.Sort( sort_by )
+            
         
-        if sort_by is None: sort_by = self._sort_by
+        if sort_by is None:
+            
+            sort_by = self._sort_by
+            
         
         self._sort_by = sort_by
         
-        ( sort_by_type, sort_by_data ) = sort_by
+        sort_function = self._GetSortFunction( ( 'system', HC.options[ 'sort_fallback' ] ) )
         
-        def deal_with_none( x ):
-            
-            if x is None: return -1
-            else: return x
-            
+        self._sorted_media.sort( sort_function )
         
-        if sort_by_type == 'system':
-            
-            if sort_by_data == CC.SORT_BY_RANDOM: sort_function = lambda x: random.random()
-            elif sort_by_data == CC.SORT_BY_SMALLEST: sort_function = lambda x: deal_with_none( x.GetSize() )
-            elif sort_by_data == CC.SORT_BY_LARGEST: sort_function = lambda x: -deal_with_none( x.GetSize() )
-            elif sort_by_data == CC.SORT_BY_SHORTEST: sort_function = lambda x: deal_with_none( x.GetDuration() )
-            elif sort_by_data == CC.SORT_BY_LONGEST: sort_function = lambda x: -deal_with_none( x.GetDuration() )
-            elif sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: deal_with_none( x.GetTimestamp( self._file_service_key ) )
-            elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -deal_with_none( x.GetTimestamp( self._file_service_key ) )
-            elif sort_by_data == CC.SORT_BY_MIME: sort_function = lambda x: x.GetMime()
-            
-        elif sort_by_type == 'namespaces':
-            
-            def namespace_sort_function( namespaces, x ):
-                
-                x_tags_manager = x.GetTagsManager()
-                
-                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), collapse_siblings = True ) for namespace in namespaces ]
-                
-            
-            sort_function = lambda x: namespace_sort_function( sort_by_data, x )
-            
-        elif sort_by_type in ( 'rating_descend', 'rating_ascend' ):
-            
-            service_key = sort_by_data
-            
-            def ratings_sort_function( service_key, reverse, x ):
-                
-                x_ratings_manager = x.GetRatingsManager()
-                
-                rating = deal_with_none( x_ratings_manager.GetRating( service_key ) )
-                
-                if reverse:
-                    
-                    rating *= -1
-                    
-                
-                return rating
-                
-            
-            reverse = sort_by_type == 'rating_descend'
-            
-            sort_function = lambda x: ratings_sort_function( service_key, reverse, x )
-            
+        # this is a stable sort, so the fallback order above will remain for equal items
+        
+        sort_function = self._GetSortFunction( self._sort_by )
         
         self._sorted_media.sort( sort_function )
         
@@ -1616,13 +1635,16 @@ class TagsManagerSimple( object ):
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
+        if collapse_siblings:
+            
+            combined = list( siblings_manager.CollapseTags( combined ) )
+            
+        
         slice = []
         
         for namespace in namespaces:
             
             tags = [ tag for tag in combined if tag.startswith( namespace + ':' ) ]
-            
-            if collapse_siblings: tags = list( siblings_manager.CollapseTags( tags ) )
             
             tags = [ tag.split( ':', 1 )[1] for tag in tags ]
             
@@ -1643,14 +1665,16 @@ class TagsManagerSimple( object ):
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
         
-        slice = { tag for tag in combined_current.union( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
+        combined = combined_current.union( combined_pending )
         
         if collapse_siblings:
             
             siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
             
-            slice = siblings_manager.CollapseTags( slice )
+            combined = siblings_manager.CollapseTags( combined )
             
+        
+        slice = { tag for tag in combined if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
         
         slice = frozenset( slice )
         

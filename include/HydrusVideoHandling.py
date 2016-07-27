@@ -307,7 +307,10 @@ class VideoRendererFFMPEG( object ):
         
         self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
         
-        self.skip_frames( skip_frames )
+        if skip_frames > 0:
+            
+            self.skip_frames( skip_frames )
+            
         
     
     def skip_frames( self, n ):

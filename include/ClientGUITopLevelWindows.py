@@ -393,7 +393,7 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         
         FrameThatResizes.__init__( self, parent, title, frame_key, float_on_parent )
         
-        self._ok = wx.Button( self, label = 'close' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'close' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventCloseButton )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )

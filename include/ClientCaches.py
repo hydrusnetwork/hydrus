@@ -200,55 +200,146 @@ class ClientFilesManager( object ):
         self._Reinit()
         
     
-    def _GenerateExpectedFilePath( self, location, hash, mime ):
+    def _GenerateExpectedFilePath( self, hash, mime ):
         
         hash_encoded = hash.encode( 'hex' )
         
-        prefix = hash_encoded[:2]
+        prefix = 'f' + hash_encoded[:2]
         
-        return os.path.join( location, prefix, hash_encoded + HC.mime_ext_lookup[ mime ] )
+        location = self._prefixes_to_locations[ prefix ]
         
-    
-    def _GenerateExpectedThumbnailPath( self, location, hash, full_size ):
-        
-        hash_encoded = hash.encode( 'hex' )
-        
-        first_two_chars = hash_encoded[:2]
-        
-        path = os.path.join( location, first_two_chars, hash_encoded ) + '.thumbnail'
-        
-        if not full_size:
-            
-            path += '.resized'
-            
+        path = os.path.join( location, prefix, hash_encoded + HC.mime_ext_lookup[ mime ] )
         
         return path
         
     
-    def _GetLocation( self, hash ):
+    def _GenerateExpectedFullSizeThumbnailPath( self, hash ):
         
         hash_encoded = hash.encode( 'hex' )
         
-        prefix = hash_encoded[:2]
+        prefix = 't' + hash_encoded[:2]
         
         location = self._prefixes_to_locations[ prefix ]
         
-        return location
+        path = os.path.join( location, prefix, hash_encoded ) + '.thumbnail'
+        
+        return path
+        
+    
+    def _GenerateExpectedResizedThumbnailPath( self, hash ):
+        
+        hash_encoded = hash.encode( 'hex' )
+        
+        prefix = 'r' + hash_encoded[:2]
+        
+        location = self._prefixes_to_locations[ prefix ]
+        
+        path = os.path.join( location, prefix, hash_encoded ) + '.thumbnail.resized'
+        
+        return path
+        
+    
+    def _GenerateFullSizeThumbnail( self, hash ):
+        
+        try:
+            
+            file_path = self._LookForFilePath( hash )
+            
+        except HydrusExceptions.FileMissingException:
+            
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
+            
+        
+        try:
+            
+            thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
+            
+        
+        full_size_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+        
+        try:
+            
+            with open( full_size_path, 'wb' ) as f:
+                
+                f.write( thumbnail )
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + full_size_path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+            
+        
+    
+    def _GenerateResizedThumbnail( self, hash ):
+        
+        full_size_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+        
+        options = self._controller.GetOptions()
+        
+        thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
+        
+        try:
+            
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
+            
+        except:
+            
+            try:
+                
+                HydrusPaths.DeletePath( full_size_path )
+                
+            except:
+                
+                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+                
+            
+            self._GenerateFullSizeThumbnail( hash )
+            
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
+            
+        
+        resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
+        
+        try:
+            
+            with open( resized_path, 'wb' ) as f:
+                
+                f.write( thumbnail_resized )
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but the resized version would not save to disk. This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+            
         
     
     def _GetRecoverTuple( self ):
         
-        paths = { path for path in self._prefixes_to_locations.values() }
+        all_locations = { location for location in self._prefixes_to_locations.values() }
         
-        for path in paths:
+        all_prefixes = self._prefixes_to_locations.keys()
+        
+        for possible_location in all_locations:
             
-            for prefix in HydrusData.IterateHexPrefixes():
+            for prefix in all_prefixes:
                 
-                correct_path = self._prefixes_to_locations[ prefix ]
+                correct_location = self._prefixes_to_locations[ prefix ]
                 
-                if path != correct_path and os.path.exists( os.path.join( path, prefix ) ):
+                if possible_location != correct_location and os.path.exists( os.path.join( possible_location, prefix ) ):
                     
-                    return ( prefix, path, correct_path )
+                    recoverable_location = possible_location
+                    
+                    return ( prefix, recoverable_location, correct_location )
                     
                 
             
@@ -258,94 +349,141 @@ class ClientFilesManager( object ):
     
     def _GetRebalanceTuple( self ):
         
-        paths_to_ideal_weights = self._controller.GetNewOptions().GetClientFilesLocationsToIdealWeights()
+        ( locations_to_ideal_weights, resized_thumbnail_override ) = self._controller.GetNewOptions().GetClientFilesLocationsToIdealWeights()
         
-        total_weight = sum( paths_to_ideal_weights.values() )
+        total_weight = sum( locations_to_ideal_weights.values() )
         
-        paths_to_normalised_ideal_weights = { path : weight / total_weight for ( path, weight ) in paths_to_ideal_weights.items() }
+        ideal_locations_to_normalised_weights = { location : weight / total_weight for ( location, weight ) in locations_to_ideal_weights.items() }
         
-        current_paths_to_normalised_weights = collections.defaultdict( lambda: 0 )
+        current_locations_to_normalised_weights = collections.defaultdict( lambda: 0 )
         
-        for ( prefix, path ) in self._prefixes_to_locations.items():
+        file_prefixes = [ prefix for prefix in self._prefixes_to_locations if prefix.startswith( 'f' ) ]
+        
+        for file_prefix in file_prefixes:
             
-            current_paths_to_normalised_weights[ path ] += 1.0 / 256
+            location = self._prefixes_to_locations[ file_prefix ]
+            
+            current_locations_to_normalised_weights[ location ] += 1.0 / 256
             
         
-        for path in current_paths_to_normalised_weights.keys():
+        for location in current_locations_to_normalised_weights.keys():
             
-            if path not in paths_to_normalised_ideal_weights:
+            if location not in ideal_locations_to_normalised_weights:
                 
-                paths_to_normalised_ideal_weights[ path ] = 0.0
+                ideal_locations_to_normalised_weights[ location ] = 0.0
                 
             
         
         #
         
-        overweight_paths = []
-        underweight_paths = []
+        overweight_locations = []
+        underweight_locations = []
         
-        for ( path, ideal_weight ) in paths_to_normalised_ideal_weights.items():
+        for ( location, ideal_weight ) in ideal_locations_to_normalised_weights.items():
             
-            if path in current_paths_to_normalised_weights:
+            if location in current_locations_to_normalised_weights:
                 
-                current_weight = current_paths_to_normalised_weights[ path ]
+                current_weight = current_locations_to_normalised_weights[ location ]
                 
                 if current_weight < ideal_weight:
                     
-                    underweight_paths.append( path )
+                    underweight_locations.append( location )
                     
                 elif current_weight >= ideal_weight + 1.0 / 256:
                     
-                    overweight_paths.append( path )
+                    overweight_locations.append( location )
                     
                 
             else:
                 
-                underweight_paths.append( path )
+                underweight_locations.append( location )
                 
             
         
         #
         
-        if len( underweight_paths ) == 0 or len( overweight_paths ) == 0:
+        if len( underweight_locations ) > 0 and len( overweight_locations ) > 0:
             
-            return None
+            overweight_location = overweight_locations.pop( 0 )
+            underweight_location = underweight_locations.pop( 0 )
+            
+            random.shuffle( file_prefixes )
+            
+            for file_prefix in file_prefixes:
+                
+                location = self._prefixes_to_locations[ file_prefix ]
+                
+                if location == overweight_location:
+                    
+                    return ( file_prefix, overweight_location, underweight_location )
+                    
+                
             
         else:
             
-            overweight_path = overweight_paths.pop( 0 )
-            underweight_path = underweight_paths.pop( 0 )
-            
-            prefixes_and_paths = self._prefixes_to_locations.items()
-            
-            random.shuffle( prefixes_and_paths )
-            
-            for ( prefix, path ) in prefixes_and_paths:
+            for hex_prefix in HydrusData.IterateHexPrefixes():
                 
-                if path == overweight_path:
+                full_size_prefix = 't' + hex_prefix
+                file_prefix = 'f' + hex_prefix
+                
+                full_size_location = self._prefixes_to_locations[ full_size_prefix ]
+                file_location = self._prefixes_to_locations[ file_prefix ]
+                
+                if full_size_location != file_location:
                     
-                    return ( prefix, overweight_path, underweight_path )
+                    return ( full_size_prefix, full_size_location, file_location )
                     
                 
             
+            if resized_thumbnail_override is None:
+                
+                for hex_prefix in HydrusData.IterateHexPrefixes():
+                    
+                    resized_prefix = 'r' + hex_prefix
+                    file_prefix = 'f' + hex_prefix
+                    
+                    resized_location = self._prefixes_to_locations[ resized_prefix ]
+                    file_location = self._prefixes_to_locations[ file_prefix ]
+                    
+                    if resized_location != file_location:
+                        
+                        return ( resized_prefix, resized_location, file_location )
+                        
+                    
+                
+            else:
+                
+                for hex_prefix in HydrusData.IterateHexPrefixes():
+                    
+                    resized_prefix = 'r' + hex_prefix
+                    
+                    resized_location = self._prefixes_to_locations[ resized_prefix ]
+                    
+                    if resized_location != resized_thumbnail_override:
+                        
+                        return ( resized_prefix, resized_location, resized_thumbnail_override )
+                        
+                    
+                
+            
+        
+        return None
         
     
     def _IterateAllFilePaths( self ):
         
         for ( prefix, location ) in self._prefixes_to_locations.items():
             
-            dir = os.path.join( location, prefix )
-            
-            filenames = os.listdir( dir )
-            
-            for filename in filenames:
+            if prefix.startswith( 'f' ):
                 
-                if filename.endswith( '.thumbnail' ) or filename.endswith( '.thumbnail.resized' ):
-                    
-                    continue
-                    
+                dir = os.path.join( location, prefix )
                 
-                yield os.path.join( dir, filename )
+                filenames = os.listdir( dir )
+                
+                for filename in filenames:
+                    
+                    yield os.path.join( dir, filename )
+                    
                 
             
         
@@ -354,13 +492,13 @@ class ClientFilesManager( object ):
         
         for ( prefix, location ) in self._prefixes_to_locations.items():
             
-            dir = os.path.join( location, prefix )
-            
-            filenames = os.listdir( dir )
-            
-            for filename in filenames:
+            if prefix.startswith( 't' ) or prefix.startswith( 'r' ):
                 
-                if filename.endswith( '.thumbnail' ) or filename.endswith( '.thumbnail.resized' ):
+                dir = os.path.join( location, prefix )
+                
+                filenames = os.listdir( dir )
+                
+                for filename in filenames:
                     
                     yield os.path.join( dir, filename )
                     
@@ -368,11 +506,11 @@ class ClientFilesManager( object ):
             
         
     
-    def _LookForFilePath( self, location, hash ):
+    def _LookForFilePath( self, hash ):
         
         for potential_mime in HC.ALLOWED_MIMES:
             
-            potential_path = self._GenerateExpectedFilePath( location, hash, potential_mime )
+            potential_path = self._GenerateExpectedFilePath( hash, potential_mime )
             
             if os.path.exists( potential_path ):
                 
@@ -380,7 +518,7 @@ class ClientFilesManager( object ):
                 
             
         
-        raise HydrusExceptions.FileMissingException( 'File for ' + hash.encode( 'hex' ) + ' not found in directory ' + location + '!' )
+        raise HydrusExceptions.FileMissingException( 'File for ' + hash.encode( 'hex' ) + ' not found!' )
         
     
     def _Reinit( self ):
@@ -427,9 +565,7 @@ class ClientFilesManager( object ):
         
         with self._lock:
             
-            location = self._GetLocation( hash )
-            
-            dest_path = self._GenerateExpectedFilePath( location, hash, mime )
+            dest_path = self._GenerateExpectedFilePath( hash, mime )
             
             if not os.path.exists( dest_path ):
                 
@@ -440,13 +576,11 @@ class ClientFilesManager( object ):
             
         
     
-    def AddThumbnail( self, hash, thumbnail ):
+    def AddFullSizeThumbnail( self, hash, thumbnail ):
         
         with self._lock:
             
-            location = self._GetLocation( hash )
-            
-            path = self._GenerateExpectedThumbnailPath( location, hash, True )
+            path = self._GenerateExpectedFullSizeThumbnailPath( hash )
             
             with open( path, 'wb' ) as f:
                 
@@ -454,7 +588,7 @@ class ClientFilesManager( object ):
                 
             
         
-        HydrusGlobals.client_controller.pub( 'new_thumbnails', { hash } )
+        self._controller.pub( 'new_thumbnails', { hash } )
         
     
     def ClearOrphans( self, move_location = None ):
@@ -662,11 +796,9 @@ class ClientFilesManager( object ):
             
             for hash in hashes:
                 
-                location = self._GetLocation( hash )
-                
                 try:
                     
-                    path = self._LookForFilePath( location, hash )
+                    path = self._LookForFilePath( hash )
                     
                 except HydrusExceptions.FileMissingException:
                     
@@ -683,10 +815,8 @@ class ClientFilesManager( object ):
             
             for hash in hashes:
                 
-                location = self._GetLocation( hash )
-                
-                path = self._GenerateExpectedThumbnailPath( location, hash, True )
-                resized_path = self._GenerateExpectedThumbnailPath( location, hash, False )
+                path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+                resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
                 
                 HydrusPaths.DeletePath( path )
                 HydrusPaths.DeletePath( resized_path )
@@ -698,15 +828,13 @@ class ClientFilesManager( object ):
         
         with self._lock:
             
-            location = self._GetLocation( hash )
-            
             if mime is None:
                 
-                path = self._LookForFilePath( location, hash )
+                path = self._LookForFilePath( hash )
                 
             else:
                 
-                path = self._GenerateExpectedFilePath( location, hash, mime )
+                path = self._GenerateExpectedFilePath( hash, mime )
                 
             
             if not os.path.exists( path ):
@@ -718,114 +846,21 @@ class ClientFilesManager( object ):
             
         
     
-    def _GenerateFullSizeThumbnail( self, location, hash ):
-        
-        try:
-            
-            file_path = self._LookForFilePath( location, hash )
-            
-        except HydrusExceptions.FileMissingException:
-            
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
-            
-        
-        try:
-            
-            thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
-            
-        
-        full_size_path = self._GenerateExpectedThumbnailPath( location, hash, True )
-        
-        try:
-            
-            with open( full_size_path, 'wb' ) as f:
-                
-                f.write( thumbnail )
-                
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + full_size_path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
-            
-        
-    
-    def _GenerateResizedThumbnail( self, location, hash ):
-        
-        full_size_path = self._GenerateExpectedThumbnailPath( location, hash, True )
-        
-        options = HydrusGlobals.client_controller.GetOptions()
-        
-        thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
-        
-        try:
-            
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
-            
-        except:
-            
-            try:
-                
-                HydrusPaths.DeletePath( full_size_path )
-                
-            except:
-                
-                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
-                
-            
-            self._GenerateFullSizeThumbnail( location, hash )
-            
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
-            
-        
-        resized_path = self._GenerateExpectedThumbnailPath( location, hash, False )
-        
-        try:
-            
-            with open( resized_path, 'wb' ) as f:
-                
-                f.write( thumbnail_resized )
-                
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but the resized version would not save to disk. This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
-            
-        
-    
-    def GetThumbnailPath( self, hash, full_size ):
+    def GetFullSizeThumbnailPath( self, hash ):
         
         with self._lock:
             
-            location = self._GetLocation( hash )
-            
-            path = self._GenerateExpectedThumbnailPath( location, hash, full_size )
+            path = self._GenerateExpectedFullSizeThumbnailPath( hash )
             
             if not os.path.exists( path ):
                 
-                if full_size:
+                self._GenerateFullSizeThumbnail( hash )
+                
+                if not self._bad_error_occured:
                     
-                    self._GenerateFullSizeThumbnail( location, hash )
+                    self._bad_error_occured = True
                     
-                    if not self._bad_error_occured:
-                        
-                        self._bad_error_occured = True
-                        
-                        HydrusData.ShowText( 'A thumbnail for a file, ' + hash.encode( 'hex' ) + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->maintenance->regenerate thumbnails\'.' )
-                        
-                    
-                else:
-                    
-                    self._GenerateResizedThumbnail( location, hash )
+                    HydrusData.ShowText( 'A thumbnail for a file, ' + hash.encode( 'hex' ) + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->maintenance->regenerate thumbnails\'.' )
                     
                 
             
@@ -833,13 +868,26 @@ class ClientFilesManager( object ):
             
         
     
-    def HaveThumbnail( self, hash ):
+    def GetResizedThumbnailPath( self, hash ):
         
         with self._lock:
             
-            location = self._GetLocation( hash )
+            path = self._GenerateExpectedResizedThumbnailPath( hash )
             
-            path = self._GenerateExpectedThumbnailPath( location, hash, True )
+            if not os.path.exists( path ):
+                
+                self._GenerateResizedThumbnail( hash )
+                
+            
+            return path
+            
+        
+    
+    def HaveFullSizeThumbnail( self, hash ):
+        
+        with self._lock:
+            
+            path = self._GenerateExpectedFullSizeThumbnailPath( hash )
             
             return os.path.exists( path )
             
@@ -858,9 +906,9 @@ class ClientFilesManager( object ):
             
             while rebalance_tuple is not None:
                 
-                ( prefix, overweight_path, underweight_path ) = rebalance_tuple
+                ( prefix, overweight_location, underweight_location ) = rebalance_tuple
                 
-                text = 'Moving \'' + prefix + '\' files from ' + overweight_path + ' to ' + underweight_path
+                text = 'Moving \'' + prefix + '\' from ' + overweight_location + ' to ' + underweight_location
                 
                 if partial:
                     
@@ -872,7 +920,8 @@ class ClientFilesManager( object ):
                     HydrusData.ShowText( text )
                     
                 
-                self._controller.Write( 'relocate_client_files', prefix, overweight_path, underweight_path )
+                # these two lines can cause a deadlock because the db sometimes calls stuff in here.
+                self._controller.Write( 'relocate_client_files', prefix, overweight_location, underweight_location )
                 
                 self._Reinit()
                 
@@ -893,9 +942,9 @@ class ClientFilesManager( object ):
             
             while recover_tuple is not None:
                 
-                ( prefix, incorrect_path, correct_path ) = recover_tuple
+                ( prefix, recoverable_location, correct_location ) = recover_tuple
                 
-                text = 'Recovering \'' + prefix + '\' files from ' + incorrect_path + ' to ' + correct_path
+                text = 'Recovering \'' + prefix + '\' from ' + recoverable_location + ' to ' + correct_location
                 
                 if partial:
                     
@@ -907,18 +956,10 @@ class ClientFilesManager( object ):
                     HydrusData.ShowText( text )
                     
                 
-                full_incorrect_path = os.path.join( incorrect_path, prefix )
-                full_correct_path = os.path.join( correct_path, prefix )
+                recoverable_path = os.path.join( recoverable_location, prefix )
+                correct_path = os.path.join( correct_location, prefix )
                 
-                HydrusPaths.MoveAndMergeTree( full_incorrect_path, full_correct_path )
-                
-                try: HydrusPaths.RecyclePath( full_incorrect_path )
-                except:
-                    
-                    HydrusData.ShowText( 'After recovering some files, attempting to remove ' + full_incorrect_path + ' failed.' )
-                    
-                    return
-                    
+                HydrusPaths.MoveAndMergeTree( recoverable_path, correct_path )
                 
                 if partial:
                     
@@ -944,9 +985,7 @@ class ClientFilesManager( object ):
         
         with self._lock:
             
-            location = self._GetLocation( hash )
-            
-            self._GenerateResizedThumbnail( location, hash )
+            self._GenerateResizedThumbnail( hash )
             
         
     
@@ -989,9 +1028,7 @@ class ClientFilesManager( object ):
                     
                     hash = hash_encoded.decode( 'hex' )
                     
-                    location = self._GetLocation( hash )
-                    
-                    full_size_path = self._GenerateExpectedThumbnailPath( location, hash, True )
+                    full_size_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
                     
                     if only_do_missing and os.path.exists( full_size_path ):
                         
@@ -1002,9 +1039,9 @@ class ClientFilesManager( object ):
                     
                     if mime in HC.MIMES_WITH_THUMBNAILS:
                         
-                        self._GenerateFullSizeThumbnail( location, hash )
+                        self._GenerateFullSizeThumbnail( hash )
                         
-                        thumbnail_resized_path = self._GenerateExpectedThumbnailPath( location, hash, False )
+                        thumbnail_resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
                         
                         if os.path.exists( thumbnail_resized_path ):
                             
@@ -1568,7 +1605,14 @@ class ThumbnailCache( object ):
             
             try:
                 
-                path = self._client_files_manager.GetThumbnailPath( hash, full_size )
+                if full_size:
+                    
+                    path = self._client_files_manager.GetFullSizeThumbnailPath( hash )
+                    
+                else:
+                    
+                    path = self._client_files_manager.GetResizedThumbnailPath( hash )
+                    
                 
             except HydrusExceptions.FileMissingException as e:
                 
@@ -1581,7 +1625,14 @@ class ThumbnailCache( object ):
             
             try:
                 
-                path = self._client_files_manager.GetThumbnailPath( hash, full_size )
+                if full_size:
+                    
+                    path = self._client_files_manager.GetFullSizeThumbnailPath( hash )
+                    
+                else:
+                    
+                    path = self._client_files_manager.GetResizedThumbnailPath( hash )
+                    
                 
             except HydrusExceptions.FileMissingException:
                 

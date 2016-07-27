@@ -122,7 +122,7 @@ class TestServer( unittest.TestCase ):
         
         prefix = hash_encoded[:2]
         
-        path =  os.path.join( client_files_default, prefix, hash_encoded + '.jpg' )
+        path =  os.path.join( client_files_default, 'f' + prefix, hash_encoded + '.jpg' )
         
         with open( path, 'wb' ) as f: f.write( 'file' )
         
@@ -139,7 +139,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        path = os.path.join( client_files_default, prefix, hash_encoded + '.thumbnail' )
+        path = os.path.join( client_files_default, 't' + prefix, hash_encoded + '.thumbnail' )
         
         with open( path, 'wb' ) as f: f.write( 'thumb' )
         
@@ -250,8 +250,8 @@ class TestServer( unittest.TestCase ):
         
         prefix = hash_encoded[:2]
         
-        file_path =  os.path.join( client_files_default, prefix, hash_encoded + '.jpg' )
-        thumbnail_path = os.path.join( client_files_default, prefix, hash_encoded + '.thumbnail' )
+        file_path =  os.path.join( client_files_default, 'f' + prefix, hash_encoded + '.jpg' )
+        thumbnail_path = os.path.join( client_files_default, 't' + prefix, hash_encoded + '.thumbnail' )
         
         with open( file_path, 'wb' ) as f: f.write( 'file' )
         with open( thumbnail_path, 'wb' ) as f: f.write( 'thumbnail' )

@@ -725,9 +725,12 @@ class TestClientDB( unittest.TestCase ):
         
         for prefix in HydrusData.IterateHexPrefixes():
             
-            dir = os.path.join( client_files_default, prefix )
-            
-            self.assertTrue( os.path.exists( dir ) )
+            for c in ( 'f', 't', 'r' ):
+                
+                dir = os.path.join( client_files_default, c + prefix )
+                
+                self.assertTrue( os.path.exists( dir ) )
+                
             
         
     

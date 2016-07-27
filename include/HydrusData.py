@@ -1460,8 +1460,14 @@ class ClientToServerContentUpdatePackage( HydrusYAMLBase ):
         
         if data_type == HC.CONTENT_TYPE_FILES:
             
-            if action == HC.CONTENT_UPDATE_PETITION: return ( ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids }, reason ) for ( hash_ids, reason ) in data )
-            else: return ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids } for hash_ids in ( data, ) )
+            if action == HC.CONTENT_UPDATE_PETITION:
+                
+                return ( ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids }, reason ) for ( hash_ids, reason ) in data )
+                
+            else:
+                
+                return [ { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids } for hash_ids in data ]
+                
             
         if data_type == HC.CONTENT_TYPE_MAPPINGS:
             

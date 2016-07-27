@@ -243,13 +243,22 @@ class ManageOptionsPanel( ManagePanel ):
             self._delete = wx.Button( self, label = 'delete' )
             self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
             
+            self._resized_thumbnails_override = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            
             #
             
             self._new_options = HydrusGlobals.client_controller.GetNewOptions()
             
-            for ( location, weight ) in self._new_options.GetClientFilesLocationsToIdealWeights().items():
+            ( locations_to_ideal_weights, resized_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+            
+            for ( location, weight ) in locations_to_ideal_weights.items():
                 
                 self._client_files.Append( ( location, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( location, weight ) )
+                
+            
+            if resized_thumbnail_override is not None:
+                
+                self._resized_thumbnails_override.SetPath( resized_thumbnail_override )
                 
             
             #
@@ -275,6 +284,23 @@ class ManageOptionsPanel( ManagePanel ):
             hbox.AddF( self._delete, CC.FLAGS_MIXED )
             
             vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+            
+            text = 'If you like, you can force all your resized thumbnails to be stored in a single location, for instance on a low-latency SSD.'
+            text += os.linesep * 2
+            text += 'Leave it blank to store resized thumbnails with everything else.'
+            
+            st = wx.StaticText( self, label = text )
+            
+            st.Wrap( 400 )
+            
+            vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self, label = 'resized thumbnail override location: ' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._resized_thumbnails_override, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -349,7 +375,14 @@ class ManageOptionsPanel( ManagePanel ):
                 locations_to_weights[ location ] = weight
                 
             
-            self._new_options.SetClientFilesLocationsToIdealWeights( locations_to_weights )
+            resized_thumbnails_override = self._resized_thumbnails_override.GetPath()
+            
+            if resized_thumbnails_override == '':
+                
+                resized_thumbnails_override = None
+                
+            
+            self._new_options.SetClientFilesLocationsToIdealWeights( locations_to_weights, resized_thumbnails_override )
             
         
 
@@ -1162,7 +1195,10 @@ class ManageOptionsPanel( ManagePanel ):
                 
                 abs_path = HydrusPaths.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
                 
-                if abs_path is not None: self._export_location.SetPath( abs_path )
+                if abs_path is not None:
+                    
+                    self._export_location.SetPath( abs_path )
+                    
                 
             
             self._delete_to_recycle_bin.SetValue( HC.options[ 'delete_to_recycle_bin' ] )
@@ -1665,7 +1701,9 @@ class ManageOptionsPanel( ManagePanel ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._default_sort = ClientGUICommon.ChoiceSort( self, sort_by = HC.options[ 'sort_by' ] )
+            self._default_sort = ClientGUICommon.ChoiceSort( self )
+            
+            self._sort_fallback = ClientGUICommon.ChoiceSort( self, add_namespaces_and_ratings = False )
             
             self._default_collect = ClientGUICommon.CheckboxCollect( self )
             
@@ -1677,7 +1715,21 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]: self._sort_by.Append( '-'.join( sort_by ), sort_by )
+            try:
+                
+                self._default_sort.SetSelection( HC.options[ 'default_sort' ] )
+                
+            except:
+                
+                self._default_sort.SetSelection( 0 )
+                
+            
+            self._sort_fallback.SetSelection( HC.options[ 'sort_fallback' ] )
+            
+            for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]:
+                
+                self._sort_by.Append( '-'.join( sort_by ), sort_by )
+                
             
             #
             
@@ -1687,6 +1739,8 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddF( wx.StaticText( self, label = 'default sort: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._default_sort, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'secondary sort (when primary gives two equal values): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._sort_fallback, CC.FLAGS_EXPAND_BOTH_WAYS )
             gridbox.AddF( wx.StaticText( self, label = 'default collect: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._default_collect, CC.FLAGS_EXPAND_BOTH_WAYS )
             
@@ -1740,6 +1794,7 @@ class ManageOptionsPanel( ManagePanel ):
         def UpdateOptions( self ):
             
             HC.options[ 'default_sort' ] = self._default_sort.GetSelection() 
+            HC.options[ 'sort_fallback' ] = self._sort_fallback.GetSelection()
             HC.options[ 'default_collect' ] = self._default_collect.GetChoice()
             
             sort_by_choices = []
@@ -1816,6 +1871,11 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._estimated_number_fullscreens = wx.StaticText( self, label = '' )
             
+            self._video_buffer_size_mb = wx.SpinCtrl( self, min = 48, max = 16 * 1024 )
+            self._video_buffer_size_mb.Bind( wx.EVT_SPINCTRL, self.EventVideoBufferUpdate )
+            
+            self._estimated_number_video_frames = wx.StaticText( self, label = '' )
+            
             self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( self, '', min = 1, max = 100000 )
             
             self._num_autocomplete_chars = wx.SpinCtrl( self, min = 1, max = 100 )
@@ -1850,6 +1910,8 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
             
+            self._video_buffer_size_mb.SetValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
+            
             self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
             
             self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
@@ -1881,6 +1943,11 @@ class ManageOptionsPanel( ManagePanel ):
             fullscreens_sizer.AddF( self._fullscreen_cache_size, CC.FLAGS_MIXED )
             fullscreens_sizer.AddF( self._estimated_number_fullscreens, CC.FLAGS_MIXED )
             
+            video_buffer_sizer = wx.BoxSizer( wx.HORIZONTAL )
+            
+            video_buffer_sizer.AddF( self._video_buffer_size_mb, CC.FLAGS_MIXED )
+            video_buffer_sizer.AddF( self._estimated_number_video_frames, CC.FLAGS_MIXED )
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._disk_cache_init_period, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1910,6 +1977,23 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for media viewer cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
+            
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            text = 'Hydrus video rendering is CPU intensive.'
+            text += os.linesep
+            text += 'If you have a lot of memory, you can set a generous potential video buffer to compensate.'
+            text += os.linesep
+            text += 'If the video buffer can hold an entire video, it only needs to be rendered once and will loop smoothly.'
+            
+            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_MIXED )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory for video buffer: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( video_buffer_sizer, CC.FLAGS_NONE )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -1955,6 +2039,7 @@ class ManageOptionsPanel( ManagePanel ):
             self.EventFullscreensUpdate( None )
             self.EventPreviewsUpdate( None )
             self.EventThumbnailsUpdate( None )
+            self.EventVideoBufferUpdate( None )
             
             wx.CallAfter( self.Layout ) # draws the static texts correctly
             
@@ -1998,6 +2083,13 @@ class ManageOptionsPanel( ManagePanel ):
             self._estimated_number_thumbnails.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
             
         
+        def EventVideoBufferUpdate( self, event ):
+            
+            estimated_720p_frames = int( ( self._video_buffer_size_mb.GetValue() * 1024 * 1024 ) / ( 1280 * 720 * 3 ) )
+            
+            self._estimated_number_video_frames.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( estimated_720p_frames ) + ' frames of 720p video)' )
+            
+        
         def UpdateOptions( self ):
             
             self._new_options.SetNoneableInteger( 'disk_cache_init_period', self._disk_cache_init_period.GetValue() )
@@ -2010,6 +2102,8 @@ class ManageOptionsPanel( ManagePanel ):
             HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
             HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
             HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
+            
+            self._new_options.SetInteger( 'video_buffer_size_mb', self._video_buffer_size_mb.GetValue() )
             
             self._new_options.SetNoneableInteger( 'forced_search_limit', self._forced_search_limit.GetValue() )
             
@@ -2440,10 +2534,10 @@ class ManageTagsPanel( ManagePanel ):
             self._modify_mappers = wx.Button( self, label = 'modify mappers' )
             self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
             
-            self._copy_tags = wx.Button( self, label = 'copy tags' )
+            self._copy_tags = wx.Button( self, id = wx.ID_COPY, label = 'copy tags' )
             self._copy_tags.Bind( wx.EVT_BUTTON, self.EventCopyTags )
             
-            self._paste_tags = wx.Button( self, label = 'paste tags' )
+            self._paste_tags = wx.Button( self, id = wx.ID_PASTE, label = 'paste tags' )
             self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
             
             if self._i_am_local_tag_service:

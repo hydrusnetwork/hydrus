@@ -1641,22 +1641,25 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
     
 class ChoiceSort( BetterChoice ):
     
-    def __init__( self, parent, page_key = None, sort_by = None ):
+    def __init__( self, parent, page_key = None, add_namespaces_and_ratings = True ):
         
         BetterChoice.__init__( self, parent )
         
         self._page_key = page_key
         
-        if sort_by is None: sort_by = HC.options[ 'sort_by' ]
+        sort_choices = list( CC.SORT_CHOICES )
         
-        sort_choices = CC.SORT_CHOICES + sort_by
-        
-        ratings_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-        
-        for ratings_service in ratings_services:
+        if add_namespaces_and_ratings:
             
-            sort_choices.append( ( 'rating_descend', ratings_service ) )
-            sort_choices.append( ( 'rating_ascend', ratings_service ) )
+            sort_choices.extend( HC.options[ 'sort_by' ] )
+            
+            ratings_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            
+            for ratings_service in ratings_services:
+                
+                sort_choices.append( ( 'rating_descend', ratings_service ) )
+                sort_choices.append( ( 'rating_ascend', ratings_service ) )
+                
             
         
         for ( sort_by_type, sort_by_data ) in sort_choices:
@@ -1678,9 +1681,6 @@ class ChoiceSort( BetterChoice ):
             
             self.Append( 'sort by ' + string, ( sort_by_type, sort_by_data ) )
             
-        
-        try: self.SetSelection( HC.options[ 'default_sort' ] )
-        except: pass
         
         self.Bind( wx.EVT_CHOICE, self.EventChoice )
         

@@ -660,6 +660,15 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self._sort_by = ClientGUICommon.ChoiceSort( self, self._page_key )
         
+        try:
+            
+            self._sort_by.SetSelection( HC.options[ 'default_sort' ] )
+            
+        except:
+            
+            self._sort_by.SetSelection( 0 )
+            
+        
         sizer.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
@@ -2824,24 +2833,20 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def ShowQuery( self, query_key, media_results ):
         
-        try:
+        if query_key == self._query_key:
             
-            if query_key == self._query_key:
-                
-                current_predicates = self._current_predicates_box.GetPredicates()
-                
-                file_service_key = self._management_controller.GetKey( 'file_service' )
-                
-                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
-                
-                panel.Collect( self._page_key, self._collect_by.GetChoice() )
-                
-                panel.Sort( self._page_key, self._sort_by.GetChoice() )
-                
-                self._controller.pub( 'swap_media_panel', self._page_key, panel )
-                
+            current_predicates = self._current_predicates_box.GetPredicates()
             
-        except: wx.MessageBox( traceback.format_exc() )
+            file_service_key = self._management_controller.GetKey( 'file_service' )
+            
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
+            
+            panel.Collect( self._page_key, self._collect_by.GetChoice() )
+            
+            panel.Sort( self._page_key, self._sort_by.GetChoice() )
+            
+            self._controller.pub( 'swap_media_panel', self._page_key, panel )
+            
         
 
 management_panel_types_to_classes[ MANAGEMENT_TYPE_QUERY ] = ManagementPanelQuery

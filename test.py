@@ -92,7 +92,15 @@ class Controller( object ):
         services.append( ClientData.GenerateService( CC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, CC.LOCAL_TAG_SERVICE_KEY, {} ) )
         self._reads[ 'services' ] = services
         
-        client_files_locations = { prefix : client_files_default for prefix in HydrusData.IterateHexPrefixes() }
+        client_files_locations = {}
+        
+        for prefix in HydrusData.IterateHexPrefixes():
+            
+            for c in ( 'f', 't', 'r' ):
+                
+                client_files_locations[ c + prefix ] = client_files_default
+                
+            
         
         self._reads[ 'client_files_locations' ] = client_files_locations
         

@@ -480,9 +480,16 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'integers' ] = {}
+        
+        self._dictionary[ 'integers' ][ 'video_buffer_size_mb' ] = 96
+        
+        #
+        
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
         
         self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
+        self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = None
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -522,16 +529,23 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            result = {}
+            paths_to_weights = {}
             
             for ( portable_path, weight ) in self._dictionary[ 'client_files_locations_ideal_weights' ]:
                 
                 abs_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_path )
                 
-                result[ abs_path ] = weight
+                paths_to_weights[ abs_path ] = weight
                 
             
-            return result
+            resized_thumbnail_override = self._dictionary[ 'client_files_locations_resized_thumbnail_override' ]
+            
+            if resized_thumbnail_override is not None:
+                
+                resized_thumbnail_override = HydrusPaths.ConvertPortablePathToAbsPath( resized_thumbnail_override )
+                
+            
+            return ( paths_to_weights, resized_thumbnail_override )
             
         
     
@@ -621,6 +635,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         return self._dictionary[ 'frame_locations' ].items()
         
     
+    def GetInteger( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'integers' ][ name ]
+            
+        
+    
     def GetNoneableInteger( self, name ):
         
         with self._lock:
@@ -656,13 +678,20 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetClientFilesLocationsToIdealWeights( self, locations_to_weights ):
+    def SetClientFilesLocationsToIdealWeights( self, locations_to_weights, resized_thumbnail_override ):
         
         with self._lock:
             
             portable_locations_and_weights = [ ( HydrusPaths.ConvertAbsPathToPortablePath( location ), float( weight ) ) for ( location, weight ) in locations_to_weights.items() ]
             
             self._dictionary[ 'client_files_locations_ideal_weights' ] = portable_locations_and_weights
+            
+            if resized_thumbnail_override is not None:
+                
+                resized_thumbnail_override = HydrusPaths.ConvertAbsPathToPortablePath( resized_thumbnail_override )
+                
+            
+            self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = resized_thumbnail_override
             
         
     
@@ -677,6 +706,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     def SetFrameLocation( self, frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ):
         
         self._dictionary[ 'frame_locations' ][ frame_key ] = ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+        
+    
+    def SetInteger( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'integers' ][ name ] = value
+            
         
     
     def SetNoneableInteger( self, name, value ):
@@ -1901,7 +1938,7 @@ class ServiceRepository( ServiceRestricted ):
             
             for hash in remote_thumbnail_hashes_i_should_have:
                 
-                if not client_files_manager.HaveThumbnail( hash ):
+                if not client_files_manager.HaveFullSizeThumbnail( hash ):
                     
                     thumbnail_hashes_i_need.add( hash )
                     
@@ -1932,7 +1969,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     thumbnail = self.Request( HC.GET, 'thumbnail', request_args = request_args )
                     
-                    client_files_manager.AddThumbnail( hash, thumbnail )
+                    client_files_manager.AddFullSizeThumbnail( hash, thumbnail )
                     
                 
                 job_key.DeleteVariable( 'popup_gauge_1' )

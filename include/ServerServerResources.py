@@ -267,6 +267,10 @@ class HydrusResourceCommandRestrictedAccountTypes( HydrusResourceCommandRestrict
         
         HydrusGlobals.server_controller.WriteSynchronous( 'account_types', self._service_key, edit_log )
         
+        session_manager = HydrusGlobals.server_controller.GetServerSessionManager()
+        
+        session_manager.RefreshAccounts( self._service_key )
+        
         response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context

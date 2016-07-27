@@ -1598,7 +1598,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _RebalanceClientFiles( self ):
         
-        text = 'This will move your files around your storage directories until they satisfy the weights you have set in the options. It will also recover and folders that are in the wrong place. Use this if you have recently changed your file storage locations and want to hurry any transfers you have set up, or if you are recovering a complicated backup.'
+        text = 'This will move your files around your storage directories until they satisfy the weights you have set in the options. It will also recover any folders that are in the wrong place. Use this if you have recently changed your file storage locations and want to hurry any transfers you have set up, or if you are recovering a complicated backup.'
         text += os.linesep * 2
         text += 'The operation will lock file access and the database. Popup messages will report its progress.'
         

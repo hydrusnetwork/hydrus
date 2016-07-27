@@ -2134,7 +2134,9 @@ class DB( HydrusDB.HydrusDB ):
         
         for prefix in HydrusData.IterateHexPrefixes():
             
-            self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( prefix, location ) )
+            self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'f' + prefix, location ) )
+            self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 't' + prefix, location ) )
+            self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'r' + prefix, location ) )
             
         
         init_service_info = []
@@ -4906,7 +4908,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 thumbnail = HydrusFileHandling.GenerateThumbnail( dest_path )
                 
-                client_files_manager.AddThumbnail( hash, thumbnail )
+                client_files_manager.AddFullSizeThumbnail( hash, thumbnail )
                 
             
             if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
@@ -7863,6 +7865,61 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'sankaku chan', ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ] ) )
             
         
+        if version == 215:
+            
+            info = self._c.execute( 'SELECT prefix, location FROM client_files_locations;' ).fetchall()
+            
+            self._c.execute( 'DELETE FROM client_files_locations;' )
+            
+            for ( i, ( prefix, location ) ) in enumerate( info ):
+                
+                self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'f' + prefix, location ) )
+                self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 't' + prefix, location ) )
+                self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'r' + prefix, location ) )
+                
+                location = HydrusPaths.ConvertPortablePathToAbsPath( location )
+                
+                text_prefix = 'rearranging client files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, 256 ) + ', '
+                
+                source = os.path.join( location, prefix )
+                file_dest = os.path.join( location, 'f' + prefix )
+                thumb_dest = os.path.join( location, 't' + prefix )
+                resized_dest = os.path.join( location, 'r' + prefix )
+                
+                shutil.move( source, file_dest )
+                
+                os.makedirs( thumb_dest )
+                os.makedirs( resized_dest )
+                
+                filenames = os.listdir( file_dest )
+                
+                num_to_do = len( filenames )
+                
+                for ( j, filename ) in enumerate( filenames ):
+                    
+                    if j % 100 == 0:
+                        
+                        self._controller.pub( 'splash_set_status_text', text_prefix + HydrusData.ConvertValueRangeToPrettyString( j, num_to_do ) )
+                        
+                    
+                    source_path = os.path.join( file_dest, filename )
+                    
+                    if source_path.endswith( 'thumbnail' ):
+                        
+                        dest_path = os.path.join( thumb_dest, filename )
+                        
+                        shutil.move( source_path, dest_path )
+                        
+                    elif source_path.endswith( 'resized' ):
+                        
+                        dest_path = os.path.join( resized_dest, filename )
+                        
+                        shutil.move( source_path, dest_path )
+                        
+                    
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -8051,6 +8108,19 @@ class DB( HydrusDB.HydrusDB ):
             
         
         if len( pending_mappings_ids ) > 0:
+            
+            culled_pending_mappings_ids = []
+            
+            for ( namespace_id, tag_id, hash_ids ) in pending_mappings_ids:
+                
+                existing_current_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ) }
+                
+                valid_hash_ids = set( hash_ids ).difference( existing_current_hash_ids )
+                
+                culled_pending_mappings_ids.append( ( namespace_id, tag_id, valid_hash_ids ) )
+                
+            
+            pending_mappings_ids = culled_pending_mappings_ids
             
             for ( namespace_id, tag_id, hash_ids ) in pending_mappings_ids:
                 

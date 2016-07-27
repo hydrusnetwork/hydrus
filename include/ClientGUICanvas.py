@@ -120,16 +120,15 @@ def ShouldHaveAnimationBar( media ):
     
 class Animation( wx.Window ):
     
+    TIMER_MS = 5
+    
     def __init__( self, parent, media, initial_size, initial_position, start_paused ):
         
         wx.Window.__init__( self, parent, size = initial_size, pos = initial_position )
         
-        self.SetDoubleBuffered( True )
-        
         ( initial_width, initial_height ) = initial_size
         
         self._media = media
-        self._video_container = ClientRendering.RasterContainerVideo( self._media, initial_size )
         
         self._animation_bar = None
         
@@ -143,10 +142,12 @@ class Animation( wx.Window ):
         
         self._current_frame_index = int( ( self._num_frames - 1 ) * HC.options[ 'animation_start_position' ] )
         self._current_frame_drawn = False
-        self._current_frame_drawn_at = 0.0
-        self._next_frame_due_at = 0.0
+        self._next_frame_due_at = HydrusData.GetNowPrecise()
+        self._slow_frame_score = 1.0
         
         self._paused = start_paused
+        
+        self._video_container = ClientRendering.RasterContainerVideo( self._media, initial_size, init_position = self._current_frame_index )
         
         self._canvas_bmp = wx.EmptyBitmap( initial_width, initial_height, 24 )
         
@@ -159,12 +160,14 @@ class Animation( wx.Window ):
         self.Bind( wx.EVT_KEY_UP, self.EventPropagateKey )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
-        self._timer_video.Start( 5, wx.TIMER_CONTINUOUS )
+        self._timer_video.Start( self.TIMER_MS, wx.TIMER_CONTINUOUS )
         
         self.Refresh()
         
     
     def __del__( self ):
+        
+        self._video_container.Stop()
         
         wx.CallLater( 500, gc.collect )
         
@@ -211,7 +214,7 @@ class Animation( wx.Window ):
             dc.StretchBlit( 0, 0, my_width, my_height, mdc, 0, 0, frame_width, frame_height )
             
         
-        wx.CallAfter( wx_bmp.Destroy )
+        wx_bmp.Destroy()
         
         if self._animation_bar is not None:
             
@@ -222,21 +225,16 @@ class Animation( wx.Window ):
         
         next_frame_time_s = self._video_container.GetDuration( self._current_frame_index ) / 1000.0
         
-        if HydrusData.TimeHasPassedPrecise( self._next_frame_due_at + next_frame_time_s ):
+        next_frame_ideally_due = self._next_frame_due_at + next_frame_time_s
+        
+        if HydrusData.TimeHasPassedPrecise( next_frame_ideally_due ):
             
-            # we are rendering slower than the animation demands, so we'll slow down
-            # this also initialises self._next_frame_due_at
-            
-            self._current_frame_drawn_at = HydrusData.GetNowPrecise()
+            self._next_frame_due_at = HydrusData.GetNowPrecise() + next_frame_time_s
             
         else:
             
-            # to make timings more accurate and keep frame throughput accurate, let's pretend we drew this at the right time
+            self._next_frame_due_at = next_frame_ideally_due
             
-            self._current_frame_drawn_at = self._next_frame_due_at
-            
-        
-        self._next_frame_due_at = self._current_frame_drawn_at + next_frame_time_s
         
         self._a_frame_has_been_drawn = True
         
@@ -264,11 +262,7 @@ class Animation( wx.Window ):
         
         dc = wx.BufferedPaintDC( self, self._canvas_bmp )
         
-        if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ):
-            
-            self._DrawFrame( dc )
-            
-        elif not self._a_frame_has_been_drawn:
+        if not self._a_frame_has_been_drawn:
             
             self._DrawWhite( dc )
             
@@ -313,6 +307,8 @@ class Animation( wx.Window ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
+        ( media_width, media_height ) = self._media.GetResolution()
+        
         ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
         
         if my_width != current_bmp_width or my_height != current_bmp_height:
@@ -322,21 +318,29 @@ class Animation( wx.Window ):
                 ( renderer_width, renderer_height ) = self._video_container.GetSize()
                 
                 we_just_zoomed_in = my_width > renderer_width or my_height > renderer_height
+                we_just_zoomed_out = my_width < renderer_width or my_height < renderer_height
                 
                 if we_just_zoomed_in:
                     
                     if self._video_container.IsScaled():
                         
-                        ( media_width, media_height ) = self._media.GetResolution()
-                        
                         target_width = min( media_width, my_width )
                         target_height = min( media_height, my_height )
                         
-                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ) )
+                        self._video_container.Stop()
+                        
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index )
                         
                     
-                
-                self._video_container.SetFramePosition( self._current_frame_index )
+                elif we_just_zoomed_out:
+                    
+                    if my_width < media_width or my_height < media_height: # i.e. new zoom is scaled
+                        
+                        self._video_container.Stop()
+                        
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_width, my_height ), init_position = self._current_frame_index )
+                        
+                    
                 
                 self._current_frame_drawn = False
                 self._a_frame_has_been_drawn = False
@@ -356,12 +360,9 @@ class Animation( wx.Window ):
             
             self._current_frame_index = frame_index
             
-            self._video_container.SetFramePosition( self._current_frame_index )
+            self._video_container.GetReadyForFrame( self._current_frame_index )
             
-            self._current_frame_drawn_at = 0.0
             self._current_frame_drawn = False
-            
-            self.Refresh()
             
         
         self._paused = True
@@ -420,7 +421,7 @@ class Animation( wx.Window ):
                 
                 if self._current_frame_drawn:
                     
-                    if not self._paused and HydrusData.TimeHasPassedPrecise( self._next_frame_due_at ):
+                    if not self._paused and HydrusData.TimeHasPassedPrecise( self._next_frame_due_at - self.TIMER_MS / 1000.0 ):
                         
                         num_frames = self._media.GetNumFrames()
                         
@@ -433,13 +434,16 @@ class Animation( wx.Window ):
                         
                         self._current_frame_drawn = False
                         
-                        self._video_container.SetFramePosition( self._current_frame_index )
-                        
                     
                 
-                if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ):
+                if not self._current_frame_drawn:
                     
-                    self.Refresh()
+                    if self._video_container.HasFrame( self._current_frame_index ):
+                        
+                        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+                        
+                        self._DrawFrame( dc )
+                        
                     
                 
             
@@ -884,6 +888,11 @@ class Canvas( wx.Window ):
         
     
     def _HydrusShouldNotProcessInput( self ):
+        
+        if HydrusGlobals.client_controller.MenuIsOpen():
+            
+            return True
+            
         
         if HydrusGlobals.do_not_catch_char_hook:
             
