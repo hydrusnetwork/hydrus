@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 216</h3></li>
+				<ul>
+					<li>video rendering pipeline rewritten to be much smoother</li>
+					<li>canvas video render timing rewritten to be more frame accurate and smoother</li>
+					<li>video rendering pipeline will deal with 100% CPU rendering bottlenecks much better</li>
+					<li>videocontainers will rush to render towards clicked cursor and then slow down</li>
+					<li>videocontainers will stop rendering as soon as they are replaced on zoom</li>
+					<li>videocontainers will stop rendering as soon as their parent canvas is closed</li>
+					<li>added a video buffer size option to options->speed and memory</li>
+					<li>client_files subfolders are now split into f, t, and r groups for files, full size thumbnails, and resized thumbnails</li>
+					<li>added an option to override resized thumbnail storage location under options->file storage locations</li>
+					<li>added secondary sort option to options->sort/collect</li>
+					<li>fixed a bug where automatically pended tags could exist on top of current tags, forming redundant (1) (+1) situations</li>
+					<li>fixed a bug when sorting by namespace and a respective namespaced tag has a sibling that de-namespaces it</li>
+					<li>relatedly, namespace sorting will now filter correctly by collapsed siblings when those sibling pairs' namespaces differ</li>
+					<li>and collecting will now collect correctly with sibling pairs where the pairs' namespaces differ</li>
+					<li>simplified how the server caches its account sessions</li>
+					<li>improved how the server refreshes specific account sessions</li>
+					<li>the server now refreshes cached session accounts immediately when an admin actions an account type</li>
+					<li>neatened a little server db account fetching code</li>
+					<li>fixed file repository petition denial</li>
+					<li>added a better catch for upnp addmapping error when the mapping already exists as a port forward</li>
+					<li>the media canvas will no longer accept any mouse or key event if a menu is open anywhere in the program (this circumstance is difficult to pull off, but does cause a crash)</li>
+				</ul>
 				<li><h3>version 215</h3></li>
 				<ul>
 					<li>you can now set different suggested favourite tags for different tag services</li>
