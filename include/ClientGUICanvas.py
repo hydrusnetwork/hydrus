@@ -11,6 +11,7 @@ import ClientGUIPanels
 import ClientGUITopLevelWindows
 import ClientMedia
 import ClientRatings
+import ClientRendering
 import collections
 import gc
 import HydrusImageHandling
@@ -88,7 +89,16 @@ def CalculateMediaContainerSize( media, zoom ):
         
     elif action == CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON:
         
-        return OPEN_EXTERNALLY_BUTTON_SIZE
+        ( width, height ) = OPEN_EXTERNALLY_BUTTON_SIZE
+        
+        if media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+            
+            ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), HC.UNSCALED_THUMBNAIL_DIMENSIONS )
+            
+            height = height + thumb_height
+            
+        
+        return ( width, height )
         
     else:
         
@@ -150,6 +160,7 @@ class Animation( wx.Window ):
         self._video_container = ClientRendering.RasterContainerVideo( self._media, initial_size, init_position = self._current_frame_index )
         
         self._canvas_bmp = wx.EmptyBitmap( initial_width, initial_height, 24 )
+        self._frame_bmp = None
         
         self._timer_video = wx.Timer( self, id = ID_TIMER_VIDEO )
         
@@ -169,6 +180,13 @@ class Animation( wx.Window ):
         
         self._video_container.Stop()
         
+        if self._frame_bmp is not None:
+            
+            self._frame_bmp.Destroy()
+            
+        
+        self._canvas_bmp.Destroy()
+        
         wx.CallLater( 500, gc.collect )
         
     
@@ -180,11 +198,22 @@ class Animation( wx.Window ):
         
         ( frame_width, frame_height ) = current_frame.GetSize()
         
-        wx_bmp = current_frame.GetWxBitmap()
+        if self._frame_bmp is None or self._frame_bmp.GetSize() != current_frame.GetSize():
+            
+            self._frame_bmp = wx.EmptyBitmap( frame_width, frame_height, current_frame.GetDepth() * 8 )
+            
         
-        if HC.PLATFORM_OSX:
+        current_frame.CopyToWxBitmap( self._frame_bmp )
+        
+        # since stretchblit is unreliable, and since stretched drawing is so slow anyway, let's do it at the numpy_level
+        # so this calls for 'copy this clipped region to this bmp'
+        # the frame container clips the numpy_image, resizes up in cv, fills the bmp
+        # then we blit in 0.001ms no prob
+        
+        if HC.PLATFORM_OSX or HC.PLATFORM_LINUX:
             
             # for some reason, stretchblit just draws white for os x
+            # and for ubuntu 16.04, it only handles the first frame!
             # maybe a wx.copy problem?
             # or a mask?
             # os x double buffering something?
@@ -194,7 +223,7 @@ class Animation( wx.Window ):
             
             dc.SetUserScale( scale, scale )
             
-            dc.DrawBitmap( wx_bmp, 0, 0 )
+            dc.DrawBitmap( self._frame_bmp, 0, 0 )
             
             dc.SetUserScale( 1.0, 1.0 )
             
@@ -209,12 +238,10 @@ class Animation( wx.Window ):
             # will need to setdirty on drag that reveals offscreen region
             # hence prob a good idea to give the bmp 100px or so spare offscreen buffer, to reduce redraw spam, if that can be neatly done
             
-            mdc = wx.MemoryDC( wx_bmp )
+            mdc = wx.MemoryDC( self._frame_bmp )
             
             dc.StretchBlit( 0, 0, my_width, my_height, mdc, 0, 0, frame_width, frame_height )
             
-        
-        wx_bmp.Destroy()
         
         if self._animation_bar is not None:
             
@@ -446,6 +473,13 @@ class Animation( wx.Window ):
                         
                     
                 
+                if self._animation_bar is not None:
+                    
+                    buffer_indices = self._video_container.GetBufferIndices()
+                    
+                    self._animation_bar.SetBufferIndices( buffer_indices )
+                    
+                
             
         except wx.PyDeadObjectError:
             
@@ -478,6 +512,7 @@ class AnimationBar( wx.Window ):
         self._media_window = media_window
         self._num_frames = self._media.GetNumFrames()
         self._current_frame_index = 0
+        self._buffer_indices = None
         
         self._currently_in_a_drag = False
         self._it_was_playing = False
@@ -490,6 +525,13 @@ class AnimationBar( wx.Window ):
         
         self._timer_update = wx.Timer( self, id = ID_TIMER_ANIMATION_BAR_UPDATE )
         self._timer_update.Start( 100, wx.TIMER_CONTINUOUS )
+        
+    
+    def _GetXFromFrameIndex( self, index, width_offset = 0 ):
+        
+        ( my_width, my_height ) = self._canvas_bmp.GetSize()
+        
+        return int( float( my_width - width_offset ) * float( index ) / float( self._num_frames - 1 ) )
         
     
     def _Redraw( self, dc ):
@@ -517,9 +559,66 @@ class AnimationBar( wx.Window ):
         
         #
         
+        if self._buffer_indices is not None:
+            
+            ( start_index, rendered_to_index, end_index ) = self._buffer_indices
+            
+            start_x = self._GetXFromFrameIndex( start_index )
+            rendered_to_x = self._GetXFromFrameIndex( rendered_to_index )
+            end_x = self._GetXFromFrameIndex( end_index )
+            
+            if start_x != rendered_to_x:
+                
+                ( r, g, b ) = background_colour.Get()
+                
+                r = int( r * 0.85 )
+                g = int( g * 0.85 )
+                
+                rendered_colour = wx.Colour( r, g, b )
+                
+                dc.SetBrush( wx.Brush( rendered_colour ) )
+                
+                if rendered_to_x > start_x:
+                    
+                    dc.DrawRectangle( start_x, 0, rendered_to_x - start_x, ANIMATED_SCANBAR_HEIGHT )
+                    
+                else:
+                    
+                    dc.DrawRectangle( start_x, 0, my_width - start_x, ANIMATED_SCANBAR_HEIGHT )
+                    
+                    dc.DrawRectangle( 0, 0, rendered_to_x, ANIMATED_SCANBAR_HEIGHT )
+                    
+                
+            
+            if rendered_to_x != end_x:
+                
+                ( r, g, b ) = background_colour.Get()
+                
+                r = int( r * 0.93 )
+                g = int( g * 0.93 )
+                
+                to_be_rendered_colour = wx.Colour( r, g, b )
+                
+                dc.SetBrush( wx.Brush( to_be_rendered_colour ) )
+                
+                if end_x > rendered_to_x:
+                    
+                    dc.DrawRectangle( rendered_to_x, 0, end_x - rendered_to_x, ANIMATED_SCANBAR_HEIGHT )
+                    
+                else:
+                    
+                    dc.DrawRectangle( rendered_to_x, 0, my_width - rendered_to_x, ANIMATED_SCANBAR_HEIGHT )
+                    
+                    dc.DrawRectangle( 0, 0, end_x, ANIMATED_SCANBAR_HEIGHT )
+                    
+                
+            
+        
         dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNSHADOW ) ) )
         
-        dc.DrawRectangle( int( float( my_width - ANIMATED_SCANBAR_CARET_WIDTH ) * float( self._current_frame_index ) / float( self._num_frames - 1 ) ), 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
+        caret_x = self._GetXFromFrameIndex( self._current_frame_index, width_offset = ANIMATED_SCANBAR_CARET_WIDTH )
+        
+        dc.DrawRectangle( caret_x, 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
         
         #
         
@@ -619,6 +718,18 @@ class AnimationBar( wx.Window ):
         self._dirty = True
         
         self.Refresh()
+        
+    
+    def SetBufferIndices( self, buffer_indices ):
+        
+        if buffer_indices != self._buffer_indices:
+            
+            self._buffer_indices = buffer_indices
+            
+            self._dirty = True
+            
+            self.Refresh()
+            
         
     
     def SetPaused( self, paused ):
@@ -3370,7 +3481,7 @@ class MediaContainer( wx.Window ):
             
         elif action == CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON:
             
-            self._media_window = OpenExternallyButton( self, self._media )
+            self._media_window = OpenExternallyPanel( self, self._media )
             
         else:
             
@@ -3559,6 +3670,8 @@ class EmbedButton( wx.Window ):
         
         self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
         
+        self.SetCursor( wx.StockCursor( wx.CURSOR_HAND ) )
+        
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
@@ -3572,9 +3685,7 @@ class EmbedButton( wx.Window ):
         
         dc.SetBackground( background_brush )
         
-        dc.Clear() # gcdc doesn't support clear
-        
-        dc = wx.GCDC( dc )
+        dc.Clear()
         
         center_x = x / 2
         center_y = y / 2
@@ -3644,17 +3755,45 @@ class EmbedButton( wx.Window ):
             
         
     
-class OpenExternallyButton( wx.Button ):
+class OpenExternallyPanel( wx.Panel ):
     
     def __init__( self, parent, media ):
         
-        wx.Button.__init__( self, parent, label = 'open externally', size = OPEN_EXTERNALLY_BUTTON_SIZE )
+        wx.Panel.__init__( self, parent )
         
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) )
         
         self._media = media
         
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        if self._media.GetLocationsManager().HasLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+            
+            hash = self._media.GetHash()
+            
+            thumbnail_path = HydrusGlobals.client_controller.GetClientFilesManager().GetFullSizeThumbnailPath( hash )
+            
+            bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path ).GetWxBitmap()
+            
+            thumbnail = ClientGUICommon.BufferedWindowIcon( self, bmp )
+            
+            thumbnail.Bind( wx.EVT_LEFT_DOWN, self.EventButton )
+            
+            vbox.AddF( thumbnail, CC.FLAGS_CENTER )
+            
+        
+        m_text = HC.mime_string_lookup[ media.GetMime() ]
+        
+        button = wx.Button( self, label = 'open ' + m_text + ' externally', size = OPEN_EXTERNALLY_BUTTON_SIZE )
+        
+        vbox.AddF( button, CC.FLAGS_CENTER )
+        
+        self.SetSizer( vbox )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_HAND ) )
+        
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventButton )
+        button.Bind( wx.EVT_BUTTON, self.EventButton )
         
     
     def EventButton( self, event ):

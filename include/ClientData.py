@@ -249,6 +249,25 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, coll
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
+def GetSortChoices( add_namespaces_and_ratings = True ):
+
+    sort_choices = list( CC.SORT_CHOICES )
+    
+    if add_namespaces_and_ratings:
+        
+        sort_choices.extend( HC.options[ 'sort_by' ] )
+        
+        ratings_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        
+        for ratings_service in ratings_services:
+            
+            sort_choices.append( ( 'rating_descend', ratings_service ) )
+            sort_choices.append( ( 'rating_ascend', ratings_service ) )
+            
+        
+    
+    return sort_choices
+    
 def ShowExceptionClient( e ):
     
     ( etype, value, tb ) = sys.exc_info()
@@ -467,6 +486,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
         
+        self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
+        
         #
         
         self._dictionary[ 'noneable_integers' ] = {}
@@ -483,6 +504,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ] = {}
         
         self._dictionary[ 'integers' ][ 'video_buffer_size_mb' ] = 96
+        
+        self._dictionary[ 'integers' ][ 'related_tags_width' ] = 150
+        self._dictionary[ 'integers' ][ 'related_tags_search_1_duration_ms' ] = 250
+        self._dictionary[ 'integers' ][ 'related_tags_search_2_duration_ms' ] = 2000
+        self._dictionary[ 'integers' ][ 'related_tags_search_3_duration_ms' ] = 6000
         
         #
         
@@ -2259,7 +2285,17 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'pin/rm/' + multihash
         
-        ClientNetworking.RequestsGet( url )
+        try:
+            
+            ClientNetworking.RequestsGet( url )
+            
+        except HydrusExceptions.NetworkException as e:
+            
+            if 'not pinned' not in str( e ):
+                
+                raise
+                
+            
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]
         

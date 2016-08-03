@@ -1,4 +1,3 @@
-import Crypto.PublicKey.RSA
 import HydrusConstants as HC
 import ClientDefaults
 import ClientDownloading
@@ -1505,28 +1504,28 @@ class DialogInputLocalFiles( Dialog ):
         self._gauge_cancel.Bind( wx.EVT_BUTTON, self.EventGaugeCancel )
         self._gauge_cancel.Disable()
         
-        self._add_files_button = wx.Button( self, label = 'Add Files' )
+        self._add_files_button = wx.Button( self, label = 'add files' )
         self._add_files_button.Bind( wx.EVT_BUTTON, self.EventAddPaths )
         
-        self._add_folder_button = wx.Button( self, label = 'Add Folder' )
+        self._add_folder_button = wx.Button( self, label = 'add folder' )
         self._add_folder_button.Bind( wx.EVT_BUTTON, self.EventAddFolder )
         
-        self._remove_files_button = wx.Button( self, label = 'Remove Files' )
+        self._remove_files_button = wx.Button( self, label = 'remove files' )
         self._remove_files_button.Bind( wx.EVT_BUTTON, self.EventRemovePaths )
         
         self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
         
         self._delete_after_success = wx.CheckBox( self, label = 'delete original files after successful import' )
         
-        self._add_button = wx.Button( self, label = 'Import now' )
+        self._add_button = wx.Button( self, label = 'import now' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
         self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
         
-        self._tag_button = wx.Button( self, label = 'Add tags based on filename' )
+        self._tag_button = wx.Button( self, label = 'add tags based on filename' )
         self._tag_button.Bind( wx.EVT_BUTTON, self.EventTags )
         self._tag_button.SetForegroundColour( ( 0, 128, 0 ) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
         self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
         
@@ -3626,6 +3625,8 @@ class DialogPathsToTags( Dialog ):
                     
                 
                 ( base, filename ) = os.path.split( path )
+                
+                ( filename, any_ext_gumpf ) = os.path.splitext( filename )
                 
                 if self._filename_checkbox.IsChecked():
                     

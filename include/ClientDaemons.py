@@ -7,7 +7,6 @@ import httplib
 import itertools
 import HydrusConstants as HC
 import HydrusData
-import HydrusEncryption
 import HydrusExceptions
 import HydrusImageHandling
 import HydrusNATPunch

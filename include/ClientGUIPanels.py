@@ -5,6 +5,7 @@ import ClientDownloading
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIPredicates
+import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
 import ClientMedia
 import ClientThreading
@@ -1703,7 +1704,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._default_sort = ClientGUICommon.ChoiceSort( self )
             
-            self._sort_fallback = ClientGUICommon.ChoiceSort( self, add_namespaces_and_ratings = False )
+            self._sort_fallback = ClientGUICommon.ChoiceSort( self )
             
             self._default_collect = ClientGUICommon.CheckboxCollect( self )
             
@@ -1724,7 +1725,14 @@ class ManageOptionsPanel( ManagePanel ):
                 self._default_sort.SetSelection( 0 )
                 
             
-            self._sort_fallback.SetSelection( HC.options[ 'sort_fallback' ] )
+            try:
+                
+                self._sort_fallback.SetSelection( HC.options[ 'sort_fallback' ] )
+                
+            except:
+                
+                self._sort_fallback.SetSelection( 0 )
+                
             
             for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]:
                 
@@ -2175,6 +2183,16 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._suggested_favourites_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
             
+            suggested_tags_related_panel = ClientGUICommon.StaticBox( suggested_tags_panel, 'related' )
+            
+            self._show_related_tags = wx.CheckBox( suggested_tags_related_panel )
+            
+            self._related_tags_width = wx.SpinCtrl( suggested_tags_related_panel, min = 60, max = 400 )
+            
+            self._related_tags_search_1_duration_ms = wx.SpinCtrl( suggested_tags_related_panel, min = 50, max = 60000 )
+            self._related_tags_search_2_duration_ms = wx.SpinCtrl( suggested_tags_related_panel, min = 50, max = 60000 )
+            self._related_tags_search_3_duration_ms = wx.SpinCtrl( suggested_tags_related_panel, min = 50, max = 60000 )
+            
             #
             
             if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
@@ -2200,6 +2218,14 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._suggested_favourites_services.SelectClientData( CC.LOCAL_TAG_SERVICE_KEY )
             
+            self._show_related_tags.SetValue( self._new_options.GetBoolean( 'show_related_tags' ) )
+            
+            self._related_tags_width.SetValue( self._new_options.GetInteger( 'related_tags_width' ) )
+            
+            self._related_tags_search_1_duration_ms.SetValue( self._new_options.GetInteger( 'related_tags_search_1_duration_ms' ) )
+            self._related_tags_search_2_duration_ms.SetValue( self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) )
+            self._related_tags_search_3_duration_ms.SetValue( self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) )
+            
             #
             
             gridbox = wx.FlexGridSizer( 0, 2 )
@@ -2222,8 +2248,30 @@ class ManageOptionsPanel( ManagePanel ):
             suggested_tags_favourites_panel.AddF( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
             suggested_tags_favourites_panel.AddF( self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
             
+            related_gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            related_gridbox.AddGrowableCol( 1, 1 )
+            
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'show related tags on single-file manage tags windows' ), CC.FLAGS_MIXED )
+            related_gridbox.AddF( self._show_related_tags, CC.FLAGS_MIXED )
+            
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'width of related tags list' ), CC.FLAGS_MIXED )
+            related_gridbox.AddF( self._related_tags_width, CC.FLAGS_MIXED )
+            
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'search 1 duration (ms)' ), CC.FLAGS_MIXED )
+            related_gridbox.AddF( self._related_tags_search_1_duration_ms, CC.FLAGS_MIXED )
+            
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'search 2 duration (ms)' ), CC.FLAGS_MIXED )
+            related_gridbox.AddF( self._related_tags_search_2_duration_ms, CC.FLAGS_MIXED )
+            
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'search 3 duration (ms)' ), CC.FLAGS_MIXED )
+            related_gridbox.AddF( self._related_tags_search_3_duration_ms, CC.FLAGS_MIXED )
+            
+            suggested_tags_related_panel.AddF( related_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             suggested_tags_panel.AddF( self._suggested_tags_width, CC.FLAGS_EXPAND_PERPENDICULAR )
             suggested_tags_panel.AddF( suggested_tags_favourites_panel, CC.FLAGS_EXPAND_SIZER_DEPTH_ONLY )
+            suggested_tags_panel.AddF( suggested_tags_related_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -2283,6 +2331,15 @@ class ManageOptionsPanel( ManagePanel ):
                 
                 self._new_options.SetSuggestedTagsFavourites( service_key, favourites )
                 
+            
+            self._new_options.SetBoolean( 'show_related_tags', self._show_related_tags.GetValue() )
+            
+            self._new_options.SetInteger( 'related_tags_width', self._related_tags_width.GetValue() )
+            
+            self._new_options.SetInteger( 'related_tags_search_1_duration_ms', self._related_tags_search_1_duration_ms.GetValue() )
+            self._new_options.SetInteger( 'related_tags_search_2_duration_ms', self._related_tags_search_2_duration_ms.GetValue() )
+            self._new_options.SetInteger( 'related_tags_search_3_duration_ms', self._related_tags_search_3_duration_ms.GetValue() )
+            
             
         
     
@@ -2556,6 +2613,8 @@ class ManageTagsPanel( ManagePanel ):
             
             self.SetMedia( media )
             
+            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._media, self.AddTags )
+            
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             if self._i_am_local_tag_service:
@@ -2592,17 +2651,7 @@ class ManageTagsPanel( ManagePanel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            favourites = self._new_options.GetSuggestedTagsFavourites( tag_service_key )
-            
-            if len( favourites ) > 0:
-                
-                suggested_tags = ClientGUICommon.ListBoxTagsSuggestions( self, self.AddTags )
-                
-                suggested_tags.SetTags( favourites )
-                
-                hbox.AddF( suggested_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
+            hbox.AddF( self._suggested_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
             hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #

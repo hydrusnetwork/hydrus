@@ -1731,7 +1731,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnails_to_render_later = []
         
-        for thumbnail in thumbnails:
+        for thumbnail in visible_thumbnails:
             
             if thumbnail_cache.HasThumbnailCached( thumbnail ):
                 
@@ -3117,7 +3117,7 @@ class Thumbnail( Selectable ):
         
         dc.DrawBitmap( wx_bmp, x_offset, y_offset )
         
-        wx.CallAfter( wx_bmp.Destroy )
+        wx_bmp.Destroy()
         
         namespaces = self.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
         

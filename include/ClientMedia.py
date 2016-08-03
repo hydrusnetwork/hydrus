@@ -791,7 +791,18 @@ class MediaList( object ):
         
         self._sort_by = sort_by
         
-        sort_function = self._GetSortFunction( ( 'system', HC.options[ 'sort_fallback' ] ) )
+        sort_choices = ClientData.GetSortChoices( add_namespaces_and_ratings = True )
+        
+        try:
+            
+            sort_by_fallback = sort_choices[ HC.options[ 'sort_fallback' ] ]
+            
+        except IndexError:
+            
+            sort_by_fallback = sort_choices[ 0 ]
+            
+        
+        sort_function = self._GetSortFunction( sort_by_fallback )
         
         self._sorted_media.sort( sort_function )
         

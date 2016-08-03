@@ -1481,7 +1481,7 @@ class BetterChoice( wx.Choice ):
         selection = self.GetSelection()
         
         if selection != wx.NOT_FOUND: return self.GetClientData( selection )
-        else: raise Exception( 'Choice not chosen!' )
+        else: return self.GetClientData( 0 )
         
     
     def SelectClientData( self, client_data ):
@@ -1495,6 +1495,8 @@ class BetterChoice( wx.Choice ):
                 return
                 
             
+        
+        self.Select( 0 )
         
     
 class CheckboxCollect( wx.combo.ComboCtrl ):
@@ -1647,20 +1649,7 @@ class ChoiceSort( BetterChoice ):
         
         self._page_key = page_key
         
-        sort_choices = list( CC.SORT_CHOICES )
-        
-        if add_namespaces_and_ratings:
-            
-            sort_choices.extend( HC.options[ 'sort_by' ] )
-            
-            ratings_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-            
-            for ratings_service in ratings_services:
-                
-                sort_choices.append( ( 'rating_descend', ratings_service ) )
-                sort_choices.append( ( 'rating_ascend', ratings_service ) )
-                
-            
+        sort_choices = ClientData.GetSortChoices( add_namespaces_and_ratings = add_namespaces_and_ratings )
         
         for ( sort_by_type, sort_by_data ) in sort_choices:
             
@@ -3592,50 +3581,6 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     def RemoveTags( self, tags ):
         
         self._RemoveTags( tags )
-        
-    
-class ListBoxTagsSuggestions( ListBoxTagsStrings ):
-    
-    def __init__( self, parent, activate_callable ):
-        
-        ListBoxTagsStrings.__init__( self, parent )
-        
-        self._activate_callable = activate_callable
-        
-    
-    def _Activate( self ):
-        
-        if len( self._selected_terms ) > 0:
-            
-            tags = set( self._selected_terms )
-            
-            self._activate_callable( tags )
-            
-        
-    
-    def SetTags( self, tags ):
-        
-        ListBoxTagsStrings.SetTags( self, tags )
-        
-        width = HydrusGlobals.client_controller.GetNewOptions().GetNoneableInteger( 'suggested_tags_width' )
-        
-        if width is None:
-            
-            if len( tags ) > 0:
-                
-                dc = wx.MemoryDC( self._client_bmp )
-                
-                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-                
-                width = max( ( dc.GetTextExtent( s )[0] for s in self._ordered_strings ) )
-                
-                self.SetMinClientSize( ( width + 2 * self.TEXT_X_PADDING, -1 ) )
-                
-            
-        else:
-            
-            self.SetMinSize( ( width, -1 ) )
-            
         
     
 class ListBoxTagsPredicates( ListBoxTags ):

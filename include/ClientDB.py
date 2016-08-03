@@ -14,7 +14,6 @@ import HydrusConstants as HC
 import HydrusDB
 import ClientDownloading
 import ClientImageHandling
-import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
@@ -26,6 +25,7 @@ import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
 import lz4
+import numpy
 import os
 import psutil
 import Queue
@@ -4297,6 +4297,136 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _GetRelatedTags( self, service_key, skip_hash, search_tags, max_results, max_time_to_take ):
+        
+        start = HydrusData.GetNowPrecise()
+        
+        service_id = self._GetServiceId( service_key )
+        
+        skip_hash_id = self._GetHashId( skip_hash )
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        namespace_ids_to_tag_ids = HydrusData.BuildKeyToListDict( [ self._GetNamespaceIdTagId( tag ) for tag in search_tags ] )
+        
+        namespace_ids = namespace_ids_to_tag_ids.keys()
+        
+        if len( namespace_ids ) == 0:
+            
+            return []
+            
+        
+        random.shuffle( namespace_ids )
+        
+        time_on_this_section = max_time_to_take / 2
+        
+        # this biases namespaced tags when we are in a rush, as they are less common than unnamespaced but will get the same search time
+        time_per_namespace = time_on_this_section / len( namespace_ids )
+        
+        hash_ids_counter = collections.Counter()
+        
+        for namespace_id in namespace_ids:
+            
+            namespace_start = HydrusData.GetNowPrecise()
+            
+            tag_ids = namespace_ids_to_tag_ids[ namespace_id ]
+            
+            random.shuffle( tag_ids )
+            
+            query = self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE namespace_id = ? AND tag_id IN ' + HydrusData.SplayListForDB( tag_ids ) + ';', ( namespace_id, ) )
+            
+            results = query.fetchmany( 100 )
+            
+            while len( results ) > 0:
+                
+                for ( hash_id, ) in results:
+                    
+                    hash_ids_counter[ hash_id ] += 1
+                    
+                
+                if HydrusData.TimeHasPassedPrecise( namespace_start + time_per_namespace ):
+                    
+                    break
+                    
+                
+                results = query.fetchmany( 100 )
+                
+            
+            if HydrusData.TimeHasPassedPrecise( namespace_start + time_per_namespace ):
+                
+                break
+                
+            
+        
+        if skip_hash_id in hash_ids_counter:
+            
+            del hash_ids_counter[ skip_hash_id ]
+            
+        
+        #
+        
+        if len( hash_ids_counter ) == 0:
+            
+            return []
+            
+        
+        # this stuff is often 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.....
+        # the 1 stuff often produces large quantities of the same very popular tag, so your search for [ 'eva', 'female' ] will produce 'touhou' because so many 2hu images have 'female'
+        # so we want to do a 'soft' intersect, only picking the files that have the greatest number of shared search_tags
+        # this filters to only the '2' results, which gives us eva females and their hair colour and a few choice other popular tags for that particular domain
+        
+        [ ( gumpf, largest_count ) ] = hash_ids_counter.most_common( 1 )
+        
+        hash_ids = [ hash_id for ( hash_id, count ) in hash_ids_counter.items() if count > largest_count * 0.8 ]
+        
+        counter = collections.Counter()
+        
+        random.shuffle( hash_ids )
+        
+        for hash_id in hash_ids:
+            
+            for ( namespace_id, tag_id ) in self._c.execute( 'SELECT namespace_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id = ?;', ( hash_id, ) ):
+                
+                counter[ ( namespace_id, tag_id ) ] += 1
+                
+            
+            if HydrusData.TimeHasPassedPrecise( start + max_time_to_take ):
+                
+                break
+                
+            
+        
+        #
+        
+        for ( namespace_id, tag_ids ) in namespace_ids_to_tag_ids.items():
+            
+            for tag_id in tag_ids:
+                
+                if ( namespace_id, tag_id ) in counter:
+                    
+                    del counter[ ( namespace_id, tag_id ) ]
+                    
+                
+            
+        
+        results = counter.most_common( max_results )
+        
+        tags_and_counts = [ ( self._GetNamespaceTag( namespace_id, tag_id ), count ) for ( ( namespace_id, tag_id ), count ) in results ]
+        
+        tags_to_do = [ tag for ( tag, count ) in tags_and_counts ]
+        
+        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+        
+        filtered_tags = tag_censorship_manager.FilterTags( service_key, tags_to_do )
+        
+        inclusive = True
+        pending_count = 0
+        
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count ) in tags_and_counts if tag in filtered_tags ]
+        
+        return predicates
+        
+    
     def _GetRemoteThumbnailHashesIShouldHave( self, service_key ):
         
         service_id = self._GetServiceId( service_key )
@@ -6005,6 +6135,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'service_filenames': result = self._GetServiceFilenames( *args, **kwargs )
         elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
         elif action == 'services': result = self._GetServices( *args, **kwargs )
+        elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )

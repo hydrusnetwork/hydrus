@@ -1106,6 +1106,21 @@ class DataCache( object ):
         self._total_estimated_memory_footprint = sum( ( data.GetEstimatedMemoryFootprint() for data in self._keys_to_data.values() ) )
         
     
+    def _TouchKey( self, key ):
+    
+        for ( i, ( fifo_key, last_access_time ) ) in enumerate( self._keys_fifo ):
+            
+            if fifo_key == key:
+                
+                del self._keys_fifo[ i ]
+                
+                break
+                
+            
+        
+        self._keys_fifo.append( ( key, HydrusData.GetNow() ) )
+        
+    
     def Clear( self ):
         
         with self._lock:
@@ -1148,19 +1163,26 @@ class DataCache( object ):
                 raise Exception( 'Cache error! Looking for ' + HydrusData.ToUnicode( key ) + ', but it was missing.' )
                 
             
-            for ( i, ( fifo_key, last_access_time ) ) in enumerate( self._keys_fifo ):
-                
-                if fifo_key == key:
-                    
-                    del self._keys_fifo[ i ]
-                    
-                    break
-                    
-                
-            
-            self._keys_fifo.append( ( key, HydrusData.GetNow() ) )
+            self._TouchKey( key )
             
             return self._keys_to_data[ key ]
+            
+        
+    
+    def GetIfHasData( self, key ):
+        
+        with self._lock:
+            
+            if key in self._keys_to_data:
+                
+                self._TouchKey( key )
+                
+                return self._keys_to_data[ key ]
+                
+            else:
+                
+                return None
+                
             
         
     
@@ -1537,18 +1559,20 @@ class RenderedImageCache( object ):
         
         key = ( hash, target_resolution )
         
-        if self._data_cache.HasData( key ):
-            
-            return self._data_cache.GetData( key )
-            
-        else:
+        result = self._data_cache.GetIfHasData( key )
+        
+        if result is None:
             
             image_container = ClientRendering.RasterContainerImage( media, target_resolution )
             
             self._data_cache.AddData( key, image_container )
             
-            return image_container
+        else:
             
+            image_container = result
+            
+        
+        return image_container
         
     
     def HasImage( self, hash, target_resolution ):
@@ -1758,14 +1782,20 @@ class ThumbnailCache( object ):
                 
                 hash = display_media.GetHash()
                 
-                if not self._data_cache.HasData( hash ):
+                result = self._data_cache.GetIfHasData( hash )
+                
+                if result is None:
                     
                     hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
                     
                     self._data_cache.AddData( hash, hydrus_bitmap )
                     
+                else:
+                    
+                    hydrus_bitmap = result
+                    
                 
-                return self._data_cache.GetData( hash )
+                return hydrus_bitmap
                 
             elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
             elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]

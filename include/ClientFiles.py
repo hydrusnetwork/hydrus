@@ -76,7 +76,14 @@ def GenerateExportFilename( media, terms ):
         filename = re.sub( '/', '_', filename, flags = re.UNICODE )
         
     
-    return filename + HC.mime_ext_lookup[ mime ]
+    ext = HC.mime_ext_lookup[ mime ]
+    
+    if not filename.endswith( ext ):
+        
+        filename += ext
+        
+    
+    return filename
     
 def GetAllPaths( raw_paths ):
     

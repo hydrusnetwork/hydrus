@@ -8,6 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 217</h3></li>
+				<ul>
+					<li>fixed some high-res video streaming thread scheduling problems with the new video renderer</li>
+					<li>fixed a cause of huge memory bloat with greatly upscaled videos</li>
+					<li>to improve seek response time, streaming buffer for the video renderer has a much smaller cap</li>
+					<li>renderer throttling calculations are more sensible and reliable</li>
+					<li>the video renderer discards frames to save time if they happen to still be in its buffer</li>
+					<li>the video scanbar now displays the current frame buffer around the caret!</li>
+					<li>video canvas now recycles the same frame blit bitmap to save a little time</li>
+					<li>wrote a prototype related-tags suggestion 'service' for the suggested tags control</li>
+					<li>you can turn it on and set some options for it at options->tags, feedback would be appreciated</li>
+					<li>munged increasingly complicated components of the suggested tags control into a clean and proper self-hiding panel</li>
+					<li>fixed a very important bug that was failing to filter visible thumbnail fetch on mass select and thus massively slowing down the client on large ctrl+a-like operations</li>
+					<li>open externally button now shows the media's thumbnail, if it has one</li>
+					<li>open externally and embed buttons now use hand cursor</li>
+					<li>the simple path tagging dialog panel now cuts off .jpg extensions from filenames on filename parse</li>
+					<li>if the string component of a generated file export path already ends in the correct .jpg extension, a second will not be added</li>
+					<li>ipfs unpin will no longer break if the file was already unpinned</li>
+					<li>the hydrus server now gives filename (for a file save as dialog) correctly on a content-disposition header (this affects the client's local booru as well)</li>
+					<li>the secondary sort can now be a namespace or rating sort</li>
+					<li>fixed some potential init problems with some dropdown controls</li>
+					<li>an edge case object-missing cache retrieval bug is fixed</li>
+					<li>updated openssl on os x, which might have fixed some problems</li>
+					<li>updated python on windows, which updated openssl and a bunch of other stuff</li>
+					<li>updated sqlite on windows</li>
+					<li>updated linux dev machine to ubuntu 16.04, so a variety of packaged libraries are updated</li>
+					<li>fixed auto server setup if the client is launched from a windows cmd window</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 216</h3></li>
 				<ul>
 					<li>video rendering pipeline rewritten to be much smoother</li>

@@ -308,13 +308,17 @@ class HydrusResourceCommand( Resource ):
                 
                 content_type = HC.mime_string_lookup[ mime ]
                 
+                content_disposition = 'inline'
+                
             else:
                 
                 mime = HydrusFileHandling.GetMime( path )
                 
                 ( base, filename ) = os.path.split( path )
                 
-                content_type = HC.mime_string_lookup[ mime ] + '; ' + filename
+                content_type = HC.mime_string_lookup[ mime ]
+                
+                content_disposition = 'inline; filename="' + filename + '"'
                 
             
             content_length = size
@@ -322,6 +326,7 @@ class HydrusResourceCommand( Resource ):
             # can't be unicode!
             request.setHeader( 'Content-Type', str( content_type ) )
             request.setHeader( 'Content-Length', str( content_length ) )
+            request.setHeader( 'Content-Disposition', str( content_disposition ) )
             
             request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + 86400 * 365 ) ) )
             request.setHeader( 'Cache-Control', str( 86400 * 365  ) )

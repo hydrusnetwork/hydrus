@@ -1435,7 +1435,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-                parser_status = 'page checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new files'
+                parser_status = 'page checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
                 
             except HydrusExceptions.NotFoundException:
                 
@@ -2339,7 +2339,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         keep_checking = False
                         
                     
-                    job_key.SetVariable( 'popup_text_1', prefix + ': found ' + HydrusData.ConvertIntToPrettyString( total_new_urls ) + ' new files' )
+                    job_key.SetVariable( 'popup_text_1', prefix + ': found ' + HydrusData.ConvertIntToPrettyString( total_new_urls ) + ' new urls' )
                     
                     ClientData.WaitPolitely()
                     
@@ -2780,7 +2780,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-                watcher_status = 'thread checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new files'
+                watcher_status = 'thread checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
                 
             except HydrusExceptions.NotFoundException:
                 

@@ -295,30 +295,33 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if HC.PLATFORM_WINDOWS:
                         
-                        my_frozen_path = os.path.join( HC.BASE_DIR, 'client.exe' )
+                        server_frozen_path = os.path.join( HC.BASE_DIR, 'server.exe' )
                         
                     else:
                         
-                        my_frozen_path = os.path.join( HC.BASE_DIR, 'client' )
+                        server_frozen_path = os.path.join( HC.BASE_DIR, 'server' )
                         
                     
-                    my_executable = sys.executable
+                    if os.path.exists( server_frozen_path ):
                     
-                    if my_executable == my_frozen_path:
-                    
-                        if HC.PLATFORM_WINDOWS: subprocess.Popen( [ os.path.join( HC.BASE_DIR, 'server.exe' ) ] )
-                        else: subprocess.Popen( [ os.path.join( '.', HC.BASE_DIR, 'server' ) ] )
+                        if HC.PLATFORM_WINDOWS: subprocess.Popen( [ server_frozen_path ] )
+                        else: subprocess.Popen( [ server_frozen_path ] )
                         
                     else:
                         
-                        server_executable = my_executable
+                        python_executable = sys.executable
                         
-                        if 'pythonw' in server_executable:
+                        if python_executable.endswith( 'client.exe' ) or python_executable.endswith( 'client' ):
                             
-                            server_executable = server_executable.replace( 'pythonw', 'python' )
+                            raise Exception( 'Could not automatically set up the server--could not find server executable or python executable.' )
                             
                         
-                        subprocess.Popen( [ server_executable, os.path.join( HC.BASE_DIR, 'server.py' ) ] )
+                        if 'pythonw' in python_executable:
+                            
+                            python_executable = python_executable.replace( 'pythonw', 'python' )
+                            
+                        
+                        subprocess.Popen( [ python_executable, os.path.join( HC.BASE_DIR, 'server.py' ) ] )
                         
                     
                     time_waited = 0
