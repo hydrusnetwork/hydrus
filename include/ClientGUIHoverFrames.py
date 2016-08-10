@@ -28,7 +28,7 @@ class FullscreenHoverFrame( wx.Frame ):
         
         self._last_ideal_position = None
         
-        self.SetBackgroundColour( wx.WHITE )
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
         self._timer_check_show = wx.Timer( self, id = ClientGUICanvas.ID_TIMER_HOVER_SHOW )
@@ -473,8 +473,6 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         self._icon_panel = wx.Panel( self )
-        
-        self._icon_panel.SetBackgroundColour( wx.WHITE )
         
         self._trash_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.trash )
         self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.inbox )

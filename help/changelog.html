@@ -8,6 +8,22 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 218</h3></li>
+				<ul>
+					<li>related tags control now updates on new media events (i.e. if the parent media viewer scrolls to different media)</li>
+					<li>related tags also initialises with suggestions and refreshes the list on media change</li>
+					<li>related tags now properly filter out dupe suggestions caused by siblings</li>
+					<li>went over all the gui colours in the client, cleared some redundancies and replaced all the static whites and blacks with appropriate system defaults or chosen custom colours</li>
+					<li>full size thumbnails can now also be stored in a different location, like resized thumbs, under options->file storage locations</li>
+					<li>fixed false postiive shutdown maintenance checking due to vacuums projected to take longer than the given maintenance time</li>
+					<li>fixed false postiive shutdown maintenance checking due to sqlite_stat1 creeping in</li>
+					<li>pasting tags or otherwise editing many in at once in the manage tags frame will immediately commit all the changes in one db transaction, rather than one for each tag laggily in turn</li>
+					<li>removed 'import tags' from file menu--this advanced stuff is now done in and better left to the advanced content update dialog</li>
+					<li>restoring from an old db backup with a simpler db structure will no longer create conflicts</li>
+					<li>deleting currently rendering files from the trash should be slightly more reliable</li>
+					<li>fixed some crash error reporting</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 217</h3></li>
 				<ul>
 					<li>fixed some high-res video streaming thread scheduling problems with the new video renderer</li>

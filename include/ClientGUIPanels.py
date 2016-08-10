@@ -231,8 +231,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._client_files = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'path', -1 ), ( 'weight', 80 ) ] )
             
             self._add = wx.Button( self, label = 'add' )
@@ -246,11 +244,13 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._resized_thumbnails_override = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
             
+            self._full_size_thumbnails_override = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            
             #
             
             self._new_options = HydrusGlobals.client_controller.GetNewOptions()
             
-            ( locations_to_ideal_weights, resized_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+            ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
             
             for ( location, weight ) in locations_to_ideal_weights.items():
                 
@@ -260,6 +260,11 @@ class ManageOptionsPanel( ManagePanel ):
             if resized_thumbnail_override is not None:
                 
                 self._resized_thumbnails_override.SetPath( resized_thumbnail_override )
+                
+            
+            if full_size_thumbnail_override is not None:
+                
+                self._full_size_thumbnails_override.SetPath( full_size_thumbnail_override )
                 
             
             #
@@ -286,15 +291,24 @@ class ManageOptionsPanel( ManagePanel ):
             
             vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
             
-            text = 'If you like, you can force all your resized thumbnails to be stored in a single location, for instance on a low-latency SSD.'
+            text = 'If you like, you can force your thumbnails to be stored elsewhere, for instance on a low-latency SSD.'
             text += os.linesep * 2
-            text += 'Leave it blank to store resized thumbnails with everything else.'
+            text += 'Normally, your full size thumbnails are rarely accessed--only to initially generate resized thumbnails--so you can store them somewhere slow, but if you set the thumbnail size to be the maximum of 200x200, these originals will be used instead of resized thumbs and are good in a fast location.'
+            text += os.linesep * 2
+            text += 'Leave either of these blank to store the thumbnails alongside the original files.'
             
             st = wx.StaticText( self, label = text )
             
             st.Wrap( 400 )
             
             vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self, label = 'full size thumbnail override location: ' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._full_size_thumbnails_override, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -383,7 +397,14 @@ class ManageOptionsPanel( ManagePanel ):
                 resized_thumbnails_override = None
                 
             
-            self._new_options.SetClientFilesLocationsToIdealWeights( locations_to_weights, resized_thumbnails_override )
+            full_size_thumbnails_override = self._full_size_thumbnails_override.GetPath()
+            
+            if full_size_thumbnails_override == '':
+                
+                full_size_thumbnails_override = None
+                
+            
+            self._new_options.SetClientFilesLocationsToIdealWeights( locations_to_weights, resized_thumbnails_override, full_size_thumbnails_override )
             
         
 
@@ -392,8 +413,6 @@ class ManageOptionsPanel( ManagePanel ):
         def __init__( self, parent ):
             
             wx.Panel.__init__( self, parent )
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._gui_colours = {}
             
@@ -531,8 +550,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._external_host = wx.TextCtrl( self )
             self._external_host.SetToolTipString( 'If you have trouble parsing your external ip using UPnP, you can force it to be this.' )
             
@@ -667,8 +684,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._new_options = new_options
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             general = ClientGUICommon.StaticBox( self, 'general' )
             
             self._website_download_polite_wait = wx.SpinCtrl( general, min = 1, max = 30 )
@@ -760,8 +775,6 @@ class ManageOptionsPanel( ManagePanel ):
         def __init__( self, parent ):
             
             wx.Panel.__init__( self, parent )
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
@@ -964,8 +977,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._new_options = new_options
             
             self._filter_inbox_and_archive_predicates = wx.CheckBox( self, label = 'hide inbox and archive predicates if either has no files' )
@@ -1037,8 +1048,6 @@ class ManageOptionsPanel( ManagePanel ):
             wx.Panel.__init__( self, parent )
             
             self._new_options = new_options
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._import_tag_options = wx.ListBox( self )
             self._import_tag_options.Bind( wx.EVT_LEFT_DCLICK, self.EventDelete )
@@ -1177,8 +1186,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._export_location = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
             
             self._delete_to_recycle_bin = wx.CheckBox( self, label = '' )
@@ -1264,8 +1271,6 @@ class ManageOptionsPanel( ManagePanel ):
         def __init__( self, parent ):
             
             wx.Panel.__init__( self, parent )
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._default_gui_session = wx.Choice( self )
             
@@ -1446,8 +1451,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._new_options = HydrusGlobals.client_controller.GetNewOptions()
             
             self._fit_to_canvas = wx.CheckBox( self, label = '' )
@@ -1542,8 +1545,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._local_port = ClientGUICommon.NoneableSpinCtrl( self, 'local server port', none_phrase = 'do not run local server', min = 1, max = 65535 )
             
             #
@@ -1574,8 +1575,6 @@ class ManageOptionsPanel( ManagePanel ):
         def __init__( self, parent ):
             
             wx.Panel.__init__( self, parent )
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._shortcuts = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'modifier', 120 ), ( 'key', 120 ), ( 'action', -1 ) ], delete_key_callback = self.DeleteShortcuts )
             
@@ -1700,8 +1699,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._default_sort = ClientGUICommon.ChoiceSort( self )
             
             self._sort_fallback = ClientGUICommon.ChoiceSort( self )
@@ -1819,8 +1816,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._play_dumper_noises = wx.CheckBox( self, label = 'play success/fail noises when dumping' )
             
             #
@@ -1849,8 +1844,6 @@ class ManageOptionsPanel( ManagePanel ):
             wx.Panel.__init__( self, parent )
             
             self._new_options = new_options
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( self, 'max disk cache init period', none_phrase = 'do not run', min = 1, max = 120 )
             self._disk_cache_init_period.SetToolTipString( 'When the client boots, it can speed up operation by reading the front of the database into memory. This sets the max number of seconds it can spend doing that.' )
@@ -2137,8 +2130,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._new_options = new_options
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._default_tag_sort = wx.Choice( self )
             
             self._default_tag_sort.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
@@ -2258,13 +2249,13 @@ class ManageOptionsPanel( ManagePanel ):
             related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'width of related tags list' ), CC.FLAGS_MIXED )
             related_gridbox.AddF( self._related_tags_width, CC.FLAGS_MIXED )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'search 1 duration (ms)' ), CC.FLAGS_MIXED )
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'initial search duration (ms)' ), CC.FLAGS_MIXED )
             related_gridbox.AddF( self._related_tags_search_1_duration_ms, CC.FLAGS_MIXED )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'search 2 duration (ms)' ), CC.FLAGS_MIXED )
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'medium search duration (ms)' ), CC.FLAGS_MIXED )
             related_gridbox.AddF( self._related_tags_search_2_duration_ms, CC.FLAGS_MIXED )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'search 3 duration (ms)' ), CC.FLAGS_MIXED )
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'thorough search duration (ms)' ), CC.FLAGS_MIXED )
             related_gridbox.AddF( self._related_tags_search_3_duration_ms, CC.FLAGS_MIXED )
             
             suggested_tags_related_panel.AddF( related_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2396,7 +2387,7 @@ class ManageTagsPanel( ManagePanel ):
             service_key = service.GetServiceKey()
             name = service.GetName()
             
-            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit )
+            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
             
             self._tag_repositories.AddPage( name, service_key, page )
             
@@ -2543,13 +2534,14 @@ class ManageTagsPanel( ManagePanel ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, file_service_key, tag_service_key, media, immediate_commit ):
+        def __init__( self, parent, file_service_key, tag_service_key, media, immediate_commit, canvas_key = None ):
             
             wx.Panel.__init__( self, parent )
             
             self._file_service_key = file_service_key
             self._tag_service_key = tag_service_key
             self._immediate_commit = immediate_commit
+            self._canvas_key = canvas_key
             
             self._content_updates = []
             
@@ -2613,9 +2605,7 @@ class ManageTagsPanel( ManagePanel ):
             
             self.SetMedia( media )
             
-            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._media, self.AddTags )
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._media, self.AddTags, canvas_key = self._canvas_key )
             
             if self._i_am_local_tag_service:
                 
@@ -2775,6 +2765,8 @@ class ManageTagsPanel( ManagePanel ):
             
             forced_choice_actions = []
             
+            immediate_content_updates = []
+            
             for choices in sets_of_choices:
                 
                 always_do = False
@@ -2902,17 +2894,19 @@ class ManageTagsPanel( ManagePanel ):
                 
                 if self._immediate_commit:
                     
-                    if len( content_updates ) > 0:
-                        
-                        service_keys_to_content_updates = { self._tag_service_key : content_updates }
-                        
-                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                        
+                    immediate_content_updates.extend( content_updates )
                     
                 else:
                     
                     self._content_updates.extend( content_updates )
                     
+                
+            
+            if len( immediate_content_updates ) > 0:
+                
+                service_keys_to_content_updates = { self._tag_service_key : immediate_content_updates }
+                
+                HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                 
             
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
@@ -3098,8 +3092,6 @@ class ReviewServices( ReviewPanel ):
         self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
         
         self._InitialiseServices()
-        
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
         self._notebook.AddPage( self._local_listbook, 'local' )
         self._notebook.AddPage( self._remote_listbook, 'remote' )
@@ -3381,8 +3373,6 @@ class ReviewServices( ReviewPanel ):
             self._DisplayService()
             
             #
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -3692,7 +3682,7 @@ class ReviewServices( ReviewPanel ):
                     
                     num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                     
-                    self._ratings_text.SetLabelText( str( num_ratings ) + ' files rated' )
+                    self._ratings_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_ratings ) + ' files rated' )
                     
                 elif service_type == HC.LOCAL_BOORU:
                     

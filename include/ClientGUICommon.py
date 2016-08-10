@@ -199,7 +199,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._dropdown_window = wx.Frame( self, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_RAISED )
             
-            self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
             
             self._dropdown_window.SetSize( ( 0, 0 ) )
             
@@ -1829,7 +1829,7 @@ class ListBook( wx.Panel ):
         
         wx.Panel.__init__( self, *args, **kwargs )
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
         self._keys_to_active_pages = {}
         self._keys_to_proto_pages = {}
@@ -1839,7 +1839,7 @@ class ListBook( wx.Panel ):
         
         self._empty_panel = wx.Panel( self )
         
-        self._empty_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        self._empty_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
         self._current_key = None
         
@@ -2514,7 +2514,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 dc.DrawRectangle( 0, i * self._text_y, my_width, self._text_y )
                 
-                text_colour = wx.WHITE
+                text_colour = self._background_colour
                 
             
             dc.SetTextForeground( text_colour )
@@ -4779,7 +4779,7 @@ class PopupMessageManager( wx.Frame ):
         
         wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE )
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
         self._max_messages_to_display = 10
         
@@ -6099,7 +6099,7 @@ class StaticBox( wx.Panel ):
         
         wx.Panel.__init__( self, parent, style = wx.BORDER_DOUBLE )
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
         self._sizer = wx.BoxSizer( wx.VERTICAL )
         
@@ -6503,7 +6503,7 @@ class WaitingPolitelyTrafficLight( BufferedWindow ):
     
     def _Draw( self, dc ):
         
-        dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
+        dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) ) )
         
         dc.Clear()
         
@@ -6516,7 +6516,7 @@ class WaitingPolitelyTrafficLight( BufferedWindow ):
             dc.SetBrush( wx.Brush( wx.Colour( 77, 250, 144 ) ) )
             
         
-        dc.SetPen( wx.BLACK_PEN )
+        dc.SetPen( wx.Pen( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNSHADOW ) ) )
         
         dc.DrawCircle( 9, 9, 7 )
         

@@ -94,26 +94,23 @@ class ListBoxTagsSuggestionsRelated( ClientGUICommon.ListBoxTags ):
     
 class RelatedTagsPanel( wx.Panel ):
     
-    def __init__( self, parent, service_key, media, activate_callable ):
+    def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
         
         wx.Panel.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
+        self._canvas_key = canvas_key
         
         self._new_options = HydrusGlobals.client_controller.GetNewOptions()
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        button_1 = wx.Button( self, label = '1' )
-        button_1.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags1 )
-        button_1.SetMinSize( ( 30, -1 ) )
-        
-        button_2 = wx.Button( self, label = '2' )
+        button_2 = wx.Button( self, label = 'medium' )
         button_2.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags2 )
         button_2.SetMinSize( ( 30, -1 ) )
         
-        button_3 = wx.Button( self, label = '3' )
+        button_3 = wx.Button( self, label = 'thorough' )
         button_3.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags3 )
         button_3.SetMinSize( ( 30, -1 ) )
         
@@ -121,7 +118,6 @@ class RelatedTagsPanel( wx.Panel ):
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.AddF( button_1, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         button_hbox.AddF( button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         button_hbox.AddF( button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
@@ -129,6 +125,13 @@ class RelatedTagsPanel( wx.Panel ):
         vbox.AddF( self._related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+        if self._canvas_key is not None:
+            
+            HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            
+        
+        self._QuickSuggestedRelatedTags()
         
     
     def _FetchRelatedTags( self, max_time_to_take ):
@@ -150,20 +153,26 @@ class RelatedTagsPanel( wx.Panel ):
         
         predicates = HydrusGlobals.client_controller.Read( 'related_tags', self._service_key, hash, search_tags, max_results, max_time_to_take )
         
-        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-        
-        predicates = siblings_manager.CollapsePredicates( predicates )
-        
         predicates = ClientSearch.SortPredicates( predicates )
         
         self._related_tags.SetPredicates( predicates )
         
     
-    def EventSuggestedRelatedTags1( self, event ):
+    def _QuickSuggestedRelatedTags( self ):
         
         max_time_to_take = self._new_options.GetInteger( 'related_tags_search_1_duration_ms' ) / 1000.0
         
         self._FetchRelatedTags( max_time_to_take )
+        
+    
+    def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._media = ( new_media_singleton.Duplicate(), )
+            
+            self._QuickSuggestedRelatedTags()
+            
         
     
     def EventSuggestedRelatedTags2( self, event ):
@@ -182,12 +191,13 @@ class RelatedTagsPanel( wx.Panel ):
     
 class SuggestedTagsPanel( wx.Panel ):
     
-    def __init__( self, parent, service_key, media, activate_callable ):
+    def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
         
         wx.Panel.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
+        self._canvas_key = canvas_key
         
         self._new_options = HydrusGlobals.client_controller.GetNewOptions()
         
@@ -210,7 +220,7 @@ class SuggestedTagsPanel( wx.Panel ):
         
         if self._new_options.GetBoolean( 'show_related_tags' ) and len( media ) == 1:
             
-            related_tags = RelatedTagsPanel( self, service_key, media, activate_callable )
+            related_tags = RelatedTagsPanel( self, service_key, media, activate_callable, canvas_key = self._canvas_key )
             
             hbox.AddF( related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
             

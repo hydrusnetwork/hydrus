@@ -624,8 +624,6 @@ class AnimationBar( wx.Window ):
         
         dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
         
-        dc.SetTextForeground( wx.BLACK )
-        
         s = HydrusData.ConvertValueRangeToPrettyString( self._current_frame_index + 1, self._num_frames )
         
         ( x, y ) = dc.GetTextExtent( s )

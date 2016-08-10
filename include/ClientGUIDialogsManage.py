@@ -667,8 +667,6 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             #
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
@@ -1277,8 +1275,6 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                 
             
             def ArrangeControls():
-                
-                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
                 
                 gridbox = wx.FlexGridSizer( 0, 2 )
                 
@@ -2247,10 +2243,6 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                 
                 def ArrangeControls():
-                    
-                    self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-                    
-                    #
                     
                     gridbox = wx.FlexGridSizer( 0, 2 )
                     
@@ -3372,8 +3364,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             wx.Panel.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
             self._services = services
             
             self._media = media
@@ -3440,8 +3430,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         def __init__( self, parent, services, media ):
             
             wx.Panel.__init__( self, parent )
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             self._services = services
             
@@ -3894,8 +3882,6 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             if 'upnp' in self._options: self._upnp.SetValue( self._options[ 'upnp' ] )
             
             #
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -4602,8 +4588,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
             
             #
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -5379,10 +5363,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             #
             
             self._SetControls()
-            
-            #
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
             #
             

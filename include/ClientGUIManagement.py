@@ -246,8 +246,6 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
         if self._captcha_challenge is None:
             
-            dc.SetBackground( wx.Brush( wx.WHITE ) )
-            
             dc.Clear()
             
             self._refresh_button.SetLabelText( '' )
@@ -256,8 +254,6 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             self._captcha_time_left.SetLabelText( '' )
             
         elif self._captcha_challenge == '':
-            
-            dc.SetBackground( wx.Brush( wx.WHITE ) )
             
             dc.Clear()
             
@@ -627,7 +623,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self.SetupScrolling()
         
-        self.SetBackgroundColour( wx.WHITE )
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
         self._controller = controller
         self._management_controller = management_controller

@@ -2320,7 +2320,7 @@ class DB( HydrusDB.HydrusDB ):
             
             file_hashes = self._GetHashes( deletable_file_hash_ids )
             
-            client_files_manager.DeleteFiles( file_hashes )
+            wx.CallAfter( client_files_manager.DeleteFiles, file_hashes )
             
         
         useful_thumbnail_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id != ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( self._trash_service_id, ) ) }
@@ -2331,7 +2331,7 @@ class DB( HydrusDB.HydrusDB ):
             
             thumbnail_hashes = self._GetHashes( deletable_thumbnail_hash_ids )
             
-            client_files_manager.DeleteThumbnails( thumbnail_hashes )
+            wx.CallAfter( client_files_manager.DeleteThumbnails, thumbnail_hashes )
             
         
     
@@ -4299,6 +4299,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetRelatedTags( self, service_key, skip_hash, search_tags, max_results, max_time_to_take ):
         
+        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+        
+        search_tags = siblings_manager.CollapseTags( search_tags )
+        
         start = HydrusData.GetNowPrecise()
         
         service_id = self._GetServiceId( service_key )
@@ -4307,9 +4311,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        namespace_ids_to_tag_ids = HydrusData.BuildKeyToListDict( [ self._GetNamespaceIdTagId( tag ) for tag in search_tags ] )
+        search_namespace_ids_to_tag_ids = HydrusData.BuildKeyToListDict( [ self._GetNamespaceIdTagId( tag ) for tag in search_tags ] )
         
-        namespace_ids = namespace_ids_to_tag_ids.keys()
+        namespace_ids = search_namespace_ids_to_tag_ids.keys()
         
         if len( namespace_ids ) == 0:
             
@@ -4329,7 +4333,7 @@ class DB( HydrusDB.HydrusDB ):
             
             namespace_start = HydrusData.GetNowPrecise()
             
-            tag_ids = namespace_ids_to_tag_ids[ namespace_id ]
+            tag_ids = search_namespace_ids_to_tag_ids[ namespace_id ]
             
             random.shuffle( tag_ids )
             
@@ -4398,7 +4402,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        for ( namespace_id, tag_ids ) in namespace_ids_to_tag_ids.items():
+        for ( namespace_id, tag_ids ) in search_namespace_ids_to_tag_ids.items():
             
             for tag_id in tag_ids:
                 
@@ -4411,9 +4415,13 @@ class DB( HydrusDB.HydrusDB ):
         
         results = counter.most_common( max_results )
         
-        tags_and_counts = [ ( self._GetNamespaceTag( namespace_id, tag_id ), count ) for ( ( namespace_id, tag_id ), count ) in results ]
+        tags_to_counts = { self._GetNamespaceTag( namespace_id, tag_id ) : count for ( ( namespace_id, tag_id ), count ) in results }
         
-        tags_to_do = [ tag for ( tag, count ) in tags_and_counts ]
+        tags_to_counts = siblings_manager.CollapseTagsToCount( tags_to_counts )
+        
+        tags_to_do = tags_to_counts.keys()
+        
+        tags_to_do = { tag for tag in tags_to_counts if tag not in search_tags }
         
         tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
         
@@ -4422,7 +4430,7 @@ class DB( HydrusDB.HydrusDB ):
         inclusive = True
         pending_count = 0
         
-        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count ) in tags_and_counts if tag in filtered_tags ]
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, tags_to_counts[ tag ], pending_count ) for tag in filtered_tags ]
         
         return predicates
         
@@ -5258,7 +5266,7 @@ class DB( HydrusDB.HydrusDB ):
         return True
         
     
-    def _MaintenanceDue( self ):
+    def _MaintenanceDue( self, stop_time ):
         
         # vacuum
         
@@ -5272,11 +5280,33 @@ class DB( HydrusDB.HydrusDB ):
             
             due_names = { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
             
-            due_names.discard( 'sqlite_stat1' )
+            possible_due_names = set()
             
             if len( due_names ) > 0:
                 
-                return True
+                self._CloseDBCursor()
+                
+                try:
+                    
+                    for name in due_names:
+                        
+                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+                        
+                        if HydrusDB.CanVacuum( db_path, stop_time = stop_time ):
+                            
+                            possible_due_names.add( name )
+                            
+                        
+                    
+                    if len( possible_due_names ) > 0:
+                        
+                        return True
+                        
+                    
+                finally:
+                    
+                    self._InitDBCursor()
+                    
                 
             
         
@@ -5295,7 +5325,9 @@ class DB( HydrusDB.HydrusDB ):
             all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master;' ) ) )
             
         
-        names_to_analyze = [ name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
+        names_to_analyze = { name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
+        
+        names_to_analyze.discard( 'sqlite_stat1' )
         
         if len( names_to_analyze ) > 0:
             
@@ -8738,7 +8770,17 @@ class DB( HydrusDB.HydrusDB ):
             source = os.path.join( path, filename )
             dest = os.path.join( self._db_dir, filename )
             
-            HydrusPaths.MirrorFile( source, dest )
+            if os.path.exists( source ):
+                
+                HydrusPaths.MirrorFile( source, dest )
+                
+            else:
+                
+                # if someone backs up with an older version that does not have as many db files as this version, we get conflict
+                # don't want to delete just in case, but we will move it out the way
+                
+                shutil.move( dest, dest + '.old' )
+                
             
         
         client_files_default = os.path.join( self._db_dir, 'client_files' )

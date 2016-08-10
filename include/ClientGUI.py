@@ -702,7 +702,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         def file():
             
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'import_tags' ), p( '&Import Tag Archive' ), p( 'Add tags from a tag archive.' ) )
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
@@ -793,7 +792,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         def pages():
             
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'show_hide_splitters' ), p( 'Show/Hide Splitters' ), p( 'Show or hide the current page\'s splitters.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'show_hide_splitters' ), p( 'Show/Hide Management and Preview Panels' ), p( 'Show or hide the panels on the left.' ) )
             
             menu.AppendSeparator()
             
@@ -1205,27 +1204,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             dlg.ShowModal()
             
-        
-    
-    def _ImportTags( self ):
-        
-        with wx.FileDialog( self, style = wx.FD_MULTIPLE ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                paths = [ HydrusData.ToUnicode( path ) for path in dlg.GetPaths() ]
-                
-                services = self._controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
-                
-                service_keys = [ service.GetServiceKey() for service in services ]
-                
-                service_key = ClientGUIDialogs.SelectServiceKey( service_keys = service_keys )
-                
-                for path in paths:
-                    
-                    ClientGUIDialogs.ImportFromHTA( self, path, service_key )
-                    
-                
         
     
     def _InitialiseMenubar( self ):
@@ -2377,7 +2355,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
             elif command == 'import_files': self._ImportFiles()
-            elif command == 'import_tags': self._ImportTags()
             elif command == 'load_gui_session': self._LoadGUISession( data )
             elif command == 'load_into_disk_cache':
                 
@@ -2892,7 +2869,7 @@ class FrameSplash( wx.Frame ):
     
     def _Redraw( self, dc ):
         
-        dc.SetBackground( wx.Brush( wx.WHITE ) )
+        dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) ) )
         
         dc.Clear()
         

@@ -285,9 +285,7 @@ class Dialog( wx.Dialog ):
         
         self._new_options = HydrusGlobals.client_controller.GetNewOptions()
         
-        #self.SetDoubleBuffered( True )
-        
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
         self.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
         

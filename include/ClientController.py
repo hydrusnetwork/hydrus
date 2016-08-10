@@ -417,11 +417,15 @@ class Controller( HydrusController.HydrusController ):
                 
                 if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
                     
-                    if self.ThereIsIdleShutdownWorkDue():
+                    idle_shutdown_max_minutes = self._options[ 'idle_shutdown_max_minutes' ]
+                    
+                    time_to_stop = HydrusData.GetNow() + ( idle_shutdown_max_minutes * 60 )
+                    
+                    if self.ThereIsIdleShutdownWorkDue( time_to_stop ):
                         
                         if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
                             
-                            text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( self._options[ 'idle_shutdown_max_minutes' ] ) + ' minutes\' maintenance work?'
+                            text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( idle_shutdown_max_minutes ) + ' minutes\' maintenance work?'
                             
                             with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
                                 
@@ -993,9 +997,9 @@ class Controller( HydrusController.HydrusController ):
         return self._system_busy
         
     
-    def ThereIsIdleShutdownWorkDue( self ):
+    def ThereIsIdleShutdownWorkDue( self, time_to_stop ):
         
-        maintenance_due = self.Read( 'maintenance_due' )
+        maintenance_due = self.Read( 'maintenance_due', time_to_stop )
         
         if maintenance_due:
             

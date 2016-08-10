@@ -516,6 +516,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
         self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = None
+        self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = None
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -571,7 +572,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 resized_thumbnail_override = HydrusPaths.ConvertPortablePathToAbsPath( resized_thumbnail_override )
                 
             
-            return ( paths_to_weights, resized_thumbnail_override )
+            
+            full_size_thumbnail_override = self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ]
+            
+            if full_size_thumbnail_override is not None:
+                
+                full_size_thumbnail_override = HydrusPaths.ConvertPortablePathToAbsPath( full_size_thumbnail_override )
+                
+            
+            return ( paths_to_weights, resized_thumbnail_override, full_size_thumbnail_override )
             
         
     
@@ -704,7 +713,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetClientFilesLocationsToIdealWeights( self, locations_to_weights, resized_thumbnail_override ):
+    def SetClientFilesLocationsToIdealWeights( self, locations_to_weights, resized_thumbnail_override, full_size_thumbnail_override ):
         
         with self._lock:
             
@@ -718,6 +727,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
             
             self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = resized_thumbnail_override
+            self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = full_size_thumbnail_override
             
         
     

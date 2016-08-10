@@ -99,6 +99,7 @@ except HydrusExceptions.PermissionException as e:
 except:
     
     import traceback
+    import os
     
     try:
         

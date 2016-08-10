@@ -74,7 +74,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self.SetDoubleBuffered( True ) # This seems to stop some bad scroll draw logic, where top/bottom row is auto-drawn undrawn and then paint event called
         
-        self.SetBackgroundColour( wx.WHITE )
+        self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'thumbgrid_background' ] ) )
         
         self.SetScrollRate( 0, 50 )
         
@@ -392,7 +392,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                         self._SetFocussedMedia( None )
                         
                     
-                    HydrusGlobals.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+                    # we want currently animating files (i.e. currently open files) to be unloaded before the delete call goes through
+                    
+                    wx.CallAfter( HydrusGlobals.client_controller.Write, 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
                     
                 else:
                     

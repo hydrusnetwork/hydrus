@@ -306,8 +306,6 @@ class ConversationPanel( wx.Panel ):
         
         wx.Panel.__init__( self, parent, style = wx.SIMPLE_BORDER )
         
-        self.SetBackgroundColour( wx.WHITE )
-        
         self._identity = identity
         self._page_key = page_key
         self._conversation = conversation
@@ -568,8 +566,6 @@ class DestinationPanel( wx.Panel ):
             
             status_text = wx.StaticText( self, label = self._status )
             
-            status_text.SetForegroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_HIGHLIGHT ) )
-            
             status_text.SetCursor( wx.StockCursor( wx.CURSOR_HAND ) )
             
             status_text.Bind( wx.EVT_LEFT_DOWN, self.EventReadMenu )
@@ -578,8 +574,6 @@ class DestinationPanel( wx.Panel ):
             
             status_text = wx.StaticText( self, label = self._status )
             
-            status_text.SetForegroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_HIGHLIGHT ) )
-            
             status_text.SetCursor( wx.StockCursor( wx.CURSOR_HAND ) )
             
             status_text.Bind( wx.EVT_LEFT_DOWN, self.EventUnreadMenu )
@@ -587,8 +581,6 @@ class DestinationPanel( wx.Panel ):
         else:
             
             status_text = wx.StaticText( self, label = self._status )
-            
-            status_text.SetForegroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_HIGHLIGHT ) )
             
         
         return status_text
@@ -968,7 +960,6 @@ class DraftBodyPanel( wx.Panel ):
                     else: selection_range = wx.richtext.RichTextRange( ip, ip )
                     
                     text_attribute.SetFlags( wx.TEXT_ATTR_TEXT_COLOUR )
-                    text_attribute.SetTextColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_HIGHLIGHT ) )
                     
                     text_attribute.SetFontUnderlined( True )
                     
@@ -986,7 +977,6 @@ class DraftBodyPanel( wx.Panel ):
             text_attribute = wx.richtext.TextAttrEx()
             
             text_attribute.SetFlags( wx.TEXT_ATTR_TEXT_COLOUR )
-            text_attribute.SetTextColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOWTEXT ) )
             
             text_attribute.SetFontUnderlined( False )
             

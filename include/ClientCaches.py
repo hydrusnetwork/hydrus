@@ -349,7 +349,7 @@ class ClientFilesManager( object ):
     
     def _GetRebalanceTuple( self ):
         
-        ( locations_to_ideal_weights, resized_thumbnail_override ) = self._controller.GetNewOptions().GetClientFilesLocationsToIdealWeights()
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._controller.GetNewOptions().GetClientFilesLocationsToIdealWeights()
         
         total_weight = sum( locations_to_ideal_weights.values() )
         
@@ -421,17 +421,34 @@ class ClientFilesManager( object ):
             
         else:
             
-            for hex_prefix in HydrusData.IterateHexPrefixes():
+            if full_size_thumbnail_override is None:
                 
-                full_size_prefix = 't' + hex_prefix
-                file_prefix = 'f' + hex_prefix
-                
-                full_size_location = self._prefixes_to_locations[ full_size_prefix ]
-                file_location = self._prefixes_to_locations[ file_prefix ]
-                
-                if full_size_location != file_location:
+                for hex_prefix in HydrusData.IterateHexPrefixes():
                     
-                    return ( full_size_prefix, full_size_location, file_location )
+                    full_size_prefix = 't' + hex_prefix
+                    file_prefix = 'f' + hex_prefix
+                    
+                    full_size_location = self._prefixes_to_locations[ full_size_prefix ]
+                    file_location = self._prefixes_to_locations[ file_prefix ]
+                    
+                    if full_size_location != file_location:
+                        
+                        return ( full_size_prefix, full_size_location, file_location )
+                        
+                    
+                
+            else:
+                
+                for hex_prefix in HydrusData.IterateHexPrefixes():
+                    
+                    full_size_prefix = 't' + hex_prefix
+                    
+                    full_size_location = self._prefixes_to_locations[ full_size_prefix ]
+                    
+                    if full_size_location != full_size_thumbnail_override:
+                        
+                        return ( full_size_prefix, full_size_location, full_size_thumbnail_override )
+                        
                     
                 
             
