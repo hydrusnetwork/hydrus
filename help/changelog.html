@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 219</h3></li>
+				<ul>
+					<li>wrote framework for per-mime zoom options--mimes now have separate show actions for the media viewer and the preview window and zoom in to fit</li>
+					<li>added 'half/double zoom' to limit a mime's zoom to only 25%, 50%, 100%, 200%, 400% and so on (png defaults to this)</li>
+					<li>added placeholders for zoom in/out algorithm quality, but they don't do anything yet</li>
+					<li>added a listctrl to edit all this to options->media</li>
+					<li>added a scrappy zoom values option to options->media</li>
+					<li>cleaned up a bunch of zoom code</li>
+					<li>added video/mpeg support</li>
+					<li>fixed some mime layout stuff</li>
+					<li>duplicate tag predicates across the 'all known tags' space are merged into more accurate (3-5)-type counts</li>
+					<li>refactored and simplified how predicate counts are merged</li>
+					<li>if launched from the manage tags dialog, the advanced content update dialog now correctly filters hta imports to only the files the manage tags dialog was launched with</li>
+					<li>the advanced content update dialog has a bit of better text to explain this</li>
+					<li>in prep for a complete rewrite of the image rendering pipeline, merged the fullscreen and preview image caches and cleaned up some related code</li>
+					<li>added resume recovery to the v215->v216 update code for users for whom this update was interrupted</li>
+					<li>directory creation is improved across the program</li>
+					<li>fixed the optimised merge-move file code, which was forgetting to clean up the source when no move was needed</li>
+					<li>the optmised merge-move directory code will now be much quicker in some situations</li>
+					<li>all file moves across the program should be less stupid-error prone, and repeating/resuming many maintenance or update tasks that require a lot of moves will be much faster</li>
+					<li>manual exports, which use copy rather than move, should also be more sensible and faster when repeated</li>
+					<li>improved database exception rendering, which in some cases was being truncated</li>
+					<li>misc cleanup</li>
+					<li>misc small updates to help</li>
+				</ul>
 				<li><h3>version 218</h3></li>
 				<ul>
 					<li>related tags control now updates on new media events (i.e. if the parent media viewer scrolls to different media)</li>
@@ -15,8 +40,8 @@
 					<li>related tags now properly filter out dupe suggestions caused by siblings</li>
 					<li>went over all the gui colours in the client, cleared some redundancies and replaced all the static whites and blacks with appropriate system defaults or chosen custom colours</li>
 					<li>full size thumbnails can now also be stored in a different location, like resized thumbs, under options->file storage locations</li>
-					<li>fixed false postiive shutdown maintenance checking due to vacuums projected to take longer than the given maintenance time</li>
-					<li>fixed false postiive shutdown maintenance checking due to sqlite_stat1 creeping in</li>
+					<li>fixed false positive shutdown maintenance checking due to vacuums projected to take longer than the given maintenance time</li>
+					<li>fixed false positive shutdown maintenance checking due to sqlite_stat1 creeping in</li>
 					<li>pasting tags or otherwise editing many in at once in the manage tags frame will immediately commit all the changes in one db transaction, rather than one for each tag laggily in turn</li>
 					<li>removed 'import tags' from file menu--this advanced stuff is now done in and better left to the advanced content update dialog</li>
 					<li>restoring from an old db backup with a simpler db structure will no longer create conflicts</li>
