@@ -11,6 +11,7 @@ import unittest
 import HydrusData
 import ClientConstants as CC
 import HydrusGlobals
+import HydrusPaths
 
 class TestDaemons( unittest.TestCase ):
     
@@ -20,7 +21,7 @@ class TestDaemons( unittest.TestCase ):
         
         try:
             
-            if not os.path.exists( test_dir ): os.makedirs( test_dir )
+            HydrusPaths.MakeSureDirectoryExists( test_dir )
             
             with open( os.path.join( test_dir, '0' ), 'wb' ) as f: f.write( TestConstants.tinest_gif )
             with open( os.path.join( test_dir, '1' ), 'wb' ) as f: f.write( TestConstants.tinest_gif ) # previously imported

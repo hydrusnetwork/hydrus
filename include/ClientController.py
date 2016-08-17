@@ -247,7 +247,7 @@ class Controller( HydrusController.HydrusController ):
             
             media = data
             
-            image_container = self.GetCache( 'fullscreen' ).GetImage( media )
+            image_container = self.GetCache( 'images' ).GetImage( media )
             
             def CopyToClipboard():
                 
@@ -531,8 +531,7 @@ class Controller( HydrusController.HydrusController ):
         
         def wx_code():
             
-            self._caches[ 'fullscreen' ] = ClientCaches.RenderedImageCache( self, 'fullscreen' )
-            self._caches[ 'preview' ] = ClientCaches.RenderedImageCache( self, 'preview' )
+            self._caches[ 'images' ] = ClientCaches.RenderedImageCache( self )
             self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
             
             CC.GlobalBMPs.STATICInitialise()
@@ -831,7 +830,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         import ClientLocalServer
                         
-                        self._local_service = reactor.listenTCP( port, ClientLocalServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ) )
+                        self._local_service = reactor.listenTCP( port, ClientLocalServer.HydrusServiceLocal( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ), interface = '127.0.0.1' )
                         
                         try:
                             

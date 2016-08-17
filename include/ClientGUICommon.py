@@ -71,6 +71,15 @@ def FlushOutPredicates( parent, predicates ):
     
     return good_predicates
     
+def WrapInText( control, parent, text ):
+    
+    hbox = wx.BoxSizer( wx.HORIZONTAL )
+    
+    hbox.AddF( wx.StaticText( parent, label = text ), CC.FLAGS_MIXED )
+    hbox.AddF( control, CC.FLAGS_EXPAND_BOTH_WAYS )
+    
+    return hbox
+    
 def IsWXAncestor( child, ancestor ):
     
     parent = child

@@ -727,55 +727,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddToCount( self, current_or_pending, count ):
+    def AddCounts( self, predicate ):
         
-        if count == 0:
-            
-            return
-            
+        ( min_current_count, max_current_count, min_pending_count, max_pending_count ) = predicate.GetAllCounts()
         
-        if current_or_pending == HC.CURRENT:
-            
-            if self._min_current_count == 0:
-                
-                self._min_current_count = count
-                
-            else:
-                
-                if self._max_current_count is None:
-                    
-                    self._max_current_count = self._min_current_count
-                    
-                
-                self._max_current_count += count
-                
-                if count > self._min_current_count:
-                    
-                    self._min_current_count = count
-                    
-                
-            
-        elif current_or_pending == HC.PENDING:
-            
-            if self._min_pending_count == 0:
-                
-                self._min_pending_count = count
-                
-            else:
-                
-                if self._max_pending_count is None:
-                    
-                    self._max_pending_count = self._min_pending_count
-                    
-                
-                self._max_pending_count += count
-                
-                if count > self._min_pending_count:
-                    
-                    self._min_pending_count = count
-                    
-                
-            
+        ( self._min_current_count, self._max_current_count ) = ClientData.MergeCounts( self._min_current_count, self._max_current_count, min_current_count, max_current_count )
+        ( self._min_pending_count, self._max_pending_count) = ClientData.MergeCounts( self._min_pending_count, self._max_pending_count, min_pending_count, max_pending_count )
+        
+    
+    def GetAllCounts( self ):
+        
+        return ( self._min_current_count, self._max_current_count, self._min_pending_count, self._max_pending_count )
         
     
     def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )

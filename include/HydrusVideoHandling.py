@@ -86,6 +86,28 @@ def GetMatroskaOrWebMProperties( path ):
     
     return ( ( width, height ), duration, num_frames )
     
+def GetMimeFromFFMPEG( path ):
+    
+    info = Hydrusffmpeg_parse_infos( path )
+    
+    if 'mime_text' in info:
+        
+        mime_text = info[ 'mime_text' ]
+        
+        if 'matroska' in mime_text or 'webm' in mime_text:
+            
+            # typically it is 'matroska,webm'
+            
+            return GetMatroskaOrWebm( path )
+            
+        elif mime_text in ( 'mpeg', 'mpegvideo' ):
+            
+            return HC.VIDEO_MPEG
+            
+        
+    
+    raise Exception( 'FFMPEG could not find mime in ' + path + '!' )
+    
 def HasVideoStream( path ):
     
     try:
@@ -129,6 +151,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
     
     infos = proc.stderr.read().decode('utf8')
+    
     proc.terminate()
     
     del proc
@@ -172,7 +195,24 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     except:
         raise IOError("Error reading duration in file %s,"%(filename)+
                       "Text parsed: %s"%infos)
-
+    
+    try:
+        
+        ( input_line, ) = [ l for l in lines if l.startswith( 'Input #0' ) ]
+        
+        # Input #0, matroska, webm, from 'm.mkv':
+        
+        text = input_line[10:]
+        
+        mime_text = text.split( ', from' )[0]
+        
+        result[ 'mime_text' ] = mime_text
+        
+    except:
+        
+        pass
+        
+    
     # get the output line that speaks about video
     lines_video = [l for l in lines if ' Video: ' in l]
     

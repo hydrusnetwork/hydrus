@@ -43,6 +43,19 @@ def CatchExceptionClient( etype, value, tb ):
         
         trace = ''.join( trace_list )
         
+        pretty_value = HydrusData.ToUnicode( value )
+        
+        if os.linesep in pretty_value:
+            
+            ( first_line, anything_else ) = pretty_value.split( os.linesep, 1 )
+            
+            trace = trace + os.linesep + anything_else
+            
+        else:
+            
+            first_line = pretty_value
+            
+        
         job_key = ClientThreading.JobKey()
         
         if etype == HydrusExceptions.ShutdownException:
@@ -54,16 +67,14 @@ def CatchExceptionClient( etype, value, tb ):
             if etype == wx.PyDeadObjectError:
                 
                 HydrusData.Print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-                HydrusData.Print( HydrusData.ToUnicode( value ) )
                 HydrusData.Print( trace )
                 
                 return
                 
             
-            first_line = HydrusData.ToUnicode( value ).split( os.linesep )[0]
-            
             try: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype.__name__ ) )
             except: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype ) )
+            
             job_key.SetVariable( 'popup_text_1', first_line )
             job_key.SetVariable( 'popup_traceback', trace )
             
@@ -158,13 +169,11 @@ def ConvertZoomToPercentage( zoom ):
     
     zoom_percent = zoom * 100
     
-    if zoom in CC.ZOOMS:
+    pretty_zoom = '%.2f' % zoom_percent + '%'
+    
+    if pretty_zoom.endswith( '00%' ):
         
         pretty_zoom = '%i' % zoom_percent + '%'
-        
-    else:
-        
-        pretty_zoom = '%.2f' % zoom_percent + '%'
         
     
     return pretty_zoom
@@ -268,6 +277,38 @@ def GetSortChoices( add_namespaces_and_ratings = True ):
     
     return sort_choices
     
+def MergeCounts( min_a, max_a, min_b, max_b ):
+    
+    # 100-None and 100-None returns 100-200
+    # 1-None and 4-5 returns 5-6
+    # 1-2, and 5-7 returns 6, 9
+    
+    if min_a == 0:
+        
+        ( min_answer, max_answer ) = ( min_b, max_b )
+        
+    elif min_b == 0:
+        
+        ( min_answer, max_answer ) = ( min_a, max_a )
+        
+    else:
+        
+        if max_a is None:
+            
+            max_a = min_a
+            
+        
+        if max_b is None:
+            
+            max_b = min_b
+            
+        
+        min_answer = max( min_a, min_b )
+        max_answer = max_a + max_b
+        
+    
+    return ( min_answer, max_answer )
+    
 def ShowExceptionClient( e ):
     
     ( etype, value, tb ) = sys.exc_info()
@@ -284,6 +325,19 @@ def ShowExceptionClient( e ):
         trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
     
+    pretty_value = HydrusData.ToUnicode( value )
+    
+    if os.linesep in pretty_value:
+        
+        ( first_line, anything_else ) = HydrusData.ToUnicode( value ).split( os.linesep, 1 )
+        
+        trace = trace + os.linesep + anything_else
+        
+    else:
+        
+        first_line = pretty_value
+        
+    
     job_key = ClientThreading.JobKey()
     
     if isinstance( e, HydrusExceptions.ShutdownException ):
@@ -295,7 +349,6 @@ def ShowExceptionClient( e ):
         if etype == wx.PyDeadObjectError:
             
             HydrusData.Print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-            HydrusData.Print( HydrusData.ToUnicode( value ) )
             HydrusData.Print( trace )
             
             return
@@ -305,8 +358,6 @@ def ShowExceptionClient( e ):
         else: title = HydrusData.ToUnicode( etype )
         
         job_key.SetVariable( 'popup_title', title )
-        
-        first_line = HydrusData.ToUnicode( value ).split( os.linesep )[0]
         
         job_key.SetVariable( 'popup_text_1', first_line )
         job_key.SetVariable( 'popup_traceback', trace )
@@ -448,30 +499,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseDefaults( self ):
         
-        self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
-        
-        #
-        
-        self._dictionary[ 'suggested_tags' ] = HydrusSerialisable.SerialisableDictionary()
-        
-        self._dictionary[ 'suggested_tags' ][ 'favourites' ] = {}
-        
-        #
-        
-        self._dictionary[ 'frame_locations' ] = {}
-        
-        # remember size, remember position, last_size, last_pos, default gravity, default position, maximised, fullscreen
-        self._dictionary[ 'frame_locations' ][ 'file_import_status' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
-        self._dictionary[ 'frame_locations' ][ 'main_gui' ] = ( True, True, ( 640, 480 ), ( 20, 20 ), ( -1, -1 ), 'topleft', True, False )
-        self._dictionary[ 'frame_locations' ][ 'manage_options_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
-        self._dictionary[ 'frame_locations' ][ 'manage_tags_dialog' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
-        self._dictionary[ 'frame_locations' ][ 'manage_tags_frame' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
-        self._dictionary[ 'frame_locations' ][ 'media_viewer' ] = ( True, True, ( 640, 480 ), ( 70, 70 ), ( -1, -1 ), 'topleft', True, True )
-        self._dictionary[ 'frame_locations' ][ 'regular_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
-        self._dictionary[ 'frame_locations' ][ 'review_services' ] = ( False, True, None, None, ( -1, -1 ), 'topleft', False, False )
-        
-        #
-        
         self._dictionary[ 'booleans' ] = {}
         
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
@@ -490,17 +517,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        self._dictionary[ 'noneable_integers' ] = {}
-        
-        self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
-        
-        self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
-        self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
-        
-        self._dictionary[ 'noneable_integers' ][ 'suggested_tags_width' ] = None
-        
-        #
-        
         self._dictionary[ 'integers' ] = {}
         
         self._dictionary[ 'integers' ][ 'video_buffer_size_mb' ] = 96
@@ -512,11 +528,78 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'noneable_integers' ] = {}
+        
+        self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
+        
+        self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
+        self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
+        
+        self._dictionary[ 'noneable_integers' ][ 'suggested_tags_width' ] = None
+        
+        #
+        
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
         
         self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
         self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = None
         self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = None
+        
+        #
+        
+        self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        #
+        
+        self._dictionary[ 'frame_locations' ] = {}
+        
+        # remember size, remember position, last_size, last_pos, default gravity, default position, maximised, fullscreen
+        self._dictionary[ 'frame_locations' ][ 'file_import_status' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'main_gui' ] = ( True, True, ( 640, 480 ), ( 20, 20 ), ( -1, -1 ), 'topleft', True, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_options_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_tags_dialog' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_tags_frame' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'media_viewer' ] = ( True, True, ( 640, 480 ), ( 70, 70 ), ( -1, -1 ), 'topleft', True, True )
+        self._dictionary[ 'frame_locations' ][ 'regular_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'review_services' ] = ( False, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        
+        #
+        
+        self._dictionary[ 'media_view' ] = HydrusSerialisable.SerialisableDictionary() # integer keys, so got to be cleverer dict
+        
+        # media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality
+        self._dictionary[ 'media_view' ][ HC.IMAGE_JPEG ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, True, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        self._dictionary[ 'media_view' ][ HC.IMAGE_PNG ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, True, True, CC.ZOOM_NEAREST, CC.ZOOM_AREA )
+        self._dictionary[ 'media_view' ][ HC.IMAGE_GIF ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, True, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED, True, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+            
+        else:
+            
+            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+            
+        
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_PDF ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_FLV ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MP4 ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MPEG ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MKV ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_WEBM ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_WMV ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_MP3 ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_OGG ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_FLAC ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_WMA] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        
+        self._dictionary[ 'media_zooms' ] = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
+        
+        #
+        
+        self._dictionary[ 'suggested_tags' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'suggested_tags' ][ 'favourites' ] = {}
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -678,11 +761,57 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetMediaShowAction( self, mime ):
+        
+        with self._lock:
+            
+            ( media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            return media_show_action
+            
+        
+    
+    def GetMediaViewOptions( self, mime ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'media_view' ][ mime ]
+            
+        
+    
+    def GetMediaZoomOptions( self, mime ):
+        
+        with self._lock:
+            
+            ( media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            return ( zoom_in_to_fit, exact_zooms_only )
+            
+        
+    
+    def GetMediaZooms( self ):
+        
+        with self._lock:
+            
+            return list( self._dictionary[ 'media_zooms' ] )
+            
+        
+    
     def GetNoneableInteger( self, name ):
         
         with self._lock:
             
             return self._dictionary[ 'noneable_integers' ][ name ]
+            
+        
+    
+    def GetPreviewShowAction( self, mime ):
+        
+        with self._lock:
+            
+            ( media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            return preview_show_action
             
         
     
@@ -749,6 +878,22 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'integers' ][ name ] = value
+            
+        
+    
+    def SetMediaViewOptions( self, mime, value_tuple ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'media_view' ][ mime ] = value_tuple
+            
+        
+    
+    def SetMediaZooms( self, zooms ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'media_zooms' ] = zooms
             
         
     

@@ -925,7 +925,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             dest_path = HydrusPaths.AppendPathUntilNoConflicts( dest_path )
                             
-                            shutil.move( path, dest_path )
+                            HydrusPaths.MergeFile( path, dest_path )
                             
                         
                         txt_path = path + '.txt'
@@ -940,7 +940,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             txt_dest_path = HydrusPaths.AppendPathUntilNoConflicts( txt_dest_path )
                             
-                            shutil.move( txt_path, txt_dest_path )
+                            HydrusPaths.MergeFile( txt_path, txt_dest_path )
                             
                         
                         self._path_cache.RemoveSeed( path )

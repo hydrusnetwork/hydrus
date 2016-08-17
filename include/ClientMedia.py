@@ -636,7 +636,10 @@ class MediaList( object ):
             
             if selected_media is not None and media not in selected_media: continue
             
-            if media.IsCollection(): media_results.extend( media.GenerateMediaResults( has_location = has_location, discriminant = discriminant, selected_media = selected_media, unrated = unrated, for_media_viewer = True ) )
+            if media.IsCollection():
+                
+                media_results.extend( media.GenerateMediaResults( has_location = has_location, discriminant = discriminant, selected_media = selected_media, unrated = unrated, for_media_viewer = True ) )
+                
             else:
                 
                 if discriminant is not None:
@@ -663,7 +666,11 @@ class MediaList( object ):
                 
                 if for_media_viewer:
                     
-                    if HC.options[ 'mime_media_viewer_actions' ][ media.GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+                    new_options = HydrusGlobals.client_controller.GetNewOptions()
+                    
+                    media_show_action = new_options.GetMediaShowAction( media.GetMime() )
+                    
+                    if media_show_action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
                         
                         continue
                         

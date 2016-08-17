@@ -134,6 +134,143 @@ class EditFrameLocationPanel( EditPanel ):
         return ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
         
     
+class EditMediaViewOptionsPanel( EditPanel ):
+    
+    def __init__( self, parent, info ):
+        
+        EditPanel.__init__( self, parent )
+        
+        self._original_info = info
+        
+        ( self._mime, media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = self._original_info
+        
+        possible_actions = CC.media_viewer_capabilities[ self._mime ]
+        
+        self._media_show_action = ClientGUICommon.BetterChoice( self )
+        self._preview_show_action = ClientGUICommon.BetterChoice( self )
+        
+        for action in possible_actions:
+            
+            self._media_show_action.Append( CC.media_viewer_action_string_lookup[ action ], action )
+            
+            if action != CC.MEDIA_VIEWER_DO_NOT_SHOW:
+                
+                self._preview_show_action.Append( CC.media_viewer_action_string_lookup[ action ], action )
+                
+            
+        
+        self._media_show_action.Bind( wx.EVT_CHOICE, self.EventActionChange )
+        self._preview_show_action.Bind( wx.EVT_CHOICE, self.EventActionChange )
+        
+        self._zoom_in_to_fit = wx.CheckBox( self, label = 'by default, zoom in to fit' )
+        self._zoom_in_to_fit.SetToolTipString( 'If this is checked and the media is smaller than the viewer canvas at 100% zoom, it will be initially scaled up so it fits as much of the canvas as possible.' )
+        
+        self._exact_zooms_only = wx.CheckBox( self, label = 'only permit half and double zooms' )
+        self._exact_zooms_only.SetToolTipString( 'This limits zooms to 25%, 50%, 100%, 200%, 400%, and so on. It makes for fast resize and is useful for files that often have flat colours and hard edges, which often scale badly otherwise.' )
+        
+        self._zoom_in_quality = ClientGUICommon.BetterChoice( self )
+        
+        for zoom in ( CC.ZOOM_NEAREST, CC.ZOOM_LINEAR, CC.ZOOM_CUBIC, CC.ZOOM_LANCZOS4 ):
+            
+            self._zoom_in_quality.Append( CC.zoom_string_lookup[ zoom ], zoom )
+            
+        
+        self._zoom_out_quality = ClientGUICommon.BetterChoice( self )
+        
+        for zoom in ( CC.ZOOM_NEAREST, CC.ZOOM_LINEAR, CC.ZOOM_AREA ):
+            
+            self._zoom_out_quality.Append( CC.zoom_string_lookup[ zoom ], zoom )
+            
+        
+        #
+        
+        self._media_show_action.SelectClientData( media_show_action )
+        self._preview_show_action.SelectClientData( preview_show_action )
+        
+        self._zoom_in_to_fit.SetValue( zoom_in_to_fit )
+        self._exact_zooms_only.SetValue( exact_zooms_only )
+        
+        self._zoom_in_quality.SelectClientData( zoom_in_quality )
+        self._zoom_out_quality.SelectClientData( zoom_out_quality )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        text = 'Setting media view options for ' + HC.mime_string_lookup[ self._mime ] + '.'
+        
+        vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.WrapInText( self._media_show_action, self, 'media viewer show action:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.WrapInText( self._preview_show_action, self, 'preview show action:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        if possible_actions == CC.no_support:
+            
+            self._zoom_in_to_fit.Hide()
+            self._exact_zooms_only.Hide()
+            
+            self._zoom_in_quality.Hide()
+            self._zoom_out_quality.Hide()
+            
+        else:
+            
+            vbox.AddF( self._zoom_in_to_fit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._exact_zooms_only, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.AddF( wx.StaticText( self, label = 'These zoom quality controls don\'t do anything yet!' ), CC.FLAGS_MIXED )
+            
+            vbox.AddF( ClientGUICommon.WrapInText( self._zoom_in_quality, self, '>100% (interpolation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( ClientGUICommon.WrapInText( self._zoom_out_quality, self, '<100% (decimation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+        
+        if self._mime == HC.APPLICATION_FLASH:
+            
+            self._zoom_in_quality.Disable()
+            self._zoom_out_quality.Disable()
+            
+        
+        self.SetSizer( vbox )
+        
+    
+    def EventActionChange( self, event ):
+        
+        if self._media_show_action.GetChoice() in CC.no_support and self._preview_show_action.GetChoice() in CC.no_support:
+            
+            self._zoom_in_to_fit.Disable()
+            self._exact_zooms_only.Disable()
+            
+            self._zoom_in_quality.Disable()
+            self._zoom_out_quality.Disable()
+            
+        else:
+            
+            self._zoom_in_to_fit.Enable()
+            self._exact_zooms_only.Enable()
+            
+            self._zoom_in_quality.Enable()
+            self._zoom_out_quality.Enable()
+            
+        
+        if self._mime == HC.APPLICATION_FLASH:
+            
+            self._zoom_in_quality.Disable()
+            self._zoom_out_quality.Disable()
+            
+        
+    
+    def GetValue( self ):
+        
+        media_show_action = self._media_show_action.GetChoice()
+        preview_show_action = self._preview_show_action.GetChoice()
+        
+        zoom_in_to_fit = self._zoom_in_to_fit.GetValue()
+        exact_zooms_only = self._exact_zooms_only.GetValue()
+        
+        zoom_in_quality = self._zoom_in_quality.GetChoice()
+        zoom_out_quality = self._zoom_out_quality.GetChoice()
+        
+        return ( self._mime, media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality )
+        
+    
 class EditSeedCachePanel( EditPanel ):
     
     def __init__( self, parent, controller, seed_cache ):
@@ -1453,50 +1590,40 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._new_options = HydrusGlobals.client_controller.GetNewOptions()
             
-            self._fit_to_canvas = wx.CheckBox( self, label = '' )
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
             
             self._disable_cv_for_gifs = wx.CheckBox( self, label = '' )
             
-            self._mime_media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
+            self._media_zooms = wx.TextCtrl( self )
+            self._media_zooms.Bind( wx.EVT_TEXT, self.EventZoomsChanged )
             
-            self._mime_media_viewer_actions = {}
+            self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
-            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.VIDEO_FLV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
+            self._media_viewer_options = ClientGUICommon.SaneListCtrl( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom in to fit', 80 ), ( 'half/double zoom', 80 ), ( '>100% quality', 120 ), ( '<100% quality', 120 ) ] )
             
-            for mime in mimes_in_correct_order:
-                
-                dropdown = ClientGUICommon.BetterChoice( self._mime_media_viewer_panel )
-                
-                for action in CC.media_viewer_capabilities[ mime ]:
-                    
-                    dropdown.Append( CC.media_viewer_action_string_lookup[ action ], action )
-                    
-                
-                current_action = HC.options[ 'mime_media_viewer_actions' ][ mime ]
-                
-                dropdown.SelectClientData( current_action )
-                
-                self._mime_media_viewer_actions[ mime ] = dropdown
-                
+            self._media_viewer_edit_button = wx.Button( self._media_viewer_panel, label = 'edit' )
+            self._media_viewer_edit_button.Bind( wx.EVT_BUTTON, self.EventEditMediaViewerOptions )
             
             #
             
-            self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
             self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            media_zooms = self._new_options.GetMediaZooms()
             
-            gridbox.AddGrowableCol( 1, 1 )
+            self._media_zooms.SetValue( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
+            
+            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.VIDEO_FLV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
             
             for mime in mimes_in_correct_order:
                 
-                gridbox.AddF( wx.StaticText( self._mime_media_viewer_panel, label = HC.mime_string_lookup[ mime ] ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._mime_media_viewer_actions[ mime ], CC.FLAGS_MIXED )
+                items = self._new_options.GetMediaViewOptions( mime )
                 
-            
-            self._mime_media_viewer_panel.AddF( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+                listctrl_list = [ mime ] + list( items )
+                pretty_listctrl_list = self._GetPrettyMediaViewOptions( listctrl_list )
+                
+                self._media_viewer_options.Append( pretty_listctrl_list, listctrl_list )
+                
             
             #
             
@@ -1506,36 +1633,126 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Zoom smaller media to fit media canvas: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._fit_to_canvas, CC.FLAGS_MIXED )
-            
             gridbox.AddF( wx.StaticText( self, label = 'Start animations this % in: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._animation_start_position, CC.FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self, label = 'Disable OpenCV for gifs: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( self._disable_cv_for_gifs, CC.FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( self, label = 'Media zooms: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._media_zooms, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._mime_media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._media_viewer_panel.AddF( self._media_viewer_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._media_viewer_panel.AddF( self._media_viewer_edit_button, CC.FLAGS_LONE_BUTTON )
+            
+            vbox.AddF( self._media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
         
+        def _GetPrettyMediaViewOptions( self, listctrl_list ):
+            
+            ( mime, media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = listctrl_list
+            
+            pretty_mime = HC.mime_string_lookup[ mime ]
+            pretty_media_show_action = CC.media_viewer_action_string_lookup[ media_show_action ]
+            pretty_preview_show_action = CC.media_viewer_action_string_lookup[ preview_show_action ]
+            
+            no_show_actions = ( CC.MEDIA_VIEWER_DO_NOT_SHOW, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON )
+            
+            no_show = media_show_action in CC.no_support and preview_show_action in CC.no_support
+            
+            if no_show:
+                
+                pretty_zoom_in_to_fit = ''
+                pretty_exact_zooms_only = ''
+                pretty_zoom_in_quality = ''
+                pretty_zoom_out_quality = ''
+                
+            else:
+                
+                pretty_zoom_in_to_fit = str( zoom_in_to_fit )
+                pretty_exact_zooms_only = str( exact_zooms_only )
+                pretty_zoom_in_quality = CC.zoom_string_lookup[ zoom_in_quality ]
+                pretty_zoom_out_quality = CC.zoom_string_lookup[ zoom_out_quality ]
+                
+            
+            return ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_in_to_fit, pretty_exact_zooms_only, pretty_zoom_in_quality, pretty_zoom_out_quality )
+            
+        
+        def EventEditMediaViewerOptions( self, event ):
+            
+            for i in self._media_viewer_options.GetAllSelected():
+                
+                listctrl_list = self._media_viewer_options.GetClientData( i )
+                
+                title = 'set media view options information'
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                    
+                    panel = EditMediaViewOptionsPanel( dlg, listctrl_list )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        new_listctrl_list = panel.GetValue()
+                        pretty_new_listctrl_list = self._GetPrettyMediaViewOptions( new_listctrl_list )
+                        
+                        self._media_viewer_options.UpdateRow( i, pretty_new_listctrl_list, new_listctrl_list )
+                        
+                    
+                
+            
+        
+        def EventZoomsChanged( self, event ):
+            
+            try:
+                
+                media_zooms = [ float( media_zoom ) for media_zoom in self._media_zooms.GetValue().split( ',' ) ]
+                
+                self._media_zooms.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) )
+                
+            except ValueError:
+                
+                self._media_zooms.SetBackgroundColour( wx.Colour( 255, 127, 127 ) )
+                
+            
+            self._media_zooms.Refresh()
+            
+        
         def UpdateOptions( self ):
             
-            HC.options[ 'fit_to_canvas' ] = self._fit_to_canvas.GetValue()
             HC.options[ 'animation_start_position' ] = float( self._animation_start_position.GetValue() ) / 100.0
             
-            mime_media_viewer_actions = {}
-            
-            for ( mime, dropdown ) in self._mime_media_viewer_actions.items():
-                
-                mime_media_viewer_actions[ mime ] = dropdown.GetChoice()
-                
-            
-            HC.options[ 'mime_media_viewer_actions' ] = mime_media_viewer_actions
-            
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
+            
+            try:
+                
+                media_zooms = [ float( media_zoom ) for media_zoom in self._media_zooms.GetValue().split( ',' ) ]
+                
+                if len( media_zooms ) > 0:
+                    
+                    self._new_options.SetMediaZooms( media_zooms )
+                    
+                
+            except ValueError:
+                
+                HydrusData.ShowText( 'Could not parse those zooms, so they were not saved!' )
+                
+            
+            for listctrl_list in self._media_viewer_options.GetClientData():
+                
+                listctrl_list = list( listctrl_list )
+                
+                mime = listctrl_list[0]
+                
+                value = listctrl_list[1:]
+                
+                self._new_options.SetMediaViewOptions( mime, value )
+                
             
         
     
@@ -1862,11 +2079,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._estimated_number_thumbnails = wx.StaticText( self, label = '' )
             
-            self._preview_cache_size = wx.SpinCtrl( self, min = 5, max = 3000 )
-            self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
-            
-            self._estimated_number_previews = wx.StaticText( self, label = '' )
-            
             self._fullscreen_cache_size = wx.SpinCtrl( self, min = 25, max = 3000 )
             self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
             
@@ -1907,8 +2119,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
             
-            self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
-            
             self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
             
             self._video_buffer_size_mb.SetValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
@@ -1933,11 +2143,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             thumbnails_sizer.AddF( self._thumbnail_cache_size, CC.FLAGS_MIXED )
             thumbnails_sizer.AddF( self._estimated_number_thumbnails, CC.FLAGS_MIXED )
-            
-            previews_sizer = wx.BoxSizer( wx.HORIZONTAL )
-            
-            previews_sizer.AddF( self._preview_cache_size, CC.FLAGS_MIXED )
-            previews_sizer.AddF( self._estimated_number_previews, CC.FLAGS_MIXED )
             
             fullscreens_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -1972,9 +2177,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( thumbnails_sizer, CC.FLAGS_NONE )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for preview cache: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( previews_sizer, CC.FLAGS_NONE )
             
             gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for media viewer cache: ' ), CC.FLAGS_MIXED )
             gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
@@ -2038,7 +2240,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             self.EventFetchAuto( None )
             self.EventFullscreensUpdate( None )
-            self.EventPreviewsUpdate( None )
             self.EventThumbnailsUpdate( None )
             self.EventVideoBufferUpdate( None )
             
@@ -2070,13 +2271,6 @@ class ManageOptionsPanel( ManagePanel ):
             self._estimated_number_fullscreens.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
             
         
-        def EventPreviewsUpdate( self, event ):
-            
-            estimated_bytes_per_preview = 3 * 400 * 400
-            
-            self._estimated_number_previews.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._preview_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_preview ) + ' previews)' )
-            
-        
         def EventThumbnailsUpdate( self, event ):
             
             estimated_bytes_per_thumb = 3 * self._thumbnail_height.GetValue() * self._thumbnail_width.GetValue()
@@ -2101,7 +2295,6 @@ class ManageOptionsPanel( ManagePanel ):
             HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
             
             HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
-            HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
             HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
             
             self._new_options.SetInteger( 'video_buffer_size_mb', self._video_buffer_size_mb.GetValue() )

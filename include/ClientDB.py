@@ -1161,10 +1161,7 @@ class DB( HydrusDB.HydrusDB ):
             
             update_dir = ClientFiles.GetExpectedUpdateDir( service_key )
             
-            if not os.path.exists( update_dir ):
-                
-                os.makedirs( update_dir )
-                
+            HydrusPaths.MakeSureDirectoryExists( update_dir )
             
             if 'first_timestamp' not in info:
                 
@@ -1371,10 +1368,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            if not os.path.exists( path ):
-                
-                os.makedirs( path )
-                
+            HydrusPaths.MakeSureDirectoryExists( path )
             
             for filename in self._db_filenames.values():
                 
@@ -1905,7 +1899,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         move_path = os.path.join( move_location, move_filename )
                         
-                        shutil.move( path, move_path )
+                        HydrusPaths.MergeFile( path, move_path )
                         
                     
                 
@@ -1961,10 +1955,7 @@ class DB( HydrusDB.HydrusDB ):
         
         client_files_default = os.path.join( self._db_dir, 'client_files' )
         
-        if not os.path.exists( client_files_default ):
-            
-            os.makedirs( client_files_default )
-            
+        HydrusPaths.MakeSureDirectoryExists( client_files_default )
         
         other_dirs = []
         
@@ -1972,10 +1963,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for path in other_dirs:
             
-            if not os.path.exists( path ):
-                
-                os.makedirs( path )
-                
+            HydrusPaths.MakeSureDirectoryExists( path )
             
         
         HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
@@ -2579,20 +2567,34 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        current_ids_to_count = collections.Counter()
-        pending_ids_to_count = collections.Counter()
+        ids_to_count = {}
         
         if not there_was_a_namespace and add_namespaceless:
             
-            added_namespaceless_current_ids_to_count = collections.Counter()
-            added_namespaceless_pending_ids_to_count = collections.Counter()
+            added_namespaceless_ids_to_count = {}
             tag_ids_to_incidence_count = collections.Counter()
+            
+        
+        def add_count_to_dict( d, key, c_min, c_max, p_min, p_max ):
+            
+            if key in d:
+                
+                ( current_min, current_max, pending_min, pending_max ) = d[ key ]
+                
+                ( current_min, current_max ) = ClientData.MergeCounts( current_min, current_max, c_min, c_max )
+                ( pending_min, pending_max ) = ClientData.MergeCounts( pending_min, pending_max, p_min, p_max )
+                
+            else:
+                
+                ( current_min, current_max, pending_min, pending_max ) = ( c_min, c_max, p_min, p_max )
+                
+            
+            d[ key ] = ( current_min, current_max, pending_min, pending_max )
             
         
         for ( namespace_id, tag_id, current_count, pending_count ) in cache_results:
             
-            current_ids_to_count[ ( namespace_id, tag_id ) ] += current_count
-            pending_ids_to_count[ ( namespace_id, tag_id ) ] += pending_count
+            add_count_to_dict( ids_to_count, ( namespace_id, tag_id ), current_count, None, pending_count, None )
             
             # prepare to add any namespaced counts to the namespaceless count
             
@@ -2602,29 +2604,29 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if namespace_id != 1:
                     
-                    added_namespaceless_current_ids_to_count[ tag_id ] += current_count
-                    added_namespaceless_pending_ids_to_count[ tag_id ] += pending_count
+                    add_count_to_dict( added_namespaceless_ids_to_count, tag_id, current_count, None, pending_count, None )
                     
                 
             
-        
-        # any instances of namespaceless counts that are just copies of a single namespaced count are not useful
-        # e.g. 'series:evangelion (300)' is not benefitted by adding 'evangelion (300)'
-        # so do not add them
         
         if not there_was_a_namespace and add_namespaceless:
             
             for ( tag_id, incidence ) in tag_ids_to_incidence_count.items():
                 
-                if incidence > 1:
+                # any instances of namespaceless counts that are just copies of a single namespaced count are not useful
+                # e.g. 'series:evangelion (300)' is not benefitted by adding 'evangelion (300)'
+                # so do not add them
+                
+                if incidence > 1 and tag_id in added_namespaceless_ids_to_count:
                     
-                    current_ids_to_count[ ( 1, tag_id ) ] += added_namespaceless_current_ids_to_count[ tag_id ]
-                    pending_ids_to_count[ ( 1, tag_id ) ] += added_namespaceless_pending_ids_to_count[ tag_id ]
+                    ( current_min, current_max, pending_min, pending_max ) = added_namespaceless_ids_to_count[ tag_id ]
+                    
+                    add_count_to_dict( ids_to_count, ( 1, tag_id ), current_min, current_max, pending_min, pending_max )
                     
                 
             
         
-        return ( current_ids_to_count, pending_ids_to_count )
+        return ids_to_count
         
     
     def _GetAutocompleteNamespaceIdTagIds( self, search_text, exact_match ):
@@ -2767,26 +2769,19 @@ class DB( HydrusDB.HydrusDB ):
         
         there_was_a_namespace = ':' in search_text
         
-        ( current_ids_to_count, pending_ids_to_count ) = self._GetAutocompleteCounts( tag_service_id, file_service_id, namespace_id_tag_ids, there_was_a_namespace, add_namespaceless )
+        ids_to_count = self._GetAutocompleteCounts( tag_service_id, file_service_id, namespace_id_tag_ids, there_was_a_namespace, add_namespaceless )
         
         #
         
-        ids_to_do = set()
-        
-        if include_current: ids_to_do.update( ( id for ( id, count ) in current_ids_to_count.items() if count > 0 ) )
-        if include_pending: ids_to_do.update( ( id for ( id, count ) in pending_ids_to_count.items() if count > 0 ) )
-        
-        ids_to_tags = { ( namespace_id, tag_id ) : self._GetNamespaceTag( namespace_id, tag_id ) for ( namespace_id, tag_id ) in ids_to_do }
-        
-        tag_info = [ ( ids_to_tags[ id ], current_ids_to_count[ id ], pending_ids_to_count[ id ] ) for id in ids_to_do ]
-        
-        tags_to_do = { tag for ( tag, current_count, pending_count ) in tag_info }
+        tags_to_ids = { self._GetNamespaceTag( namespace_id, tag_id ) : ( namespace_id, tag_id ) for ( namespace_id, tag_id ) in ids_to_count.keys() }
         
         tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
         
-        filtered_tags = tag_censorship_manager.FilterTags( tag_service_key, tags_to_do )
+        filtered_tags = tag_censorship_manager.FilterTags( tag_service_key, tags_to_ids.keys() )
         
-        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
+        filtered_tags_and_counts = [ ( tag, ids_to_count[ tags_to_ids[ tag ] ] ) for tag in filtered_tags ]
+        
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count) ) in filtered_tags_and_counts ]
         
         return predicates
         
@@ -6186,11 +6181,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if os.path.exists( full_source ):
             
-            HydrusPaths.MoveAndMergeTree( full_source, full_dest )
+            HydrusPaths.MergeTree( full_source, full_dest )
             
         elif not os.path.exists( full_dest ):
             
-            os.makedirs( full_dest )
+            HydrusPaths.MakeSureDirectoryExists( full_dest )
             
         
         portable_dest = HydrusPaths.ConvertAbsPathToPortablePath( dest )
@@ -6735,15 +6730,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 dest_dir = os.path.join( HC.CLIENT_UPDATES_DIR, service_key_encoded )
                 
-                if not os.path.exists( dest_dir ):
-                    
-                    os.makedirs( dest_dir )
-                    
+                HydrusPaths.MakeSureDirectoryExists( dest_dir )
                 
                 source_path = os.path.join( HC.CLIENT_UPDATES_DIR, filename )
                 dest_path = os.path.join( dest_dir, gumpf )
                 
-                shutil.move( source_path, dest_path )
+                HydrusPaths.MergeFile( source_path, dest_path )
                 
             
             #
@@ -7831,7 +7823,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     try:
                         
-                        shutil.move( source_path, dest_path )
+                        HydrusPaths.MergeFile( source_path, dest_path )
                         
                     except:
                         
@@ -8049,35 +8041,38 @@ class DB( HydrusDB.HydrusDB ):
                 thumb_dest = os.path.join( location, 't' + prefix )
                 resized_dest = os.path.join( location, 'r' + prefix )
                 
-                shutil.move( source, file_dest )
-                
-                os.makedirs( thumb_dest )
-                os.makedirs( resized_dest )
-                
-                filenames = os.listdir( file_dest )
-                
-                num_to_do = len( filenames )
-                
-                for ( j, filename ) in enumerate( filenames ):
+                if os.path.exists( source ): # recover from this update being previously interrupted
                     
-                    if j % 100 == 0:
-                        
-                        self._controller.pub( 'splash_set_status_text', text_prefix + HydrusData.ConvertValueRangeToPrettyString( j, num_to_do ) )
-                        
+                    HydrusPaths.MergeTree( source, file_dest )
                     
-                    source_path = os.path.join( file_dest, filename )
+                    HydrusPaths.MakeSureDirectoryExists( thumb_dest )
+                    HydrusPaths.MakeSureDirectoryExists( resized_dest )
                     
-                    if source_path.endswith( 'thumbnail' ):
+                    filenames = os.listdir( file_dest )
+                    
+                    num_to_do = len( filenames )
+                    
+                    for ( j, filename ) in enumerate( filenames ):
                         
-                        dest_path = os.path.join( thumb_dest, filename )
+                        if j % 100 == 0:
+                            
+                            self._controller.pub( 'splash_set_status_text', text_prefix + HydrusData.ConvertValueRangeToPrettyString( j, num_to_do ) )
+                            
                         
-                        shutil.move( source_path, dest_path )
+                        source_path = os.path.join( file_dest, filename )
                         
-                    elif source_path.endswith( 'resized' ):
-                        
-                        dest_path = os.path.join( resized_dest, filename )
-                        
-                        shutil.move( source_path, dest_path )
+                        if source_path.endswith( 'thumbnail' ):
+                            
+                            dest_path = os.path.join( thumb_dest, filename )
+                            
+                            HydrusPaths.MergeFile( source_path, dest_path )
+                            
+                        elif source_path.endswith( 'resized' ):
+                            
+                            dest_path = os.path.join( resized_dest, filename )
+                            
+                            HydrusPaths.MergeFile( source_path, dest_path )
+                            
                         
                     
                 
@@ -8779,13 +8774,18 @@ class DB( HydrusDB.HydrusDB ):
                 # if someone backs up with an older version that does not have as many db files as this version, we get conflict
                 # don't want to delete just in case, but we will move it out the way
                 
-                shutil.move( dest, dest + '.old' )
+                HydrusPaths.MergeFile( dest, dest + '.old' )
                 
             
         
+        client_files_source = os.path.join( path, 'client_files' )
         client_files_default = os.path.join( self._db_dir, 'client_files' )
         
-        HydrusPaths.MirrorTree( os.path.join( path, 'client_files' ), client_files_default )
+        if os.path.exists( client_files_source ):
+            
+            HydrusPaths.MirrorTree( client_files_source, client_files_default )
+            
+        
         HydrusPaths.MirrorTree( os.path.join( path, 'client_updates' ), os.path.join( self._db_dir, 'client_updates' ) )
         
     

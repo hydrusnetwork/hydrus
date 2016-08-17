@@ -111,10 +111,7 @@ def CopyAndMergeTree( source, dest ):
     
     pauser = HydrusData.BigJobPauser()
     
-    if not os.path.exists( dest ):
-        
-        os.makedirs( dest )
-        
+    MakeSureDirectoryExists( dest )
     
     num_errors = 0
     
@@ -129,10 +126,7 @@ def CopyAndMergeTree( source, dest ):
             source_path = os.path.join( root, dirname )
             dest_path = os.path.join( dest_root, dirname )
             
-            if not os.path.exists( dest_path ):
-                
-                os.makedirs( dest_path )
-                
+            MakeSureDirectoryExists( dest_path )
             
             shutil.copystat( source_path, dest_path )
             
@@ -271,17 +265,35 @@ def LaunchFile( path ):
     
     thread.start()
     
+def MakeSureDirectoryExists( path ):
+    
+    if not os.path.exists( path ):
+        
+        os.makedirs( path )
+        
+    
 def MakeFileWritable( path ):
     
-    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-    except: pass
+    try:
+        
+        os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+        
+    except:
+        
+        pass
+        
     
 def MergeFile( source, dest ):
     
-    if not PathsHaveSameSizeAndDate( source, dest ):
+    if PathsHaveSameSizeAndDate( source, dest ):
+        
+        DeletePath( source )
+        
+    else:
         
         try:
             
+            # this overwrites on conflict without hassle
             shutil.move( source, dest )
             
         except Exception as e:
@@ -296,12 +308,68 @@ def MergeFile( source, dest ):
     
     return True
     
+def MergeTree( source, dest ):
+    
+    pauser = HydrusData.BigJobPauser()
+    
+    if not os.path.exists( dest ):
+        
+        shutil.move( source, dest )
+        
+    else:
+        
+        
+        MakeSureDirectoryExists( dest )
+        
+        num_errors = 0
+        
+        for ( root, dirnames, filenames ) in os.walk( source ):
+            
+            dest_root = root.replace( source, dest )
+            
+            for dirname in dirnames:
+                
+                pauser.Pause()
+                
+                source_path = os.path.join( root, dirname )
+                dest_path = os.path.join( dest_root, dirname )
+                
+                MakeSureDirectoryExists( dest_path )
+                
+                shutil.copystat( source_path, dest_path )
+                
+            
+            for filename in filenames:
+                
+                if num_errors > 5:
+                    
+                    raise Exception( 'Too many errors, directory move abandoned.' )
+                    
+                
+                pauser.Pause()
+                
+                source_path = os.path.join( root, filename )
+                dest_path = os.path.join( dest_root, filename )
+                
+                ok = MergeFile( source_path, dest_path )
+                
+                if not ok:
+                    
+                    num_errors += 1
+                    
+                
+            
+        
+        DeletePath( source )
+        
+    
 def MirrorFile( source, dest ):
     
     if not PathsHaveSameSizeAndDate( source, dest ):
         
         try:
             
+            # this overwrites on conflict without hassle
             shutil.copy2( source, dest )
             
         except Exception as e:
@@ -320,10 +388,7 @@ def MirrorTree( source, dest ):
     
     pauser = HydrusData.BigJobPauser()
     
-    if not os.path.exists( dest ):
-        
-        os.makedirs( dest )
-        
+    MakeSureDirectoryExists( dest )
     
     num_errors = 0
     
@@ -342,10 +407,7 @@ def MirrorTree( source, dest ):
             
             surplus_dest_paths.discard( dest_path )
             
-            if not os.path.exists( dest_path ):
-                
-                os.makedirs( dest_path )
-                
+            MakeSureDirectoryExists( dest_path )
             
             shutil.copystat( source_path, dest_path )
             
@@ -380,59 +442,6 @@ def MirrorTree( source, dest ):
             DeletePath( dest_path )
             
         
-    
-def MoveAndMergeTree( source, dest ):
-    
-    pauser = HydrusData.BigJobPauser()
-    
-    if not os.path.exists( dest ):
-        
-        os.makedirs( dest )
-        
-    
-    num_errors = 0
-    
-    for ( root, dirnames, filenames ) in os.walk( source ):
-        
-        dest_root = root.replace( source, dest )
-        
-        for dirname in dirnames:
-            
-            pauser.Pause()
-            
-            source_path = os.path.join( root, dirname )
-            dest_path = os.path.join( dest_root, dirname )
-            
-            if not os.path.exists( dest_path ):
-                
-                os.makedirs( dest_path )
-                
-            
-            shutil.copystat( source_path, dest_path )
-            
-        
-        for filename in filenames:
-            
-            if num_errors > 5:
-                
-                raise Exception( 'Too many errors, directory move abandoned.' )
-                
-            
-            pauser.Pause()
-            
-            source_path = os.path.join( root, filename )
-            dest_path = os.path.join( dest_root, filename )
-            
-            ok = MergeFile( source_path, dest_path )
-            
-            if not ok:
-                
-                num_errors += 1
-                
-            
-        
-    
-    DeletePath( source )
     
 def PathsHaveSameSizeAndDate( path1, path2 ):
     

@@ -40,6 +40,7 @@ from twisted.internet import reactor
 from include import ClientCaches
 from include import ClientData
 from include import HydrusData
+from include import HydrusPaths
 
 only_run = None
 
@@ -56,7 +57,7 @@ class Controller( object ):
         
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
         
-        os.makedirs( client_files_default )
+        HydrusPaths.MakeSureDirectoryExists( client_files_default )
         
         HydrusGlobals.is_first_start = True
         

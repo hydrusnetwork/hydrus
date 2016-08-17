@@ -554,7 +554,7 @@ class ClientFilesManager( object ):
                     
                     missing.add( dir )
                     
-                    os.makedirs( dir )
+                    HydrusPaths.MakeSureDirectoryExists( dir )
                     
                 
             else:
@@ -586,7 +586,7 @@ class ClientFilesManager( object ):
             
             if not os.path.exists( dest_path ):
                 
-                shutil.copy2( source_path, dest_path )
+                HydrusPaths.MirrorFile( source_path, dest_path )
                 
             
             return dest_path
@@ -759,7 +759,7 @@ class ClientFilesManager( object ):
                     
                     job_key.SetVariable( 'popup_text_1', status )
                     
-                    shutil.move( path, dest )
+                    HydrusPaths.MergeFile( path, dest )
                     
                 
             
@@ -976,7 +976,7 @@ class ClientFilesManager( object ):
                 recoverable_path = os.path.join( recoverable_location, prefix )
                 correct_path = os.path.join( correct_location, prefix )
                 
-                HydrusPaths.MoveAndMergeTree( recoverable_path, correct_path )
+                HydrusPaths.MergeTree( recoverable_path, correct_path )
                 
                 if partial:
                     
@@ -1542,13 +1542,11 @@ MENU_EVENT_ID_TO_ACTION_CACHE = MenuEventIdToActionCache()
 
 class RenderedImageCache( object ):
     
-    def __init__( self, controller, cache_type ):
+    def __init__( self, controller ):
         
         self._controller = controller
-        self._type = cache_type
         
-        if self._type == 'fullscreen': self._data_cache = DataCache( self._controller, 'fullscreen_cache_size' )
-        elif self._type == 'preview': self._data_cache = DataCache( self._controller, 'preview_cache_size' )
+        self._data_cache = DataCache( self._controller, 'fullscreen_cache_size' )
         
     
     def Clear( self ): self._data_cache.Clear()
@@ -2416,11 +2414,7 @@ class TagSiblingsManager( object ):
                     
                     new_predicate = tags_to_predicates[ new_tag ]
                     
-                    current_count = old_predicate.GetCount( HC.CURRENT )
-                    pending_count = old_predicate.GetCount( HC.PENDING )
-                    
-                    new_predicate.AddToCount( HC.CURRENT, current_count )
-                    new_predicate.AddToCount( HC.PENDING, pending_count )
+                    new_predicate.AddCounts( old_predicate )
                     
                 else:
                     

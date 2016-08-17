@@ -263,7 +263,7 @@ class OptionsPanelMimes( OptionsPanel ):
         self._mime_groups_to_checkboxes = {}
         self._mime_groups_to_values = {}
         
-        mime_groups = [ HC.IMAGES, HC.AUDIO, HC.APPLICATIONS, HC.VIDEO ]
+        mime_groups = [ HC.APPLICATIONS, HC.AUDIO, HC.IMAGES, HC.VIDEO ]
         
         mime_groups_to_mimes = collections.defaultdict( list )
         
@@ -284,7 +284,9 @@ class OptionsPanelMimes( OptionsPanel ):
         
         gridbox.AddGrowableCol( 1, 1 )
         
-        for ( mime_group, mimes ) in mime_groups_to_mimes.items():
+        for mime_group in mime_groups:
+            
+            mimes = mime_groups_to_mimes[ mime_group ]
             
             mg_checkbox = wx.CheckBox( self, label = HC.mime_string_lookup[ mime_group ] )
             mg_checkbox.Bind( wx.EVT_CHECKBOX, self.EventMimeGroupCheckbox )

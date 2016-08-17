@@ -205,6 +205,7 @@ media_viewer_capabilities[ HC.VIDEO_FLV ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_MP4 ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_MKV ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_WEBM ] = animated_full_support
+media_viewer_capabilities[ HC.VIDEO_MPEG ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_WMV ] = animated_full_support
 media_viewer_capabilities[ HC.AUDIO_MP3 ] = no_support
 media_viewer_capabilities[ HC.AUDIO_OGG ] = no_support
@@ -350,7 +351,19 @@ wxk_code_string_lookup = {
     wx.WXK_NUMPAD_DECIMAL: 'numpad decimal'
     }
 
-ZOOMS = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
+ZOOM_NEAREST = 0 # pixelly?
+ZOOM_LINEAR = 1 # simple quick garbage
+ZOOM_AREA = 2 # for shrinking without moire
+ZOOM_CUBIC = 3 # for interpolating, pretty good
+ZOOM_LANCZOS4 = 4 # for interpolating, noice
+
+zoom_string_lookup = {}
+
+zoom_string_lookup[ ZOOM_NEAREST ] = 'nearest neighbour'
+zoom_string_lookup[ ZOOM_LINEAR ] = 'bilinear interpolation'
+zoom_string_lookup[ ZOOM_AREA ] = 'pixel area resampling'
+zoom_string_lookup[ ZOOM_CUBIC ] = '4x4 bilinear interpolation'
+zoom_string_lookup[ ZOOM_LANCZOS4 ] = '8x8 Lanczos interpolation'
 
 class GlobalBMPs( object ):
     

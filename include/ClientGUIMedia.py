@@ -437,7 +437,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             display_media = self._focussed_media.GetDisplayMedia()
             
-            if HC.options[ 'mime_media_viewer_actions' ][ display_media.GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            
+            media_show_action = new_options.GetMediaShowAction( display_media.GetMime() )
+            
+            if media_show_action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
                 
                 hash = display_media.GetHash()
                 mime = display_media.GetMime()

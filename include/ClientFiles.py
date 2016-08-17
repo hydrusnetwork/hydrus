@@ -126,10 +126,7 @@ def GetExportPath():
         
         path = os.path.join( os.path.expanduser( '~' ), 'hydrus_export' )
         
-        if not os.path.exists( path ):
-            
-            os.makedirs( path )
-            
+        HydrusPaths.MakeSureDirectoryExists( path )
         
     else:
         

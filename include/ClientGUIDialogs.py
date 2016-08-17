@@ -105,7 +105,7 @@ def ExportToHTA( parent, service_key, hashes ):
         HydrusGlobals.client_controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
         
     
-def ImportFromHTA( parent, hta_path, tag_service_key ):
+def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
     
     hta = HydrusTagArchive.HydrusTagArchive( hta_path )
     
@@ -202,18 +202,29 @@ def ImportFromHTA( parent, hta_path, tag_service_key ):
             
             file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( file_service_key )
             
-            text += 'For ' + file_service.GetName()
+            text += 'For '
+            
+            if hashes is None:
+                
+                text += 'all'
+                
+            else:
+                
+                text += HydrusData.ConvertIntToPrettyString( len( hashes ) )
+                
+            
+            text += ' files in \'' + file_service.GetName() + '\''
             
             if adding: text += ' to '
             else: text += ' from '
             
-            text += service.GetName() + ' ?'
+            text += '\'' + service.GetName() + '\'?'
             
             with DialogYesNo( parent, text ) as dlg_final:
                 
                 if dlg_final.ShowModal() == wx.ID_YES:
                     
-                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', hta_path, tag_service_key, file_service_key, adding, namespaces )
+                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
                     
                 
             
@@ -573,7 +584,7 @@ class DialogAdvancedContentUpdate( Dialog ):
                 
                 path = HydrusData.ToUnicode( dlg_file.GetPath() )
                 
-                ImportFromHTA( self, path, self._service_key )
+                ImportFromHTA( self, path, self._service_key, self._hashes )
                 
             
         
@@ -4439,10 +4450,7 @@ class DialogSetupExport( Dialog ):
         
         directory = self._directory_picker.GetPath()
         
-        if not os.path.exists( directory ):
-            
-            os.makedirs( directory )
-            
+        HydrusPaths.MakeSureDirectoryExists( directory )
         
         pattern = self._pattern.GetValue()
         
@@ -4484,7 +4492,7 @@ class DialogSetupExport( Dialog ):
                     
                     source_path = client_files_manager.GetFilePath( hash, mime )
                     
-                    shutil.copy2( source_path, path )
+                    HydrusPaths.MirrorFile( source_path, path )
                     
                     try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
                     except: pass
@@ -4498,8 +4506,11 @@ class DialogSetupExport( Dialog ):
                 
             
             wx.CallAfter( self._export.SetLabel, 'done!' )
+            
             time.sleep( 1 )
+            
             wx.CallAfter( self._export.SetLabel, 'export' )
+            
             wx.CallAfter( self._export.Enable )
             
         

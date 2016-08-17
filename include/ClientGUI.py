@@ -1961,7 +1961,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def _THREADSyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces ):
+    def _THREADSyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes = None ):
+        
+        if hashes is not None:
+            
+            hashes = set( hashes )
+            
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         
@@ -1981,7 +1986,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             total_num_hta_hashes = 0
             
             for chunk_of_hta_hashes in HydrusData.SplitIteratorIntoChunks( hta.IterateHashes(), 1000 ):
-        
+                
                 while job_key.IsPaused() or job_key.IsCancelled():
                     
                     time.sleep( 0.1 )
@@ -2012,6 +2017,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
                     
                     chunk_of_hydrus_hashes = self._controller.Read( 'filter_hashes', chunk_of_hydrus_hashes, file_service_key )
+                    
+                
+                if hashes is not None:
+                    
+                    chunk_of_hydrus_hashes = [ hash for hash in chunk_of_hydrus_hashes if hash in hashes ]
                     
                 
                 hydrus_hashes.extend( chunk_of_hydrus_hashes )
@@ -2783,9 +2793,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def SetMediaFocus( self ): self._SetMediaFocus()
     
-    def SyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces ):
+    def SyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes = None ):
         
-        self._controller.CallToThread( self._THREADSyncToTagArchive, hta_path, tag_service_key, file_service_key, adding, namespaces )
+        self._controller.CallToThread( self._THREADSyncToTagArchive, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
         
     
     '''

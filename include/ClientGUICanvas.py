@@ -60,7 +60,7 @@ def CalculateCanvasMediaSize( media, ( canvas_width, canvas_height ) ):
     
     return ( canvas_width, canvas_height )
     
-def CalculateCanvasFitZoom( media, ( canvas_width, canvas_height ) ):
+def CalculateCanvasFitZoom( media, ( canvas_width, canvas_height ), exact_zooms_only ):
     
     ( media_width, media_height ) = media.GetResolution()
     
@@ -77,11 +77,31 @@ def CalculateCanvasFitZoom( media, ( canvas_width, canvas_height ) ):
     
     canvas_zoom = min( ( width_zoom, height_zoom ) )
     
+    if exact_zooms_only:
+        
+        exact_zoom = 1.0
+        
+        if canvas_zoom > 1.0:
+            
+            while exact_zoom * 2 < canvas_zoom:
+                
+                exact_zoom *= 2
+                
+            
+        elif canvas_zoom < 1.0:
+            
+            while exact_zoom > canvas_zoom:
+                
+                exact_zoom /= 2
+                
+            
+        
+        canvas_zoom = exact_zoom
+        
+    
     return canvas_zoom
     
-def CalculateMediaContainerSize( media, zoom ):
-    
-    action = HC.options[ 'mime_media_viewer_actions' ][ media.GetDisplayMedia().GetMime() ]
+def CalculateMediaContainerSize( media, zoom, action ):
     
     if action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
         
@@ -790,13 +810,16 @@ class AnimationBar( wx.Window ):
 class Canvas( wx.Window ):
     
     BORDER = wx.SIMPLE_BORDER
+    PREVIEW_WINDOW = False
     
-    def __init__( self, parent, image_cache ):
+    def __init__( self, parent ):
         
         wx.Window.__init__( self, parent, style = self.BORDER )
         
         self._file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-        self._image_cache = image_cache
+        self._image_cache = HydrusGlobals.client_controller.GetCache( 'images' )
+        
+        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
         
         self._canvas_key = HydrusData.GenerateKey()
         
@@ -977,13 +1000,34 @@ class Canvas( wx.Window ):
             
         
     
+    def _GetShowAction( self, media ):
+        
+        if media is None:
+            
+            return CC.MEDIA_VIEWER_DO_NOT_SHOW
+            
+        
+        mime = media.GetMime()
+        
+        if self.PREVIEW_WINDOW:
+            
+            return self._new_options.GetPreviewShowAction( mime )
+            
+        else:
+            
+            return self._new_options.GetMediaShowAction( mime )
+            
+        
+    
     def _GetIndexString( self ): return ''
     
     def _GetMediaContainerSizeAndPosition( self ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        ( media_width, media_height ) = CalculateMediaContainerSize( self._current_display_media, self._current_zoom )
+        action = self._GetShowAction( self._current_display_media )
+        
+        ( media_width, media_height ) = CalculateMediaContainerSize( self._current_display_media, self._current_zoom, action )
         
         ( drag_x, drag_y ) = self._total_drag_delta
         
@@ -1025,7 +1069,7 @@ class Canvas( wx.Window ):
     
     def _IsZoomable( self ):
         
-        return HC.options[ 'mime_media_viewer_actions' ][ self._current_display_media.GetMime() ] != CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON
+        return self._GetShowAction( self._current_display_media ) not in ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_DO_NOT_SHOW )
         
     
     def _ManageRatings( self ):
@@ -1079,7 +1123,7 @@ class Canvas( wx.Window ):
         pass
         
     
-    def _RecalcZoom( self ):
+    def _ReinitZoom( self ):
         
         if self._current_display_media is None:
             
@@ -1093,10 +1137,14 @@ class Canvas( wx.Window ):
             
             ( canvas_media_width, canvas_media_height ) = CalculateCanvasMediaSize( self._current_display_media, ( my_width, my_height ) )
             
-            media_needs_to_be_scaled_down = media_width > canvas_media_width or media_height > canvas_media_height
-            media_needs_to_be_scaled_up = media_width < canvas_media_width and media_height < canvas_media_height and HC.options[ 'fit_to_canvas' ]
+            mime = self._current_display_media.GetMime()
             
-            self._canvas_zoom = CalculateCanvasFitZoom( self._current_display_media, ( my_width, my_height ) )
+            ( zoom_in_to_fit, exact_zooms_only ) = self._new_options.GetMediaZoomOptions( mime )
+            
+            media_needs_to_be_scaled_down = media_width > canvas_media_width or media_height > canvas_media_height
+            media_needs_to_be_scaled_up = zoom_in_to_fit and media_width < canvas_media_width and media_height < canvas_media_height
+            
+            self._canvas_zoom = CalculateCanvasFitZoom( self._current_display_media, ( my_width, my_height ), exact_zooms_only )
             
             if media_needs_to_be_scaled_down or media_needs_to_be_scaled_up:
                 
@@ -1165,13 +1213,22 @@ class Canvas( wx.Window ):
         
         if self._current_display_media is not None and self._IsZoomable():
             
-            my_zoomins = list( CC.ZOOMS )
+            ( zoom_in_to_fit, exact_zooms_only ) = self._new_options.GetMediaZoomOptions( self._current_display_media.GetMime() )
             
-            if self._canvas_zoom not in my_zoomins:
+            if exact_zooms_only:
                 
-                my_zoomins.append( self._canvas_zoom )
+                my_zoomins = [ self._current_zoom * 2 ]
                 
-                my_zoomins.sort()
+            else:
+                
+                my_zoomins = self._new_options.GetMediaZooms()
+                
+                if self._canvas_zoom not in my_zoomins:
+                    
+                    my_zoomins.append( self._canvas_zoom )
+                    
+                    my_zoomins.sort()
+                    
                 
             
             for zoom in my_zoomins:
@@ -1184,7 +1241,9 @@ class Canvas( wx.Window ):
                         
                         ( my_width, my_height ) = self.GetClientSize()
                         
-                        ( new_media_width, new_media_height ) = CalculateMediaContainerSize( self._current_display_media, zoom )
+                        action = self._GetShowAction( self._current_display_media )
+                        
+                        ( new_media_width, new_media_height ) = CalculateMediaContainerSize( self._current_display_media, zoom, action )
                         
                         if new_media_width >= my_width or new_media_height >= my_height: return
                         
@@ -1211,14 +1270,23 @@ class Canvas( wx.Window ):
         
         if self._current_display_media is not None and self._IsZoomable():
             
-            my_zoomouts = list( CC.ZOOMS )
+            ( zoom_in_to_fit, exact_zooms_only ) = self._new_options.GetMediaZoomOptions( self._current_display_media.GetMime() )
             
-            if self._canvas_zoom not in my_zoomouts:
+            if exact_zooms_only:
                 
-                my_zoomouts.append( self._canvas_zoom )
+                my_zoomouts = [ self._current_zoom / 2 ]
                 
-            
-            my_zoomouts.sort( reverse = True )
+            else:
+                
+                my_zoomouts = self._new_options.GetMediaZooms()
+                
+                if self._canvas_zoom not in my_zoomouts:
+                    
+                    my_zoomouts.append( self._canvas_zoom )
+                    
+                
+                my_zoomouts.sort( reverse = True )
+                
             
             for zoom in my_zoomouts:
                 
@@ -1252,8 +1320,14 @@ class Canvas( wx.Window ):
             
             if self._current_display_media.GetMime() != HC.APPLICATION_FLASH:
                 
-                if self._current_zoom == 1.0: new_zoom = self._canvas_zoom
-                else: new_zoom = 1.0
+                if self._current_zoom == 1.0:
+                    
+                    new_zoom = self._canvas_zoom
+                    
+                else:
+                    
+                    new_zoom = 1.0
+                    
                 
                 if new_zoom != self._current_zoom:
                     
@@ -1321,7 +1395,7 @@ class Canvas( wx.Window ):
                 
                 if my_width != media_width or my_height != media_height:
                     
-                    self._RecalcZoom()
+                    self._ReinitZoom()
                     
                 
             
@@ -1383,7 +1457,7 @@ class Canvas( wx.Window ):
                 
                 media = None
                 
-            elif HC.options[ 'mime_media_viewer_actions' ][ media.GetDisplayMedia().GetMime() ] == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+            elif self._GetShowAction( media ) == CC.MEDIA_VIEWER_DO_NOT_SHOW:
                 
                 media = None
                 
@@ -1411,7 +1485,7 @@ class Canvas( wx.Window ):
                 
                 self._current_display_media = self._current_media.GetDisplayMedia()
                 
-                self._RecalcZoom()
+                self._ReinitZoom()
                 
                 ( initial_size, initial_position ) = self._GetMediaContainerSizeAndPosition()
                 
@@ -1419,7 +1493,9 @@ class Canvas( wx.Window ):
                 
                 if self._current_display_media.GetLocationsManager().HasLocal() and initial_width > 0 and initial_height > 0:
                     
-                    self._media_container = MediaContainer( self, self._image_cache, self._current_display_media, initial_size, initial_position )
+                    show_action = self._GetShowAction( self._current_display_media )
+                    
+                    self._media_container = MediaContainer( self, self._current_display_media, initial_size, initial_position, show_action )
                     
                     self._PrefetchNeighbours()
                     
@@ -1465,9 +1541,9 @@ class CanvasWithDetails( Canvas ):
     
     BORDER = wx.NO_BORDER
     
-    def __init__( self, parent, image_cache ):
+    def __init__( self, parent ):
         
-        Canvas.__init__( self, parent, image_cache )
+        Canvas.__init__( self, parent )
         
         self._hover_commands = ClientGUIHoverFrames.FullscreenHoverFrameCommands( self, self._canvas_key )
         self._hover_tags = ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self._canvas_key )
@@ -1677,9 +1753,11 @@ class CanvasWithDetails( Canvas ):
     
 class CanvasPanel( Canvas ):
     
+    PREVIEW_WINDOW = True
+    
     def __init__( self, parent, page_key ):
         
-        Canvas.__init__( self, parent, HydrusGlobals.client_controller.GetCache( 'preview' ) )
+        Canvas.__init__( self, parent )
         
         self._page_key = page_key
         
@@ -1906,7 +1984,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
     
     def __init__( self, parent, page_key, media_results ):
         
-        CanvasWithDetails.__init__( self, parent, HydrusGlobals.client_controller.GetCache( 'fullscreen' ) )
+        CanvasWithDetails.__init__( self, parent )
         ClientMedia.ListeningMediaList.__init__( self, CC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._page_key = page_key
@@ -2037,8 +2115,9 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
         for ( media, delay ) in to_render:
             
             hash = media.GetHash()
+            mime = media.GetMime()
             
-            if media.GetMime() in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
+            if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
                 
                 ( media_width, media_height ) = media.GetResolution()
                 
@@ -2046,7 +2125,9 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
                 
                 if media_width > canvas_media_width or media_height > canvas_media_height:
                     
-                    zoom = CalculateCanvasFitZoom( media, ( my_width, my_height ) )
+                    ( zoom_in_to_fit, exact_zooms_only ) = self._new_options.GetMediaZoomOptions( mime )
+                    
+                    zoom = CalculateCanvasFitZoom( media, ( my_width, my_height ), exact_zooms_only )
                     
                 else:
                     
@@ -3436,12 +3517,13 @@ class RatingsFilterFrameLike( CanvasMediaListFilter ):
     
 class MediaContainer( wx.Window ):
     
-    def __init__( self, parent, image_cache, media, initial_size, initial_position ):
+    def __init__( self, parent, media, initial_size, initial_position, show_action ):
         
         wx.Window.__init__( self, parent, size = initial_size, pos = initial_position )
         
-        self._image_cache = image_cache
         self._media = media
+        self._show_action = show_action
+        
         self._media_window = None
         self._embed_button = None
         self._animation_bar = None
@@ -3459,9 +3541,7 @@ class MediaContainer( wx.Window ):
         
         ( media_initial_size, media_initial_position ) = ( self.GetClientSize(), ( 0, 0 ) )
         
-        action = HC.options[ 'mime_media_viewer_actions' ][ self._media.GetDisplayMedia().GetMime() ]
-        
-        if do_embed_button and action in ( CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED ):
+        if do_embed_button and self._show_action in ( CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED ):
             
             self._embed_button = EmbedButton( self, media_initial_size )
             self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
@@ -3473,17 +3553,17 @@ class MediaContainer( wx.Window ):
             self._embed_button.Hide()
             
         
-        if action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+        if self._show_action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
             
             raise Exception( 'This media should not be shown in the media viewer!' )
             
-        elif action == CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON:
+        elif self._show_action == CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON:
             
             self._media_window = OpenExternallyPanel( self, self._media )
             
         else:
             
-            start_paused = action in ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED )
+            start_paused = self._show_action in ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED )
             
             if ShouldHaveAnimationBar( self._media ) or self._media.GetMime() == HC.APPLICATION_FLASH:
                 
@@ -3516,7 +3596,7 @@ class MediaContainer( wx.Window ):
                 
             else:
                 
-                self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
+                self._media_window = StaticImage( self, self._media, media_initial_size, media_initial_position )
                 
             
         
@@ -3808,14 +3888,14 @@ class OpenExternallyPanel( wx.Panel ):
     
 class StaticImage( wx.Window ):
     
-    def __init__( self, parent, media, image_cache, initial_size, initial_position ):
+    def __init__( self, parent, media, initial_size, initial_position ):
         
         wx.Window.__init__( self, parent, size = initial_size, pos = initial_position )
         
         self._dirty = True
         
         self._media = media
-        self._image_cache = image_cache
+        self._image_cache = HydrusGlobals.client_controller.GetCache( 'images' )
         self._image_container = self._image_cache.GetImage( self._media, initial_size )
         
         self._is_rendered = False

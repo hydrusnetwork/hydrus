@@ -475,10 +475,7 @@ class DB( HydrusDB.HydrusDB ):
             
             backup_path = os.path.join( HC.DB_DIR, 'server_backup' )
             
-            if not os.path.exists( backup_path ):
-                
-                os.makedirs( backup_path )
-                
+            HydrusPaths.MakeSureDirectoryExists( backup_path )
             
             for filename in self._db_filenames.values():
                 
@@ -617,10 +614,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for dir in dirs:
             
-            if not os.path.exists( dir ):
-                
-                os.makedirs( dir )
-                
+            HydrusPaths.MakeSureDirectoryExists( dir )
             
         
         dirs = ( HC.SERVER_FILES_DIR, )
@@ -631,10 +625,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 new_dir = os.path.join( dir, prefix )
                 
-                if not os.path.exists( new_dir ):
-                    
-                    os.makedirs( new_dir )
-                    
+                HydrusPaths.MakeSureDirectoryExists( new_dir )
                 
             
         
@@ -1980,10 +1971,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     update_dir = ServerFiles.GetExpectedUpdateDir( service_key )
                     
-                    if not os.path.exists( update_dir ):
-                        
-                        os.makedirs( update_dir )
-                        
+                    HydrusPaths.MakeSureDirectoryExists( update_dir )
                     
                     begin = 0
                     end = HydrusData.GetNow()
@@ -2389,15 +2377,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 dest_dir = os.path.join( HC.SERVER_UPDATES_DIR, service_key_encoded )
                 
-                if not os.path.exists( dest_dir ):
-                    
-                    os.makedirs( dest_dir )
-                    
+                HydrusPaths.MakeSureDirectoryExists( dest_dir )
                 
                 source_path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
                 dest_path = os.path.join( dest_dir, gumpf )
                 
-                shutil.move( source_path, dest_path )
+                HydrusPaths.MergeFile( source_path, dest_path )
                 
             
         
@@ -2600,7 +2585,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     try:
                         
-                        shutil.move( source_path, dest_path )
+                        HydrusPaths.MergeFile( source_path, dest_path )
                         
                     except:
                         
