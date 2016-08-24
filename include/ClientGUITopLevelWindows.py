@@ -470,7 +470,7 @@ class ShowKeys( Frame ):
         elif key_type == 'access': title = 'Access Keys'
         
         # give it no parent, so this doesn't close when the dialog is closed!
-        Frame.__init__( self, None, HydrusGlobals.client_controller.PrepStringForDisplay( title ) )
+        Frame.__init__( self, None, HydrusGlobals.client_controller.PrepStringForDisplay( title ), float_on_parent = False )
         
         self._key_type = key_type
         self._keys = keys

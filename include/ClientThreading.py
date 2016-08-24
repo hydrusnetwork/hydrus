@@ -7,6 +7,7 @@ import HydrusData
 import HydrusGlobals
 import HydrusThreading
 import os
+import wx
 
 class JobKey( object ):
     
@@ -21,6 +22,7 @@ class JobKey( object ):
         self._stop_time = stop_time
         
         self._deleted = threading.Event()
+        self._deletion_time = None
         self._begun = threading.Event()
         self._done = threading.Event()
         self._cancelled = threading.Event()
@@ -75,10 +77,25 @@ class JobKey( object ):
                 
             
         
+        if not self._deleted.is_set():
+            
+            if self._deletion_time is not None:
+                
+                if HydrusData.TimeHasPassed( self._deletion_time ):
+                    
+                    self.Finish()
+                    
+                    self._deleted.set()
+                    
+                
+            
+        
     
     def Begin( self ): self._begun.set()
     
     def CanBegin( self ):
+        
+        self._CheckCancelTests()
         
         if self.IsCancelled():
             
@@ -100,11 +117,16 @@ class JobKey( object ):
         self.Finish()
         
     
-    def Delete( self ):
+    def Delete( self, seconds = None ):
         
-        self.Finish()
-        
-        self._deleted.set()
+        if seconds is None:
+            
+            self._deletion_time = HydrusData.GetNow()
+            
+        else:
+            
+            self._deletion_time = HydrusData.GetNow() + seconds
+            
         
     
     def DeleteVariable( self, name ):
@@ -133,10 +155,14 @@ class JobKey( object ):
     
     def IsBegun( self ):
         
+        self._CheckCancelTests()
+        
         return self._begun.is_set()
         
     
     def IsCancellable( self ):
+        
+        self._CheckCancelTests()
         
         return self._cancellable and not self.IsDone()
         
@@ -157,14 +183,31 @@ class JobKey( object ):
     
     def IsDone( self ):
         
+        self._CheckCancelTests()
+        
         return HydrusThreading.IsThreadShuttingDown() or self._done.is_set()
         
     
-    def IsPausable( self ): return self._pausable and not self.IsDone()
+    def IsPausable( self ):
+        
+        self._CheckCancelTests()
+        
+        return self._pausable and not self.IsDone()
+        
     
-    def IsPaused( self ): return self._paused.is_set() and not self.IsDone()
+    def IsPaused( self ):
+        
+        self._CheckCancelTests()
+        
+        return self._paused.is_set() and not self.IsDone()
+        
     
-    def IsWorking( self ): return self.IsBegun() and not self.IsDone()
+    def IsWorking( self ):
+        
+        self._CheckCancelTests()
+        
+        return self.IsBegun() and not self.IsDone()
+        
     
     def PausePlay( self ):
         

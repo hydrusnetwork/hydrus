@@ -368,7 +368,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._client_files = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'path', -1 ), ( 'weight', 80 ) ] )
+            self._client_files = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'path', -1 ), ( 'weight', 80 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -457,6 +457,34 @@ class ManageOptionsPanel( ManagePanel ):
             self.SetSizer( vbox )
             
         
+        def Delete( self ):
+            
+            if len( self._client_files.GetAllSelected() ) < self._client_files.GetItemCount():
+                
+                self._client_files.RemoveAllSelected()
+                
+            
+        
+        def Edit( self ):
+            
+            for i in self._client_files.GetAllSelected():
+                
+                ( location, weight ) = self._client_files.GetClientData( i )
+                
+                with wx.NumberEntryDialog( self, 'Enter the weight of ' + location + '.', '', 'Enter Weight', value = int( weight ), min = 1, max = 256 ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        weight = dlg.GetValue()
+                        
+                        weight = float( weight )
+                        
+                        self._client_files.UpdateRow( i, ( location, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( location, weight ) )
+                        
+                    
+                
+            
+        
         def EventAdd( self, event ):
             
             with wx.DirDialog( self, 'Select the file location' ) as dlg:
@@ -492,30 +520,12 @@ class ManageOptionsPanel( ManagePanel ):
         
         def EventDelete( self, event ):
             
-            if len( self._client_files.GetAllSelected() ) < self._client_files.GetItemCount():
-                
-                self._client_files.RemoveAllSelected()
-                
+            self.Delete()
             
         
         def EventEditWeight( self, event ):
             
-            for i in self._client_files.GetAllSelected():
-                
-                ( location, weight ) = self._client_files.GetClientData( i )
-                
-                with wx.NumberEntryDialog( self, 'Enter the weight of ' + location + '.', '', 'Enter Weight', value = int( weight ), min = 1, max = 256 ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        weight = dlg.GetValue()
-                        
-                        weight = float( weight )
-                        
-                        self._client_files.UpdateRow( i, ( location, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( location, weight ) )
-                        
-                    
-                
+            self.Edit()
             
         
         def UpdateOptions( self ):
@@ -1426,7 +1436,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
-            self._frame_locations = ClientGUICommon.SaneListCtrl( frame_locations_panel, 200, [ ( 'name', -1 ), ( 'remember size', 90 ), ( 'remember position', 90 ), ( 'last size', 90 ), ( 'last position', 90 ), ( 'default gravity', 90 ), ( 'default position', 90 ), ( 'maximised', 90 ), ( 'fullscreen', 90 ) ] )
+            self._frame_locations = ClientGUICommon.SaneListCtrl( frame_locations_panel, 200, [ ( 'name', -1 ), ( 'remember size', 90 ), ( 'remember position', 90 ), ( 'last size', 90 ), ( 'last position', 90 ), ( 'default gravity', 90 ), ( 'default position', 90 ), ( 'maximised', 90 ), ( 'fullscreen', 90 ) ], activation_callback = self.EditFrameLocations )
             
             self._frame_locations_edit_button = wx.Button( frame_locations_panel, label = 'edit' )
             self._frame_locations_edit_button.Bind( wx.EVT_BUTTON, self.EventEditFrameLocation )
@@ -1534,7 +1544,7 @@ class ManageOptionsPanel( ManagePanel ):
             return pretty_listctrl_list
             
         
-        def EventEditFrameLocation( self, event ):
+        def EditFrameLocations( self ):
             
             for i in self._frame_locations.GetAllSelected():
                 
@@ -1557,6 +1567,11 @@ class ManageOptionsPanel( ManagePanel ):
                         
                     
                 
+            
+        
+        def EventEditFrameLocation( self, event ):
+            
+            self.EditFrameLocations()
             
         
         def UpdateOptions( self ):
@@ -1599,7 +1614,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
-            self._media_viewer_options = ClientGUICommon.SaneListCtrl( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom in to fit', 80 ), ( 'half/double zoom', 80 ), ( '>100% quality', 120 ), ( '<100% quality', 120 ) ] )
+            self._media_viewer_options = ClientGUICommon.SaneListCtrl( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom in to fit', 80 ), ( 'half/double zoom', 80 ), ( '>100% quality', 120 ), ( '<100% quality', 120 ) ], activation_callback = self.EditMediaViewerOptions, use_display_tuple_for_sort = True )
             
             self._media_viewer_edit_button = wx.Button( self._media_viewer_panel, label = 'edit' )
             self._media_viewer_edit_button.Bind( wx.EVT_BUTTON, self.EventEditMediaViewerOptions )
@@ -1647,7 +1662,7 @@ class ManageOptionsPanel( ManagePanel ):
             self._media_viewer_panel.AddF( self._media_viewer_options, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._media_viewer_panel.AddF( self._media_viewer_edit_button, CC.FLAGS_LONE_BUTTON )
             
-            vbox.AddF( self._media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._media_viewer_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -1682,7 +1697,7 @@ class ManageOptionsPanel( ManagePanel ):
             return ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_in_to_fit, pretty_exact_zooms_only, pretty_zoom_in_quality, pretty_zoom_out_quality )
             
         
-        def EventEditMediaViewerOptions( self, event ):
+        def EditMediaViewerOptions( self ):
             
             for i in self._media_viewer_options.GetAllSelected():
                 
@@ -1705,6 +1720,11 @@ class ManageOptionsPanel( ManagePanel ):
                         
                     
                 
+            
+        
+        def EventEditMediaViewerOptions( self, event ):
+            
+            self.EditMediaViewerOptions()
             
         
         def EventZoomsChanged( self, event ):
@@ -1793,7 +1813,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'modifier', 120 ), ( 'key', 120 ), ( 'action', -1 ) ], delete_key_callback = self.DeleteShortcuts )
+            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'modifier', 120 ), ( 'key', 120 ), ( 'action', -1 ) ], delete_key_callback = self.DeleteShortcuts, activation_callback = self.EditShortcuts )
             
             self._shortcuts_add = wx.Button( self, label = 'add' )
             self._shortcuts_add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -1845,6 +1865,32 @@ class ManageOptionsPanel( ManagePanel ):
             self._shortcuts.RemoveAllSelected()
             
         
+        def EditShortcuts( self ):
+        
+            indices = self._shortcuts.GetAllSelected()
+            
+            for index in indices:
+                
+                ( modifier, key, action ) = self._shortcuts.GetClientData( index )
+                
+                with ClientGUIDialogs.DialogInputShortcut( self, modifier, key, action ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        ( modifier, key, action ) = dlg.GetInfo()
+                        
+                        ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
+                        
+                        pretty_action = action
+                        
+                        self._shortcuts.UpdateRow( index, ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
+                        
+                        self._SortListCtrl()
+                        
+                    
+                
+            
+        
         def EventAdd( self, event ):
             
             with ClientGUIDialogs.DialogInputShortcut( self ) as dlg:
@@ -1871,28 +1917,7 @@ class ManageOptionsPanel( ManagePanel ):
         
         def EventEdit( self, event ):
             
-            indices = self._shortcuts.GetAllSelected()
-            
-            for index in indices:
-                
-                ( modifier, key, action ) = self._shortcuts.GetClientData( index )
-                
-                with ClientGUIDialogs.DialogInputShortcut( self, modifier, key, action ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        ( modifier, key, action ) = dlg.GetInfo()
-                        
-                        ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
-                        
-                        pretty_action = action
-                        
-                        self._shortcuts.UpdateRow( index, ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
-                        
-                        self._SortListCtrl()
-                        
-                    
-                
+            self.EditShortcuts()
             
         
         def UpdateOptions( self ):
@@ -3490,7 +3515,7 @@ class ReviewServices( ReviewPanel ):
                 
                 self._booru_shares_panel = ClientGUICommon.StaticBox( self, 'shares' )
                 
-                self._booru_shares = ClientGUICommon.SaneListCtrl( self._booru_shares_panel, -1, [ ( 'title', 110 ), ( 'text', -1 ), ( 'expires', 170 ), ( 'num files', 70 ) ], delete_key_callback = self.DeleteBoorus )
+                self._booru_shares = ClientGUICommon.SaneListCtrl( self._booru_shares_panel, -1, [ ( 'title', 110 ), ( 'text', -1 ), ( 'expires', 170 ), ( 'num files', 70 ) ], delete_key_callback = self.DeleteBoorus, activation_callback = self.EditBoorus )
                 
                 self._booru_open_search = wx.Button( self._booru_shares_panel, label = 'open share in new page' )
                 self._booru_open_search.Bind( wx.EVT_BUTTON, self.EventBooruOpenSearch )
@@ -3512,7 +3537,7 @@ class ReviewServices( ReviewPanel ):
                 
                 self._ipfs_shares_panel = ClientGUICommon.StaticBox( self, 'pinned directories' )
                 
-                self._ipfs_shares = ClientGUICommon.SaneListCtrl( self._ipfs_shares_panel, -1, [ ( 'multihash', 110 ), ( 'num files', 70 ), ( 'total size', 70 ), ( 'note', 200 ) ], delete_key_callback = self.UnpinIPFSDirectories )
+                self._ipfs_shares = ClientGUICommon.SaneListCtrl( self._ipfs_shares_panel, -1, [ ( 'multihash', 110 ), ( 'num files', 70 ), ( 'total size', 70 ), ( 'note', 200 ) ], delete_key_callback = self.UnpinIPFSDirectories, activation_callback = self.EditIPFSNotes )
                 
                 self._ipfs_open_search = wx.Button( self._ipfs_shares_panel, label = 'open share in new page' )
                 self._ipfs_open_search.Bind( wx.EVT_BUTTON, self.EventIPFSOpenSearch )
@@ -3946,13 +3971,8 @@ class ReviewServices( ReviewPanel ):
             self._booru_shares.RemoveAllSelected()
             
         
-        def EventBooruDelete( self, event ):
-            
-            self.DeleteBoorus()
-            
+        def EditBoorus( self ):
         
-        def EventBooruEdit( self, event ):
-            
             writes = []
             
             for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
@@ -3979,6 +3999,40 @@ class ReviewServices( ReviewPanel ):
                 
                 self._controller.Write( 'local_booru_share', share_key, info )
                 
+            
+        
+        def EditIPFSNotes( self ):
+            
+            for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for ' + multihash + '.' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        hashes = self._controller.Read( 'service_directory', self._service_key, multihash )
+                        
+                        note = dlg.GetValue()
+                        
+                        content_update_row = ( hashes, multihash, note )
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        
+                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+                        
+                    
+                
+            
+            self._DisplayService()
+            
+        
+        def EventBooruDelete( self, event ):
+            
+            self.DeleteBoorus()
+            
+        
+        def EventBooruEdit( self, event ):
+            
+            self.EditBoorus()
             
         
         def EventBooruOpenSearch( self, event ):
@@ -4181,26 +4235,7 @@ class ReviewServices( ReviewPanel ):
         
         def EventIPFSSetNote( self, event ):
             
-            for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
-                
-                with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for ' + multihash + '.' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        hashes = self._controller.Read( 'service_directory', self._service_key, multihash )
-                        
-                        note = dlg.GetValue()
-                        
-                        content_update_row = ( hashes, multihash, note )
-                        
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
-                        
-                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
-                        
-                    
-                
-            
-            self._DisplayService()
+            self.EditIPFSNotes()
             
         
         def EventIPFSUnpin( self, event ):

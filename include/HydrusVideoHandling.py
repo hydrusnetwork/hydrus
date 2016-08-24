@@ -174,11 +174,19 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
         
         if 'start:' in line:
             
-            m = re.search( '(start\\: )' + '-?[0-9]\\.[0-9]*', line )
+            m = re.search( '(start\\: )' + '-?[0-9]+\\.[0-9]*', line )
             
             start_offset = float( line[ m.start() + 7 : m.end() ] )
             
-        else: start_offset = 0
+            if abs( start_offset ) > 1.0: # once had a file with start offset of 957499 seconds jej
+                
+                start_offset = 0
+                
+            
+        else:
+            
+            start_offset = 0
+            
         
         match = re.search("[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
         hms = map(float, line[match.start()+1:match.end()].split(':'))

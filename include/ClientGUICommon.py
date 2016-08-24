@@ -2087,7 +2087,7 @@ class ListBook( wx.Panel ):
             
             self._panel_sizer.Detach( page_to_delete )
             
-            wx.CallAfter( page_to_delete.Destroy )
+            page_to_delete.Destroy()
             
             del self._keys_to_active_pages[ key_to_delete ]
             
@@ -4827,6 +4827,8 @@ class PopupMessageManager( wx.Frame ):
     
     def _CheckPending( self ):
         
+        size_and_position_needed = False
+        
         num_messages_displayed = self._message_vbox.GetItemCount()
         
         if len( self._pending_job_keys ) > 0 and num_messages_displayed < self._max_messages_to_display:
@@ -4839,6 +4841,10 @@ class PopupMessageManager( wx.Frame ):
             
             self._message_vbox.AddF( window, CC.FLAGS_EXPAND_PERPENDICULAR )
             
+            size_and_position_needed = True
+            
+        
+        dismiss_shown_before = self._dismiss_all.IsShown()
         
         num_messages_pending = len( self._pending_job_keys )
         
@@ -4848,9 +4854,20 @@ class PopupMessageManager( wx.Frame ):
             
             self._dismiss_all.Show()
             
-        else: self._dismiss_all.Hide()
+        else:
+            
+            self._dismiss_all.Hide()
+            
         
-        self._SizeAndPositionAndShow()
+        if self._dismiss_all.IsShown() != dismiss_shown_before:
+            
+            size_and_position_needed = True
+            
+        
+        if size_and_position_needed:
+            
+            self._SizeAndPositionAndShow()
+            
         
     
     def _SizeAndPositionAndShow( self ):
@@ -4887,7 +4904,10 @@ class PopupMessageManager( wx.Frame ):
                     tlp.Raise()
                     
                 
-            else: self.Hide()
+            else:
+                
+                self.Hide()
+                
             
         except:
             
@@ -4919,7 +4939,10 @@ class PopupMessageManager( wx.Frame ):
             
             self._CheckPending()
             
-        except: HydrusData.Print( traceback.format_exc() )
+        except:
+            
+            HydrusData.Print( traceback.format_exc() )
+            
         
     
     def CleanBeforeDestroy( self ):
@@ -4955,7 +4978,7 @@ class PopupMessageManager( wx.Frame ):
         
         self._message_vbox.Detach( window )
         
-        wx.CallAfter( window.Destroy )
+        window.Destroy()
         
         self._SizeAndPositionAndShow()
         
@@ -4992,6 +5015,8 @@ class PopupMessageManager( wx.Frame ):
         try:
             
             if HydrusGlobals.view_shutdown:
+                
+                self._timer.Stop()
                 
                 self.Destroy()
                 
@@ -5682,7 +5707,7 @@ class RegexButton( wx.Button ):
     
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
-    def __init__( self, parent, height, columns, delete_key_callback = None, use_display_tuple_for_sort = False ):
+    def __init__( self, parent, height, columns, delete_key_callback = None, activation_callback = None, use_display_tuple_for_sort = False ):
         
         num_columns = len( columns )
         
@@ -5709,9 +5734,10 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         self.SetMinSize( ( -1, height ) )
         
         self._delete_key_callback = delete_key_callback
+        self._activation_callback = activation_callback
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
+        self.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventItemActivated )
     
     def Append( self, display_tuple, client_data ):
         
@@ -5733,13 +5759,31 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         self._next_data_index += 1
         
     
+    def EventItemActivated( self, event ):
+        
+        if self._activation_callback is not None:
+            
+            self._activation_callback()
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
     def EventKeyDown( self, event ):
         
         if event.KeyCode in CC.DELETE_KEYS:
             
-            if self._delete_key_callback is not None: self._delete_key_callback()
+            if self._delete_key_callback is not None:
+                
+                self._delete_key_callback()
+                
             
-        else: event.Skip()
+        else:
+            
+            event.Skip()
+            
         
     
     def GetAllSelected( self ):

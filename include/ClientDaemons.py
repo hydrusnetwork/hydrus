@@ -79,6 +79,8 @@ def DAEMONDownloadFiles( controller ):
     
     if num_downloads > 0:
         
+        client_files_manager = controller.GetClientFilesManager()
+        
         successful_hashes = set()
         
         job_key = ClientThreading.JobKey()
@@ -125,7 +127,7 @@ def DAEMONDownloadFiles( controller ):
                             
                             controller.WaitUntilPubSubsEmpty()
                             
-                            controller.WriteSynchronous( 'import_file', temp_path, override_deleted = True )
+                            client_files_manager.ImportFile( temp_path, override_deleted = True )
                             
                             successful_hashes.add( hash )
                             

@@ -114,8 +114,6 @@ class HydrusController( object ):
         
         result = self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
         
-        time.sleep( 0.00001 )
-        
         return result
         
     
@@ -137,8 +135,6 @@ class HydrusController( object ):
     def _Write( self, action, priority, synchronous, *args, **kwargs ):
         
         result = self._db.Write( action, priority, synchronous, *args, **kwargs )
-        
-        time.sleep( 0.00001 )
         
         return result
         

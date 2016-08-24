@@ -280,7 +280,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             
             dc.DrawBitmap( wx_bmp, 0, 0 )
             
-            wx.CallAfter( wx_bmp.Destroy )
+            wx_bmp.Destroy()
             
             self._refresh_button.SetLabelText( 'get new captcha' )
             self._refresh_button.Enable()

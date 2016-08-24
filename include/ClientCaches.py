@@ -578,18 +578,13 @@ class ClientFilesManager( object ):
             
         
     
-    def AddFile( self, hash, mime, source_path ):
+    def LocklessAddFile( self, hash, mime, source_path ):
         
-        with self._lock:
+        dest_path = self._GenerateExpectedFilePath( hash, mime )
+        
+        if not os.path.exists( dest_path ):
             
-            dest_path = self._GenerateExpectedFilePath( hash, mime )
-            
-            if not os.path.exists( dest_path ):
-                
-                HydrusPaths.MirrorFile( source_path, dest_path )
-                
-            
-            return dest_path
+            HydrusPaths.MirrorFile( source_path, dest_path )
             
         
     
@@ -597,182 +592,45 @@ class ClientFilesManager( object ):
         
         with self._lock:
             
-            path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+            self.LocklessAddFullSizeThumbnail( hash, thumbnail )
             
-            with open( path, 'wb' ) as f:
-                
-                f.write( thumbnail )
-                
+        
+    
+    def LocklessAddFullSizeThumbnail( self, hash, thumbnail ):
+        
+        path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+        
+        with open( path, 'wb' ) as f:
+            
+            f.write( thumbnail )
             
         
         self._controller.pub( 'new_thumbnails', { hash } )
         
     
+    def CheckFileIntegrity( self, *args, **kwargs ):
+        
+        with self._lock:
+            
+            self._controller.WriteSynchronous( 'file_integrity', *args, **kwargs )
+            
+        
+    
     def ClearOrphans( self, move_location = None ):
         
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        job_key.SetVariable( 'popup_title', 'clearing orphans' )
-        job_key.SetVariable( 'popup_text_1', 'preparing' )
-        
-        self._controller.pub( 'message', job_key )
-        
-        orphan_paths = []
-        orphan_thumbnails = []
-        
-        for ( i, path ) in enumerate( self._IterateAllFilePaths() ):
+        with self._lock:
             
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            job_key = ClientThreading.JobKey( cancellable = True )
             
-            if should_quit:
-                
-                return
-                
+            job_key.SetVariable( 'popup_title', 'clearing orphans' )
+            job_key.SetVariable( 'popup_text_1', 'preparing' )
             
-            if i % 100 == 0:
-                
-                status = 'reviewed ' + HydrusData.ConvertIntToPrettyString( i ) + ' files, found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans'
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
+            self._controller.pub( 'message', job_key )
             
-            try:
-                
-                is_an_orphan = False
-                
-                ( directory, filename ) = os.path.split( path )
-                
-                should_be_a_hex_hash = filename[:64]
-                
-                hash = should_be_a_hex_hash.decode( 'hex' )
-                
-                is_an_orphan = HydrusGlobals.client_controller.Read( 'is_an_orphan', 'file', hash )
-                
-            except:
-                
-                is_an_orphan = True
-                
+            orphan_paths = []
+            orphan_thumbnails = []
             
-            if is_an_orphan:
-                
-                orphan_paths.append( path )
-                
-            
-        
-        time.sleep( 2 )
-        
-        for ( i, path ) in enumerate( self._IterateAllThumbnailPaths() ):
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return
-                
-            
-            if i % 100 == 0:
-                
-                status = 'reviewed ' + HydrusData.ConvertIntToPrettyString( i ) + ' thumbnails, found ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphans'
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
-            
-            try:
-                
-                is_an_orphan = False
-                
-                ( directory, filename ) = os.path.split( path )
-                
-                should_be_a_hex_hash = filename[:64]
-                
-                hash = should_be_a_hex_hash.decode( 'hex' )
-                
-                is_an_orphan = HydrusGlobals.client_controller.Read( 'is_an_orphan', 'thumbnail', hash )
-                
-            except:
-                
-                is_an_orphan = True
-                
-            
-            if is_an_orphan:
-                
-                orphan_thumbnails.append( path )
-                
-            
-        
-        time.sleep( 2 )
-        
-        if len( orphan_paths ) > 0:
-            
-            if move_location is None:
-                
-                status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now deleting'
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
-                time.sleep( 5 )
-                
-                for path in orphan_paths:
-                    
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        return
-                        
-                    
-                    HydrusData.Print( 'Deleting the orphan ' + path )
-                    
-                    status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
-                    
-                    job_key.SetVariable( 'popup_text_1', status )
-                    
-                    HydrusPaths.DeletePath( path )
-                    
-                
-            else:
-                
-                status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now moving to ' + move_location
-                
-                job_key.SetVariable( 'popup_text_1', status )
-                
-                time.sleep( 5 )
-                
-                for path in orphan_paths:
-                    
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        return
-                        
-                    
-                    ( source_dir, filename ) = os.path.split( path )
-                    
-                    dest = os.path.join( move_location, filename )
-                    
-                    dest = HydrusPaths.AppendPathUntilNoConflicts( dest )
-                    
-                    HydrusData.Print( 'Moving the orphan ' + path + ' to ' + dest )
-                    
-                    status = 'moving orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
-                    
-                    job_key.SetVariable( 'popup_text_1', status )
-                    
-                    HydrusPaths.MergeFile( path, dest )
-                    
-                
-            
-        
-        if len( orphan_thumbnails ) > 0:
-            
-            status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
-            
-            job_key.SetVariable( 'popup_text_1', status )
-            
-            time.sleep( 5 )
-            
-            for ( i, path ) in enumerate( orphan_thumbnails ):
+            for ( i, path ) in enumerate( self._IterateAllFilePaths() ):
                 
                 ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                 
@@ -781,33 +639,188 @@ class ClientFilesManager( object ):
                     return
                     
                 
-                status = 'deleting orphan thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
+                if i % 100 == 0:
+                    
+                    status = 'reviewed ' + HydrusData.ConvertIntToPrettyString( i ) + ' files, found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans'
+                    
+                    job_key.SetVariable( 'popup_text_1', status )
+                    
+                
+                try:
+                    
+                    is_an_orphan = False
+                    
+                    ( directory, filename ) = os.path.split( path )
+                    
+                    should_be_a_hex_hash = filename[:64]
+                    
+                    hash = should_be_a_hex_hash.decode( 'hex' )
+                    
+                    is_an_orphan = HydrusGlobals.client_controller.Read( 'is_an_orphan', 'file', hash )
+                    
+                except:
+                    
+                    is_an_orphan = True
+                    
+                
+                if is_an_orphan:
+                    
+                    orphan_paths.append( path )
+                    
+                
+            
+            time.sleep( 2 )
+            
+            for ( i, path ) in enumerate( self._IterateAllThumbnailPaths() ):
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                if should_quit:
+                    
+                    return
+                    
+                
+                if i % 100 == 0:
+                    
+                    status = 'reviewed ' + HydrusData.ConvertIntToPrettyString( i ) + ' thumbnails, found ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphans'
+                    
+                    job_key.SetVariable( 'popup_text_1', status )
+                    
+                
+                try:
+                    
+                    is_an_orphan = False
+                    
+                    ( directory, filename ) = os.path.split( path )
+                    
+                    should_be_a_hex_hash = filename[:64]
+                    
+                    hash = should_be_a_hex_hash.decode( 'hex' )
+                    
+                    is_an_orphan = HydrusGlobals.client_controller.Read( 'is_an_orphan', 'thumbnail', hash )
+                    
+                except:
+                    
+                    is_an_orphan = True
+                    
+                
+                if is_an_orphan:
+                    
+                    orphan_thumbnails.append( path )
+                    
+                
+            
+            time.sleep( 2 )
+            
+            if len( orphan_paths ) > 0:
+                
+                if move_location is None:
+                    
+                    status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now deleting'
+                    
+                    job_key.SetVariable( 'popup_text_1', status )
+                    
+                    time.sleep( 5 )
+                    
+                    for path in orphan_paths:
+                        
+                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                        
+                        if should_quit:
+                            
+                            return
+                            
+                        
+                        HydrusData.Print( 'Deleting the orphan ' + path )
+                        
+                        status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
+                        
+                        job_key.SetVariable( 'popup_text_1', status )
+                        
+                        HydrusPaths.DeletePath( path )
+                        
+                    
+                else:
+                    
+                    status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now moving to ' + move_location
+                    
+                    job_key.SetVariable( 'popup_text_1', status )
+                    
+                    time.sleep( 5 )
+                    
+                    for path in orphan_paths:
+                        
+                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                        
+                        if should_quit:
+                            
+                            return
+                            
+                        
+                        ( source_dir, filename ) = os.path.split( path )
+                        
+                        dest = os.path.join( move_location, filename )
+                        
+                        dest = HydrusPaths.AppendPathUntilNoConflicts( dest )
+                        
+                        HydrusData.Print( 'Moving the orphan ' + path + ' to ' + dest )
+                        
+                        status = 'moving orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
+                        
+                        job_key.SetVariable( 'popup_text_1', status )
+                        
+                        HydrusPaths.MergeFile( path, dest )
+                        
+                    
+                
+            
+            if len( orphan_thumbnails ) > 0:
+                
+                status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
                 
                 job_key.SetVariable( 'popup_text_1', status )
                 
-                HydrusData.Print( 'Deleting the orphan ' + path )
+                time.sleep( 5 )
                 
-                HydrusPaths.DeletePath( path )
+                for ( i, path ) in enumerate( orphan_thumbnails ):
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        return
+                        
+                    
+                    status = 'deleting orphan thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
+                    
+                    job_key.SetVariable( 'popup_text_1', status )
+                    
+                    HydrusData.Print( 'Deleting the orphan ' + path )
+                    
+                    HydrusPaths.DeletePath( path )
+                    
                 
             
-        
-        if len( orphan_paths ) == 0 and len( orphan_thumbnails ) == 0:
+            if len( orphan_paths ) == 0 and len( orphan_thumbnails ) == 0:
+                
+                final_text = 'no orphans found!'
+                
+            else:
+                
+                final_text = HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphan files and ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
+                
             
-            final_text = 'no orphans found!'
+            job_key.SetVariable( 'popup_text_1', final_text )
             
-        else:
+            HydrusData.Print( job_key.ToString() )
             
-            final_text = HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphan files and ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
+            job_key.Finish()
             
-        
-        job_key.SetVariable( 'popup_text_1', final_text )
-        
-        HydrusData.Print( job_key.ToString() )
-        
-        job_key.Finish()
         
     
-    def DeleteFiles( self, hashes ):
+    def DelayedDeleteFiles( self, hashes ):
+        
+        time.sleep( 2 )
         
         with self._lock:
             
@@ -826,7 +839,9 @@ class ClientFilesManager( object ):
                 
             
     
-    def DeleteThumbnails( self, hashes ):
+    def DelayedDeleteThumbnails( self, hashes ):
+        
+        time.sleep( 2 )
         
         with self._lock:
             
@@ -845,22 +860,35 @@ class ClientFilesManager( object ):
         
         with self._lock:
             
-            if mime is None:
-                
-                path = self._LookForFilePath( hash )
-                
-            else:
-                
-                path = self._GenerateExpectedFilePath( hash, mime )
-                
+            return self.LocklessGetFilePath( hash, mime )
             
-            if not os.path.exists( path ):
-                
-                raise HydrusExceptions.FileMissingException( 'No file found at path + ' + path + '!' )
-                
+        
+    
+    def ImportFile( self, *args, **kwargs ):
+        
+        with self._lock:
             
-            return path
+            return self._controller.WriteSynchronous( 'import_file', *args, **kwargs )
             
+        
+    
+    def LocklessGetFilePath( self, hash, mime = None ):
+        
+        if mime is None:
+            
+            path = self._LookForFilePath( hash )
+            
+        else:
+            
+            path = self._GenerateExpectedFilePath( hash, mime )
+            
+        
+        if not os.path.exists( path ):
+            
+            raise HydrusExceptions.FileMissingException( 'No file found at path + ' + path + '!' )
+            
+        
+        return path
         
     
     def GetFullSizeThumbnailPath( self, hash ):
@@ -1092,10 +1120,10 @@ class ClientFilesManager( object ):
     
 class DataCache( object ):
     
-    def __init__( self, controller, cache_size_key ):
+    def __init__( self, controller, cache_size ):
         
         self._controller = controller
-        self._cache_size_key = cache_size_key
+        self._cache_size = cache_size
         
         self._keys_to_data = {}
         self._keys_fifo = []
@@ -1157,7 +1185,7 @@ class DataCache( object ):
                 
                 options = self._controller.GetOptions()
                 
-                while self._total_estimated_memory_footprint > options[ self._cache_size_key ]:
+                while self._total_estimated_memory_footprint > self._cache_size:
                     
                     self._DeleteItem()
                     
@@ -1546,7 +1574,11 @@ class RenderedImageCache( object ):
         
         self._controller = controller
         
-        self._data_cache = DataCache( self._controller, 'fullscreen_cache_size' )
+        options = self._controller.GetOptions()
+        
+        cache_size = options[ 'fullscreen_cache_size' ]
+        
+        self._data_cache = DataCache( self._controller, cache_size )
         
     
     def Clear( self ): self._data_cache.Clear()
@@ -1602,7 +1634,12 @@ class ThumbnailCache( object ):
     def __init__( self, controller ):
         
         self._controller = controller
-        self._data_cache = DataCache( self._controller, 'thumbnail_cache_size' )
+        
+        options = self._controller.GetOptions()
+        
+        cache_size = options[ 'thumbnail_cache_size' ]
+        
+        self._data_cache = DataCache( self._controller, cache_size )
         self._client_files_manager = self._controller.GetClientFilesManager()
         
         self._lock = threading.Lock()

@@ -262,7 +262,9 @@ def THREADDownloadURL( job_key, url, url_string ):
         job_key.DeleteVariable( 'popup_gauge_1' )
         job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
         
-        ( result, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path )
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        ( result, hash ) = client_files_manager.ImportFile( temp_path )
         
     except HydrusExceptions.NetworkException:
         
@@ -360,7 +362,9 @@ def THREADDownloadURLs( job_key, urls, title ):
             
             job_key.SetVariable( 'popup_text_2', 'importing' )
             
-            ( result, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path )
+            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+            
+            ( result, hash ) = client_files_manager.ImportFile( temp_path )
             
         except HydrusExceptions.NetworkException:
             

@@ -61,42 +61,23 @@ def GeneratePerceptualHash( path ):
     
     if depth == 4:
         
-        # create a white greyscale canvas
-        
-        white = numpy.ones( ( x, y ) ) * 255
-        
         # create weight and transform numpy_image to greyscale
         
         numpy_alpha = numpy_image[ :, :, 3 ]
         
+        numpy_alpha_float = numpy_alpha / 255.0
+        
         numpy_image_bgr = numpy_image[ :, :, :3 ]
         
-        numpy_image_gray = cv2.cvtColor( numpy_image_bgr, cv2.COLOR_BGR2GRAY )
+        numpy_image_gray_bare = cv2.cvtColor( numpy_image_bgr, cv2.COLOR_BGR2GRAY )
         
-        numpy_image_result = numpy.empty( ( y, x ), numpy.float32 )
+        # create a white greyscale canvas
         
-        # paste greyscale onto the white
+        white = numpy.ones( ( y, x ) ) * 255.0
         
-        # can't think of a better way to do this!
-        # cv2.addWeighted only takes a scalar for weight!
-        for i in range( y ):
-            
-            for j in range( x ):
-                
-                opacity = float( numpy_alpha[ i, j ] ) / 255.0
-                
-                grey_part = numpy_image_gray[ i, j ] * opacity
-                white_part = 255 * ( 1 - opacity )
-                
-                pixel = grey_part + white_part
-                
-                numpy_image_result[ i, j ] = pixel
-                
-            
+        # paste the grayscale image onto the white canvas using: pixel * alpha + white * ( 1 - alpha )
         
-        numpy_image_gray = numpy_image_result
-        
-        # use 255 for white weight, alpha for image weight
+        numpy_image_gray = numpy.uint8( ( numpy_image_gray_bare * numpy_alpha_float ) + ( white * ( numpy.ones( ( y, x ) ) - numpy_alpha_float ) ) )
         
     else:
         

@@ -583,6 +583,8 @@ class Controller( HydrusController.HydrusController ):
         
         self.CallBlockingToWx( wx_code_gui )
         
+        # ShowText will now popup as a message, as popup message manager has overwritten the hooks
+        
         HydrusController.HydrusController.InitView( self )
         
         self._local_service = None
@@ -608,8 +610,21 @@ class Controller( HydrusController.HydrusController ):
             self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 ) )
             
         
-        if HydrusGlobals.is_first_start: wx.CallAfter( self._gui.DoFirstStart )
-        if HydrusGlobals.is_db_updated: wx.CallLater( 1, HydrusData.ShowText, 'The client has updated to version ' + str( HC.SOFTWARE_VERSION ) + '!' )
+        if HydrusGlobals.is_first_start:
+            
+            message = 'Hi, this looks like the first time you have started the hydrus client.'
+            message += os.linesep * 2
+            message += 'Don\'t forget to check out the help if you haven\'t already.'
+            message += os.linesep * 2
+            message += 'You can right-click popup messages like this to dismiss them.'
+            
+            HydrusData.ShowText( message )
+            
+        
+        if HydrusGlobals.is_db_updated:
+            
+            HydrusData.ShowText( 'The client has updated to version ' + str( HC.SOFTWARE_VERSION ) + '!' )
+            
         
     
     def MaintainDB( self, stop_time = None ):
@@ -709,7 +724,7 @@ class Controller( HydrusController.HydrusController ):
             self._menu_open = False
             
         
-        wx.CallAfter( menu.Destroy )
+        menu.Destroy()
         
     
     def PrepStringForDisplay( self, text ):
@@ -753,7 +768,7 @@ class Controller( HydrusController.HydrusController ):
                         text += os.linesep * 2
                         text += 'You can change the port this client tries to host its local server on in services->manage services.'
                         
-                        wx.CallLater( 1, HydrusData.ShowText, text )
+                        HydrusData.ShowText( text )
                         
                     except:
                         
@@ -772,7 +787,7 @@ class Controller( HydrusController.HydrusController ):
                             text += os.linesep * 2
                             text += HydrusData.ToUnicode( e )
                             
-                            wx.CallLater( 1, HydrusData.ShowText, text )
+                            HydrusData.ShowText( text )
                             
                         
                     
@@ -824,7 +839,7 @@ class Controller( HydrusController.HydrusController ):
                         text += os.linesep * 2
                         text += 'You can change the port this client tries to host its local server on in file->options.'
                         
-                        wx.CallLater( 1, HydrusData.ShowText, text )
+                        HydrusData.ShowText( text )
                         
                     except:
                         
@@ -843,7 +858,7 @@ class Controller( HydrusController.HydrusController ):
                             text += os.linesep * 2
                             text += HydrusData.ToUnicode( e )
                             
-                            wx.CallLater( 1, HydrusData.ShowText, text )
+                            HydrusData.ShowText( text )
                             
                         
                     
@@ -924,7 +939,11 @@ class Controller( HydrusController.HydrusController ):
         
         self._app = wx.App()
         
-        self._app.SetAssertMode( wx.PYAPP_ASSERT_SUPPRESS )
+        self._app.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important
+        
+        # I have had this as 'suppress' before
+        # The default is to create exceptions, and since this stuff is usually pissy locale/missing parent stuff, we don't want to kill the boot
+        self._app.SetAssertMode( wx.PYAPP_ASSERT_EXCEPTION )
         
         HydrusData.Print( 'booting controller...' )
         

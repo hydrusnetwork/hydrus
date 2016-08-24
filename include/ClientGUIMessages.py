@@ -411,7 +411,7 @@ class ConversationPanel( wx.Panel ):
             
             self._drafts_vbox.Detach( draft_panel )
             
-            wx.CallAfter( draft_panel.Destroy )
+            draft_panel.Destroy()
             
             self._scrolling_messages_window.FitInside()
             

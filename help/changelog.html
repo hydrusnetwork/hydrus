@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 220</h3></li>
+				<ul>
+					<li>fixed collection selection show action lookup for the preview window</li>
+					<li>files added through the normal import dialog or import folders will be not be fed into the import pipeline if it looks like they are already in use by another process</li>
+					<li>(hence setting an import folder to a browser download destination should be more reliable)</li>
+					<li>rewrote some critical phash generation code that was running extremely slow when importing large pngs with transparency</li>
+					<li>all listctrls that have an edit button now also trigger the edit event on item activate (e.g. double-click/enter key on an item)</li>
+					<li>added zoom in/out/switch to edit shortcut action dropdowns, can't promise it works everywhere</li>
+					<li>'stopping' a gallery page search will now correctly make sure the search queue is unpaused so it can move on to any subsequent search</li>
+					<li>the way excess messages are added to the popup message manager is quicker, improving gui responsivity on message spam</li>
+					<li>fixed a potential race condition when a file import occurs at the same time as client_files rebalancing</li>
+					<li>fixed a potential race condition when a check_file_integrity db maintenance occurs at the same time as client_files rebalancing</li>
+					<li>the client will no longer suppress some core debug stuff</li>
+					<li>fixed an invalid event handler on canvas close bug</li>
+					<li>fixed a long-time wx locale issue</li>
+					<li>fixed a misc main gui parent assert issue</li>
+					<li>fixed some invalid non-wx-thread calllater calls</li>
+					<li>cleaned up some inartful showmessage calls</li>
+					<li>cleaned up some datacache init code</li>
+					<li>fixed some shutdown event handling</li>
+					<li>generally improved and fixed in some cases how threads signal job status</li>
+					<li>improved some thread-interaction timings</li>
+					<li>improved how files and thumbnails are deleted</li>
+					<li>file imports add their files to the client_files structure in a more sensible way</li>
+					<li>misc fixes</li>
+					<li>misc layout fixes</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 219</h3></li>
 				<ul>
 					<li>wrote framework for per-mime zoom options--mimes now have separate show actions for the media viewer and the preview window and zoom in to fit</li>

@@ -909,7 +909,7 @@ class DialogInputCustomFilterAction( Dialog ):
         
         self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
         
-        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove' ] )
+        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ] )
         
         self._ok_none = wx.Button( self._none_panel, label = 'ok' )
         self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
@@ -1789,12 +1789,15 @@ class DialogInputLocalFiles( Dialog ):
         
         file_paths = ClientFiles.GetAllPaths( raw_paths )
         
+        free_paths = HydrusPaths.FilterFreePaths( file_paths )
+        
         num_file_paths = len( file_paths )
         num_good_files = 0
         num_empty_files = 0
         num_uninteresting_mime_files = 0
+        num_occupied_files = num_file_paths - len( free_paths )
         
-        for ( i, path ) in enumerate( file_paths ):
+        for ( i, path ) in enumerate( free_paths ):
             
             if path.endswith( os.path.sep + 'Thumbs.db' ) or path.endswith( os.path.sep + 'thumbs.db' ):
                 
@@ -1850,7 +1853,7 @@ class DialogInputLocalFiles( Dialog ):
             message = HydrusData.ConvertIntToPrettyString( num_good_files ) + ' files were parsed successfully'
             
         
-        if num_empty_files > 0 or num_uninteresting_mime_files > 0:
+        if num_empty_files > 0 or num_uninteresting_mime_files > 0 or num_occupied_files > 0:
             
             if num_good_files == 0:
                 
@@ -1871,6 +1874,11 @@ class DialogInputLocalFiles( Dialog ):
             if num_uninteresting_mime_files > 0:
                 
                 bad_comments.append( HydrusData.ConvertIntToPrettyString( num_uninteresting_mime_files ) + ' had unsupported mimes' )
+                
+            
+            if num_occupied_files > 0:
+                
+                bad_comments.append( HydrusData.ConvertIntToPrettyString( num_occupied_files ) + ' were probably already in use by another process' )
                 
             
             message += ' and '.join( bad_comments )
@@ -2203,7 +2211,7 @@ class DialogInputShortcut( Dialog ):
         
         self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
         
-        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove' ] )
+        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ] )
         
         self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -3199,7 +3207,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
                 
-                self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces )
+                self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces, activation_callback = self.EditQuickNamespaces )
                 
                 self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
                 self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
@@ -3301,6 +3309,26 @@ class DialogPathsToTags( Dialog ):
                 self._refresh_callable()
                 
             
+            def EditQuickNamespaces( self ):
+                
+                for index in self._quick_namespaces_list.GetAllSelected():
+                    
+                    ( namespace, regex ) = self._quick_namespaces_list.GetClientData( index = index )
+                    
+                    with DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            ( namespace, regex ) = dlg.GetInfo()
+                            
+                            self._quick_namespaces_list.UpdateRow( index, ( namespace, regex ), ( namespace, regex ) )
+                            
+                        
+                    
+                
+                self._refresh_callable()
+                
+            
             def EventAddRegex( self, event ):
                 
                 regex = self._regex_box.GetValue()
@@ -3345,26 +3373,14 @@ class DialogPathsToTags( Dialog ):
                     
                 
             
-            def EventDeleteQuickNamespace( self, event ): self.DeleteQuickNamespaces()
+            def EventDeleteQuickNamespace( self, event ):
+                
+                self.DeleteQuickNamespaces()
+                
             
             def EventEditQuickNamespace( self, event ):
                 
-                for index in self._quick_namespaces_list.GetAllSelected():
-                    
-                    ( namespace, regex ) = self._quick_namespaces_list.GetClientData( index = index )
-                    
-                    with DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            ( namespace, regex ) = dlg.GetInfo()
-                            
-                            self._quick_namespaces_list.UpdateRow( index, ( namespace, regex ), ( namespace, regex ) )
-                            
-                        
-                    
-                
-                self._refresh_callable()
+                self.EditQuickNamespaces()
                 
             
             def EventNumNamespaceChanged( self, event ):
@@ -4630,7 +4646,7 @@ class DialogShortcuts( Dialog ):
             
             for ( key, action ) in key_dict.items():
                 
-                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove' ):
+                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ):
                     
                     service_key = None
                     
@@ -4772,7 +4788,7 @@ class DialogShortcuts( Dialog ):
             
             self._original_shortcuts = shortcuts
             
-            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ], delete_key_callback = self.RemoveShortcuts )
+            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ], delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -4836,22 +4852,7 @@ class DialogShortcuts( Dialog ):
         
         def _SortListCtrl( self ): self._shortcuts.SortListItems( 3 )
         
-        def EventAdd( self, event ):
-            
-            with DialogInputCustomFilterAction( self ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( pretty_tuple, data_tuple ) = dlg.GetInfo()
-                    
-                    self._shortcuts.Append( pretty_tuple, data_tuple )
-                    
-                    self._SortListCtrl()
-                    
-                
-            
-        
-        def EventEdit( self, event ):
+        def EditShortcuts( self ):
             
             for index in self._shortcuts.GetAllSelected():
                 
@@ -4871,7 +4872,30 @@ class DialogShortcuts( Dialog ):
                 
             
         
-        def EventRemove( self, event ): self.RemoveShortcuts()
+        def EventAdd( self, event ):
+            
+            with DialogInputCustomFilterAction( self ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( pretty_tuple, data_tuple ) = dlg.GetInfo()
+                    
+                    self._shortcuts.Append( pretty_tuple, data_tuple )
+                    
+                    self._SortListCtrl()
+                    
+                
+            
+        
+        def EventEdit( self, event ):
+            
+            self.EditShortcuts()
+            
+        
+        def EventRemove( self, event ):
+            
+            self.RemoveShortcuts()
+            
         
         def GetShortcuts( self ):
             

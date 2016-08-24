@@ -188,7 +188,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
         self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
         
-        self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ], delete_key_callback = self.Delete )
+        self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add = wx.Button( self._account_types_panel, label = 'add' )
         self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -290,40 +290,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         self._ctrl_account_types.RemoveAllSelected()
         
     
-    def EventAdd( self, event ):
-        
-        with ClientGUIDialogs.DialogInputNewAccountType( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                account_type = dlg.GetAccountType()
-                
-                title = account_type.GetTitle()
-                
-                permissions = account_type.GetPermissions()
-                
-                permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
-                
-                max_num_bytes = account_type.GetMaxBytes()
-                max_num_requests = account_type.GetMaxRequests()
-                
-                max_num_bytes_string = account_type.GetMaxBytesString()
-                max_num_requests_string = account_type.GetMaxRequestsString()
-                
-                if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
-                
-                self._titles_to_account_types[ title ] = account_type
-                
-                self._edit_log.append( ( HC.ADD, account_type ) )
-                
-                self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
-                
-            
-        
-    
-    def EventDelete( self, event ): self.Delete()
-    
-    def EventEdit( self, event ):
+    def Edit( self ):
         
         indices = self._ctrl_account_types.GetAllSelected()
         
@@ -368,6 +335,47 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
                     
                 
             
+        
+    
+    def EventAdd( self, event ):
+        
+        with ClientGUIDialogs.DialogInputNewAccountType( self ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                account_type = dlg.GetAccountType()
+                
+                title = account_type.GetTitle()
+                
+                permissions = account_type.GetPermissions()
+                
+                permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
+                
+                max_num_bytes = account_type.GetMaxBytes()
+                max_num_requests = account_type.GetMaxRequests()
+                
+                max_num_bytes_string = account_type.GetMaxBytesString()
+                max_num_requests_string = account_type.GetMaxRequestsString()
+                
+                if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
+                
+                self._titles_to_account_types[ title ] = account_type
+                
+                self._edit_log.append( ( HC.ADD, account_type ) )
+                
+                self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
+                
+            
+        
+    
+    def EventDelete( self, event ):
+        
+        self.Delete()
+        
+    
+    def EventEdit( self, event ):
+        
+        self.Edit()
         
     
     def EventOK( self, event ):
@@ -1391,7 +1399,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage export folders' )
         
-        self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, use_display_tuple_for_sort = True )
+        self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
         
         export_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
@@ -1537,24 +1545,12 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         return ( path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase )
         
     
-    def Delete( self ): self._export_folders.RemoveAllSelected()
-    
-    def EventAdd( self, event ):
+    def Delete( self ):
         
-        with wx.DirDialog( self, 'Select a folder to add.' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                path = HydrusData.ToUnicode( dlg.GetPath() )
-                
-                self._AddFolder( path )
-                
-            
+        self._export_folders.RemoveAllSelected()
         
     
-    def EventDelete( self, event ): self.Delete()
-    
-    def EventEdit( self, event ):
+    def Edit( self ):
         
         indices = self._export_folders.GetAllSelected()
         
@@ -1574,6 +1570,29 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
                     
                 
             
+        
+    
+    def EventAdd( self, event ):
+        
+        with wx.DirDialog( self, 'Select a folder to add.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                self._AddFolder( path )
+                
+            
+        
+    
+    def EventDelete( self, event ):
+        
+        self.Delete()
+        
+    
+    def EventEdit( self, event ):
+        
+        self.Edit()
         
     
     def EventOK( self, event ):
@@ -2482,7 +2501,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage import folders' )
         
-        self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ) ], delete_key_callback = self.Delete )
+        self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add_button = wx.Button( self, label = 'add' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -2589,6 +2608,34 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         self._import_folders.RemoveAllSelected()
         
     
+    def Edit( self ):
+        
+        indices = self._import_folders.GetAllSelected()
+        
+        for index in indices:
+            
+            ( name, path, check_period ) = self._import_folders.GetClientData( index )
+            
+            import_folder = self._names_to_import_folders[ name ]
+            
+            with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    import_folder = dlg.GetInfo()
+                    
+                    ( name, path, check_period ) = import_folder.ToListBoxTuple()
+                    
+                    pretty_check_period = self._GetPrettyVariables( check_period )
+                    
+                    self._import_folders.UpdateRow( index, ( name, path, pretty_check_period ), ( name, path, check_period ) )
+                    
+                    self._names_to_import_folders[ name ] = import_folder
+                    
+                
+            
+        
+    
     def EventAdd( self, event ):
         
         client_data = self._import_folders.GetClientData()
@@ -2631,30 +2678,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def EventEdit( self, event ):
         
-        indices = self._import_folders.GetAllSelected()
-        
-        for index in indices:
-            
-            ( name, path, check_period ) = self._import_folders.GetClientData( index )
-            
-            import_folder = self._names_to_import_folders[ name ]
-            
-            with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    import_folder = dlg.GetInfo()
-                    
-                    ( name, path, check_period ) = import_folder.ToListBoxTuple()
-                    
-                    pretty_check_period = self._GetPrettyVariables( check_period )
-                    
-                    self._import_folders.UpdateRow( index, ( name, path, pretty_check_period ), ( name, path, check_period ) )
-                    
-                    self._names_to_import_folders[ name ] = import_folder
-                    
-                
-            
+        self.Edit()
         
     
     def EventOK( self, event ):
@@ -3510,7 +3534,7 @@ class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage regex favourites' )
         
-        self._regexes = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'regex phrase', 120 ), ( 'description', -1 ) ], delete_key_callback = self.Delete )
+        self._regexes = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'regex phrase', 120 ), ( 'description', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add_button = wx.Button( self, label = 'add' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -3573,6 +3597,34 @@ class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
         self._regexes.RemoveAllSelected()
         
     
+    def Edit( self ):
+        
+        indices = self._regexes.GetAllSelected()
+        
+        for index in indices:
+            
+            ( regex_phrase, description ) = self._regexes.GetClientData( index )
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'Update regex.', default = regex_phrase ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    regex_phrase = dlg.GetValue()
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
+                        
+                        if dlg_2.ShowModal() == wx.ID_OK:
+                            
+                            description = dlg_2.GetValue()
+                            
+                            self._regexes.UpdateRow( index, ( regex_phrase, description ), ( regex_phrase, description ) )
+                            
+                        
+                    
+                
+            
+        
+    
     def EventAdd( self, event ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter regex.' ) as dlg:
@@ -3601,30 +3653,7 @@ class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
     
     def EventEdit( self, event ):
         
-        indices = self._regexes.GetAllSelected()
-        
-        for index in indices:
-            
-            ( regex_phrase, description ) = self._regexes.GetClientData( index )
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'Update regex.', default = regex_phrase ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    regex_phrase = dlg.GetValue()
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
-                        
-                        if dlg_2.ShowModal() == wx.ID_OK:
-                            
-                            description = dlg_2.GetValue()
-                            
-                            self._regexes.UpdateRow( index, ( regex_phrase, description ), ( regex_phrase, description ) )
-                            
-                        
-                    
-                
-            
+        self.Edit()
         
     
     def EventOK( self, event ):
@@ -7036,7 +7065,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ], delete_key_callback = self.RemoveMappings )
+        self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ], delete_key_callback = self.RemoveMappings, activation_callback = self.EditMappings )
         
         self._add_custom = wx.Button( self, label = 'add custom mapping' )
         self._add_custom.Bind( wx.EVT_BUTTON, self.EventAddCustomMapping )
@@ -7091,6 +7120,34 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         self._mappings_list_ctrl.SortListItems( 1 )
         
     
+    def EditMappings( self ):
+        
+        do_refresh = False
+        
+        for index in self._mappings_list_ctrl.GetAllSelected():
+            
+            ( description, internal_ip, internal_port, external_ip, external_port, protocol, duration ) = self._mappings_list_ctrl.GetClientData( index )
+            
+            with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
+                    
+                    HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
+                    
+                    internal_client = HydrusNATPunch.GetLocalIP()
+                    
+                    HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
+                    
+                    do_refresh = True
+                    
+                
+            
+        
+        if do_refresh: self._RefreshMappings()
+        
+    
     def EventAddCustomMapping( self, event ):
         
         do_refresh = False
@@ -7130,30 +7187,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def EventEditMapping( self, event ):
         
-        do_refresh = False
-        
-        for index in self._mappings_list_ctrl.GetAllSelected():
-            
-            ( description, internal_ip, internal_port, external_ip, external_port, protocol, duration ) = self._mappings_list_ctrl.GetClientData( index )
-            
-            with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
-                    
-                    HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
-                    
-                    internal_client = HydrusNATPunch.GetLocalIP()
-                    
-                    HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
-                    
-                    do_refresh = True
-                    
-                
-            
-        
-        if do_refresh: self._RefreshMappings()
+        self.EditMappings()
         
     
     def EventOK( self, event ):
@@ -7161,7 +7195,10 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         self.EndModal( wx.ID_OK )
         
     
-    def EventRemoveMapping( self, event ): self.RemoveMappings()
+    def EventRemoveMapping( self, event ):
+        
+        self.RemoveMappings()
+        
     
     def RemoveMappings( self ):
         

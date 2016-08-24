@@ -1316,7 +1316,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusData.Print( job_key.ToString() )
             
-            wx.CallLater( 1000 * 30, job_key.Delete )
+            job_key.Delete( 30 )
             
         
     
@@ -1872,7 +1872,8 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                path = client_files_manager.GetFilePath( hash, mime )
+                # lockless because this db call is made by the locked client files manager
+                path = client_files_manager.LocklessGetFilePath( hash, mime )
                 
             except HydrusExceptions.FileMissingException:
                 
@@ -2308,7 +2309,7 @@ class DB( HydrusDB.HydrusDB ):
             
             file_hashes = self._GetHashes( deletable_file_hash_ids )
             
-            wx.CallAfter( client_files_manager.DeleteFiles, file_hashes )
+            self._controller.CallToThread( client_files_manager.DelayedDeleteFiles, file_hashes )
             
         
         useful_thumbnail_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id != ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( self._trash_service_id, ) ) }
@@ -2319,7 +2320,7 @@ class DB( HydrusDB.HydrusDB ):
             
             thumbnail_hashes = self._GetHashes( deletable_thumbnail_hash_ids )
             
-            wx.CallAfter( client_files_manager.DeleteThumbnails, thumbnail_hashes )
+            self._controller.CallToThread( client_files_manager.DelayedDeleteThumbnails, thumbnail_hashes )
             
         
     
@@ -4958,7 +4959,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _ImportFile( self, path, import_file_options = None, override_deleted = False, url = None ):
+    def _ImportFile( self, temp_path, import_file_options = None, override_deleted = False, url = None ):
         
         if import_file_options is None:
             
@@ -4967,9 +4968,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( archive, exclude_deleted_files, min_size, min_resolution ) = import_file_options.ToTuple()
         
-        HydrusImageHandling.ConvertToPngIfBmp( path )
+        HydrusImageHandling.ConvertToPngIfBmp( temp_path )
         
-        hash = HydrusFileHandling.GetHashFromPath( path )
+        hash = HydrusFileHandling.GetHashFromPath( temp_path )
         
         hash_id = self._GetHashId( hash )
         
@@ -4999,16 +5000,9 @@ class DB( HydrusDB.HydrusDB ):
             
         elif status == CC.STATUS_NEW:
             
-            mime = HydrusFileHandling.GetMime( path )
+            mime = HydrusFileHandling.GetMime( temp_path )
             
-            client_files_manager = self._controller.GetClientFilesManager()
-            
-            dest_path = client_files_manager.AddFile( hash, mime, path )
-            
-            # I moved the file copy up because passing an original filename with unicode chars to getfileinfo
-            # was causing problems in windows.
-            
-            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( dest_path )
+            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( temp_path )
             
             if width is not None and height is not None:
                 
@@ -5017,8 +5011,6 @@ class DB( HydrusDB.HydrusDB ):
                     ( min_x, min_y ) = min_resolution
                     
                     if width < min_x or height < min_y:
-                        
-                        os.remove( dest_path )
                         
                         raise Exception( 'Resolution too small' )
                         
@@ -5029,34 +5021,31 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if size < min_size:
                     
-                    os.remove( dest_path )
-                    
                     raise Exception( 'File too small' )
                     
                 
             
             timestamp = HydrusData.GetNow()
             
+            client_files_manager = self._controller.GetClientFilesManager()
+            
             if mime in HC.MIMES_WITH_THUMBNAILS:
                 
-                thumbnail = HydrusFileHandling.GenerateThumbnail( dest_path )
+                thumbnail = HydrusFileHandling.GenerateThumbnail( temp_path )
                 
-                client_files_manager.AddFullSizeThumbnail( hash, thumbnail )
+                # lockless because this db call is made by the locked client files manager
+                client_files_manager.LocklessAddFullSizeThumbnail( hash, thumbnail )
                 
             
             if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
                 
-                try:
-                    
-                    phash = ClientImageHandling.GeneratePerceptualHash( dest_path )
-                    
-                    self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
-                    
-                except:
-                    
-                    pass
-                    
+                phash = ClientImageHandling.GeneratePerceptualHash( temp_path )
                 
+                self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                
+            
+            # lockless because this db call is made by the locked client files manager
+            client_files_manager.LocklessAddFile( hash, mime, temp_path )
             
             self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
             
@@ -5066,7 +5055,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self.pub_content_updates_after_commit( { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
             
-            ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( dest_path )
+            ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( temp_path )
             
             self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
             
@@ -6568,150 +6557,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 160:
-            
-            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'e621', ClientDefaults.GetDefaultBoorus()[ 'e621' ] ) )
-            
-            self._c.execute( 'DROP TABLE ratings_filter;' )
-            
-        
-        if version == 161:
-            
-            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
-            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_EXPORT_FOLDER, ) )
-            
-            #
-            
-            for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
-                
-                path = os.path.join( HC.CLIENT_UPDATES_DIR, filename )
-                
-                with open( path, 'rb' ) as f:
-                    
-                    inefficient_string = f.read()
-                    
-                
-                try:
-                    
-                    ( dump_type, dump_version, dump ) = json.loads( inefficient_string )
-                    
-                    serialisable_info = json.loads( dump )
-                    
-                    better_string = json.dumps( ( dump_type, dump_version, serialisable_info ) )
-                    
-                    with open( path, 'wb' ) as f:
-                        
-                        f.write( better_string )
-                        
-                    
-                except:
-                    
-                    continue
-                    
-                
-            
-        
-        if version == 162:
-            
-            self._c.execute( 'DROP INDEX mappings_service_id_tag_id_index;' )
-            self._c.execute( 'DROP INDEX mappings_service_id_hash_id_index;' )
-            self._c.execute( 'DROP INDEX mappings_service_id_status_index;' )
-            
-            self._c.execute( 'CREATE INDEX mappings_namespace_id_index ON mappings ( namespace_id );' )
-            self._c.execute( 'CREATE INDEX mappings_tag_id_index ON mappings ( tag_id );' )
-            self._c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
-            
-        
-        if version == 163:
-            
-            self._c.execute( 'DROP INDEX mappings_status_index;' )
-            
-            self._c.execute( 'CREATE INDEX mappings_status_pending_index ON mappings ( status ) WHERE status = 1;' )
-            self._c.execute( 'CREATE INDEX mappings_status_deleted_index ON mappings ( status ) WHERE status = 2;' )
-            
-            #
-            
-            info = {}
-            
-            self._AddService( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE, CC.TRASH_SERVICE_KEY, info )
-            
-            self._trash_service_id = self._GetServiceId( CC.TRASH_SERVICE_KEY )
-            self._local_file_service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
-            
-            deleted_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
-            
-            self._c.executemany( 'INSERT OR IGNORE INTO deleted_files ( service_id, hash_id ) VALUES ( ?, ? );', ( ( self._trash_service_id, hash_id ) for hash_id in deleted_hash_ids ) )
-            
-        
-        if version == 164:
-            
-            self._c.execute( 'CREATE TABLE file_trash ( hash_id INTEGER PRIMARY KEY, timestamp INTEGER );' )
-            self._c.execute( 'CREATE INDEX file_trash_timestamp ON file_trash ( timestamp );' )
-            
-            self._trash_service_id = self._GetServiceId( CC.TRASH_SERVICE_KEY )
-            
-            trash_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._trash_service_id, ) ) ]
-            
-            now = HydrusData.GetNow()
-            
-            self._c.executemany( 'INSERT OR IGNORE INTO file_trash ( hash_id, timestamp ) VALUES ( ?, ? );', ( ( hash_id, now ) for hash_id in trash_hash_ids ) )
-            
-            self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( self._trash_service_id, ) )
-            
-            #
-            
-            self._c.execute( 'DROP INDEX mappings_status_pending_index;' )
-            self._c.execute( 'DROP INDEX mappings_status_deleted_index;' )
-            
-            self._c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
-            
-            #
-            
-            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'yande.re', ClientDefaults.GetDefaultBoorus()[ 'yande.re' ] ) )
-            
-        
-        if version == 169:
-            
-            result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( '', ) ).fetchone()
-            
-            if result is not None:
-                
-                ( tag_id, ) = result
-                
-                self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
-                
-            
-            #
-            
-            def iterate_all_file_paths():
-                
-                client_files_default = os.path.join( self._db_dir, 'client_files' )
-                
-                for prefix in HydrusData.IterateHexPrefixes():
-                    
-                    dir = os.path.join( client_files_default, prefix )
-                    
-                    next_paths = os.listdir( dir )
-                    
-                    for path in next_paths:
-                        
-                        yield os.path.join( dir, path )
-                        
-                    
-                
-            
-            for ( i, path ) in enumerate( iterate_all_file_paths() ):
-                
-                try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                except: pass
-                
-                if i % 100 == 0:
-                    
-                    self._controller.pub( 'splash_set_status_text', 'updating file permissions ' + HydrusData.ConvertIntToPrettyString( i ) )
-                    
-                
-            
         
         if version == 171:
             
@@ -8701,7 +8546,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 job_key.SetVariable( 'popup_text_1', 'done!' )
                 
-                wx.CallLater( 1000 * 30, job_key.Delete )
+                job_key.Delete( 30 )
                 
             
         

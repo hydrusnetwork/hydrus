@@ -53,7 +53,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         title = self._controller.PrepStringForDisplay( 'Hydrus Client' )
         
-        ClientGUITopLevelWindows.FrameThatResizes.__init__( self, None, title, 'main_gui' )
+        ClientGUITopLevelWindows.FrameThatResizes.__init__( self, None, title, 'main_gui', float_on_parent = False )
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles ) )
         
@@ -72,7 +72,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._notebook = wx.Notebook( self )
         self._notebook.Bind( wx.EVT_MIDDLE_DOWN, self.EventNotebookMiddleClick )
         self._notebook.Bind( wx.EVT_RIGHT_DOWN, self.EventNotebookMenu )
-        self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventNotebookPageChanged )
+        self.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventNotebookPageChanged )
         
         self._tab_right_click_index = -1
         
@@ -124,7 +124,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._RefreshStatusBar()
         
-        # as we are in oninit, callafter and calllater( 0 ) are different
+        # as we are in oninit, callafter and calllater( 1ms ) are different
         # later waits until the mainloop is running, I think.
         # after seems to execute synchronously
         
@@ -484,6 +484,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _CheckFileIntegrity( self ):
         
+        client_files_manager = self._controller.GetClientFilesManager()
+        
         message = 'This will go through all the files the database thinks it has and check that they actually exist. Any files that are missing will be deleted from the internal record.'
         message += os.linesep * 2
         message += 'You can perform a quick existence check, which will only look to see if a file exists, or a thorough content check, which will also make sure existing files are not corrupt or otherwise incorrect.'
@@ -494,7 +496,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             result = dlg.ShowModal()
             
-            if result == wx.ID_YES: self._controller.Write( 'file_integrity', 'quick' )
+            if result == wx.ID_YES:
+                
+                self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'quick' )
+                
             elif result == wx.ID_NO:
                 
                 text = 'If an existing file is found to be corrupt/incorrect, would you like to move it or delete it?'
@@ -511,13 +516,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                                 
                                 path = HydrusData.ToUnicode( dlg_3.GetPath() )
                                 
-                                self._controller.Write( 'file_integrity', 'thorough', path )
+                                self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough', path )
                                 
                             
                         
                     elif result == wx.ID_NO:
                         
-                        self._controller.Write( 'file_integrity', 'thorough' )
+                        self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough' )
                         
                     
                 
@@ -663,10 +668,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             page.CleanBeforeDestroy()
             
-            wx.CallAfter( page.Destroy )
+            page.Destroy()
             
         
-        wx.CallAfter( gc.collect )
+        gc.collect()
         
     
     def _FetchIP( self, service_key ):
@@ -2122,7 +2127,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         HydrusData.Print( job_key.ToString() )
                         
-                        wx.CallLater( 1000 * 5, job_key.Delete )
+                        job_key.Delete( 5 )
                         
                         return
                         
@@ -2219,7 +2224,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         job_key.Finish()
         
-        wx.CallLater( 1000 * 5, job_key.Delete )
+        job_key.Delete( 5 )
         
     
     def ClearClosedPages( self ):
@@ -2250,17 +2255,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._DestroyPages( deletee_pages )
         
     
-    def DoFirstStart( self ):
-        
-        message = 'Hi, this looks like the first time you have started the hydrus client.'
-        message += os.linesep * 2
-        message += 'Don\'t forget to check out the help if you haven\'t already.'
-        message += os.linesep * 2
-        message += 'You can right-click popup messages like this to dismiss them.'
-        
-        HydrusData.ShowText( message )
-        
-    
     def EventClose( self, event ):
         
         if not event.CanVeto():
@@ -2280,7 +2274,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         page = self._notebook.GetCurrentPage()
         
-        if page is not None: page.SetMediaFocus()
+        if page is not None:
+            
+            page.SetMediaFocus()
+            
         
     
     def EventMenu( self, event ):
@@ -2735,7 +2732,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ( menu, label, show ) = self._GenerateMenuInfo( name )
         
-        if HC.PLATFORM_OSX: menu.SetTitle( label ) # causes bugs in os x if this is not here
+        if HC.PLATFORM_OSX:
+            
+            menu.SetTitle( label ) # causes bugs in os x if this is not here
+            
         
         ( old_menu, old_label, old_show ) = self._menus[ name ]
         
@@ -2776,10 +2776,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._menus[ name ] = ( menu, label, show )
         
-        wx.CallAfter( old_menu.Destroy )
+        old_menu.Destroy()
         
     
-    def RefreshStatusBar( self ): self._RefreshStatusBar()
+    def RefreshStatusBar( self ):
+        
+        self._RefreshStatusBar()
+        
     
     def SaveLastSession( self ):
         

@@ -572,7 +572,7 @@ class HydrusBitmap( object ):
             
             image = wx.ImageFromBitmap( bitmap )
             
-            wx.CallAfter( bitmap.Destroy )
+            bitmap.Destroy()
             
             return image
             

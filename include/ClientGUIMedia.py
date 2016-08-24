@@ -1550,7 +1550,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         alpha_bmp = wx.BitmapFromImage( image, 32 )
         
-        wx.CallAfter( image.Destroy )
+        image.Destroy()
         
         self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, 0 )
         
@@ -1797,7 +1797,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 for bmp in self._dirty_canvas_pages:
                     
-                    wx.CallAfter( bmp.Destroy )
+                    bmp.Destroy()
                     
                 
                 self._dirty_canvas_pages = []

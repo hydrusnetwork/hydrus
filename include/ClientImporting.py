@@ -212,7 +212,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         gallery.GetFile( temp_path, url, report_hooks = [ self._file_download_hook ] )
                         
                     
-                    ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, url = url )
+                    client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                    
+                    ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options, url = url )
                     
                 finally:
                     
@@ -488,6 +490,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._current_query = None
+            self._gallery_paused = False
             
         
     
@@ -681,7 +684,20 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', path, import_file_options = self._import_file_options )
+            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            
+            try:
+                
+                HydrusPaths.MirrorFile( path, temp_path )
+                
+                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                
+                ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                
+            finally:
+                
+                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                
             
             self._paths_cache.UpdateSeedStatus( path, status )
             
@@ -1044,6 +1060,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 all_paths = ClientFiles.GetAllPaths( raw_paths )
                 
+                all_paths = HydrusPaths.FilterFreePaths( all_paths )
+                
                 for path in all_paths:
                     
                     if path.endswith( '.txt' ):
@@ -1074,7 +1092,20 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         if mime in self._mimes:
                             
-                            ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', path, import_file_options = self._import_file_options )
+                            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                            
+                            try:
+                                
+                                HydrusPaths.MirrorFile( path, temp_path )
+                                
+                                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                                
+                                ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                                
+                            finally:
+                                
+                                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                                
                             
                             self._path_cache.UpdateSeedStatus( path, status )
                             
@@ -1315,7 +1346,9 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                     HydrusGlobals.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
-                    ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, url = file_url )
+                    client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                    
+                    ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options, url = file_url )
                     
                 finally:
                     
@@ -2152,7 +2185,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         job_key.SetVariable( 'popup_text_1', x_out_of_y + 'importing file' )
                         
-                        ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, url = url )
+                        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                        
+                        ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options, url = url )
                         
                         if status == CC.STATUS_SUCCESSFUL:
                             
@@ -2623,7 +2658,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     HydrusGlobals.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
-                    ( status, hash ) = HydrusGlobals.client_controller.WriteSynchronous( 'import_file', temp_path, import_file_options = self._import_file_options, url = file_url )
+                    client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                    
+                    ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options, url = file_url )
                     
                 finally:
                     

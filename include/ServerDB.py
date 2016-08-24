@@ -2301,65 +2301,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusData.Print( 'The server is updating to version ' + str( version + 1 ) )
         
-        if version == 161:
-            
-            for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
-                
-                path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
-                
-                with open( path, 'rb' ) as f:
-                    
-                    compressed_inefficient_string = f.read()
-                    
-                
-                try:
-                    
-                    inefficient_string = lz4.loads( compressed_inefficient_string )
-                    
-                    ( dump_type, dump_version, dump ) = json.loads( inefficient_string )
-                    
-                    if not isinstance( dump, ( unicode, str ) ):
-                        
-                        continue
-                        
-                    
-                    serialisable_info = json.loads( dump )
-                    
-                except:
-                    
-                    continue
-                    
-                
-                better_string = json.dumps( ( dump_type, dump_version, serialisable_info ) )
-                
-                compressed_better_string = lz4.dumps( better_string )
-                
-                with open( path, 'wb' ) as f:
-                    
-                    f.write( compressed_better_string )
-                    
-                
-            
-        
-        if version == 169:
-            
-            bad_tag_ids = set()
-            
-            for ( tag_id, tag ) in self._c.execute( 'SELECT tag_id, tag FROM tags;' ):
-                
-                try:
-                    
-                    HydrusTags.CheckTagNotEmpty( tag )
-                    
-                except HydrusExceptions.SizeException:
-                    
-                    bad_tag_ids.add( tag_id )
-                    
-                
-            
-            self._c.executemany( 'DELETE FROM mappings WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in bad_tag_ids ) )
-            
-        
         if version == 179:
             
             HydrusData.Print( 'moving updates about' )

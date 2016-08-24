@@ -392,7 +392,7 @@ class Animation( wx.Window ):
                 self._current_frame_drawn = False
                 self._a_frame_has_been_drawn = False
                 
-                wx.CallAfter( self._canvas_bmp.Destroy )
+                self._canvas_bmp.Destroy()
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
@@ -718,7 +718,7 @@ class AnimationBar( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                wx.CallAfter( self._canvas_bmp.Destroy )
+                self._canvas_bmp.Destroy()
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
@@ -827,10 +827,6 @@ class Canvas( wx.Window ):
         self._closing = False
         
         self._service_keys_to_services = {}
-        
-        self._focus_holder = wx.Window( self )
-        self._focus_holder.Hide()
-        self._focus_holder.SetEventHandler( self )
         
         self._current_media = None
         self._current_display_media = None
@@ -1008,6 +1004,11 @@ class Canvas( wx.Window ):
             
         
         mime = media.GetMime()
+        
+        if mime == HC.APPLICATION_HYDRUS_CLIENT_COLLECTION:
+            
+            return CC.MEDIA_VIEWER_DO_NOT_SHOW
+            
         
         if self.PREVIEW_WINDOW:
             
@@ -1385,7 +1386,7 @@ class Canvas( wx.Window ):
             
             ( my_width, my_height ) = self.GetClientSize()
             
-            wx.CallAfter( self._canvas_bmp.Destroy )
+            self._canvas_bmp.Destroy()
             
             self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
             
@@ -1457,7 +1458,7 @@ class Canvas( wx.Window ):
                 
                 media = None
                 
-            elif self._GetShowAction( media ) == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+            elif self._GetShowAction( media.GetDisplayMedia() ) == CC.MEDIA_VIEWER_DO_NOT_SHOW:
                 
                 media = None
                 
@@ -1476,7 +1477,8 @@ class Canvas( wx.Window ):
                 
                 self._media_container.Hide()
                 
-                wx.CallAfter( self._media_container.Destroy )
+                # Another safe destroy for OS X's benefit
+                wx.CallLater( 500, self._media_container.Destroy )
                 
                 self._media_container = None
                 
@@ -2939,9 +2941,15 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
                 if self._current_zoom == 1.0:
                     
-                    if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom fit' )
+                    if media_width > my_width or media_height > my_height:
+                        
+                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom fit' )
+                        
                     
-                else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom full' )
+                else:
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom full' )
+                    
                 
             
             menu.AppendSeparator()
@@ -3378,9 +3386,15 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                 
                 if self._current_zoom == 1.0:
                     
-                    if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom fit' )
+                    if media_width > my_width or media_height > my_height:
+                        
+                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom fit' )
+                        
                     
-                else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom full' )
+                else:
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_switch' ), 'zoom full' )
+                    
                 
             
             menu.AppendSeparator()
@@ -3940,7 +3954,7 @@ class StaticImage( wx.Window ):
                 
                 wx_bitmap = wx.BitmapFromImage( image )
                 
-                wx.CallAfter( image.Destroy )
+                image.Destroy()
                 
             else:
                 
@@ -3949,7 +3963,7 @@ class StaticImage( wx.Window ):
             
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
-            wx.CallAfter( wx_bitmap.Destroy )
+            wx_bitmap.Destroy()
             
             self._is_rendered = True
             
@@ -4017,7 +4031,7 @@ class StaticImage( wx.Window ):
                     self._image_container = self._image_cache.GetImage( self._media, ( target_width, target_height ) )
                     
                 
-                wx.CallAfter( self._canvas_bmp.Destroy )
+                self._canvas_bmp.Destroy()
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 

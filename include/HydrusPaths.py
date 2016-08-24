@@ -180,6 +180,26 @@ def DeletePath( path ):
             
         
     
+def FilterFreePaths( paths ):
+    
+    free_paths = []
+    
+    for path in paths:
+        
+        try:
+            
+            os.rename( path, path ) # rename a path to itself
+            
+            free_paths.append( path )
+            
+        except OSError as e: # 'already in use by another process'
+            
+            HydrusData.Print( path + ' ' + str( e ) )
+            
+        
+    
+    return free_paths
+    
 def GetDevice( path ):
     
     path = path.lower()
