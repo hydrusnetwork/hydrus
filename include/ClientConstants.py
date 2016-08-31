@@ -134,7 +134,8 @@ FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
-FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_VCENTER = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_VCENTER_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 DAY = 0
 WEEK = 1
@@ -165,25 +166,25 @@ import_folder_string_lookup[ IMPORT_FOLDER_DELETE ] = 'delete the file'
 import_folder_string_lookup[ IMPORT_FOLDER_IGNORE ] = 'leave the file alone, do not reattempt it'
 import_folder_string_lookup[ IMPORT_FOLDER_MOVE ] = 'move the file'
 
-MEDIA_VIEWER_SHOW_AS_NORMAL = 0
-MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED = 1
-MEDIA_VIEWER_SHOW_BEHIND_EMBED = 2
-MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED = 3
-MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON = 4
-MEDIA_VIEWER_DO_NOT_SHOW = 5
+MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL = 0
+MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED = 1
+MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED = 2
+MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED = 3
+MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON = 4
+MEDIA_VIEWER_ACTION_DO_NOT_SHOW = 5
 
 media_viewer_action_string_lookup = {}
 
-media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_AS_NORMAL ] = 'show as normal'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED ] = 'show as normal, but start paused'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_BEHIND_EMBED ] = 'show, but initially behind an embed button'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED ] = 'show, but initially behind an embed button, and start paused'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON ] = 'show an \'open externally\' button'
-media_viewer_action_string_lookup[ MEDIA_VIEWER_DO_NOT_SHOW ] = 'do not show in the media viewer. on thumbnail activation, open externally'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL ] = 'show as normal'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED ] = 'show as normal, but start paused'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED ] = 'show, but initially behind an embed button'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED ] = 'show, but initially behind an embed button, and start paused'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON ] = 'show an \'open externally\' button'
+media_viewer_action_string_lookup[ MEDIA_VIEWER_ACTION_DO_NOT_SHOW ] = 'do not show in the media viewer. on thumbnail activation, open externally'
 
-static_full_support = [ MEDIA_VIEWER_SHOW_AS_NORMAL, MEDIA_VIEWER_SHOW_BEHIND_EMBED, MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_DO_NOT_SHOW ]
-animated_full_support = [ MEDIA_VIEWER_SHOW_AS_NORMAL, MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED, MEDIA_VIEWER_SHOW_BEHIND_EMBED, MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED, MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_DO_NOT_SHOW ]
-no_support = [ MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_DO_NOT_SHOW ]
+static_full_support = [ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
+animated_full_support = [ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED, MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
+no_support = [ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
 
 media_viewer_capabilities = {}
 
@@ -193,7 +194,7 @@ media_viewer_capabilities[ HC.IMAGE_GIF ] = animated_full_support
 
 if HC.PLATFORM_WINDOWS:
     
-    media_viewer_capabilities[ HC.APPLICATION_FLASH ] = [ MEDIA_VIEWER_SHOW_AS_NORMAL, MEDIA_VIEWER_SHOW_BEHIND_EMBED, MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_DO_NOT_SHOW ]
+    media_viewer_capabilities[ HC.APPLICATION_FLASH ] = [ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
     
 else:
     
@@ -211,6 +212,16 @@ media_viewer_capabilities[ HC.AUDIO_MP3 ] = no_support
 media_viewer_capabilities[ HC.AUDIO_OGG ] = no_support
 media_viewer_capabilities[ HC.AUDIO_FLAC ] = no_support
 media_viewer_capabilities[ HC.AUDIO_WMA] = no_support
+
+MEDIA_VIEWER_SCALE_100 = 0
+MEDIA_VIEWER_SCALE_MAX_REGULAR = 1
+MEDIA_VIEWER_SCALE_TO_CANVAS = 2
+
+media_viewer_scale_string_lookup = {}
+
+media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_100 ] = 'show at 100%'
+media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_MAX_REGULAR ] = 'scale to the largest regular zoom that fits'
+media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_TO_CANVAS ] = 'scale to the canvas size'
 
 SHUTDOWN_TIMESTAMP_VACUUM = 0
 SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE = 1

@@ -110,7 +110,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._menus = {}
         
-        vbox = wx.BoxSizer( wx.HORIZONTAL )
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
@@ -128,26 +128,41 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         # later waits until the mainloop is running, I think.
         # after seems to execute synchronously
         
-        client_files_manager = self._controller.GetClientFilesManager()
+        default_gui_session = HC.options[ 'default_gui_session' ]
         
-        if HC.options[ 'default_gui_session' ] == 'just a blank page':
+        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+        
+        cannot_load_from_db = default_gui_session not in existing_session_names
+        
+        load_a_blank_page = HC.options[ 'default_gui_session' ] == 'just a blank page' or cannot_load_from_db
+        
+        if not load_a_blank_page:
+            
+            if self._controller.LastShutdownWasBad():
+                
+                # this can be upgraded to a nicer checkboxlist dialog to select pages or w/e
+                
+                message = 'It looks like the last instance of the client did not shut down cleanly.'
+                message += os.linesep * 2
+                message += 'Would you like to try loading your default session \'' + default_gui_session + '\', or just a blank page?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load the default session', no_label = 'just load a blank page' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_NO:
+                        
+                        load_a_blank_page = True
+                        
+                    
+                
+            
+        
+        if load_a_blank_page:
             
             wx.CallLater( 1, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
             
         else:
             
-            name = HC.options[ 'default_gui_session' ]
-            
-            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-            
-            if name in existing_session_names:
-                
-                wx.CallLater( 1, self._LoadGUISession, name )
-                
-            else:
-                
-                wx.CallLater( 1, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
-                
+            wx.CallLater( 1, self._LoadGUISession, default_gui_session )
             
         
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
@@ -1635,7 +1650,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             busy_status = ''
             
         
-        if self._controller.GetDB().CurrentlyDoingJob():
+        if self._controller.DBCurrentlyDoingJob():
             
             db_status = 'db locked'
             
@@ -2721,7 +2736,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshMenu( self, name ):
         
-        db_going_to_hang_if_we_hit_it = HydrusGlobals.client_controller.GetDB().CurrentlyDoingJob()
+        db_going_to_hang_if_we_hit_it = HydrusGlobals.client_controller.DBCurrentlyDoingJob()
         
         if db_going_to_hang_if_we_hit_it:
             

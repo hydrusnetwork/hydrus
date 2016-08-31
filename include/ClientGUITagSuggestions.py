@@ -92,6 +92,59 @@ class ListBoxTagsSuggestionsRelated( ClientGUICommon.ListBoxTags ):
         self._TextsHaveChanged()
         
     
+class RecentTagsPanel( wx.Panel ):
+    
+    def __init__( self, parent, service_key, activate_callable, canvas_key = None ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._service_key = service_key
+        self._canvas_key = canvas_key
+        
+        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        clear_button = wx.Button( self, label = 'clear' )
+        clear_button.Bind( wx.EVT_BUTTON, self.EventClear )
+        
+        self._recent_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable )
+        
+        vbox.AddF( clear_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._recent_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self._RefreshRecentTags()
+        
+        if self._canvas_key is not None:
+            
+            HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            
+        
+    
+    def _RefreshRecentTags( self ):
+        
+        recent_tags = HydrusGlobals.client_controller.Read( 'recent_tags', self._service_key )
+        
+        self._recent_tags.SetTags( recent_tags )
+        
+    
+    def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._RefreshRecentTags()
+            
+        
+    
+    def EventClear( self, event ):
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'push_recent_tags', self._service_key, None )
+        
+        self._RefreshRecentTags()
+        
+    
 class RelatedTagsPanel( wx.Panel ):
     
     def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
@@ -223,6 +276,15 @@ class SuggestedTagsPanel( wx.Panel ):
             related_tags = RelatedTagsPanel( self, service_key, media, activate_callable, canvas_key = self._canvas_key )
             
             hbox.AddF( related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            something_to_show = True
+            
+        
+        if self._new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
+            
+            recent_tags = RecentTagsPanel( self, service_key, activate_callable, canvas_key = self._canvas_key )
+            
+            hbox.AddF( recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             something_to_show = True
             

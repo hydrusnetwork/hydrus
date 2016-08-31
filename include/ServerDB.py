@@ -2592,8 +2592,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
-        HydrusGlobals.is_db_updated = True
-        
     
     def _VerifyAccessKey( self, service_key, access_key ):
         

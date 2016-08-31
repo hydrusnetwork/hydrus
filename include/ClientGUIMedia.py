@@ -441,7 +441,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             media_show_action = new_options.GetMediaShowAction( display_media.GetMime() )
             
-            if media_show_action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+            if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
                 
                 hash = display_media.GetHash()
                 mime = display_media.GetMime()

@@ -563,7 +563,7 @@ class ClientFilesManager( object ):
                 
             
         
-        if len( missing ) > 0 and not HydrusGlobals.is_first_start:
+        if len( missing ) > 0 and not HydrusGlobals.client_controller.IsFirstStart():
             
             self._bad_error_occured = True
             

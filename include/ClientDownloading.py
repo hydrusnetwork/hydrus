@@ -135,7 +135,65 @@ def GetGallery( gallery_identifier ):
     
 _8CHAN_BOARDS_TO_MEDIA_HOSTS = {}
 
-def GetImageboardThreadURLs( thread_url ):
+def GetImageboardFileURL( thread_url, filename, ext ):
+    
+    ( thread_url, host, board, thread_id ) = ParseImageboardThreadURL( thread_url )
+    
+    is_4chan = '4chan.org' in host
+    is_8chan = '8ch.net' in host
+    
+    if is_4chan:
+        
+        return 'http://i.4cdn.org/' + board + '/' + filename + ext
+        
+    elif is_8chan:
+        
+        if len( filename ) == 64: # new sha256 filename
+            
+            return 'https://media.8ch.net/file_store/' + filename + ext
+            
+        else:
+            
+            if board not in _8CHAN_BOARDS_TO_MEDIA_HOSTS:
+                
+                try:
+                    
+                    html_url = 'http://8ch.net/' + board + '/res/' + thread_id + '.html'
+                    
+                    response = ClientNetworking.RequestsGet( html_url )
+                    
+                    thread_html = response.content
+                    
+                    soup = GetSoup( thread_html )
+                    
+                    file_infos = soup.find_all( 'p', class_ = "fileinfo" )
+                    
+                    example_file_url = file_infos[0].find( 'a' )[ 'href' ]
+                    
+                    parse_result = urlparse.urlparse( example_file_url )
+                    
+                    hostname = parse_result.hostname
+                    
+                    if hostname is None:
+                        
+                        hostname = '8ch.net'
+                        
+                    
+                    _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ] = hostname
+                    
+                except Exception as e:
+                    
+                    _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ] = 'media.8ch.net'
+                    
+                
+            
+            media_host = _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ]
+        
+            return 'http://' + media_host + '/' + board + '/src/' + filename + ext
+            
+        
+    
+def GetImageboardThreadJSONURL( thread_url ):
     
     ( thread_url, host, board, thread_id ) = ParseImageboardThreadURL( thread_url )
     
@@ -144,60 +202,18 @@ def GetImageboardThreadURLs( thread_url ):
     
     # 4chan
     # http://a.4cdn.org/asp/thread/382059.json
-    # http://i.4cdn.org/asp/ for images
     
     # 8chan
     # http://8ch.net/v/res/406061.json
-    # http://8ch.net/v/src/ for images, or media.8ch.net
     
     if is_4chan:
         
-        json_url = 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
-        file_base = 'http://i.4cdn.org/' + board + '/'
+        return 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
         
     elif is_8chan:
         
-        json_url = 'http://8ch.net/' + board + '/res/' + thread_id + '.json'
-        html_url = 'http://8ch.net/' + board + '/res/' + thread_id + '.html'
+        return 'http://8ch.net/' + board + '/res/' + thread_id + '.json'
         
-        if board not in _8CHAN_BOARDS_TO_MEDIA_HOSTS:
-            
-            try:
-                
-                response = ClientNetworking.RequestsGet( html_url )
-                
-                thread_html = response.content
-                
-                soup = GetSoup( thread_html )
-                
-                file_infos = soup.find_all( 'p', class_ = "fileinfo" )
-                
-                example_file_url = file_infos[0].find( 'a' )[ 'href' ]
-                
-                parse_result = urlparse.urlparse( example_file_url )
-                
-                hostname = parse_result.hostname
-                
-                if hostname is None:
-                    
-                    hostname = '8ch.net'
-                    
-                
-                _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ] = hostname
-                
-            except Exception as e:
-                
-                _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ] = 'media.8ch.net'
-                
-            
-        
-        media_host = _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ]
-        
-        file_base = 'http://' + media_host + '/' + board + '/src/'
-        
-    
-    
-    return ( json_url, file_base )
     
 def GetSoup( html ):
     
@@ -483,6 +499,58 @@ def Parse4chanPostScreen( html ):
             
         except: return ( 'error', 'unknown error' )
         
+    
+def ParseImageboardFileURLFromPost( thread_url, post ):
+    
+    url_filename = str( post[ 'tim' ] )
+    url_ext = post[ 'ext' ]
+    
+    file_original_filename = post[ 'filename' ] + url_ext
+    file_url = GetImageboardFileURL( thread_url, url_filename, url_ext )
+    
+    if 'md5' in post:
+        
+        file_md5_base64 = post[ 'md5' ]
+        
+    else:
+        
+        file_md5_base64 = None
+        
+    
+    return ( file_url, file_md5_base64, file_original_filename )
+    
+def ParseImageboardFileURLsFromJSON( thread_url, raw_json ):
+
+    json_dict = json.loads( raw_json )
+    
+    posts_list = json_dict[ 'posts' ]
+    
+    file_infos = []
+    
+    for post in posts_list:
+        
+        if 'filename' not in post:
+            
+            continue
+            
+        
+        file_infos.append( ParseImageboardFileURLFromPost( thread_url, post ) )
+        
+        if 'extra_files' in post:
+            
+            for extra_file in post[ 'extra_files' ]:
+                
+                if 'filename' not in extra_file:
+                    
+                    continue
+                    
+                
+                file_infos.append( ParseImageboardFileURLFromPost( thread_url, extra_file ) )
+                
+            
+        
+    
+    return file_infos
     
 def ParseImageboardThreadURL( thread_url ):
     

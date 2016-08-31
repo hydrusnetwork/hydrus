@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 221</h3></li>
+				<ul>
+					<li>fixed the 8chan thread parser for the new sha256 file urls. legacy links should still work!</li>
+					<li>created a 'x recent tags' suggested tags control and all the db and so on to go with it</li>
+					<li>recent tags defaults to off--turn it on under options->tags</li>
+					<li>replacing the previously basic zoom_in_to_canvas, the zoom options now support 100%, max regular zoom, or canvas fit for scaling up and down and for the media and preview windows!</li>
+					<li>cleaned up some garbage zoom code</li>
+					<li>refactored and harmonised how default zooms are calculated</li>
+					<li>harmonised and improved how canvas zooms are set</li>
+					<li>zoom_switch now works for flash</li>
+					<li>if it looks like the last instance of the client did not shut down cleanly, a new client will now present a dialog to choose whether to attempt opening the default session or just a blank page.</li>
+					<li>all listctrls across the program have better secondary sort</li>
+					<li>added an isatty() stub to the HydrusLogger for any unusual error handlers wanting to call it (youtube parser pafy was doing this)</li>
+					<li>removed some accidental (123) counts from some predicate menu and clipboard rendering</li>
+					<li>refactored a bunch of redundant flexgrid creation code</li>
+					<li>did a bunch more flexgrid refactoring</li>
+					<li>refactored some ugly global variables</li>
+					<li>misc mvc cleanup</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 220</h3></li>
 				<ul>
 					<li>fixed collection selection show action lookup for the preview window</li>

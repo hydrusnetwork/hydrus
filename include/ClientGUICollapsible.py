@@ -95,7 +95,7 @@ class CollapsiblePanel( wx.Panel ):
         
         line = wx.StaticLine( self, style = wx.LI_HORIZONTAL )
         
-        hbox.AddF( self._button, CC.FLAGS_MIXED )
+        hbox.AddF( self._button, CC.FLAGS_VCENTER )
         hbox.AddF( line, CC.FLAGS_EXPAND_DEPTH_ONLY )
         
         self._vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )

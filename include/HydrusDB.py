@@ -179,6 +179,8 @@ class HydrusDB( object ):
             self._fast_big_transaction_wal = True
             
         
+        self._is_first_start = False
+        self._is_db_updated = False
         self._local_shutdown = False
         self._loop_finished = False
         self._ready_to_serve_requests = False
@@ -221,6 +223,8 @@ class HydrusDB( object ):
                 self._UpdateDB( version )
                 
                 self._c.execute( 'COMMIT;' )
+                
+                self._is_db_updated = True
                 
             except:
                 
@@ -344,6 +348,8 @@ class HydrusDB( object ):
             
         
         if create_db:
+            
+            self._is_first_start = True
             
             self._CreateDB()
             
@@ -532,6 +538,16 @@ class HydrusDB( object ):
     def GetDBDir( self ):
         
         return self._db_dir
+        
+    
+    def IsDBUpdated( self ):
+        
+        return self._is_db_updated
+        
+    
+    def IsFirstStart( self ):
+        
+        return self._is_first_start
         
     
     def LoopIsFinished( self ):

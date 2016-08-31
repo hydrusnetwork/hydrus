@@ -142,7 +142,7 @@ class EditMediaViewOptionsPanel( EditPanel ):
         
         self._original_info = info
         
-        ( self._mime, media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = self._original_info
+        ( self._mime, media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) ) = self._original_info
         
         possible_actions = CC.media_viewer_capabilities[ self._mime ]
         
@@ -153,7 +153,7 @@ class EditMediaViewOptionsPanel( EditPanel ):
             
             self._media_show_action.Append( CC.media_viewer_action_string_lookup[ action ], action )
             
-            if action != CC.MEDIA_VIEWER_DO_NOT_SHOW:
+            if action != CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
                 
                 self._preview_show_action.Append( CC.media_viewer_action_string_lookup[ action ], action )
                 
@@ -162,24 +162,40 @@ class EditMediaViewOptionsPanel( EditPanel ):
         self._media_show_action.Bind( wx.EVT_CHOICE, self.EventActionChange )
         self._preview_show_action.Bind( wx.EVT_CHOICE, self.EventActionChange )
         
-        self._zoom_in_to_fit = wx.CheckBox( self, label = 'by default, zoom in to fit' )
-        self._zoom_in_to_fit.SetToolTipString( 'If this is checked and the media is smaller than the viewer canvas at 100% zoom, it will be initially scaled up so it fits as much of the canvas as possible.' )
+        self._media_scale_up = ClientGUICommon.BetterChoice( self )
+        self._media_scale_down = ClientGUICommon.BetterChoice( self )
+        self._preview_scale_up = ClientGUICommon.BetterChoice( self )
+        self._preview_scale_down = ClientGUICommon.BetterChoice( self )
+        
+        for scale_action in ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_TO_CANVAS ):
+            
+            text = CC.media_viewer_scale_string_lookup[ scale_action ]
+            
+            self._media_scale_up.Append( text, scale_action )
+            self._preview_scale_up.Append( text, scale_action )
+            
+            if scale_action != CC.MEDIA_VIEWER_SCALE_100:
+                
+                self._media_scale_down.Append( text, scale_action )
+                self._preview_scale_down.Append( text, scale_action )
+                
+            
         
         self._exact_zooms_only = wx.CheckBox( self, label = 'only permit half and double zooms' )
-        self._exact_zooms_only.SetToolTipString( 'This limits zooms to 25%, 50%, 100%, 200%, 400%, and so on. It makes for fast resize and is useful for files that often have flat colours and hard edges, which often scale badly otherwise.' )
+        self._exact_zooms_only.SetToolTipString( 'This limits zooms to 25%, 50%, 100%, 200%, 400%, and so on. It makes for fast resize and is useful for files that often have flat colours and hard edges, which often scale badly otherwise. The \'canvas fit\' zoom will still be inserted.' )
         
-        self._zoom_in_quality = ClientGUICommon.BetterChoice( self )
+        self._scale_up_quality = ClientGUICommon.BetterChoice( self )
         
         for zoom in ( CC.ZOOM_NEAREST, CC.ZOOM_LINEAR, CC.ZOOM_CUBIC, CC.ZOOM_LANCZOS4 ):
             
-            self._zoom_in_quality.Append( CC.zoom_string_lookup[ zoom ], zoom )
+            self._scale_up_quality.Append( CC.zoom_string_lookup[ zoom ], zoom )
             
         
-        self._zoom_out_quality = ClientGUICommon.BetterChoice( self )
+        self._scale_down_quality = ClientGUICommon.BetterChoice( self )
         
         for zoom in ( CC.ZOOM_NEAREST, CC.ZOOM_LINEAR, CC.ZOOM_AREA ):
             
-            self._zoom_out_quality.Append( CC.zoom_string_lookup[ zoom ], zoom )
+            self._scale_down_quality.Append( CC.zoom_string_lookup[ zoom ], zoom )
             
         
         #
@@ -187,11 +203,15 @@ class EditMediaViewOptionsPanel( EditPanel ):
         self._media_show_action.SelectClientData( media_show_action )
         self._preview_show_action.SelectClientData( preview_show_action )
         
-        self._zoom_in_to_fit.SetValue( zoom_in_to_fit )
+        self._media_scale_up.SelectClientData( media_scale_up )
+        self._media_scale_down.SelectClientData( media_scale_down )
+        self._preview_scale_up.SelectClientData( preview_scale_up )
+        self._preview_scale_down.SelectClientData( preview_scale_down )
+        
         self._exact_zooms_only.SetValue( exact_zooms_only )
         
-        self._zoom_in_quality.SelectClientData( zoom_in_quality )
-        self._zoom_out_quality.SelectClientData( zoom_out_quality )
+        self._scale_up_quality.SelectClientData( scale_up_quality )
+        self._scale_down_quality.SelectClientData( scale_down_quality )
         
         #
         
@@ -205,27 +225,41 @@ class EditMediaViewOptionsPanel( EditPanel ):
         
         if possible_actions == CC.no_support:
             
-            self._zoom_in_to_fit.Hide()
+            self._media_scale_up.Hide()
+            self._media_scale_down.Hide()
+            self._preview_scale_up.Hide()
+            self._preview_scale_down.Hide()
+            
             self._exact_zooms_only.Hide()
             
-            self._zoom_in_quality.Hide()
-            self._zoom_out_quality.Hide()
+            self._scale_up_quality.Hide()
+            self._scale_down_quality.Hide()
             
         else:
             
-            vbox.AddF( self._zoom_in_to_fit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            rows = []
+            
+            rows.append( ( 'if the media is smaller than the media viewer canvas: ', self._media_scale_up ) )
+            rows.append( ( 'if the media is larger than the media viewer canvas: ', self._media_scale_down ) )
+            rows.append( ( 'if the media is smaller than the preview canvas: ', self._preview_scale_up) )
+            rows.append( ( 'if the media is larger than the preview canvas: ', self._preview_scale_down ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
             vbox.AddF( self._exact_zooms_only, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( wx.StaticText( self, label = 'These zoom quality controls don\'t do anything yet!' ), CC.FLAGS_MIXED )
+            vbox.AddF( wx.StaticText( self, label = 'These zoom quality controls don\'t do anything yet!' ), CC.FLAGS_VCENTER )
             
-            vbox.AddF( ClientGUICommon.WrapInText( self._zoom_in_quality, self, '>100% (interpolation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( ClientGUICommon.WrapInText( self._zoom_out_quality, self, '<100% (decimation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( ClientGUICommon.WrapInText( self._scale_up_quality, self, '>100% (interpolation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( ClientGUICommon.WrapInText( self._scale_down_quality, self, '<100% (decimation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
         if self._mime == HC.APPLICATION_FLASH:
             
-            self._zoom_in_quality.Disable()
-            self._zoom_out_quality.Disable()
+            self._scale_up_quality.Disable()
+            self._scale_down_quality.Disable()
             
         
         self.SetSizer( vbox )
@@ -235,25 +269,33 @@ class EditMediaViewOptionsPanel( EditPanel ):
         
         if self._media_show_action.GetChoice() in CC.no_support and self._preview_show_action.GetChoice() in CC.no_support:
             
-            self._zoom_in_to_fit.Disable()
+            self._media_scale_up.Disable()
+            self._media_scale_down.Disable()
+            self._preview_scale_up.Disable()
+            self._preview_scale_down.Disable()
+            
             self._exact_zooms_only.Disable()
             
-            self._zoom_in_quality.Disable()
-            self._zoom_out_quality.Disable()
+            self._scale_up_quality.Disable()
+            self._scale_down_quality.Disable()
             
         else:
             
-            self._zoom_in_to_fit.Enable()
+            self._media_scale_up.Enable()
+            self._media_scale_down.Enable()
+            self._preview_scale_up.Enable()
+            self._preview_scale_down.Enable()
+            
             self._exact_zooms_only.Enable()
             
-            self._zoom_in_quality.Enable()
-            self._zoom_out_quality.Enable()
+            self._scale_up_quality.Enable()
+            self._scale_down_quality.Enable()
             
         
         if self._mime == HC.APPLICATION_FLASH:
             
-            self._zoom_in_quality.Disable()
-            self._zoom_out_quality.Disable()
+            self._scale_up_quality.Disable()
+            self._scale_down_quality.Disable()
             
         
     
@@ -262,13 +304,17 @@ class EditMediaViewOptionsPanel( EditPanel ):
         media_show_action = self._media_show_action.GetChoice()
         preview_show_action = self._preview_show_action.GetChoice()
         
-        zoom_in_to_fit = self._zoom_in_to_fit.GetValue()
+        media_scale_up = self._media_scale_up.GetChoice()
+        media_scale_down = self._media_scale_down.GetChoice()
+        preview_scale_up = self._preview_scale_up.GetChoice()
+        preview_scale_down = self._preview_scale_down.GetChoice()
+        
         exact_zooms_only = self._exact_zooms_only.GetValue()
         
-        zoom_in_quality = self._zoom_in_quality.GetChoice()
-        zoom_out_quality = self._zoom_out_quality.GetChoice()
+        scale_up_quality = self._scale_up_quality.GetChoice()
+        scale_down_quality = self._scale_down_quality.GetChoice()
         
-        return ( self._mime, media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality )
+        return ( self._mime, media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
         
     
 class EditSeedCachePanel( EditPanel ):
@@ -422,9 +468,9 @@ class ManageOptionsPanel( ManagePanel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._add, CC.FLAGS_MIXED )
-            hbox.AddF( self._edit, CC.FLAGS_MIXED )
-            hbox.AddF( self._delete, CC.FLAGS_MIXED )
+            hbox.AddF( self._add, CC.FLAGS_VCENTER )
+            hbox.AddF( self._edit, CC.FLAGS_VCENTER )
+            hbox.AddF( self._delete, CC.FLAGS_VCENTER )
             
             vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
             
@@ -442,14 +488,14 @@ class ManageOptionsPanel( ManagePanel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self, label = 'full size thumbnail override location: ' ), CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'full size thumbnail override location: ' ), CC.FLAGS_VCENTER )
             hbox.AddF( self._full_size_thumbnails_override, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self, label = 'resized thumbnail override location: ' ), CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'resized thumbnail override location: ' ), CC.FLAGS_VCENTER )
             hbox.AddF( self._resized_thumbnails_override, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -588,44 +634,33 @@ class ManageOptionsPanel( ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'thumbnail background (local: normal/selected, remote: normal/selected): ' ), CC.FLAGS_MIXED )
+            rows = []
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._gui_colours[ 'thumb_background' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_background_selected' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_background_remote' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_background_remote_selected' ], CC.FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_background' ], CC.FLAGS_VCENTER )
+            hbox.AddF( self._gui_colours[ 'thumb_background_selected' ], CC.FLAGS_VCENTER )
+            hbox.AddF( self._gui_colours[ 'thumb_background_remote' ], CC.FLAGS_VCENTER )
+            hbox.AddF( self._gui_colours[ 'thumb_background_remote_selected' ], CC.FLAGS_VCENTER )
             
-            gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'thumbnail border (local: normal/selected, remote: normal/selected): ' ), CC.FLAGS_MIXED )
+            rows.append( ( 'thumbnail background (local: normal/selected, remote: normal/selected): ', hbox ) )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._gui_colours[ 'thumb_border' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_border_selected' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_border_remote' ], CC.FLAGS_MIXED )
-            hbox.AddF( self._gui_colours[ 'thumb_border_remote_selected' ], CC.FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_border' ], CC.FLAGS_VCENTER )
+            hbox.AddF( self._gui_colours[ 'thumb_border_selected' ], CC.FLAGS_VCENTER )
+            hbox.AddF( self._gui_colours[ 'thumb_border_remote' ], CC.FLAGS_VCENTER )
+            hbox.AddF( self._gui_colours[ 'thumb_border_remote_selected' ], CC.FLAGS_VCENTER )
             
-            gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            rows.append( ( 'thumbnail border (local: normal/selected, remote: normal/selected): ', hbox ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'thumbnail grid background: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'thumbgrid_background' ], CC.FLAGS_MIXED )
+            rows.append( ( 'thumbnail grid background: ', self._gui_colours[ 'thumbgrid_background' ] ) )
+            rows.append( ( 'autocomplete background: ', self._gui_colours[ 'autocomplete_background' ] ) )
+            rows.append( ( 'media viewer background: ', self._gui_colours[ 'media_background' ] ) )
+            rows.append( ( 'media viewer text: ', self._gui_colours[ 'media_text' ] ) )
+            rows.append( ( 'tags box background: ', self._gui_colours[ 'tags_box' ] ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'autocomplete background: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'autocomplete_background' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'media viewer background: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'media_background' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'media viewer text: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'media_text' ], CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'tags box background: '), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_colours[ 'tags_box' ], CC.FLAGS_MIXED )
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -747,25 +782,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Proxy type: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_type, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Address: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_address, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Port: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_port, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Username (optional): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_username, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( proxy_panel, label = 'Password (optional): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._proxy_password, CC.FLAGS_MIXED )
-            
             text = 'You have to restart the client for proxy settings to take effect.'
             text += os.linesep
             text += 'This is in a buggy prototype stage right now, pending a rewrite of the networking engine.'
@@ -773,16 +789,26 @@ class ManageOptionsPanel( ManagePanel ):
             text += 'Please send me your feedback.'
             
             proxy_panel.AddF( wx.StaticText( proxy_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'proxy type: ', self._proxy_type ) )
+            rows.append( ( 'address: ', self._proxy_address ) )
+            rows.append( ( 'port: ', self._proxy_port ) )
+            rows.append( ( 'username (optional): ', self._proxy_username ) )
+            rows.append( ( 'password (optional): ', self._proxy_password ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( proxy_panel, rows )
+            
             proxy_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'external ip/host override: ', self._external_host ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'External IP/host override: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._external_host, CC.FLAGS_MIXED )
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -868,15 +894,12 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'seconds to politely wait between gallery/thread url requests: ', self._website_download_polite_wait ) )
+            rows.append( ( 'instead of the traffic light waiting politely indicator, use text: ', self._waiting_politely_text ) )
             
-            gridbox.AddF( wx.StaticText( general, label = 'seconds to politely wait between gallery/thread url requests: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._website_download_polite_wait, CC.FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( general, label = 'instead of the traffic light waiting politely indicator, use text: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._waiting_politely_text, CC.FLAGS_MIXED )
+            gridbox = ClientGUICommon.WrapInGrid( general, rows )
             
             general.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
@@ -886,14 +909,12 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'default number of times to check: ', self._thread_times_to_check ) )
+            rows.append( ( 'default wait between checks: ', self._thread_check_period ) )
             
-            gridbox.AddF( wx.StaticText( thread_checker, label = 'default number of times to check: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thread_times_to_check, CC.FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( thread_checker, label = 'default wait between checks: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thread_check_period, CC.FLAGS_MIXED )
+            gridbox = ClientGUICommon.WrapInGrid( thread_checker, rows )
             
             thread_checker.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
@@ -981,17 +1002,17 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run maintenance jobs when the client is idle and the system is not otherwise busy?: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._idle_normal, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run maintenance jobs when the client is idle and the system is not otherwise busy?: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._idle_normal, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is idle if no general browsing activity has occured in the past: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._idle_period, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is idle if no general browsing activity has occured in the past: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._idle_period, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is idle if the mouse has not been moved in the past: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._idle_mouse_period, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is idle if the mouse has not been moved in the past: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._idle_mouse_period, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the system is busy if any CPU core has recent average usage above: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._idle_cpu_max, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the system is busy if any CPU core has recent average usage above: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._idle_cpu_max, CC.FLAGS_VCENTER )
             
             self._idle_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -1001,11 +1022,11 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._shutdown_panel, label = 'Run jobs on shutdown?: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._idle_shutdown, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._shutdown_panel, label = 'Run jobs on shutdown?: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._idle_shutdown, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self._shutdown_panel, label = 'Max number of minutes to run shutdown jobs: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._idle_shutdown_max_minutes, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._shutdown_panel, label = 'Max number of minutes to run shutdown jobs: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._idle_shutdown_max_minutes, CC.FLAGS_VCENTER )
             
             self._shutdown_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -1033,8 +1054,8 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_panel, label = 'Number of days to wait between vacuums: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._maintenance_vacuum_period, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_panel, label = 'Number of days to wait between vacuums: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._maintenance_vacuum_period, CC.FLAGS_VCENTER )
             
             self._maintenance_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -1044,8 +1065,8 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._processing_panel, label = 'Delay repository update processing by (s): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._processing_phase, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._processing_panel, label = 'Delay repository update processing by (s): ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._processing_phase, CC.FLAGS_VCENTER )
             
             self._processing_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -1147,7 +1168,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._filter_inbox_and_archive_predicates, CC.FLAGS_MIXED )
+            vbox.AddF( self._filter_inbox_and_archive_predicates, CC.FLAGS_VCENTER )
             vbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1371,26 +1392,26 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default export directory: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Default export directory: ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( self._export_location, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'When deleting files or folders, send them to the OS\'s recycle bin: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._delete_to_recycle_bin, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'When deleting files or folders, send them to the OS\'s recycle bin: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._delete_to_recycle_bin, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'By default, do not reimport files that have been previously deleted: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._exclude_deleted_files, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'By default, do not reimport files that have been previously deleted: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._exclude_deleted_files, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Remove files from view when they are filtered: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._remove_filtered_files, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Remove files from view when they are filtered: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._remove_filtered_files, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Remove files from view when they are sent to the trash: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._remove_trashed_files, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Remove files from view when they are sent to the trash: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._remove_trashed_files, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Number of hours a file can be in the trash before being deleted: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._trash_max_age, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Number of hours a file can be in the trash before being deleted: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._trash_max_age, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Maximum size of trash (MB): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._trash_max_size, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Maximum size of trash (MB): ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._trash_max_size, CC.FLAGS_VCENTER )
             
             text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
             
@@ -1483,38 +1504,40 @@ class ManageOptionsPanel( ManagePanel ):
                 self._frame_locations.Append( pretty_listctrl_list, listctrl_list )
                 
             
+            self._frame_locations.SortListItems( col = 0 )
+            
             #
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default session on startup:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default_gui_session, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Default session on startup:' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._default_gui_session, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Confirm client exit:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._confirm_client_exit, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Confirm client exit:' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._confirm_client_exit, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Confirm sending files to trash:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._confirm_trash, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Confirm sending files to trash:' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._confirm_trash, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Confirm sending more than one file to archive or inbox:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._confirm_archive, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Confirm sending more than one file to archive or inbox:' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._confirm_archive, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Always embed autocomplete dropdown results window:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._always_embed_autocompletes, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Always embed autocomplete dropdown results window:' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._always_embed_autocompletes, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Capitalise gui: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._gui_capitalisation, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Capitalise gui: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._gui_capitalisation, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Hide the preview window: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._hide_preview, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Hide the preview window: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._hide_preview, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Show \'title\' banner on thumbnails: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._show_thumbnail_title_banner, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Show \'title\' banner on thumbnails: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._show_thumbnail_title_banner, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Show volume/chapter/page number on thumbnails: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._show_thumbnail_page, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Show volume/chapter/page number on thumbnails: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._show_thumbnail_page, CC.FLAGS_VCENTER )
             
             text = 'Here you can override the current and default values for many frame and dialog sizing and positioning variables.'
             text += os.linesep
@@ -1614,7 +1637,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
-            self._media_viewer_options = ClientGUICommon.SaneListCtrl( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom in to fit', 80 ), ( 'half/double zoom', 80 ), ( '>100% quality', 120 ), ( '<100% quality', 120 ) ], activation_callback = self.EditMediaViewerOptions, use_display_tuple_for_sort = True )
+            self._media_viewer_options = ClientGUICommon.SaneListCtrl( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom info', 200 ) ], activation_callback = self.EditMediaViewerOptions, use_display_tuple_for_sort = True )
             
             self._media_viewer_edit_button = wx.Button( self._media_viewer_panel, label = 'edit' )
             self._media_viewer_edit_button.Bind( wx.EVT_BUTTON, self.EventEditMediaViewerOptions )
@@ -1640,6 +1663,8 @@ class ManageOptionsPanel( ManagePanel ):
                 self._media_viewer_options.Append( pretty_listctrl_list, listctrl_list )
                 
             
+            self._media_viewer_options.SortListItems( col = 0 )
+            
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
@@ -1648,13 +1673,13 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Start animations this % in: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._animation_start_position, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Start animations this % in: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._animation_start_position, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Disable OpenCV for gifs: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._disable_cv_for_gifs, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Disable OpenCV for gifs: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._disable_cv_for_gifs, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Media zooms: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Media zooms: ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( self._media_zooms, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1669,32 +1694,26 @@ class ManageOptionsPanel( ManagePanel ):
         
         def _GetPrettyMediaViewOptions( self, listctrl_list ):
             
-            ( mime, media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = listctrl_list
+            ( mime, media_show_action, preview_show_action, zoom_info ) = listctrl_list
             
             pretty_mime = HC.mime_string_lookup[ mime ]
             pretty_media_show_action = CC.media_viewer_action_string_lookup[ media_show_action ]
             pretty_preview_show_action = CC.media_viewer_action_string_lookup[ preview_show_action ]
             
-            no_show_actions = ( CC.MEDIA_VIEWER_DO_NOT_SHOW, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON )
+            no_show_actions = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON )
             
             no_show = media_show_action in CC.no_support and preview_show_action in CC.no_support
             
             if no_show:
                 
-                pretty_zoom_in_to_fit = ''
-                pretty_exact_zooms_only = ''
-                pretty_zoom_in_quality = ''
-                pretty_zoom_out_quality = ''
+                pretty_zoom_info = ''
                 
             else:
                 
-                pretty_zoom_in_to_fit = str( zoom_in_to_fit )
-                pretty_exact_zooms_only = str( exact_zooms_only )
-                pretty_zoom_in_quality = CC.zoom_string_lookup[ zoom_in_quality ]
-                pretty_zoom_out_quality = CC.zoom_string_lookup[ zoom_out_quality ]
+                pretty_zoom_info = str( zoom_info )
                 
             
-            return ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_in_to_fit, pretty_exact_zooms_only, pretty_zoom_in_quality, pretty_zoom_out_quality )
+            return ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_info )
             
         
         def EditMediaViewerOptions( self ):
@@ -1792,7 +1811,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._local_port, CC.FLAGS_MIXED )
+            vbox.AddF( self._local_port, CC.FLAGS_VCENTER )
             
             self.SetSizer( vbox )
             
@@ -1844,7 +1863,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self, label = 'These shortcuts are global to the main gui! You probably want to stick to function keys or ctrl + something!' ), CC.FLAGS_MIXED )
+            vbox.AddF( wx.StaticText( self, label = 'These shortcuts are global to the main gui! You probably want to stick to function keys or ctrl + something!' ), CC.FLAGS_VCENTER )
             vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -1984,11 +2003,11 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'default sort: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'default sort: ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( self._default_sort, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'secondary sort (when primary gives two equal values): ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'secondary sort (when primary gives two equal values): ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( self._sort_fallback, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'default collect: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'default collect: ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( self._default_collect, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
@@ -2000,7 +2019,7 @@ class ManageOptionsPanel( ManagePanel ):
             sort_by_text += 'Any changes will be shown in the sort-by dropdowns of any new pages you open.'
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = sort_by_text ), CC.FLAGS_MIXED )
+            vbox.AddF( wx.StaticText( self, label = sort_by_text ), CC.FLAGS_VCENTER )
             vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._new_sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -2166,18 +2185,18 @@ class ManageOptionsPanel( ManagePanel ):
             
             thumbnails_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
-            thumbnails_sizer.AddF( self._thumbnail_cache_size, CC.FLAGS_MIXED )
-            thumbnails_sizer.AddF( self._estimated_number_thumbnails, CC.FLAGS_MIXED )
+            thumbnails_sizer.AddF( self._thumbnail_cache_size, CC.FLAGS_VCENTER )
+            thumbnails_sizer.AddF( self._estimated_number_thumbnails, CC.FLAGS_VCENTER )
             
             fullscreens_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
-            fullscreens_sizer.AddF( self._fullscreen_cache_size, CC.FLAGS_MIXED )
-            fullscreens_sizer.AddF( self._estimated_number_fullscreens, CC.FLAGS_MIXED )
+            fullscreens_sizer.AddF( self._fullscreen_cache_size, CC.FLAGS_VCENTER )
+            fullscreens_sizer.AddF( self._estimated_number_fullscreens, CC.FLAGS_VCENTER )
             
             video_buffer_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
-            video_buffer_sizer.AddF( self._video_buffer_size_mb, CC.FLAGS_MIXED )
-            video_buffer_sizer.AddF( self._estimated_number_video_frames, CC.FLAGS_MIXED )
+            video_buffer_sizer.AddF( self._video_buffer_size_mb, CC.FLAGS_VCENTER )
+            video_buffer_sizer.AddF( self._estimated_number_video_frames, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -2188,11 +2207,11 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail width: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thumbnail_width, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail width: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._thumbnail_width, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail height: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thumbnail_height, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail height: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._thumbnail_height, CC.FLAGS_VCENTER )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -2200,10 +2219,10 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( thumbnails_sizer, CC.FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for media viewer cache: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for media viewer cache: ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2214,13 +2233,13 @@ class ManageOptionsPanel( ManagePanel ):
             text += os.linesep
             text += 'If the video buffer can hold an entire video, it only needs to be rendered once and will loop smoothly.'
             
-            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_MIXED )
+            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_VCENTER )
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory for video buffer: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'MB memory for video buffer: ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( video_buffer_sizer, CC.FLAGS_NONE )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2229,7 +2248,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Forced system:limit for all searches: ' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Forced system:limit for all searches: ' ), CC.FLAGS_VCENTER )
             gridbox.AddF( self._forced_search_limit, CC.FLAGS_NONE )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2242,20 +2261,20 @@ class ManageOptionsPanel( ManagePanel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Automatically fetch autocomplete results after a short delay: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._fetch_ac_results_automatically, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Automatically fetch autocomplete results after a short delay: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._fetch_ac_results_automatically, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait character threshold: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._num_autocomplete_chars, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait character threshold: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._num_autocomplete_chars, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait (ms): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._autocomplete_long_wait, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait (ms): ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._autocomplete_long_wait, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait character threshold: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._autocomplete_short_wait_chars, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait character threshold: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._autocomplete_short_wait_chars, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._autocomplete_short_wait, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._autocomplete_short_wait, CC.FLAGS_VCENTER )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -2402,6 +2421,10 @@ class ManageOptionsPanel( ManagePanel ):
             self._related_tags_search_2_duration_ms = wx.SpinCtrl( suggested_tags_related_panel, min = 50, max = 60000 )
             self._related_tags_search_3_duration_ms = wx.SpinCtrl( suggested_tags_related_panel, min = 50, max = 60000 )
             
+            suggested_tags_recent_panel = ClientGUICommon.StaticBox( suggested_tags_panel, 'recent' )
+            
+            self._num_recent_tags = ClientGUICommon.NoneableSpinCtrl( suggested_tags_recent_panel, 'number of recent tags to show', min = 1, none_phrase = 'do not show' )
+            
             #
             
             if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
@@ -2435,23 +2458,25 @@ class ManageOptionsPanel( ManagePanel ):
             self._related_tags_search_2_duration_ms.SetValue( self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) )
             self._related_tags_search_3_duration_ms.SetValue( self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) )
             
+            self._num_recent_tags.SetValue( self._new_options.GetNoneableInteger( 'num_recent_tags' ) )
+            
             #
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default tag service in manage tag dialogs:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default_tag_repository, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Default tag service in manage tag dialogs:' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._default_tag_repository, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default tag sort:' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._default_tag_sort, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Default tag sort:' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._default_tag_sort, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'By default, search non-local tags in write-autocomplete: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._show_all_tags_in_autocomplete, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'By default, search non-local tags in write-autocomplete: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._show_all_tags_in_autocomplete, CC.FLAGS_VCENTER )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Apply all parents to all services: ' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._apply_all_parents_to_all_services, CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'Apply all parents to all services: ' ), CC.FLAGS_VCENTER )
+            gridbox.AddF( self._apply_all_parents_to_all_services, CC.FLAGS_VCENTER )
             
             suggested_tags_favourites_panel.AddF( self._suggested_favourites_services, CC.FLAGS_EXPAND_PERPENDICULAR )
             suggested_tags_favourites_panel.AddF( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2461,26 +2486,29 @@ class ManageOptionsPanel( ManagePanel ):
             
             related_gridbox.AddGrowableCol( 1, 1 )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'show related tags on single-file manage tags windows' ), CC.FLAGS_MIXED )
-            related_gridbox.AddF( self._show_related_tags, CC.FLAGS_MIXED )
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'show related tags on single-file manage tags windows' ), CC.FLAGS_VCENTER )
+            related_gridbox.AddF( self._show_related_tags, CC.FLAGS_VCENTER )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'width of related tags list' ), CC.FLAGS_MIXED )
-            related_gridbox.AddF( self._related_tags_width, CC.FLAGS_MIXED )
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'width of related tags list' ), CC.FLAGS_VCENTER )
+            related_gridbox.AddF( self._related_tags_width, CC.FLAGS_VCENTER )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'initial search duration (ms)' ), CC.FLAGS_MIXED )
-            related_gridbox.AddF( self._related_tags_search_1_duration_ms, CC.FLAGS_MIXED )
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'initial search duration (ms)' ), CC.FLAGS_VCENTER )
+            related_gridbox.AddF( self._related_tags_search_1_duration_ms, CC.FLAGS_VCENTER )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'medium search duration (ms)' ), CC.FLAGS_MIXED )
-            related_gridbox.AddF( self._related_tags_search_2_duration_ms, CC.FLAGS_MIXED )
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'medium search duration (ms)' ), CC.FLAGS_VCENTER )
+            related_gridbox.AddF( self._related_tags_search_2_duration_ms, CC.FLAGS_VCENTER )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'thorough search duration (ms)' ), CC.FLAGS_MIXED )
-            related_gridbox.AddF( self._related_tags_search_3_duration_ms, CC.FLAGS_MIXED )
+            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'thorough search duration (ms)' ), CC.FLAGS_VCENTER )
+            related_gridbox.AddF( self._related_tags_search_3_duration_ms, CC.FLAGS_VCENTER )
             
             suggested_tags_related_panel.AddF( related_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            suggested_tags_recent_panel.AddF( self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             suggested_tags_panel.AddF( self._suggested_tags_width, CC.FLAGS_EXPAND_PERPENDICULAR )
             suggested_tags_panel.AddF( suggested_tags_favourites_panel, CC.FLAGS_EXPAND_SIZER_DEPTH_ONLY )
             suggested_tags_panel.AddF( suggested_tags_related_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            suggested_tags_panel.AddF( suggested_tags_recent_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -2549,6 +2577,7 @@ class ManageOptionsPanel( ManagePanel ):
             self._new_options.SetInteger( 'related_tags_search_2_duration_ms', self._related_tags_search_2_duration_ms.GetValue() )
             self._new_options.SetInteger( 'related_tags_search_3_duration_ms', self._related_tags_search_3_duration_ms.GetValue() )
             
+            self._new_options.SetNoneableInteger( 'num_recent_tags', self._num_recent_tags.GetValue() )
             
         
     
@@ -2839,13 +2868,13 @@ class ManageTagsPanel( ManagePanel ):
             
             copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            copy_paste_hbox.AddF( self._copy_tags, CC.FLAGS_MIXED )
-            copy_paste_hbox.AddF( self._paste_tags, CC.FLAGS_MIXED )
+            copy_paste_hbox.AddF( self._copy_tags, CC.FLAGS_VCENTER )
+            copy_paste_hbox.AddF( self._paste_tags, CC.FLAGS_VCENTER )
             
             advanced_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            advanced_hbox.AddF( self._remove_tags, CC.FLAGS_MIXED )
-            advanced_hbox.AddF( self._advanced_content_update_button, CC.FLAGS_MIXED )
+            advanced_hbox.AddF( self._remove_tags, CC.FLAGS_VCENTER )
+            advanced_hbox.AddF( self._advanced_content_update_button, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -2868,6 +2897,11 @@ class ManageTagsPanel( ManagePanel ):
             
         
         def _AddTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
+            
+            if HydrusGlobals.client_controller.GetNewOptions().GetNoneableInteger( 'num_recent_tags' ) is not None:
+                
+                HydrusGlobals.client_controller.Write( 'push_recent_tags', self._tag_service_key, tags )
+                
             
             if not self._i_am_local_tag_service and self._account.HasPermission( HC.RESOLVE_PETITIONS ):
                 
@@ -3656,11 +3690,11 @@ class ReviewServices( ReviewPanel ):
                 self._booru_shares_panel.AddF( self._booru_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 b_box = wx.BoxSizer( wx.HORIZONTAL )
-                b_box.AddF( self._booru_open_search, CC.FLAGS_MIXED )
-                b_box.AddF( self._copy_internal_share_link, CC.FLAGS_MIXED )
-                b_box.AddF( self._copy_external_share_link, CC.FLAGS_MIXED )
-                b_box.AddF( self._booru_edit, CC.FLAGS_MIXED )
-                b_box.AddF( self._booru_delete, CC.FLAGS_MIXED )
+                b_box.AddF( self._booru_open_search, CC.FLAGS_VCENTER )
+                b_box.AddF( self._copy_internal_share_link, CC.FLAGS_VCENTER )
+                b_box.AddF( self._copy_external_share_link, CC.FLAGS_VCENTER )
+                b_box.AddF( self._booru_edit, CC.FLAGS_VCENTER )
+                b_box.AddF( self._booru_delete, CC.FLAGS_VCENTER )
                 
                 self._booru_shares_panel.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
                 
@@ -3672,10 +3706,10 @@ class ReviewServices( ReviewPanel ):
                 self._ipfs_shares_panel.AddF( self._ipfs_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 b_box = wx.BoxSizer( wx.HORIZONTAL )
-                b_box.AddF( self._ipfs_open_search, CC.FLAGS_MIXED )
-                b_box.AddF( self._ipfs_set_note, CC.FLAGS_MIXED )
-                b_box.AddF( self._copy_multihash, CC.FLAGS_MIXED )
-                b_box.AddF( self._ipfs_delete, CC.FLAGS_MIXED )
+                b_box.AddF( self._ipfs_open_search, CC.FLAGS_VCENTER )
+                b_box.AddF( self._ipfs_set_note, CC.FLAGS_VCENTER )
+                b_box.AddF( self._copy_multihash, CC.FLAGS_VCENTER )
+                b_box.AddF( self._ipfs_delete, CC.FLAGS_VCENTER )
                 
                 self._ipfs_shares_panel.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
                 
@@ -3688,28 +3722,28 @@ class ReviewServices( ReviewPanel ):
                 
                 if self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
                     
-                    repo_buttons_hbox.AddF( self._delete_local_deleted, CC.FLAGS_MIXED )
+                    repo_buttons_hbox.AddF( self._delete_local_deleted, CC.FLAGS_VCENTER )
                     
                 
                 if self._service_key == CC.TRASH_SERVICE_KEY:
                     
-                    repo_buttons_hbox.AddF( self._clear_trash, CC.FLAGS_MIXED )
+                    repo_buttons_hbox.AddF( self._clear_trash, CC.FLAGS_VCENTER )
                     
                 
                 if service_type in HC.TAG_SERVICES:
                     
-                    repo_buttons_hbox.AddF( self._service_wide_update, CC.FLAGS_MIXED )
+                    repo_buttons_hbox.AddF( self._service_wide_update, CC.FLAGS_VCENTER )
                     
                 
                 if service_type == HC.SERVER_ADMIN:
                     
-                    repo_buttons_hbox.AddF( self._init, CC.FLAGS_MIXED )
+                    repo_buttons_hbox.AddF( self._init, CC.FLAGS_VCENTER )
                     
                 
                 if service_type in HC.RESTRICTED_SERVICES:
                     
-                    repo_buttons_hbox.AddF( self._refresh, CC.FLAGS_MIXED )
-                    repo_buttons_hbox.AddF( self._copy_account_key, CC.FLAGS_MIXED )
+                    repo_buttons_hbox.AddF( self._refresh, CC.FLAGS_VCENTER )
+                    repo_buttons_hbox.AddF( self._copy_account_key, CC.FLAGS_VCENTER )
                     
                 
                 vbox.AddF( repo_buttons_hbox, CC.FLAGS_BUTTON_SIZER )

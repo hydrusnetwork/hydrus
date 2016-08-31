@@ -1952,8 +1952,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CreateDB( self ):
         
-        HydrusGlobals.is_first_start = True
-        
         client_files_default = os.path.join( self._db_dir, 'client_files' )
         
         HydrusPaths.MakeSureDirectoryExists( client_files_default )
@@ -2065,6 +2063,8 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE options ( options TEXT_YAML );', )
         
         self._c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
+        
+        self._c.execute( 'CREATE TABLE recent_tags ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, namespace_id, tag_id ) );' )
         
         self._c.execute( 'CREATE TABLE remote_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, count INTEGER, rating REAL, score REAL, PRIMARY KEY( service_id, hash_id ) );' )
         self._c.execute( 'CREATE INDEX remote_ratings_hash_id_index ON remote_ratings ( hash_id );' )
@@ -4293,6 +4293,42 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _GetRecentTags( self, service_key ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        # we could be clever and do LIMIT and ORDER BY to do the delete, but not all compilations of SQLite have that turned on, so let's KISS
+        
+        tag_ids_to_timestamp = { ( namespace_id, tag_id ) : timestamp for ( namespace_id, tag_id, timestamp ) in self._c.execute( 'SELECT namespace_id, tag_id, timestamp FROM recent_tags WHERE service_id = ?;', ( service_id, ) ) }
+        
+        def sort_key( key ):
+            
+            return tag_ids_to_timestamp[ key ]
+            
+        
+        newest_first = tag_ids_to_timestamp.keys()
+        
+        newest_first.sort( key = sort_key, reverse = True )
+        
+        num_we_want = HydrusGlobals.client_controller.GetNewOptions().GetNoneableInteger( 'num_recent_tags' )
+        
+        if num_we_want == None:
+            
+            num_we_want = 20
+            
+        
+        decayed = newest_first[ num_we_want : ]
+        
+        if len( decayed ) > 0:
+            
+            self._c.executemany( 'DELETE FROM recent_tags WHERE service_id = ? AND namespace_id = ? AND tag_id = ?;', ( ( service_id, namespace_id, tag_id ) for ( namespace_id, tag_id ) in decayed ) )
+            
+        
+        sorted_recent_tags = [ self._GetNamespaceTag( namespace_id, tag_id ) for ( namespace_id, tag_id ) in newest_first[ : num_we_want ] ]
+        
+        return sorted_recent_tags
+        
+    
     def _GetRelatedTags( self, service_key, skip_hash, search_tags, max_results, max_time_to_take ):
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
@@ -6114,6 +6150,24 @@ class DB( HydrusDB.HydrusDB ):
         if do_new_permissions: self.pub_after_commit( 'notify_new_permissions' )
         
     
+    def _PushRecentTags( self, service_key, tags ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        if tags is None:
+            
+            self._c.execute( 'DELETE FROM recent_tags WHERE service_id = ?;', ( service_id, ) )
+            
+        else:
+            
+            now = HydrusData.GetNow()
+            
+            tag_ids = [ self._GetNamespaceIdTagId( tag ) for tag in tags ]
+            
+            self._c.executemany( 'REPLACE INTO recent_tags ( service_id, namespace_id, tag_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, now ) for ( namespace_id, tag_id ) in tag_ids ) )
+            
+        
+    
     def _Read( self, action, *args, **kwargs ):
         
         if action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
@@ -6140,6 +6194,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'trash_hashes': result = self._GetTrashHashes( *args, **kwargs )
         elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
+        elif action == 'recent_tags': result = self._GetRecentTags( *args, **kwargs )
         elif action == 'remote_booru': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'remote_boorus': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU )
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
@@ -7923,11 +7978,14 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 220:
+            
+            self._c.execute( 'CREATE TABLE recent_tags ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, namespace_id, tag_id ) );' )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
-        
-        HydrusGlobals.is_db_updated = True
         
     
     def _UpdateImageboards( self, site_edit_log ):
@@ -8571,6 +8629,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+        elif action == 'push_recent_tags': result = self._PushRecentTags( *args, **kwargs )
         elif action == 'regenerate_ac_cache': result = self._RegenerateACCache( *args, **kwargs )        
         elif action == 'relocate_client_files': result = self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )

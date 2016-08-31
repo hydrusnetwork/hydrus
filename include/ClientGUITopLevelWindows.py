@@ -302,8 +302,8 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         buttonbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttonbox.AddF( self._apply, CC.FLAGS_MIXED )
-        buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        buttonbox.AddF( self._apply, CC.FLAGS_VCENTER )
+        buttonbox.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         

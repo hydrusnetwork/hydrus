@@ -474,7 +474,7 @@ sqlite3.register_adapter( Booru, yaml.safe_dump )
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self ):
         
@@ -537,6 +537,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'suggested_tags_width' ] = None
         
+        self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = None
+        
         #
         
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
@@ -567,31 +569,39 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'media_view' ] = HydrusSerialisable.SerialisableDictionary() # integer keys, so got to be cleverer dict
         
-        # media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality
-        self._dictionary[ 'media_view' ][ HC.IMAGE_JPEG ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, True, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        self._dictionary[ 'media_view' ][ HC.IMAGE_PNG ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, True, True, CC.ZOOM_NEAREST, CC.ZOOM_AREA )
-        self._dictionary[ 'media_view' ][ HC.IMAGE_GIF ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, True, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        # media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
+        
+        jpg_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        png_zoom_info = ( CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_NEAREST, CC.ZOOM_AREA )
+        gif_zoom_info = ( CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        flash_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        video_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        null_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        
+        self._dictionary[ 'media_view' ][ HC.IMAGE_JPEG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, jpg_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.IMAGE_PNG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, png_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.IMAGE_GIF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, gif_zoom_info )
         
         if HC.PLATFORM_WINDOWS:
             
-            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED, True, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, flash_zoom_info )
             
         else:
             
-            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
             
         
-        self._dictionary[ 'media_view' ][ HC.APPLICATION_PDF ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
-        self._dictionary[ 'media_view' ][ HC.VIDEO_FLV ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        self._dictionary[ 'media_view' ][ HC.VIDEO_MP4 ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        self._dictionary[ 'media_view' ][ HC.VIDEO_MPEG ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        self._dictionary[ 'media_view' ][ HC.VIDEO_MKV ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        self._dictionary[ 'media_view' ][ HC.VIDEO_WEBM ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        self._dictionary[ 'media_view' ][ HC.VIDEO_WMV ] = ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_SHOW_AS_NORMAL, False, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
-        self._dictionary[ 'media_view' ][ HC.AUDIO_MP3 ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
-        self._dictionary[ 'media_view' ][ HC.AUDIO_OGG ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
-        self._dictionary[ 'media_view' ][ HC.AUDIO_FLAC ] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
-        self._dictionary[ 'media_view' ][ HC.AUDIO_WMA] = ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, False, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_PDF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_FLV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MP4 ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MPEG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MKV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_WEBM ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_WMV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_MP3 ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_OGG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_FLAC ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_WMA ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
         
         self._dictionary[ 'media_zooms' ] = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
         
@@ -616,6 +626,38 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
                 self._dictionary[ key ] = value
                 
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info )
+            
+            mimes = loaded_dictionary[ 'media_view' ].keys()
+            
+            for mime in mimes:
+                
+                if mime in self._dictionary[ 'media_view' ]:
+                    
+                    ( default_media_show_action, default_preview_show_action, default_zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+                    
+                    ( media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, scale_up_quality, scale_down_quality ) = loaded_dictionary[ 'media_view' ][ mime ]
+                    
+                    loaded_dictionary[ 'media_view' ][ mime ] = ( media_show_action, preview_show_action, default_zoom_info )
+                    
+                else:
+                    
+                    # while devving this, I discovered some u'20' stringified keys had snuck in and hung around. let's nuke them here, in case anyone else got similar
+                    
+                    del loaded_dictionary[ 'media_view' ][ mime ]
+                    
+                
+            
+            new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
+            
+            return ( 2, new_serialisable_info )
             
         
     
@@ -765,7 +807,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = self._dictionary[ 'media_view' ][ mime ]
+            ( media_show_action, preview_show_action, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
             
             return media_show_action
             
@@ -783,9 +825,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = self._dictionary[ 'media_view' ][ mime ]
+            ( media_show_action, preview_show_action, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
             
-            return ( zoom_in_to_fit, exact_zooms_only )
+            return zoom_info
             
         
     
@@ -809,7 +851,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, zoom_in_quality, zoom_out_quality ) = self._dictionary[ 'media_view' ][ mime ]
+            ( media_show_action, preview_show_action, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
             
             return preview_show_action
             

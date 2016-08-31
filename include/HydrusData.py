@@ -804,6 +804,19 @@ def IterateHexPrefixes():
         yield prefix
         
     
+def LastShutdownWasBad( db_path, instance ):
+    
+    path = os.path.join( db_path, instance + '_running' )
+    
+    if os.path.exists( path ):
+        
+        return True
+        
+    else:
+        
+        return False
+        
+    
 def MergeKeyToListDicts( key_to_list_dicts ):
     
     result = collections.defaultdict( list )

@@ -230,24 +230,24 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
         self._info_text = wx.StaticText( self, label = 'info' )
         self._button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._top_hbox.AddF( self._first_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._previous_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._index_text, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._next_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._last_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._first_button, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( self._previous_button, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( self._index_text, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( self._next_button, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( self._last_button, CC.FLAGS_VCENTER )
         self._top_hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._top_hbox.AddF( self._archive_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._trash_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._delete_button, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( self._undelete_button, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._archive_button, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( self._trash_button, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( self._undelete_button, CC.FLAGS_VCENTER )
         self._top_hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._top_hbox.AddF( self._zoom_text, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( zoom_in, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( zoom_out, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( zoom_switch, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( fullscreen_switch, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( open_externally, CC.FLAGS_MIXED )
-        self._top_hbox.AddF( close, CC.FLAGS_MIXED )
+        self._top_hbox.AddF( self._zoom_text, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( zoom_in, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( zoom_out, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( zoom_switch, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( fullscreen_switch, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( open_externally, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( close, CC.FLAGS_VCENTER )
         
         vbox.AddF( self._top_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._title_text, CC.FLAGS_CENTER )
@@ -347,7 +347,7 @@ class FullscreenHoverFrameCommands( FullscreenHoverFrame ):
         command = wx.Button( self, label = label, style = wx.BU_EXACTFIT )
         command.Bind( wx.EVT_BUTTON, callback )
         
-        self._button_hbox.AddF( command, CC.FLAGS_MIXED )
+        self._button_hbox.AddF( command, CC.FLAGS_VCENTER )
         
     
     def EventArchiveButton( self, event ):
@@ -480,8 +480,8 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         icon_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         icon_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        icon_hbox.AddF( self._trash_icon, CC.FLAGS_MIXED )
-        icon_hbox.AddF( self._inbox_icon, CC.FLAGS_MIXED )
+        icon_hbox.AddF( self._trash_icon, CC.FLAGS_VCENTER )
+        icon_hbox.AddF( self._inbox_icon, CC.FLAGS_VCENTER )
         
         self._icon_panel.SetSizer( icon_hbox )
         

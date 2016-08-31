@@ -71,11 +71,38 @@ def FlushOutPredicates( parent, predicates ):
     
     return good_predicates
     
+def WrapInGrid( parent, rows, expand_text = False ):
+    
+    gridbox = wx.FlexGridSizer( 0, 2 )
+    
+    if expand_text:
+        
+        gridbox.AddGrowableCol( 0, 1 )
+        
+        text_flags = CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY # Trying to expand both ways nixes the center. This seems to work right.
+        control_flags = CC.FLAGS_VCENTER
+        
+    else:
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        text_flags = CC.FLAGS_VCENTER
+        control_flags = CC.FLAGS_EXPAND_BOTH_WAYS
+        
+    
+    for ( text, control ) in rows:
+        
+        gridbox.AddF( wx.StaticText( parent, label = text ), text_flags )
+        gridbox.AddF( control, control_flags )
+        
+    
+    return gridbox
+    
 def WrapInText( control, parent, text ):
     
     hbox = wx.BoxSizer( wx.HORIZONTAL )
     
-    hbox.AddF( wx.StaticText( parent, label = text ), CC.FLAGS_MIXED )
+    hbox.AddF( wx.StaticText( parent, label = text ), CC.FLAGS_VCENTER )
     hbox.AddF( control, CC.FLAGS_EXPAND_BOTH_WAYS )
     
     return hbox
@@ -947,7 +974,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             input_just_changed = self._cache_text != ''
             
-            db_not_going_to_hang_if_we_hit_it = not HydrusGlobals.client_controller.GetDB().CurrentlyDoingJob()
+            db_not_going_to_hang_if_we_hit_it = not HydrusGlobals.client_controller.DBCurrentlyDoingJob()
             
             if input_just_changed or db_not_going_to_hang_if_we_hit_it or not self._initial_matches_fetched:
                 
@@ -2825,7 +2852,7 @@ class ListBoxTags( ListBox ):
                         
                         if isinstance( term, ClientSearch.Predicate ):
                             
-                            text = term.GetUnicode()
+                            text = term.GetUnicode( with_count = False )
                             
                         else:
                             
@@ -2846,7 +2873,7 @@ class ListBoxTags( ListBox ):
                     
                 elif command == 'copy_all_tags':
                     
-                    text = os.linesep.join( self._GetAllTagsForClipboard() )
+                    text = os.linesep.join( self._GetAllTagsForClipboard( with_counts = False ) )
                     
                 elif command == 'copy_all_tags_with_counts':
                     
@@ -2930,7 +2957,7 @@ class ListBoxTags( ListBox ):
                             
                         else:
                             
-                            selection_string = '"' + term.GetUnicode() + '"'
+                            selection_string = '"' + term.GetUnicode( with_count = False ) + '"'
                             
                         
                     else:
@@ -4203,23 +4230,23 @@ class NoneableSpinCtrl( wx.Panel ):
         
         if len( message ) > 0:
             
-            hbox.AddF( wx.StaticText( self, label = message + ': ' ), CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = message + ': ' ), CC.FLAGS_VCENTER )
             
         
-        hbox.AddF( self._one, CC.FLAGS_MIXED )
+        hbox.AddF( self._one, CC.FLAGS_VCENTER )
         
         if self._num_dimensions == 2:
             
-            hbox.AddF( wx.StaticText( self, label = 'x' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._two, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'x' ), CC.FLAGS_VCENTER )
+            hbox.AddF( self._two, CC.FLAGS_VCENTER )
             
         
         if self._unit is not None:
             
-            hbox.AddF( wx.StaticText( self, label = unit ), CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = unit ), CC.FLAGS_VCENTER )
             
         
-        hbox.AddF( self._checkbox, CC.FLAGS_MIXED )
+        hbox.AddF( self._checkbox, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -4373,8 +4400,8 @@ class PopupDismissAll( PopupWindow ):
         button.Bind( wx.EVT_BUTTON, self.EventButton )
         button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        hbox.AddF( self._text, CC.FLAGS_MIXED )
-        hbox.AddF( button, CC.FLAGS_MIXED )
+        hbox.AddF( self._text, CC.FLAGS_VCENTER )
+        hbox.AddF( button, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -4474,8 +4501,8 @@ class PopupMessage( PopupWindow ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._pause_button, CC.FLAGS_MIXED )
-        hbox.AddF( self._cancel_button, CC.FLAGS_MIXED )
+        hbox.AddF( self._pause_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
         
         vbox.AddF( self._title, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._text_1, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -5738,6 +5765,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         self.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventItemActivated )
+        
     
     def Append( self, display_tuple, client_data ):
         
@@ -5853,6 +5881,13 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
         
         raise HydrusExceptions.DataMissing( 'Data not found!' )
+        
+    
+    def GetSecondarySortValues( self, col, key1, key2 ):
+        
+        # This overrides the ColumnSortedMixin. Just spam the whole tuple back.
+        
+        return ( self.itemDataMap[ key1 ], self.itemDataMap[ key2 ] )
         
     
     def HasClientData( self, data, column_index = None ):
@@ -6354,8 +6389,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._days = wx.SpinCtrl( self, min = 0, max = 360, size = ( 50, -1 ) )
             self._days.Bind( wx.EVT_SPINCTRL, self.EventSpin )
             
-            hbox.AddF( self._days, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._days, CC.FLAGS_VCENTER )
+            hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_VCENTER )
             
         
         if self._show_hours:
@@ -6363,8 +6398,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._hours = wx.SpinCtrl( self, min = 0, max = 23, size = ( 45, -1 ) )
             self._hours.Bind( wx.EVT_SPINCTRL, self.EventSpin )
             
-            hbox.AddF( self._hours, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = 'hours' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._hours, CC.FLAGS_VCENTER )
+            hbox.AddF( wx.StaticText( self, label = 'hours' ), CC.FLAGS_VCENTER )
             
         
         if self._show_minutes:
@@ -6372,8 +6407,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._minutes = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
             self._minutes.Bind( wx.EVT_SPINCTRL, self.EventSpin )
             
-            hbox.AddF( self._minutes, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = 'minutes' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._minutes, CC.FLAGS_VCENTER )
+            hbox.AddF( wx.StaticText( self, label = 'minutes' ), CC.FLAGS_VCENTER )
             
         
         if self._show_seconds:
@@ -6381,8 +6416,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._seconds = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
             self._seconds.Bind( wx.EVT_SPINCTRL, self.EventSpin )
             
-            hbox.AddF( self._seconds, CC.FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = 'seconds' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._seconds, CC.FLAGS_VCENTER )
+            hbox.AddF( wx.StaticText( self, label = 'seconds' ), CC.FLAGS_VCENTER )
             
         
         self.SetSizer( hbox )

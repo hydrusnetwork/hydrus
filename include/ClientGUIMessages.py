@@ -542,8 +542,8 @@ class DestinationPanel( wx.Panel ):
         
         self._hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._hbox.AddF( name_static_text, CC.FLAGS_MIXED )
-        self._hbox.AddF( self._status_panel, CC.FLAGS_MIXED )
+        self._hbox.AddF( name_static_text, CC.FLAGS_VCENTER )
+        self._hbox.AddF( self._status_panel, CC.FLAGS_VCENTER )
         
         self.SetSizer( self._hbox )
         
@@ -1102,8 +1102,8 @@ class DraftPanel( wx.Panel ):
             
             recipients_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            recipients_hbox.AddF( wx.StaticText( self._to_panel, label = 'recipients can see each other' ), CC.FLAGS_MIXED )
-            recipients_hbox.AddF( self._recipients_visible, CC.FLAGS_MIXED )
+            recipients_hbox.AddF( wx.StaticText( self._to_panel, label = 'recipients can see each other' ), CC.FLAGS_VCENTER )
+            recipients_hbox.AddF( self._recipients_visible, CC.FLAGS_VCENTER )
             
             self._to_panel.AddF( self._recipients_list, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._to_panel.AddF( self._new_recipient, CC.FLAGS_LONE_BUTTON )
@@ -1116,13 +1116,13 @@ class DraftPanel( wx.Panel ):
             
         
         vbox.AddF( self._body, CC.FLAGS_EXPAND_BOTH_WAYS )
-        #vbox.AddF( wx.StaticText( self, label = 'attachment hashes:' ), CC.FLAGS_MIXED )
+        #vbox.AddF( wx.StaticText( self, label = 'attachment hashes:' ), CC.FLAGS_VCENTER )
         #vbox.AddF( self._attachments, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._attachments.Hide()
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        button_hbox.AddF( self._send, CC.FLAGS_MIXED )
-        button_hbox.AddF( self._delete_draft, CC.FLAGS_MIXED )
-        button_hbox.AddF( self._save_draft, CC.FLAGS_MIXED )
+        button_hbox.AddF( self._send, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._delete_draft, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._save_draft, CC.FLAGS_VCENTER )
         
         vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
@@ -1413,9 +1413,9 @@ class IMFrame( ClientGUITopLevelWindows.Frame ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._me_label, CC.FLAGS_MIXED )
-        hbox.AddF( wx.StaticText( self, label = ' talking to ' ), CC.FLAGS_MIXED )
-        hbox.AddF( self._them_label, CC.FLAGS_MIXED )
+        hbox.AddF( self._me_label, CC.FLAGS_VCENTER )
+        hbox.AddF( wx.StaticText( self, label = ' talking to ' ), CC.FLAGS_VCENTER )
+        hbox.AddF( self._them_label, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )

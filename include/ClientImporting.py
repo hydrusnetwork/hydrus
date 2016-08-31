@@ -2739,64 +2739,13 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                ( json_url, file_base ) = ClientDownloading.GetImageboardThreadURLs( self._thread_url )
+                json_url = ClientDownloading.GetImageboardThreadJSONURL( self._thread_url )
                 
                 do_wait = True
                 
                 raw_json = HydrusGlobals.client_controller.DoHTTP( HC.GET, json_url )
                 
-                json_dict = json.loads( raw_json )
-                
-                posts_list = json_dict[ 'posts' ]
-                
-                file_infos = []
-                
-                for post in posts_list:
-                    
-                    if 'filename' not in post:
-                        
-                        continue
-                        
-                    
-                    file_original_filename = post[ 'filename' ] + post[ 'ext' ]
-                    file_url = file_base + str( post[ 'tim' ] ) + post[ 'ext' ]
-                    
-                    if 'md5' in post:
-                        
-                        file_md5_base64 = post[ 'md5' ]
-                        
-                    else:
-                        
-                        file_md5_base64 = None
-                        
-                    
-                    file_infos.append( ( file_url, file_md5_base64, file_original_filename ) )
-                    
-                    if 'extra_files' in post:
-                        
-                        for extra_file in post[ 'extra_files' ]:
-                            
-                            if 'filename' not in extra_file:
-                                
-                                continue
-                                
-                            
-                            file_original_filename = extra_file[ 'filename' ] + extra_file[ 'ext' ]
-                            file_url = file_base + str( extra_file[ 'tim' ] ) + extra_file[ 'ext' ]
-                            
-                            if 'md5' in extra_file:
-                                
-                                file_md5_base64 = extra_file[ 'md5' ]
-                                
-                            else:
-                                
-                                file_md5_base64 = None
-                                
-                            
-                            file_infos.append( ( file_url, file_md5_base64, file_original_filename ) )
-                            
-                        
-                    
+                file_infos = ClientDownloading.ParseImageboardFileURLsFromJSON( self._thread_url, raw_json )
                 
                 num_new = 0
                 

@@ -86,55 +86,55 @@ class OptionsPanelHentaiFoundry( OptionsPanel ):
         
         gridbox.AddGrowableCol( 1, 1 )
         
-        gridbox.AddF( wx.StaticText( self, label = 'nudity' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'nudity' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_nudity, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'violence' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'violence' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_violence, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'profanity' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'profanity' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_profanity, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'racism' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'racism' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_racism, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'sex' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'sex' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_sex, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'spoilers' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'spoilers' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_spoilers, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'yaoi' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'yaoi' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_yaoi, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'yuri' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'yuri' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_yuri, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'teen' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'teen' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_teen, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'guro' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'guro' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_guro, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'furry' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'furry' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_furry, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'beast' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'beast' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_beast, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'male' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'male' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_male, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'female' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'female' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_female, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'futa' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'futa' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_futa, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'other' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'other' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._rating_other, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self, label = 'order' ), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self, label = 'order' ), CC.FLAGS_VCENTER )
         gridbox.AddF( self._filter_order, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( gridbox )
@@ -294,7 +294,7 @@ class OptionsPanelMimes( OptionsPanel ):
             self._mime_groups_to_checkboxes[ mime_group ] = mg_checkbox
             self._mime_groups_to_values[ mime_group ] = mg_checkbox.GetValue()
             
-            gridbox.AddF( mg_checkbox, CC.FLAGS_MIXED )
+            gridbox.AddF( mg_checkbox, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -310,7 +310,6 @@ class OptionsPanelMimes( OptionsPanel ):
             
             gridbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
-        
         
         self.SetSizer( gridbox )
         
@@ -477,7 +476,7 @@ class OptionsPanelTags( OptionsPanel ):
                 
                 self._service_keys_to_checkbox_info[ service_key ] = []
                 
-                outer_gridbox.AddF( wx.StaticText( self, label = service.GetName() ), CC.FLAGS_MIXED )
+                outer_gridbox.AddF( wx.StaticText( self, label = service.GetName() ), CC.FLAGS_VCENTER )
             
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
@@ -507,7 +506,7 @@ class OptionsPanelTags( OptionsPanel ):
                 
                 button_id += 1
                 
-                vbox.AddF( explicit_button, CC.FLAGS_MIXED )
+                vbox.AddF( explicit_button, CC.FLAGS_VCENTER )
                 
                 outer_gridbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 

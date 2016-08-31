@@ -93,18 +93,16 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         self._token.SetValue( token )
         self._pin.SetValue( pin )
         
-        gridbox = wx.FlexGridSizer( 0, 2 )
+        rows = []
         
-        gridbox.AddGrowableCol( 1, 1 )
+        rows.append( ( 'token: ', self._token ) )
+        rows.append( ( 'pin: ', self._pin ) )
         
-        gridbox.AddF( wx.StaticText( self, label = 'token' ), CC.FLAGS_MIXED )
-        gridbox.AddF( self._token, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( wx.StaticText( self, label = 'pin' ), CC.FLAGS_MIXED )
-        gridbox.AddF( self._pin, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_MIXED )
-        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
+        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -235,16 +233,16 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         
         h_b_box = wx.BoxSizer( wx.HORIZONTAL )
         
-        h_b_box.AddF( self._add, CC.FLAGS_MIXED )
-        h_b_box.AddF( self._edit, CC.FLAGS_MIXED )
-        h_b_box.AddF( self._delete, CC.FLAGS_MIXED )
+        h_b_box.AddF( self._add, CC.FLAGS_VCENTER )
+        h_b_box.AddF( self._edit, CC.FLAGS_VCENTER )
+        h_b_box.AddF( self._delete, CC.FLAGS_VCENTER )
         
         self._account_types_panel.AddF( self._ctrl_account_types, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._account_types_panel.AddF( h_b_box, CC.FLAGS_BUTTON_SIZER )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._apply, CC.FLAGS_MIXED )
-        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        b_box.AddF( self._apply, CC.FLAGS_VCENTER )
+        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         vbox.AddF( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -427,13 +425,13 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         #
         
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-        add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-        add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
         
         ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
-        ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
+        ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         vbox.AddF( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -675,34 +673,26 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'search url: ', self._search_url ) )
+            rows.append( ( 'search tag separator: ', self._search_separator ) )
+            rows.append( ( 'advance by page num: ', self._advance_by_page_num ) )
+            rows.append( ( 'thumbnail classname: ', self._thumb_classname ) )
             
-            gridbox.AddF( wx.StaticText( self._search_panel, label = 'search url' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._search_url, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._search_panel, label = 'search tag separator' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._search_separator, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._search_panel, label = 'advance by page num' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._advance_by_page_num, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._search_panel, label = 'thumbnail classname' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._thumb_classname, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox = ClientGUICommon.WrapInGrid( self._search_panel, rows )
             
             self._search_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             self._search_panel.AddF( self._example_html_search, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
+            rows = []
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows.append( ( 'text: ', self._image_info ) )
+            rows.append( ( 'id of <img>: ', self._image_id ) )
+            rows.append( ( 'text of <a>: ', self._image_data ) )
             
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._image_panel, label = 'text' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._image_info, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._image_panel, label = 'id of <img>' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._image_id, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._image_panel, label = 'text of <a>' ), CC.FLAGS_MIXED )
-            gridbox.AddF( self._image_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox = ClientGUICommon.WrapInGrid( self._image_panel, rows )
             
             self._image_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             self._image_panel.AddF( self._example_html_image, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -711,9 +701,9 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._tag_classname, CC.FLAGS_MIXED )
-            hbox.AddF( self._namespace, CC.FLAGS_MIXED )
-            hbox.AddF( self._add, CC.FLAGS_MIXED )
+            hbox.AddF( self._tag_classname, CC.FLAGS_VCENTER )
+            hbox.AddF( self._namespace, CC.FLAGS_VCENTER )
+            hbox.AddF( self._add, CC.FLAGS_VCENTER )
             
             self._tag_panel.AddF( self._tag_classnames_to_namespaces, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._tag_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -918,14 +908,14 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         def ArrangeControls():
             
             add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            add_remove_hbox.AddF( self._add_manually, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._add_contact_address, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+            add_remove_hbox.AddF( self._add_manually, CC.FLAGS_VCENTER )
+            add_remove_hbox.AddF( self._add_contact_address, CC.FLAGS_VCENTER )
+            add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
+            add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
             
             ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
-            ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+            ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
+            ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._contacts, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1288,11 +1278,11 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
-                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'name' ), CC.FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'name' ), CC.FLAGS_VCENTER )
                 gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'contact address' ), CC.FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'contact address' ), CC.FLAGS_VCENTER )
                 gridbox.AddF( self._contact_address, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'public key' ), CC.FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'public key' ), CC.FLAGS_VCENTER )
                 gridbox.AddF( self._public_key, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._contact_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1434,14 +1424,14 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         file_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        file_buttons.AddF( self._add_button, CC.FLAGS_MIXED )
-        file_buttons.AddF( self._edit_button, CC.FLAGS_MIXED )
-        file_buttons.AddF( self._delete_button, CC.FLAGS_MIXED )
+        file_buttons.AddF( self._add_button, CC.FLAGS_VCENTER )
+        file_buttons.AddF( self._edit_button, CC.FLAGS_VCENTER )
+        file_buttons.AddF( self._delete_button, CC.FLAGS_VCENTER )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_MIXED )
-        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
+        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1713,14 +1703,14 @@ If you select synchronise, be careful!'''
         phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         phrase_hbox.AddF( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-        phrase_hbox.AddF( self._examples, CC.FLAGS_MIXED )
+        phrase_hbox.AddF( self._examples, CC.FLAGS_VCENTER )
         
         self._phrase_box.AddF( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_MIXED )
-        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
+        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1819,13 +1809,13 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         def ArrangeControls():
             
             add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-            add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+            add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
+            add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
+            add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
             
             ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
-            ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+            ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
+            ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._sites, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2021,9 +2011,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             def ArrangeControls():
                 
                 add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-                add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-                add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-                add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+                add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
+                add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
+                add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
                 
                 self._site_panel.AddF( self._imageboards, CC.FLAGS_EXPAND_BOTH_WAYS )
                 self._site_panel.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
@@ -2267,9 +2257,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     gridbox.AddGrowableCol( 1, 1 )
                     
-                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label = 'POST URL' ), CC.FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label = 'POST URL' ), CC.FLAGS_VCENTER )
                     gridbox.AddF( self._post_url, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label = 'flood time' ), CC.FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label = 'flood time' ), CC.FLAGS_VCENTER )
                     gridbox.AddF( self._flood_time, CC.FLAGS_EXPAND_BOTH_WAYS )
                     
                     self._basic_info_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2277,9 +2267,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     #
                     
                     h_b_box = wx.BoxSizer( wx.HORIZONTAL )
-                    h_b_box.AddF( self._add, CC.FLAGS_MIXED )
-                    h_b_box.AddF( self._edit, CC.FLAGS_MIXED )
-                    h_b_box.AddF( self._delete, CC.FLAGS_MIXED )
+                    h_b_box.AddF( self._add, CC.FLAGS_VCENTER )
+                    h_b_box.AddF( self._edit, CC.FLAGS_VCENTER )
+                    h_b_box.AddF( self._delete, CC.FLAGS_VCENTER )
                     
                     self._form_fields_panel.AddF( self._form_fields, CC.FLAGS_EXPAND_BOTH_WAYS )
                     self._form_fields_panel.AddF( h_b_box, CC.FLAGS_BUTTON_SIZER )
@@ -2287,9 +2277,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     #
                     
                     mime_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
-                    mime_buttons_box.AddF( self._mime_choice, CC.FLAGS_MIXED )
-                    mime_buttons_box.AddF( self._add_mime, CC.FLAGS_MIXED )
-                    mime_buttons_box.AddF( self._remove_mime, CC.FLAGS_MIXED )
+                    mime_buttons_box.AddF( self._mime_choice, CC.FLAGS_VCENTER )
+                    mime_buttons_box.AddF( self._add_mime, CC.FLAGS_VCENTER )
+                    mime_buttons_box.AddF( self._remove_mime, CC.FLAGS_VCENTER )
                     
                     self._allowed_mimes_panel.AddF( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
                     self._allowed_mimes_panel.AddF( mime_buttons_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2540,14 +2530,14 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         file_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        file_buttons.AddF( self._add_button, CC.FLAGS_MIXED )
-        file_buttons.AddF( self._edit_button, CC.FLAGS_MIXED )
-        file_buttons.AddF( self._delete_button, CC.FLAGS_MIXED )
+        file_buttons.AddF( self._add_button, CC.FLAGS_VCENTER )
+        file_buttons.AddF( self._edit_button, CC.FLAGS_VCENTER )
+        file_buttons.AddF( self._delete_button, CC.FLAGS_VCENTER )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_MIXED )
-        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
+        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2840,71 +2830,63 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         #
         
-        gridbox = wx.FlexGridSizer( 0, 2 )
+        rows = []
         
-        gridbox.AddGrowableCol( 1, 1 )
+        rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'folder path: ', self._path ) )
+        rows.append( ( 'check period: ', self._period ) )
+        rows.append( ( 'currently paused: ', self._paused ) )
+        rows.append( ( 'open a popup if new files imported: ', self._open_popup ) )
+        rows.append( ( 'review currently cached import paths: ', self._seed_cache_button ) )
         
-        gridbox.AddF( wx.StaticText( self._folder_box, label = 'name: '), CC.FLAGS_MIXED )
-        gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( self._folder_box, label = 'folder path: '), CC.FLAGS_MIXED )
-        gridbox.AddF( self._path, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( self._folder_box, label = 'check period: '), CC.FLAGS_MIXED )
-        gridbox.AddF( self._period, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( self._folder_box, label = 'currently paused: '), CC.FLAGS_MIXED )
-        gridbox.AddF( self._paused, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( self._folder_box, label = 'open a popup if new files imported: '), CC.FLAGS_MIXED )
-        gridbox.AddF( self._open_popup, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( self._folder_box, label = 'review currently cached import paths: '), CC.FLAGS_MIXED )
-        gridbox.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
+        gridbox = ClientGUICommon.WrapInGrid( self._folder_box, rows )
         
         self._folder_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
+        rows = []
+        
+        rows.append( ( 'mimes to import: ', self._mimes ) )
+        
+        mimes_gridbox = ClientGUICommon.WrapInGrid( self._file_box, rows, expand_text = True )
+        
         gridbox = wx.FlexGridSizer( 0, 3 )
         
         gridbox.AddGrowableCol( 1, 1 )
         
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'mimes to import: '), CC.FLAGS_MIXED )
-        gridbox.AddF( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( ( 20, 20 ), CC.FLAGS_NONE )
-        
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file imports successfully: '), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file imports successfully: '), CC.FLAGS_VCENTER )
         gridbox.AddF( self._action_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
         gridbox.AddF( self._location_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file is already in the db: '), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file is already in the db: '), CC.FLAGS_VCENTER )
         gridbox.AddF( self._action_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
         gridbox.AddF( self._location_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file has already been deleted from the db: '), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file has previously been deleted from the db: '), CC.FLAGS_VCENTER )
         gridbox.AddF( self._action_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
         gridbox.AddF( self._location_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file fails to import: '), CC.FLAGS_MIXED )
+        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file fails to import: '), CC.FLAGS_VCENTER )
         gridbox.AddF( self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
         gridbox.AddF( self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        self._file_box.AddF( mimes_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        self._tag_box.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._tag_box.AddF( self._txt_parse_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._tag_box.AddF( self._txt_parse_button, CC.FLAGS_MIXED )
+        self._tag_box.AddF( self._import_tag_options, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._tag_box.AddF( self._txt_parse_st, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._tag_box.AddF( self._txt_parse_button, CC.FLAGS_VCENTER )
         
         #
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_MIXED )
-        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
+        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -3173,18 +3155,16 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         #
         
-        gridbox = wx.FlexGridSizer( 0, 2 )
+        rows = []
         
-        gridbox.AddGrowableCol( 1, 1 )
+        rows.append( ( 'id/email: ', self._id ) )
+        rows.append( ( 'password: ', self._password ) )
         
-        gridbox.AddF( wx.StaticText( self, label = 'id/email' ), CC.FLAGS_MIXED )
-        gridbox.AddF( self._id, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( wx.StaticText( self, label = 'password' ), CC.FLAGS_MIXED )
-        gridbox.AddF( self._password, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_MIXED )
-        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
+        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -3304,12 +3284,16 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         buttonbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttonbox.AddF( self._apply, CC.FLAGS_MIXED )
-        buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        buttonbox.AddF( self._apply, CC.FLAGS_VCENTER )
+        buttonbox.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        for panel in self._panels: vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        for panel in self._panels:
+            
+            vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
         vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -3388,6 +3372,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             wx.Panel.__init__( self, parent )
             
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+            
             self._services = services
             
             self._media = media
@@ -3395,9 +3381,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             self._service_keys_to_controls = {}
             self._service_keys_to_original_ratings_states = {}
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 0, 1 )
+            rows = []
             
             for service in self._services:
                 
@@ -3414,9 +3398,10 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 self._service_keys_to_controls[ service_key ] = control
                 self._service_keys_to_original_ratings_states[ service_key ] = rating_state
                 
-                gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
-                gridbox.AddF( control, CC.FLAGS_MIXED )
+                rows.append( ( name + ': ', control ) )
                 
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_text = True )
             
             self.SetSizer( gridbox )
             
@@ -3462,9 +3447,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             self._service_keys_to_controls = {}
             self._service_keys_to_original_ratings_states = {}
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 0, 1 )
+            rows = []
             
             for service in self._services:
                 
@@ -3488,9 +3471,10 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 self._service_keys_to_controls[ service_key ] = control
                 self._service_keys_to_original_ratings_states[ service_key ] = ( rating_state, rating )
                 
-                gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_MIXED )
-                gridbox.AddF( control, CC.FLAGS_MIXED )
+                rows.append( ( name + ': ', control ) )
                 
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_text = True )
             
             self.SetSizer( gridbox )
             
@@ -3563,14 +3547,14 @@ class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
         
         regex_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        regex_buttons.AddF( self._add_button, CC.FLAGS_MIXED )
-        regex_buttons.AddF( self._edit_button, CC.FLAGS_MIXED )
-        regex_buttons.AddF( self._delete_button, CC.FLAGS_MIXED )
+        regex_buttons.AddF( self._add_button, CC.FLAGS_VCENTER )
+        regex_buttons.AddF( self._edit_button, CC.FLAGS_VCENTER )
+        regex_buttons.AddF( self._delete_button, CC.FLAGS_VCENTER )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_MIXED )
-        buttons.AddF( self._cancel, CC.FLAGS_MIXED )
+        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
+        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -3723,13 +3707,13 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         #
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_MIXED )
-        b_box.AddF( self._cancel, CC.FLAGS_MIXED )
+        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
+        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        add_remove_hbox.AddF( self._service_types, CC.FLAGS_MIXED )
-        add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-        add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._service_types, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         vbox.AddF( self._services_listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -3914,47 +3898,41 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
+            rows = []
             
             if 'port' in self._options:
                 
-                gridbox.AddF( wx.StaticText( self._options_panel, label = 'port' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._port, CC.FLAGS_EXPAND_BOTH_WAYS )
+                rows.append( ( 'port: ', self._port ) )
                 
             
             if 'max_monthly_data' in self._options:
                 
-                gridbox.AddF( wx.StaticText( self._options_panel, label = 'max monthly data' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._max_monthly_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+                rows.append( ( 'max monthly data: ', self._max_monthly_data ) )
                 
             
             if 'max_storage' in self._options:
                 
-                gridbox.AddF( wx.StaticText( self._options_panel, label = 'max storage' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._max_storage, CC.FLAGS_EXPAND_BOTH_WAYS )
+                rows.append( ( 'max storage: ', self._max_storage ) )
                 
             
             if 'log_uploader_ips' in self._options:
                 
-                gridbox.AddF( wx.StaticText( self._options_panel, label = 'log uploader IPs' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._log_uploader_ips, CC.FLAGS_EXPAND_BOTH_WAYS )
+                rows.append( ( 'log uploader IPs: ', self._log_uploader_ips ) )
                 
             
             if 'message' in self._options:
                 
-                gridbox.AddF( wx.StaticText( self._options_panel, label = 'message' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._message, CC.FLAGS_EXPAND_BOTH_WAYS )
+                rows.append( ( 'message: ', self._message ) )
                 
             
             if 'upnp' in self._options:
                 
-                gridbox.AddF( wx.StaticText( self._options_panel, label = 'UPnP' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._upnp, CC.FLAGS_EXPAND_BOTH_WAYS )
+                rows.append( ( 'UPnP: ', self._upnp ) )
                 
             
-            self._options_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
+            
+            self._options_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.AddF( self._options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
@@ -4074,14 +4052,14 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-        add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-        add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
         
         ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
-        ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
+        ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         self._notebook.AddPage( self._local_listbook, 'local' )
         self._notebook.AddPage( self._remote_listbook, 'remote' )
@@ -4622,29 +4600,25 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_type not in HC.NONEDITABLE_SERVICES:
                 
-                gridbox = wx.FlexGridSizer( 0, 2 )
+                rows = []
                 
-                gridbox.AddGrowableCol( 1, 1 )
-                
-                gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'name' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._service_name, CC.FLAGS_EXPAND_BOTH_WAYS )
+                rows.append( ( 'name: ', self._service_name ) )
                 
                 if service_type in HC.REMOTE_SERVICES:
                     
-                    gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'credentials' ), CC.FLAGS_MIXED )
-                    gridbox.AddF( self._service_credentials, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    rows.append( ( 'credentials: ', self._service_credentials ) )
                     
                     if service_type in HC.RESTRICTED_SERVICES:
                         
-                        gridbox.AddF( ( 20, 20 ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._check_service, CC.FLAGS_LONE_BUTTON )
+                        rows.append( ( '', self._check_service ) )
                         
                     elif service_type == HC.IPFS:
                         
-                        gridbox.AddF( ( 20, 20 ), CC.FLAGS_MIXED )
-                        gridbox.AddF( self._check_ipfs, CC.FLAGS_LONE_BUTTON )
+                        rows.append( ( '', self._check_ipfs ) )
                         
                     
+                
+                gridbox = ClientGUICommon.WrapInGrid( self._credentials_panel, rows )
                 
                 self._credentials_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
@@ -4653,12 +4627,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_type == HC.IPFS:
                 
-                gridbox = wx.FlexGridSizer( 0, 2 )
+                rows = []
                 
-                gridbox.AddGrowableCol( 1, 1 )
+                rows.append( ( 'multihash prefix: ', self._multihash_prefix ) )
                 
-                gridbox.AddF( wx.StaticText( self._ipfs_panel, label = 'multihash prefix' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._multihash_prefix, CC.FLAGS_EXPAND_BOTH_WAYS )
+                gridbox = ClientGUICommon.WrapInGrid( self._ipfs_panel, rows )
                 
                 self._ipfs_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
@@ -4667,7 +4640,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_type in HC.REPOSITORIES:
                 
-                self._repositories_panel.AddF( self._pause_synchronisation, CC.FLAGS_MIXED )
+                self._repositories_panel.AddF( self._pause_synchronisation, CC.FLAGS_VCENTER )
                 self._repositories_panel.AddF( self._reset_processing_button, CC.FLAGS_LONE_BUTTON )
                 self._repositories_panel.AddF( self._reset_downloading_button, CC.FLAGS_LONE_BUTTON )
                 
@@ -4676,21 +4649,15 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                 
-                gridbox = wx.FlexGridSizer( 0, 2 )
-                
-                gridbox.AddGrowableCol( 1, 1 )
+                rows = []
                 
                 if service_type == HC.LOCAL_RATING_NUMERICAL:
                     
-                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'number of \'stars\'' ), CC.FLAGS_MIXED )
-                    gridbox.AddF( self._num_stars, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'allow a zero rating' ), CC.FLAGS_MIXED )
-                    gridbox.AddF( self._allow_zero, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    rows.append( ( 'number of \'stars\': ', self._num_stars ) )
+                    rows.append( ( 'allow a zero rating: ', self._allow_zero ) )
                     
                 
-                gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'shape' ), CC.FLAGS_MIXED )
-                gridbox.AddF( self._shape, CC.FLAGS_EXPAND_BOTH_WAYS )
+                rows.append( ( 'shape: ', self._shape ) )
                 
                 for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
                     
@@ -4698,17 +4665,18 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     hbox = wx.BoxSizer( wx.HORIZONTAL )
                     
-                    hbox.AddF( border_ctrl, CC.FLAGS_MIXED )
-                    hbox.AddF( fill_ctrl, CC.FLAGS_MIXED )
+                    hbox.AddF( border_ctrl, CC.FLAGS_VCENTER )
+                    hbox.AddF( fill_ctrl, CC.FLAGS_VCENTER )
                     
                     if colour_type == ClientRatings.LIKE: colour_text = 'liked'
                     elif colour_type == ClientRatings.DISLIKE: colour_text = 'disliked'
                     elif colour_type == ClientRatings.NULL: colour_text = 'not rated'
                     elif colour_type == ClientRatings.MIXED: colour_text = 'a mixture of ratings'
                     
-                    gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'border/fill for ' + colour_text ), CC.FLAGS_MIXED )
-                    gridbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                    rows.append( ( 'border/fill for ' + colour_text + ': ', hbox ) )
                     
+                
+                gridbox = ClientGUICommon.WrapInGrid( self._local_rating_panel, rows )
                 
                 self._local_rating_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
@@ -4719,9 +4687,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( self._archive_sync_add, CC.FLAGS_MIXED )
-                hbox.AddF( self._archive_sync_edit, CC.FLAGS_MIXED )
-                hbox.AddF( self._archive_sync_remove, CC.FLAGS_MIXED )
+                hbox.AddF( self._archive_sync_add, CC.FLAGS_VCENTER )
+                hbox.AddF( self._archive_sync_edit, CC.FLAGS_VCENTER )
+                hbox.AddF( self._archive_sync_remove, CC.FLAGS_VCENTER )
                 
                 self._archive_panel.AddF( self._archive_sync, CC.FLAGS_EXPAND_BOTH_WAYS )
                 self._archive_panel.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
@@ -5139,17 +5107,17 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         #
         
         text_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        text_hbox.AddF( wx.StaticText( self, label = 'For more information about subscriptions, please check' ), CC.FLAGS_MIXED )
-        text_hbox.AddF( wx.HyperlinkCtrl( self, id = -1, label = 'here', url = 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' ), CC.FLAGS_MIXED )
+        text_hbox.AddF( wx.StaticText( self, label = 'For more information about subscriptions, please check' ), CC.FLAGS_VCENTER )
+        text_hbox.AddF( wx.HyperlinkCtrl( self, id = -1, label = 'here', url = 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' ), CC.FLAGS_VCENTER )
         
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        add_remove_hbox.AddF( self._add, CC.FLAGS_MIXED )
-        add_remove_hbox.AddF( self._remove, CC.FLAGS_MIXED )
-        add_remove_hbox.AddF( self._export, CC.FLAGS_MIXED )
+        add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
         
         ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        ok_hbox.AddF( self._ok, CC.FLAGS_MIXED )
-        ok_hbox.AddF( self._cancel, CC.FLAGS_MIXED )
+        ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
+        ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         vbox.AddF( text_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -5397,8 +5365,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._query_panel, label = 'Check subscription every ' ), CC.FLAGS_MIXED )
-            hbox.AddF( self._period, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._query_panel, label = 'Check subscription every ' ), CC.FLAGS_VCENTER )
+            hbox.AddF( self._period, CC.FLAGS_VCENTER )
             
             self._query_panel.AddF( self._site_type, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._query_panel.AddF( self._query, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -7088,9 +7056,9 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         edit_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        edit_buttons.AddF( self._add_custom, CC.FLAGS_MIXED )
-        edit_buttons.AddF( self._edit, CC.FLAGS_MIXED )
-        edit_buttons.AddF( self._remove, CC.FLAGS_MIXED )
+        edit_buttons.AddF( self._add_custom, CC.FLAGS_VCENTER )
+        edit_buttons.AddF( self._edit, CC.FLAGS_VCENTER )
+        edit_buttons.AddF( self._remove, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         

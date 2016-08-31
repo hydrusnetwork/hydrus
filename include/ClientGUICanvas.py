@@ -60,16 +60,23 @@ def CalculateCanvasMediaSize( media, ( canvas_width, canvas_height ) ):
     
     return ( canvas_width, canvas_height )
     
-def CalculateCanvasFitZoom( media, ( canvas_width, canvas_height ), exact_zooms_only ):
+def CalculateCanvasZooms( canvas, media ):
+    
+    if media is None:
+        
+        return ( 1.0, 1.0 )
+        
     
     ( media_width, media_height ) = media.GetResolution()
     
     if media_width == 0 or media_height == 0:
         
-        return 1.0
+        return ( 1.0, 1.0 )
         
     
-    ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, ( canvas_width, canvas_height ) )
+    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    
+    ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, canvas.GetClientSize() )
     
     width_zoom = canvas_width / float( media_width )
     
@@ -77,37 +84,98 @@ def CalculateCanvasFitZoom( media, ( canvas_width, canvas_height ), exact_zooms_
     
     canvas_zoom = min( ( width_zoom, height_zoom ) )
     
+    #
+    
+    mime = media.GetMime()
+    
+    ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomOptions( mime )
+    
     if exact_zooms_only:
         
-        exact_zoom = 1.0
+        max_regular_zoom = 1.0
         
         if canvas_zoom > 1.0:
             
-            while exact_zoom * 2 < canvas_zoom:
+            while max_regular_zoom * 2 < canvas_zoom:
                 
-                exact_zoom *= 2
+                max_regular_zoom *= 2
                 
             
         elif canvas_zoom < 1.0:
             
-            while exact_zoom > canvas_zoom:
+            while max_regular_zoom > canvas_zoom:
                 
-                exact_zoom /= 2
+                max_regular_zoom /= 2
                 
             
         
-        canvas_zoom = exact_zoom
+    else:
+        
+        regular_zooms = new_options.GetMediaZooms()
+        
+        valid_regular_zooms = [ zoom for zoom in regular_zooms if zoom < canvas_zoom ]
+        
+        if len( valid_regular_zooms ) > 0:
+            
+            max_regular_zoom = max( valid_regular_zooms )
+            
+        else:
+            
+            max_regular_zoom = canvas_zoom
+            
         
     
-    return canvas_zoom
+    if canvas.PREVIEW_WINDOW:
+        
+        scale_up_action = preview_scale_up
+        scale_down_action = preview_scale_down
+        
+    else:
+        
+        scale_up_action = media_scale_up
+        scale_down_action = media_scale_down
+        
+    
+    can_be_scaled_down = media_width > canvas_width or media_height > canvas_height
+    can_be_scaled_up = media_width < canvas_width and media_height < canvas_height
+    
+    #
+    
+    if can_be_scaled_up:
+        
+        scale_action = scale_up_action
+        
+    elif can_be_scaled_down:
+        
+        scale_action = scale_down_action
+        
+    else:
+        
+        scale_action = CC.MEDIA_VIEWER_SCALE_100
+        
+    
+    if scale_action == CC.MEDIA_VIEWER_SCALE_100:
+        
+        default_zoom = 1.0
+        
+    elif scale_action == CC.MEDIA_VIEWER_SCALE_MAX_REGULAR:
+        
+        default_zoom = max_regular_zoom
+        
+    else:
+        
+        default_zoom = canvas_zoom
+        
+    
+    return ( default_zoom, canvas_zoom )
     
 def CalculateMediaContainerSize( media, zoom, action ):
     
-    if action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+    if action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
         
         raise Exception( 'This media should not be shown in the media viewer!' )
         
-    elif action == CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON:
+    elif action == CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON:
         
         ( width, height ) = OPEN_EXTERNALLY_BUTTON_SIZE
         
@@ -1000,14 +1068,14 @@ class Canvas( wx.Window ):
         
         if media is None:
             
-            return CC.MEDIA_VIEWER_DO_NOT_SHOW
+            return CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW
             
         
         mime = media.GetMime()
         
         if mime == HC.APPLICATION_HYDRUS_CLIENT_COLLECTION:
             
-            return CC.MEDIA_VIEWER_DO_NOT_SHOW
+            return CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW
             
         
         if self.PREVIEW_WINDOW:
@@ -1070,7 +1138,7 @@ class Canvas( wx.Window ):
     
     def _IsZoomable( self ):
         
-        return self._GetShowAction( self._current_display_media ) not in ( CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_DO_NOT_SHOW )
+        return self._GetShowAction( self._current_display_media ) not in ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW )
         
     
     def _ManageRatings( self ):
@@ -1126,36 +1194,7 @@ class Canvas( wx.Window ):
     
     def _ReinitZoom( self ):
         
-        if self._current_display_media is None:
-            
-            self._current_zoom = 1.0
-            
-        else:
-            
-            ( my_width, my_height ) = self.GetClientSize()
-            
-            ( media_width, media_height ) = self._current_display_media.GetResolution()
-            
-            ( canvas_media_width, canvas_media_height ) = CalculateCanvasMediaSize( self._current_display_media, ( my_width, my_height ) )
-            
-            mime = self._current_display_media.GetMime()
-            
-            ( zoom_in_to_fit, exact_zooms_only ) = self._new_options.GetMediaZoomOptions( mime )
-            
-            media_needs_to_be_scaled_down = media_width > canvas_media_width or media_height > canvas_media_height
-            media_needs_to_be_scaled_up = zoom_in_to_fit and media_width < canvas_media_width and media_height < canvas_media_height
-            
-            self._canvas_zoom = CalculateCanvasFitZoom( self._current_display_media, ( my_width, my_height ), exact_zooms_only )
-            
-            if media_needs_to_be_scaled_down or media_needs_to_be_scaled_up:
-                
-                self._current_zoom = self._canvas_zoom
-                
-            else:
-                
-                self._current_zoom = 1.0
-                
-            
+        ( self._current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_display_media )
         
         HydrusGlobals.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         
@@ -1165,6 +1204,37 @@ class Canvas( wx.Window ):
         self._dirty = True
         
         self.Refresh()
+        
+    
+    def _SetZoom( self, new_zoom ):
+
+        if self._current_display_media.GetMime() == HC.APPLICATION_FLASH:
+            
+            # we want to preserve whitespace around flash
+            
+            ( my_width, my_height ) = self.GetClientSize()
+            
+            action = self._GetShowAction( self._current_display_media )
+            
+            ( new_media_width, new_media_height ) = CalculateMediaContainerSize( self._current_display_media, new_zoom, action )
+            
+            if new_media_width >= my_width or new_media_height >= my_height:
+                
+                return
+                
+            
+        
+        ( drag_x, drag_y ) = self._total_drag_delta
+        
+        zoom_ratio = new_zoom / self._current_zoom
+        
+        self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
+        
+        self._current_zoom = new_zoom
+        
+        HydrusGlobals.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+        
+        self._SetDirty()
         
     
     def _SizeAndPositionMediaContainer( self ):
@@ -1214,55 +1284,43 @@ class Canvas( wx.Window ):
         
         if self._current_display_media is not None and self._IsZoomable():
             
-            ( zoom_in_to_fit, exact_zooms_only ) = self._new_options.GetMediaZoomOptions( self._current_display_media.GetMime() )
+            ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = self._new_options.GetMediaZoomOptions( self._current_display_media.GetMime() )
             
             if exact_zooms_only:
                 
-                my_zoomins = [ self._current_zoom * 2 ]
+                exact_zoom = 1.0
+                
+                if exact_zoom <= self._current_zoom:
+                    
+                    while exact_zoom <= self._current_zoom:
+                        
+                        exact_zoom *= 2
+                        
+                    
+                else:
+                    
+                    while exact_zoom / 2 > self._current_zoom:
+                        
+                        exact_zoom /= 2
+                        
+                    
+                
+                possible_zooms = [ exact_zoom ]
                 
             else:
                 
-                my_zoomins = self._new_options.GetMediaZooms()
-                
-                if self._canvas_zoom not in my_zoomins:
-                    
-                    my_zoomins.append( self._canvas_zoom )
-                    
-                    my_zoomins.sort()
-                    
+                possible_zooms = self._new_options.GetMediaZooms()
                 
             
-            for zoom in my_zoomins:
+            possible_zooms.append( self._canvas_zoom )
+            
+            bigger_zooms = [ zoom for zoom in possible_zooms if zoom > self._current_zoom ]
+            
+            if len( bigger_zooms ) > 0:
                 
-                if zoom > self._current_zoom:
-                    
-                    if self._current_display_media.GetMime() == HC.APPLICATION_FLASH:
-                        
-                        # we want to preserve whitespace around flash
-                        
-                        ( my_width, my_height ) = self.GetClientSize()
-                        
-                        action = self._GetShowAction( self._current_display_media )
-                        
-                        ( new_media_width, new_media_height ) = CalculateMediaContainerSize( self._current_display_media, zoom, action )
-                        
-                        if new_media_width >= my_width or new_media_height >= my_height: return
-                        
-                    
-                    ( drag_x, drag_y ) = self._total_drag_delta
-                    
-                    zoom_ratio = zoom / self._current_zoom
-                    
-                    self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                    
-                    self._current_zoom = zoom
-                    
-                    HydrusGlobals.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
-                    
-                    self._SetDirty()
-                    
-                    break
-                    
+                new_zoom = min( bigger_zooms )
+                
+                self._SetZoom( new_zoom )
                 
             
         
@@ -1271,80 +1329,65 @@ class Canvas( wx.Window ):
         
         if self._current_display_media is not None and self._IsZoomable():
             
-            ( zoom_in_to_fit, exact_zooms_only ) = self._new_options.GetMediaZoomOptions( self._current_display_media.GetMime() )
+            ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = self._new_options.GetMediaZoomOptions( self._current_display_media.GetMime() )
             
             if exact_zooms_only:
                 
-                my_zoomouts = [ self._current_zoom / 2 ]
+                exact_zoom = 1.0
+                
+                if exact_zoom < self._current_zoom:
+                    
+                    while exact_zoom * 2 < self._current_zoom:
+                        
+                        exact_zoom *= 2
+                        
+                    
+                else:
+                    
+                    while exact_zoom >= self._current_zoom:
+                        
+                        exact_zoom /= 2
+                        
+                    
+                
+                possible_zooms = [ exact_zoom ]
                 
             else:
                 
-                my_zoomouts = self._new_options.GetMediaZooms()
-                
-                if self._canvas_zoom not in my_zoomouts:
-                    
-                    my_zoomouts.append( self._canvas_zoom )
-                    
-                
-                my_zoomouts.sort( reverse = True )
+                possible_zooms = self._new_options.GetMediaZooms()
                 
             
-            for zoom in my_zoomouts:
+            possible_zooms.append( self._canvas_zoom )
+            
+            smaller_zooms = [ zoom for zoom in possible_zooms if zoom < self._current_zoom ]
+            
+            if len( smaller_zooms ) > 0:
                 
-                if zoom < self._current_zoom:
-                    
-                    ( drag_x, drag_y ) = self._total_drag_delta
-                    
-                    zoom_ratio = zoom / self._current_zoom
-                    
-                    self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                    
-                    self._current_zoom = zoom
-                    
-                    HydrusGlobals.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
-                    
-                    self._SetDirty()
-                    
-                    break
-                    
+                new_zoom = max( smaller_zooms )
+                
+                self._SetZoom( new_zoom )
                 
             
         
     
     def _ZoomSwitch( self ):
         
-        if self._current_display_media is not None and self._IsZoomable():
+        if self._current_display_media is not None and self._IsZoomable() and self._canvas_zoom != 1.0:
             
             ( my_width, my_height ) = self.GetClientSize()
             
             ( media_width, media_height ) = self._current_display_media.GetResolution()
             
-            if self._current_display_media.GetMime() != HC.APPLICATION_FLASH:
+            if self._current_zoom == 1.0:
                 
-                if self._current_zoom == 1.0:
-                    
-                    new_zoom = self._canvas_zoom
-                    
-                else:
-                    
-                    new_zoom = 1.0
-                    
+                new_zoom = self._canvas_zoom
                 
-                if new_zoom != self._current_zoom:
-                    
-                    ( drag_x, drag_y ) = self._total_drag_delta
-                    
-                    zoom_ratio = new_zoom / self._current_zoom
-                    
-                    self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                    
-                    self._current_zoom = new_zoom
-                    
-                    HydrusGlobals.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
-                    
-                    self._SetDirty()
-                    
+            else:
                 
+                new_zoom = 1.0
+                
+            
+            self._SetZoom( new_zoom )
             
         
     
@@ -1458,7 +1501,7 @@ class Canvas( wx.Window ):
                 
                 media = None
                 
-            elif self._GetShowAction( media.GetDisplayMedia() ) == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+            elif self._GetShowAction( media.GetDisplayMedia() ) == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
                 
                 media = None
                 
@@ -2123,20 +2166,9 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
                 
                 ( media_width, media_height ) = media.GetResolution()
                 
-                ( canvas_media_width, canvas_media_height ) = CalculateCanvasMediaSize( media, ( my_width, my_height ) )
+                ( default_zoom, canvas_fit_zoom ) = CalculateCanvasZooms( self, media )
                 
-                if media_width > canvas_media_width or media_height > canvas_media_height:
-                    
-                    ( zoom_in_to_fit, exact_zooms_only ) = self._new_options.GetMediaZoomOptions( mime )
-                    
-                    zoom = CalculateCanvasFitZoom( media, ( my_width, my_height ), exact_zooms_only )
-                    
-                else:
-                    
-                    zoom = 1.0
-                    
-                
-                resolution_to_request = ( int( round( zoom * media_width ) ), int( round( zoom * media_height ) ) )
+                resolution_to_request = ( int( round( default_zoom * media_width ) ), int( round( default_zoom * media_height ) ) )
                 
                 if not self._image_cache.HasImage( hash, resolution_to_request ):
                     
@@ -3555,7 +3587,7 @@ class MediaContainer( wx.Window ):
         
         ( media_initial_size, media_initial_position ) = ( self.GetClientSize(), ( 0, 0 ) )
         
-        if do_embed_button and self._show_action in ( CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED ):
+        if do_embed_button and self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED ):
             
             self._embed_button = EmbedButton( self, media_initial_size )
             self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
@@ -3567,17 +3599,17 @@ class MediaContainer( wx.Window ):
             self._embed_button.Hide()
             
         
-        if self._show_action == CC.MEDIA_VIEWER_DO_NOT_SHOW:
+        if self._show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
             
             raise Exception( 'This media should not be shown in the media viewer!' )
             
-        elif self._show_action == CC.MEDIA_VIEWER_SHOW_OPEN_EXTERNALLY_BUTTON:
+        elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON:
             
             self._media_window = OpenExternallyPanel( self, self._media )
             
         else:
             
-            start_paused = self._show_action in ( CC.MEDIA_VIEWER_SHOW_AS_NORMAL_PAUSED, CC.MEDIA_VIEWER_SHOW_BEHIND_EMBED_PAUSED )
+            start_paused = self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED )
             
             if ShouldHaveAnimationBar( self._media ) or self._media.GetMime() == HC.APPLICATION_FLASH:
                 

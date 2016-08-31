@@ -59,8 +59,6 @@ class Controller( object ):
         
         HydrusPaths.MakeSureDirectoryExists( client_files_default )
         
-        HydrusGlobals.is_first_start = True
-        
         HydrusGlobals.controller = self
         HydrusGlobals.client_controller = self
         HydrusGlobals.server_controller = self
@@ -219,6 +217,11 @@ class Controller( object ):
         del self._writes[ name ]
         
         return write
+        
+    
+    def IsFirstStart( self ):
+        
+        return True
         
     
     def ModelIsShutdown( self ):

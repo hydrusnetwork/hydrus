@@ -23,6 +23,8 @@ class HydrusController( object ):
         
         HydrusGlobals.controller = self
         
+        self._db = None
+        
         self._no_daemons = False
         self._no_wal = False
         
@@ -37,8 +39,6 @@ class HydrusController( object ):
         
         self._model_shutdown = False
         self._view_shutdown = False
-        
-        self._db = None
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self, self.pubsub_binding_errors_to_ignore )
         
@@ -176,6 +176,18 @@ class HydrusController( object ):
     
     def CurrentlyIdle( self ): return True
     
+    def DBCurrentlyDoingJob( self ):
+        
+        if self._db is None:
+            
+            return False
+            
+        else:
+            
+            return self._db.CurrentlyDoingJob()
+            
+        
+    
     def GetCache( self, name ): return self._caches[ name ]
     
     def GetManager( self, name ): return self._managers[ name ]
@@ -205,6 +217,18 @@ class HydrusController( object ):
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemory', HydrusDaemons.DAEMONMaintainMemory, period = 300 ) )
             
             self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
+            
+        
+    
+    def IsFirstStart( self ):
+        
+        if self._db is None:
+            
+            return False
+            
+        else:
+            
+            return self._db.IsFirstStart()
             
         
     

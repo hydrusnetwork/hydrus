@@ -218,7 +218,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         hbox2 = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox2.AddF( self._captcha_entry, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox2.AddF( self._ready_button, CC.FLAGS_MIXED )
+        hbox2.AddF( self._ready_button, CC.FLAGS_VCENTER )
         
         self._captcha_box_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._captcha_box_panel.AddF( hbox2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -732,7 +732,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             if editable:
                 
-                gridbox.AddF( wx.StaticText( self._thread_panel, label = name + ':' ), CC.FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._thread_panel, label = name + ':' ), CC.FLAGS_VCENTER )
                 gridbox.AddF( field, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
             else: field.Hide()
@@ -783,7 +783,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             self._post_fields[ name ] = ( field_type, field, default )
             
-            gridbox.AddF( wx.StaticText( self._post_panel, label = name + ':' ), CC.FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._post_panel, label = name + ':' ), CC.FLAGS_VCENTER )
             gridbox.AddF( field, CC.FLAGS_EXPAND_BOTH_WAYS )
             
         
@@ -1481,8 +1481,8 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_sizer.AddF( self._gallery_pause_button, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._gallery_cancel_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._gallery_pause_button, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._gallery_cancel_button, CC.FLAGS_VCENTER )
         
         self._gallery_panel.AddF( self._gallery_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_panel.AddF( button_sizer, CC.FLAGS_LONE_BUTTON )
@@ -1491,19 +1491,19 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        queue_buttons_vbox.AddF( self._advance_button, CC.FLAGS_MIXED )
-        queue_buttons_vbox.AddF( self._delete_button, CC.FLAGS_MIXED )
-        queue_buttons_vbox.AddF( self._delay_button, CC.FLAGS_MIXED )
+        queue_buttons_vbox.AddF( self._advance_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.AddF( self._delay_button, CC.FLAGS_VCENTER )
         
         queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         queue_hbox.AddF( self._pending_queries_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_MIXED )
+        queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_VCENTER )
         
         input_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         input_hbox.AddF( self._query_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        input_hbox.AddF( self._query_paste, CC.FLAGS_MIXED )
+        input_hbox.AddF( self._query_paste, CC.FLAGS_VCENTER )
         
         self._pending_queries_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._pending_queries_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1512,9 +1512,9 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._files_pause_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._files_pause_button, CC.FLAGS_VCENTER )
         
         self._import_queue_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1881,8 +1881,8 @@ class ManagementPanelHDDImport( ManagementPanel ):
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._pause_button, CC.FLAGS_VCENTER )
         
         self._import_queue_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2040,9 +2040,9 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._pause_button, CC.FLAGS_VCENTER )
         
         self._pending_page_urls_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'pending page urls' )
         
@@ -2077,19 +2077,19 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        queue_buttons_vbox.AddF( self._advance_button, CC.FLAGS_MIXED )
-        queue_buttons_vbox.AddF( self._delete_button, CC.FLAGS_MIXED )
-        queue_buttons_vbox.AddF( self._delay_button, CC.FLAGS_MIXED )
+        queue_buttons_vbox.AddF( self._advance_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.AddF( self._delay_button, CC.FLAGS_VCENTER )
         
         queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         queue_hbox.AddF( self._pending_page_urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_MIXED )
+        queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_VCENTER )
         
         input_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         input_hbox.AddF( self._page_url_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        input_hbox.AddF( self._page_url_paste, CC.FLAGS_MIXED )
+        input_hbox.AddF( self._page_url_paste, CC.FLAGS_VCENTER )
         
         self._pending_page_urls_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._pending_page_urls_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2431,7 +2431,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         num_petitions_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         num_petitions_hbox.AddF( self._num_petitions_text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        num_petitions_hbox.AddF( refresh_num_petitions, CC.FLAGS_MIXED )
+        num_petitions_hbox.AddF( refresh_num_petitions, CC.FLAGS_VCENTER )
         
         self._petitions_info_panel.AddF( num_petitions_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petitions_info_panel.AddF( self._get_petition, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2895,21 +2895,21 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox_1.AddF( wx.StaticText( self._options_panel, label = 'check ' ), CC.FLAGS_MIXED )
-        hbox_1.AddF( self._thread_times_to_check, CC.FLAGS_MIXED )
-        hbox_1.AddF( wx.StaticText( self._options_panel, label = ' more times' ), CC.FLAGS_MIXED )
+        hbox_1.AddF( wx.StaticText( self._options_panel, label = 'check ' ), CC.FLAGS_VCENTER )
+        hbox_1.AddF( self._thread_times_to_check, CC.FLAGS_VCENTER )
+        hbox_1.AddF( wx.StaticText( self._options_panel, label = ' more times' ), CC.FLAGS_VCENTER )
         
         hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox_2.AddF( wx.StaticText( self._options_panel, label = 'check every ' ), CC.FLAGS_MIXED )
-        hbox_2.AddF( self._thread_check_period, CC.FLAGS_MIXED )
+        hbox_2.AddF( wx.StaticText( self._options_panel, label = 'check every ' ), CC.FLAGS_VCENTER )
+        hbox_2.AddF( self._thread_check_period, CC.FLAGS_VCENTER )
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_sizer.AddF( self._thread_check_now_button, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_MIXED )
-        button_sizer.AddF( self._pause_button, CC.FLAGS_MIXED )
+        button_sizer.AddF( self._thread_check_now_button, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._pause_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         

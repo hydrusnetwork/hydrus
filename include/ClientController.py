@@ -39,6 +39,8 @@ class Controller( HydrusController.HydrusController ):
     
     def __init__( self ):
         
+        self._last_shutdown_was_bad = False
+        
         HydrusController.HydrusController.__init__( self )
         
         HydrusGlobals.client_controller = self
@@ -477,8 +479,6 @@ class Controller( HydrusController.HydrusController ):
         return self._client_session_manager
         
     
-    def GetDB( self ): return self._db
-    
     def GetGUI( self ): return self._gui
     
     def GetOptions( self ):
@@ -610,7 +610,7 @@ class Controller( HydrusController.HydrusController ):
             self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 ) )
             
         
-        if HydrusGlobals.is_first_start:
+        if self._db.IsFirstStart():
             
             message = 'Hi, this looks like the first time you have started the hydrus client.'
             message += os.linesep * 2
@@ -621,10 +621,15 @@ class Controller( HydrusController.HydrusController ):
             HydrusData.ShowText( message )
             
         
-        if HydrusGlobals.is_db_updated:
+        if self._db.IsDBUpdated():
             
             HydrusData.ShowText( 'The client has updated to version ' + str( HC.SOFTWARE_VERSION ) + '!' )
             
+        
+    
+    def LastShutdownWasBad( self ):
+        
+        return self._last_shutdown_was_bad
         
     
     def MaintainDB( self, stop_time = None ):
@@ -1069,6 +1074,8 @@ class Controller( HydrusController.HydrusController ):
         try:
             
             self.CheckAlreadyRunning()
+            
+            self._last_shutdown_was_bad = HydrusData.LastShutdownWasBad( HC.DB_DIR, 'client' )
             
             HydrusData.RecordRunningStart( HC.DB_DIR, 'client' )
             

@@ -55,6 +55,11 @@ class HydrusLogger( object ):
         self._log_file.flush()
         
     
+    def isatty( self ):
+        
+        return False
+        
+    
     def write( self, value ):
         
         if value in ( os.linesep, '\n' ):
