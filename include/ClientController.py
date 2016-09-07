@@ -944,10 +944,9 @@ class Controller( HydrusController.HydrusController ):
         
         self._app = wx.App()
         
-        self._app.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important
+        self._app.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important to init this here and keep it non garbage collected
         
         # I have had this as 'suppress' before
-        # The default is to create exceptions, and since this stuff is usually pissy locale/missing parent stuff, we don't want to kill the boot
         self._app.SetAssertMode( wx.PYAPP_ASSERT_EXCEPTION )
         
         HydrusData.Print( 'booting controller...' )

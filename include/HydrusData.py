@@ -174,6 +174,11 @@ def ConvertIntToBytes( size ):
     
     return '%.0f' % size + suffixes[ suffix_index ] + 'B'
     
+def ConvertIntToFirst( n ):
+    
+    # straight from stack, wew
+    return "%d%s" % (n,"tsnrhtdd"[(n/10%10!=1)*(n%10<4)*n%10::4])
+    
 def ConvertIntToPixels( i ):
     
     if i == 1: return 'pixels'

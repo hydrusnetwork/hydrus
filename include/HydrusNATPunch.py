@@ -81,12 +81,19 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     if 'x.x.x.x:' + str( external_port ) + ' TCP is redirected to internal ' + internal_client + ':' + str( internal_port ) in output:
         
-        raise Exception( 'The UPnP mapping of ' + internal_client + ':' + internal_port + '->external:' + external_port + ' already exists as a port forward. If this UPnP mapping is automatic, please disable it.' )
+        raise HydrusExceptions.FirewallException( 'The UPnP mapping of ' + internal_client + ':' + internal_port + '->external:' + external_port + ' already exists as a port forward. If this UPnP mapping is automatic, please disable it.' )
         
     
     if output is not None and 'failed with code' in output:
         
-        raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( output ) )
+        if 'UnknownError' in output:
+            
+            raise HydrusExceptions.FirewallException( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( output ) )
+            
+        else:
+            
+            raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( output ) )
+            
         
     
     if error is not None and len( error ) > 0:

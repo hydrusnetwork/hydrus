@@ -14,6 +14,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals
+import HydrusHTMLParsing
 import HydrusNATPunch
 import HydrusPaths
 import HydrusSerialisable
@@ -132,6 +133,264 @@ class EditFrameLocationPanel( EditPanel ):
         fullscreen = self._fullscreen.GetValue()
         
         return ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+        
+    
+class EditHTMLFormulaPanel( EditPanel ):
+    
+    def __init__( self, parent, info ):
+        
+        EditPanel.__init__( self, parent )
+        
+        self._original_info = info
+        
+        self._do_testing_automatically = False
+        
+        formula_panel = ClientGUICommon.StaticBox( self, 'formula' )
+        
+        self._tag_rules = wx.ListBox( formula_panel, style = wx.LB_SINGLE )
+        self._tag_rules.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
+        
+        self._add_rule = wx.Button( formula_panel, label = 'add' )
+        self._add_rule.Bind( wx.EVT_BUTTON, self.EventAdd )
+        
+        self._edit_rule = wx.Button( formula_panel, label = 'edit' )
+        self._edit_rule.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._move_rule_up = wx.Button( formula_panel, label = u'\u2191' )
+        self._move_rule_up.Bind( wx.EVT_BUTTON, self.EventMoveUp )
+        
+        self._delete_rule = wx.Button( formula_panel, label = 'X' )
+        self._delete_rule.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        self._move_rule_down = wx.Button( formula_panel, label = u'\u2193' )
+        self._move_rule_down.Bind( wx.EVT_BUTTON, self.EventMoveDown )
+        
+        self._content_rule = wx.TextCtrl( formula_panel )
+        
+        testing_panel = ClientGUICommon.StaticBox( self, 'testing' )
+        
+        self._test_html = wx.TextCtrl( testing_panel, style = wx.TE_MULTILINE )
+        
+        self._fetch_from_url = wx.Button( testing_panel, label = 'fetch html from url' )
+        self._fetch_from_url.Bind( wx.EVT_BUTTON, self.EventFetchFromURL )
+        
+        self._run_test = wx.Button( testing_panel, label = 'run test' )
+        self._run_test.Bind( wx.EVT_BUTTON, self.EventRunTest )
+        
+        self._results = wx.TextCtrl( testing_panel, style = wx.TE_MULTILINE )
+        
+        #
+        
+        ( tag_rules, content_rule ) = self._original_info.ToTuple()
+        
+        for rule in tag_rules:
+            
+            pretty_rule = HydrusHTMLParsing.RenderTagRule( rule )
+            
+            self._tag_rules.Append( pretty_rule, rule )
+            
+        
+        self._content_rule.SetValue( content_rule )
+        
+        self._test_html.SetValue( 'Enter html here to test it against the above formula.' )
+        self._results.SetValue( 'Successfully parsed results will be printed here.' )
+        
+        #
+        
+        udd_button_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        udd_button_vbox.AddF( self._move_rule_up, CC.FLAGS_VCENTER )
+        udd_button_vbox.AddF( self._delete_rule, CC.FLAGS_VCENTER )
+        udd_button_vbox.AddF( self._move_rule_down, CC.FLAGS_VCENTER )
+        
+        tag_rules_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        tag_rules_hbox.AddF( self._tag_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+        tag_rules_hbox.AddF( udd_button_vbox, CC.FLAGS_VCENTER )
+        
+        ae_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        ae_button_hbox.AddF( self._add_rule, CC.FLAGS_VCENTER )
+        ae_button_hbox.AddF( self._edit_rule, CC.FLAGS_VCENTER )
+        
+        formula_panel.AddF( tag_rules_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        formula_panel.AddF( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        formula_panel.AddF( ClientGUICommon.WrapInText( self._content_rule, formula_panel, 'attribute: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        testing_panel.AddF( self._test_html, CC.FLAGS_EXPAND_PERPENDICULAR )
+        testing_panel.AddF( self._fetch_from_url, CC.FLAGS_EXPAND_PERPENDICULAR )
+        testing_panel.AddF( self._run_test, CC.FLAGS_EXPAND_PERPENDICULAR )
+        testing_panel.AddF( self._results, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        message = 'The html will be searched recursively by each rule in turn and then the attribute of the final tags will be returned.'
+        message += os.linesep * 2
+        message += 'So, to find the \'src\' of the first <img> tag beneath all <span> tags with the class \'content\', use:'
+        message += os.linesep * 2
+        message += 'all span tags with class=content'
+        message += '1st img tag'
+        message += 'attribute: src'
+        message += os.linesep * 2
+        message += 'Leave the attribute blank to represent the string of the tag (i.e. <p>This part</p>).'
+        
+        vbox.AddF( wx.StaticText( self, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( formula_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( testing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _RunTest( self ):
+        
+        formula = self.GetValue()
+        
+        html = self._test_html.GetValue()
+        
+        try:
+            
+            results = formula.Parse( html )
+            
+            # do the begin/end to better display '' results and any other whitespace weirdness
+            results = [ '*** RESULTS BEGIN ***' ] + results + [ '*** RESULTS END ***' ]
+            
+            results_text = os.linesep.join( results )
+            
+            self._results.SetValue( results_text )
+            
+            self._do_testing_automatically = True
+            
+        except Exception as e:
+            
+            message = 'Could not parse! Full error written to log!'
+            message += os.linesep * 2
+            message += HydrusData.ToUnicode( e )
+            
+            wx.MessageBox( message )
+            
+            self._do_testing_automatically = False
+            
+        
+    
+    def EventAdd( self, event ):
+        
+        # spawn dialog, add it and run test
+        
+        if self._do_testing_automatically:
+            
+            self._RunTest()
+            
+        
+    
+    def EventDelete( self, event ):
+        
+        selection = self._tag_rules.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            if self._tag_rules.GetCount() == 1:
+                
+                wx.MessageBox( 'A parsing formula needs at least one tag rule!' )
+                
+            else:
+                
+                self._tag_rules.Delete( selection )
+                
+                if self._do_testing_automatically:
+                    
+                    self._RunTest()
+                    
+                
+            
+        
+    
+    def EventEdit( self, event ):
+        
+        selection = self._tag_rules.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            ( name, attrs, index ) = self._tag_rules.GetClientData( selection )
+            
+            # spawn dialog, then if ok, set it and run test
+            
+            if self._do_testing_automatically:
+                
+                self._RunTest()
+                
+            
+    
+    def EventFetchFromURL( self, event ):
+        
+        # ask user for url with textdlg
+        # get it with requests
+        # handle errors with a messagebox
+        # try to parse it with bs4 to check it is good html and then splat it to the textctrl, otherwise just messagebox the error
+        
+        if self._do_testing_automatically:
+            
+            self._RunTest()
+            
+        
+    
+    def EventMoveDown( self, event ):
+        
+        selection = self._tag_rules.GetSelection()
+        
+        if selection != wx.NOT_FOUND and selection + 1 < self._tag_rules.GetCount():
+            
+            pretty_rule = self._tag_rules.GetString( selection )
+            rule = self._tag_rules.GetClientData( selection )
+            
+            self._tag_rules.Delete( selection )
+            
+            self._tag_rules.Insert( selection + 1, pretty_rule, rule )
+            
+            if self._do_testing_automatically:
+                
+                self._RunTest()
+                
+            
+        
+    
+    def EventMoveUp( self, event ):
+        
+        selection = self._tag_rules.GetSelection()
+        
+        if selection != wx.NOT_FOUND and selection > 0:
+            
+            pretty_rule = self._tag_rules.GetString( selection )
+            rule = self._tag_rules.GetClientData( selection )
+            
+            self._tag_rules.Delete( selection )
+            
+            self._tag_rules.Insert( selection - 1, pretty_rule, rule )
+            
+            if self._do_testing_automatically:
+                
+                self._RunTest()
+                
+            
+        
+    
+    def EventRunTest( self, event ):
+        
+        self._RunTest()
+        
+    
+    def GetValue( self ):
+        
+        tags_rules = [ self._tag_rules.GetClientData( i ) for i in range( self._tag_rules.GetCount() ) ]
+        content_rule = self._content_rule.GetValue()
+        
+        if content_rule == '':
+            
+            content_rule = None
+            
+        
+        formula = HydrusHTMLParsing.ParseFormula( tags_rules, content_rule )
+        
+        return formula
         
     
 class EditMediaViewOptionsPanel( EditPanel ):
@@ -998,35 +1257,25 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Run maintenance jobs when the client is idle and the system is not otherwise busy: ', self._idle_normal ) )
+            rows.append( ( 'Assume the client is idle if no general browsing activity has occured in the past: ', self._idle_period ) )
+            rows.append( ( 'Assume the client is idle if the mouse has not been moved in the past: ', self._idle_mouse_period ) )
+            rows.append( ( 'Assume the system is busy if any CPU core has recent average usage above: ', self._idle_cpu_max ) )
             
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Run maintenance jobs when the client is idle and the system is not otherwise busy?: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._idle_normal, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is idle if no general browsing activity has occured in the past: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._idle_period, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the client is idle if the mouse has not been moved in the past: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._idle_mouse_period, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self._idle_panel, label = 'Assume the system is busy if any CPU core has recent average usage above: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._idle_cpu_max, CC.FLAGS_VCENTER )
+            gridbox = ClientGUICommon.WrapInGrid( self._idle_panel, rows )
             
             self._idle_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Run jobs on shutdown: ', self._idle_shutdown ) )
+            rows.append( ( 'Max number of minutes to run shutdown jobs: ', self._idle_shutdown_max_minutes ) )
             
-            gridbox.AddF( wx.StaticText( self._shutdown_panel, label = 'Run jobs on shutdown?: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._idle_shutdown, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self._shutdown_panel, label = 'Max number of minutes to run shutdown jobs: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._idle_shutdown_max_minutes, CC.FLAGS_VCENTER )
+            gridbox = ClientGUICommon.WrapInGrid( self._shutdown_panel, rows )
             
             self._shutdown_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -1050,23 +1299,21 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Number of days to wait between vacuums: ', self._maintenance_vacuum_period ) )
             
-            gridbox.AddF( wx.StaticText( self._maintenance_panel, label = 'Number of days to wait between vacuums: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._maintenance_vacuum_period, CC.FLAGS_VCENTER )
+            gridbox = ClientGUICommon.WrapInGrid( self._maintenance_panel, rows )
             
             self._maintenance_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Delay repository update processing by (s): ', self._processing_phase ) )
             
-            gridbox.AddF( wx.StaticText( self._processing_panel, label = 'Delay repository update processing by (s): ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._processing_phase, CC.FLAGS_VCENTER )
+            gridbox = ClientGUICommon.WrapInGrid( self._processing_panel, rows )
             
             self._processing_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -1388,30 +1635,17 @@ class ManageOptionsPanel( ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Default export directory: ', self._export_location ) )
+            rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
+            rows.append( ( 'By default, do not reimport files that have been previously deleted: ', self._exclude_deleted_files ) )
+            rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
+            rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
+            rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
+            rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default export directory: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._export_location, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'When deleting files or folders, send them to the OS\'s recycle bin: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._delete_to_recycle_bin, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'By default, do not reimport files that have been previously deleted: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._exclude_deleted_files, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Remove files from view when they are filtered: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._remove_filtered_files, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Remove files from view when they are sent to the trash: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._remove_trashed_files, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Number of hours a file can be in the trash before being deleted: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._trash_max_age, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Maximum size of trash (MB): ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._trash_max_size, CC.FLAGS_VCENTER )
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
             
@@ -1508,36 +1742,19 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
+            rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
+            rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
+            rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
+            rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
+            rows.append( ( 'Capitalise gui: ', self._gui_capitalisation ) )
+            rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
+            rows.append( ( 'Show \'title\' banner on thumbnails: ', self._show_thumbnail_title_banner ) )
+            rows.append( ( 'Show volume/chapter/page number on thumbnails: ', self._show_thumbnail_page ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default session on startup:' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._default_gui_session, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Confirm client exit:' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._confirm_client_exit, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Confirm sending files to trash:' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._confirm_trash, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Confirm sending more than one file to archive or inbox:' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._confirm_archive, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Always embed autocomplete dropdown results window:' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._always_embed_autocompletes, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Capitalise gui: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._gui_capitalisation, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Hide the preview window: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._hide_preview, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Show \'title\' banner on thumbnails: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._show_thumbnail_title_banner, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Show volume/chapter/page number on thumbnails: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._show_thumbnail_page, CC.FLAGS_VCENTER )
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             text = 'Here you can override the current and default values for many frame and dialog sizing and positioning variables.'
             text += os.linesep
@@ -1651,7 +1868,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._media_zooms.SetValue( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
             
-            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.VIDEO_FLV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
+            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
             
             for mime in mimes_in_correct_order:
                 
@@ -1669,18 +1886,13 @@ class ManageOptionsPanel( ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
+            rows.append( ( 'Disable OpenCV for gifs: ', self._disable_cv_for_gifs ) )
+            rows.append( ( 'Media zooms: ', self._media_zooms ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Start animations this % in: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._animation_start_position, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Disable OpenCV for gifs: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._disable_cv_for_gifs, CC.FLAGS_VCENTER )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Media zooms: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._media_zooms, CC.FLAGS_EXPAND_PERPENDICULAR )
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -1999,16 +2211,13 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Default sort: ', self._default_sort ) )
+            rows.append( ( 'Secondary sort (when primary gives two equal values): ', self._sort_fallback ) )
+            rows.append( ( 'Default collect: ', self._default_collect ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'default sort: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._default_sort, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'secondary sort (when primary gives two equal values): ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._sort_fallback, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'default collect: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._default_collect, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -2106,49 +2315,67 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._new_options = new_options
             
-            self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( self, 'max disk cache init period', none_phrase = 'do not run', min = 1, max = 120 )
+            disk_panel = ClientGUICommon.StaticBox( self, 'disk cache' )
+            
+            self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'max disk cache init period', none_phrase = 'do not run', min = 1, max = 120 )
             self._disk_cache_init_period.SetToolTipString( 'When the client boots, it can speed up operation by reading the front of the database into memory. This sets the max number of seconds it can spend doing that.' )
             
-            self._disk_cache_maintenance_mb = ClientGUICommon.NoneableSpinCtrl( self, 'disk cache maintenance (MB)', none_phrase = 'do not keep db cached', min = 32, max = 65536 )
+            self._disk_cache_maintenance_mb = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'disk cache maintenance (MB)', none_phrase = 'do not keep db cached', min = 32, max = 65536 )
             self._disk_cache_maintenance_mb.SetToolTipString( 'The client can regularly check the front of its database is cached in memory. This represents how many megabytes it will ensure are cached.' )
             
-            self._thumbnail_width = wx.SpinCtrl( self, min = 20, max = 200 )
+            #
+            
+            media_panel = ClientGUICommon.StaticBox( self, 'thumbnail size and media cache' )
+            
+            self._thumbnail_width = wx.SpinCtrl( media_panel, min = 20, max = 200 )
             self._thumbnail_width.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            self._thumbnail_height = wx.SpinCtrl( self, min = 20, max = 200 )
+            self._thumbnail_height = wx.SpinCtrl( media_panel, min = 20, max = 200 )
             self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            self._thumbnail_cache_size = wx.SpinCtrl( self, min = 5, max = 3000 )
+            self._thumbnail_cache_size = wx.SpinCtrl( media_panel, min = 5, max = 3000 )
             self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            self._estimated_number_thumbnails = wx.StaticText( self, label = '' )
+            self._estimated_number_thumbnails = wx.StaticText( media_panel, label = '' )
             
-            self._fullscreen_cache_size = wx.SpinCtrl( self, min = 25, max = 3000 )
+            self._fullscreen_cache_size = wx.SpinCtrl( media_panel, min = 25, max = 3000 )
             self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
             
-            self._estimated_number_fullscreens = wx.StaticText( self, label = '' )
+            self._estimated_number_fullscreens = wx.StaticText( media_panel, label = '' )
             
-            self._video_buffer_size_mb = wx.SpinCtrl( self, min = 48, max = 16 * 1024 )
+            #
+            
+            buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer' )
+            
+            self._video_buffer_size_mb = wx.SpinCtrl( buffer_panel, min = 48, max = 16 * 1024 )
             self._video_buffer_size_mb.Bind( wx.EVT_SPINCTRL, self.EventVideoBufferUpdate )
             
-            self._estimated_number_video_frames = wx.StaticText( self, label = '' )
+            self._estimated_number_video_frames = wx.StaticText( buffer_panel, label = '' )
             
-            self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( self, '', min = 1, max = 100000 )
+            #
             
-            self._num_autocomplete_chars = wx.SpinCtrl( self, min = 1, max = 100 )
+            ac_panel = ClientGUICommon.StaticBox( self, 'tag autocomplete' )
+            
+            self._num_autocomplete_chars = wx.SpinCtrl( ac_panel, min = 1, max = 100 )
             self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db. (otherwise, it will only fetch exact matches)' + os.linesep + 'increase this if you find autocomplete results are slow' )
             
-            self._fetch_ac_results_automatically = wx.CheckBox( self )
+            self._fetch_ac_results_automatically = wx.CheckBox( ac_panel )
             self._fetch_ac_results_automatically.Bind( wx.EVT_CHECKBOX, self.EventFetchAuto )
             
-            self._autocomplete_long_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
+            self._autocomplete_long_wait = wx.SpinCtrl( ac_panel, min = 0, max = 10000 )
             self._autocomplete_long_wait.SetToolTipString( 'how long the gui will typically wait, after you enter a character, before it queries the db with what you have entered so far' )
             
-            self._autocomplete_short_wait_chars = wx.SpinCtrl( self, min = 1, max = 100 )
+            self._autocomplete_short_wait_chars = wx.SpinCtrl( ac_panel, min = 1, max = 100 )
             self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
             
-            self._autocomplete_short_wait = wx.SpinCtrl( self, min = 0, max = 10000 )
+            self._autocomplete_short_wait = wx.SpinCtrl( ac_panel, min = 0, max = 10000 )
             self._autocomplete_short_wait.SetToolTipString( 'how long the gui will typically wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
+            
+            #
+            
+            misc_panel = ClientGUICommon.StaticBox( self, 'misc' )
+            
+            self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, '', min = 1, max = 100000 )
             
             #
             
@@ -2167,8 +2394,6 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._video_buffer_size_mb.SetValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
             
-            self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
-            
             self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
             
             self._fetch_ac_results_automatically.SetValue( HC.options[ 'fetch_ac_results_automatically' ] )
@@ -2180,6 +2405,17 @@ class ManageOptionsPanel( ManagePanel ):
             self._autocomplete_short_wait_chars.SetValue( char_limit )
             
             self._autocomplete_short_wait.SetValue( short_wait )
+            
+            self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            disk_panel.AddF( self._disk_cache_init_period, CC.FLAGS_EXPAND_PERPENDICULAR )
+            disk_panel.AddF( self._disk_cache_maintenance_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.AddF( disk_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -2198,34 +2434,20 @@ class ManageOptionsPanel( ManagePanel ):
             video_buffer_sizer.AddF( self._video_buffer_size_mb, CC.FLAGS_VCENTER )
             video_buffer_sizer.AddF( self._estimated_number_video_frames, CC.FLAGS_VCENTER )
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            rows = []
             
-            vbox.AddF( self._disk_cache_init_period, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._disk_cache_maintenance_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
+            rows.append( ( 'Thumbnail width: ', self._thumbnail_width ) )
+            rows.append( ( 'Thumbnail height: ', self._thumbnail_height ) )
+            rows.append( ( 'MB memory reserved for thumbnail cache: ', thumbnails_sizer ) )
+            rows.append( ( 'MB memory reserved for media viewer cache: ', fullscreens_sizer ) )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
             
-            gridbox.AddGrowableCol( 1, 1 )
+            media_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail width: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._thumbnail_width, CC.FLAGS_VCENTER )
+            vbox.AddF( media_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Thumbnail height: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._thumbnail_height, CC.FLAGS_VCENTER )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for thumbnail cache: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( thumbnails_sizer, CC.FLAGS_NONE )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory reserved for media viewer cache: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( fullscreens_sizer, CC.FLAGS_NONE )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            #
             
             text = 'Hydrus video rendering is CPU intensive.'
             text += os.linesep
@@ -2233,50 +2455,51 @@ class ManageOptionsPanel( ManagePanel ):
             text += os.linesep
             text += 'If the video buffer can hold an entire video, it only needs to be rendered once and will loop smoothly.'
             
-            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_VCENTER )
+            buffer_panel.AddF( wx.StaticText( buffer_panel, label = text ), CC.FLAGS_VCENTER )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'MB memory for video buffer: ', video_buffer_sizer ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'MB memory for video buffer: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( video_buffer_sizer, CC.FLAGS_NONE )
+            gridbox = ClientGUICommon.WrapInGrid( buffer_panel, rows )
             
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            buffer_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            vbox.AddF( buffer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'Forced system:limit for all searches: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._forced_search_limit, CC.FLAGS_NONE )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            #
             
             text = 'If you disable automatic autocomplete results fetching, use Ctrl+Space to fetch results manually.'
             
-            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            ac_panel.AddF( wx.StaticText( ac_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Automatically fetch autocomplete results after a short delay: ', self._fetch_ac_results_automatically ) )
+            rows.append( ( 'Autocomplete long wait character threshold: ', self._num_autocomplete_chars ) )
+            rows.append( ( 'Autocomplete long wait (ms): ', self._autocomplete_long_wait ) )
+            rows.append( ( 'Autocomplete short wait character threshold: ', self._autocomplete_short_wait_chars ) )
+            rows.append( ( 'Autocomplete short wait (ms): ', self._autocomplete_short_wait ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Automatically fetch autocomplete results after a short delay: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._fetch_ac_results_automatically, CC.FLAGS_VCENTER )
+            gridbox = ClientGUICommon.WrapInGrid( ac_panel, rows )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait character threshold: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._num_autocomplete_chars, CC.FLAGS_VCENTER )
+            ac_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete long wait (ms): ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._autocomplete_long_wait, CC.FLAGS_VCENTER )
+            vbox.AddF( ac_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait character threshold: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._autocomplete_short_wait_chars, CC.FLAGS_VCENTER )
+            #
             
-            gridbox.AddF( wx.StaticText( self, label = 'Autocomplete short wait (ms): ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._autocomplete_short_wait, CC.FLAGS_VCENTER )
+            rows = []
             
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            rows.append( ( 'Forced system:limit for all searches: ', self._forced_search_limit ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( misc_panel, rows )
+            
+            misc_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.AddF( misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
             
             self.SetSizer( vbox )
             
@@ -2367,7 +2590,9 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._new_options = new_options
             
-            self._default_tag_sort = wx.Choice( self )
+            general_panel = ClientGUICommon.StaticBox( self, 'general tag options' )
+            
+            self._default_tag_sort = wx.Choice( general_panel )
             
             self._default_tag_sort.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
             self._default_tag_sort.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
@@ -2376,11 +2601,11 @@ class ManageOptionsPanel( ManagePanel ):
             self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
             self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
             
-            self._default_tag_repository = ClientGUICommon.BetterChoice( self )
+            self._default_tag_repository = ClientGUICommon.BetterChoice( general_panel )
             
-            self._show_all_tags_in_autocomplete = wx.CheckBox( self )
+            self._show_all_tags_in_autocomplete = wx.CheckBox( general_panel )
             
-            self._apply_all_parents_to_all_services = wx.CheckBox( self )
+            self._apply_all_parents_to_all_services = wx.CheckBox( general_panel )
             
             suggested_tags_panel = ClientGUICommon.StaticBox( self, 'suggested tags' )
             
@@ -2462,58 +2687,49 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            vbox = wx.BoxSizer( wx.VERTICAL )
             
-            gridbox.AddGrowableCol( 1, 1 )
+            rows = []
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default tag service in manage tag dialogs:' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._default_tag_repository, CC.FLAGS_VCENTER )
+            rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_repository ) )
+            rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
+            rows.append( ( 'By default, search non-local tags in write-autocomplete: ', self._show_all_tags_in_autocomplete ) )
+            rows.append( ( 'Suggest all parents for all services: ', self._apply_all_parents_to_all_services ) )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Default tag sort:' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._default_tag_sort, CC.FLAGS_VCENTER )
+            gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
             
-            gridbox.AddF( wx.StaticText( self, label = 'By default, search non-local tags in write-autocomplete: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._show_all_tags_in_autocomplete, CC.FLAGS_VCENTER )
+            general_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddF( wx.StaticText( self, label = 'Apply all parents to all services: ' ), CC.FLAGS_VCENTER )
-            gridbox.AddF( self._apply_all_parents_to_all_services, CC.FLAGS_VCENTER )
+            vbox.AddF( general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
             
             suggested_tags_favourites_panel.AddF( self._suggested_favourites_services, CC.FLAGS_EXPAND_PERPENDICULAR )
             suggested_tags_favourites_panel.AddF( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
             suggested_tags_favourites_panel.AddF( self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            related_gridbox = wx.FlexGridSizer( 0, 2 )
+            rows = []
             
-            related_gridbox.AddGrowableCol( 1, 1 )
+            rows.append( ( 'Show related tags on single-file manage tags windows: ', self._show_related_tags ) )
+            rows.append( ( 'Width of related tags list: ', self._related_tags_width ) )
+            rows.append( ( 'Initial search duration (ms): ', self._related_tags_search_1_duration_ms ) )
+            rows.append( ( 'Medium search duration (ms): ', self._related_tags_search_2_duration_ms ) )
+            rows.append( ( 'Thorough search duration (ms): ', self._related_tags_search_3_duration_ms ) )
             
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'show related tags on single-file manage tags windows' ), CC.FLAGS_VCENTER )
-            related_gridbox.AddF( self._show_related_tags, CC.FLAGS_VCENTER )
-            
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'width of related tags list' ), CC.FLAGS_VCENTER )
-            related_gridbox.AddF( self._related_tags_width, CC.FLAGS_VCENTER )
-            
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'initial search duration (ms)' ), CC.FLAGS_VCENTER )
-            related_gridbox.AddF( self._related_tags_search_1_duration_ms, CC.FLAGS_VCENTER )
-            
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'medium search duration (ms)' ), CC.FLAGS_VCENTER )
-            related_gridbox.AddF( self._related_tags_search_2_duration_ms, CC.FLAGS_VCENTER )
-            
-            related_gridbox.AddF( wx.StaticText( suggested_tags_related_panel, label = 'thorough search duration (ms)' ), CC.FLAGS_VCENTER )
-            related_gridbox.AddF( self._related_tags_search_3_duration_ms, CC.FLAGS_VCENTER )
+            related_gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
             
             suggested_tags_related_panel.AddF( related_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             suggested_tags_recent_panel.AddF( self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             suggested_tags_panel.AddF( self._suggested_tags_width, CC.FLAGS_EXPAND_PERPENDICULAR )
-            suggested_tags_panel.AddF( suggested_tags_favourites_panel, CC.FLAGS_EXPAND_SIZER_DEPTH_ONLY )
+            suggested_tags_panel.AddF( suggested_tags_favourites_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             suggested_tags_panel.AddF( suggested_tags_related_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             suggested_tags_panel.AddF( suggested_tags_recent_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( suggested_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
             
             self.SetSizer( vbox )
             

@@ -10,7 +10,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIManagement
 import ClientGUIPages
-import ClientGUIPanels
+import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
@@ -91,8 +91,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NewPageImportBooru', 'new_import_booru' )
         self._controller.sub( self, 'NewPageImportGallery', 'new_import_gallery' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
-        self._controller.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
         self._controller.sub( self, 'NewPageImportPageOfImages', 'new_page_import_page_of_images' )
+        self._controller.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
+        self._controller.sub( self, 'NewPageImportURLs', 'new_page_import_urls' )
         self._controller.sub( self, 'NewPagePetitions', 'new_page_petitions' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
         self._controller.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
@@ -124,10 +125,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._RefreshStatusBar()
         
-        # as we are in oninit, callafter and calllater( 1ms ) are different
-        # later waits until the mainloop is running, I think.
-        # after seems to execute synchronously
-        
         default_gui_session = HC.options[ 'default_gui_session' ]
         
         existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
@@ -158,11 +155,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if load_a_blank_page:
             
-            wx.CallLater( 1, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
+            self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
             
         else:
             
-            wx.CallLater( 1, self._LoadGUISession, default_gui_session )
+            self._LoadGUISession( default_gui_session )
             
         
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
@@ -834,13 +831,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             sessions.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'save_gui_session' ), p( 'Save Current' ) )
             
-            if len( gui_session_names ) > 0:
+            if len( gui_session_names ) > 0 and gui_session_names != [ 'last session' ]:
                 
                 delete = wx.Menu()
                 
                 for name in gui_session_names:
                     
-                    delete.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_gui_session', name ), name )
+                    if name != 'last session':
+                        
+                        delete.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_gui_session', name ), name )
+                        
                     
                 
                 sessions.AppendMenu( CC.ID_NULL, p( 'Delete' ), delete )
@@ -895,6 +895,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_page_of_images' ), p( '&New Page of Images Download Page' ), p( 'Open a new tab to download files from generic galleries or threads.' ) )
             download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
+            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_urls' ), p( '&New URL Download Page' ), p( 'Open a new tab to download some raw urls.' ) )
             
             submenu = wx.Menu()
             
@@ -932,8 +933,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_ipfs_download' ), p( '&An IPFS Multihash' ), p( 'Enter an IPFS multihash and attempt to import whatever is returned' ) )
                 
-            
-            download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( 'New Download Popup' ), download_popup_menu )
             
@@ -1359,7 +1358,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
             
-            panel = ClientGUIPanels.ManageOptionsPanel( dlg )
+            panel = ClientGUIScrolledPanels.ManageOptionsPanel( dlg )
             
             dlg.SetPanel( panel )
             
@@ -1491,6 +1490,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._NewPage( page_name, management_controller )
         
     
+    def _NewPageImportPageOfImages( self ):
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
+        
+        self._NewPage( 'download', management_controller )
+        
+    
     def _NewPageImportThreadWatcher( self ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher()
@@ -1498,11 +1504,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._NewPage( 'thread watcher', management_controller )
         
     
-    def _NewPageImportPageOfImages( self ):
+    def _NewPageImportURLs( self ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
+        management_controller = ClientGUIManagement.CreateManagementControllerImportURLs()
         
-        self._NewPage( 'download', management_controller )
+        self._NewPage( 'url import', management_controller )
         
     
     def _NewPagePetitions( self, service_key = None ):
@@ -1733,7 +1739,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
         
-        panel = ClientGUIPanels.ReviewServices( frame, self._controller )
+        panel = ClientGUIScrolledPanels.ReviewServices( frame, self._controller )
         
         frame.SetPanel( panel )
         
@@ -1884,27 +1890,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     service.ImportFile( multihash )
                     
-                
-            
-        
-    
-    def _StartURLDownload( self ):
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter URL.' ) as dlg:
-            
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_OK:
-                
-                url = dlg.GetValue()
-                
-                url_string = url
-                
-                job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
-                
-                self._controller.pub( 'message', job_key )
-                
-                self._controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
                 
             
         
@@ -2405,8 +2390,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._NewPageImportGallery( gallery_identifier )
                 
-            elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_page_of_images': self._NewPageImportPageOfImages()
+            elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
+            elif command == 'new_import_urls': self._NewPageImportURLs()
             elif command == 'new_page':
                 
                 with ClientGUIDialogs.DialogPageChooser( self ) as dlg: dlg.ShowModal()
@@ -2455,7 +2441,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'site': webbrowser.open( 'https://hydrusnetwork.github.io/hydrus/' )
             elif command == 'start_ipfs_download': self._StartIPFSDownload()
-            elif command == 'start_url_download': self._StartURLDownload()
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
             elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
@@ -2638,9 +2623,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._NewPage( 'import', management_controller )
         
     
+    def NewPageImportPageOfImages( self ): self._NewPageImportPageOfImages()
+    
     def NewPageImportThreadWatcher( self ): self._NewPageImportThreadWatcher()
     
-    def NewPageImportPageOfImages( self ): self._NewPageImportPageOfImages()
+    def NewPageImportURLs( self ): self._NewPageImportURLs()
     
     def NewPagePetitions( self, service_key ): self._NewPagePetitions( service_key )
     

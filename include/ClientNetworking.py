@@ -427,6 +427,29 @@ class HTTPConnection( object ):
             
         
     
+    def _ReadResponse( self, response, report_hooks, temp_path = None ):
+        
+        try:
+            
+            if response.status == 200 and temp_path is not None:
+                
+                size_of_response = self._WriteResponseToPath( response, temp_path, report_hooks )
+                
+                parsed_response = 'response written to temporary file'
+                
+            else:
+                
+                ( parsed_response, size_of_response ) = self._ParseResponse( response, report_hooks )
+                
+            
+        except socket.timeout as e:
+            
+            raise HydrusExceptions.NetworkException( 'Connection timed out during response read.' )
+            
+        
+        return ( parsed_response, size_of_response )
+        
+    
     def _ParseCookies( self, raw_cookies_string ):
         
         cookies = {}
@@ -455,7 +478,7 @@ class HTTPConnection( object ):
         
     
     def _ParseResponse( self, response, report_hooks ):
-
+        
         server_header = response.getheader( 'Server' )
         
         if server_header is not None and 'hydrus' in server_header:
@@ -636,16 +659,7 @@ class HTTPConnection( object ):
         
         response = self._GetResponse( method_string, path_and_query, request_headers, body )
         
-        if response.status == 200 and temp_path is not None:
-            
-            size_of_response = self._WriteResponseToPath( response, temp_path, report_hooks )
-            
-            parsed_response = 'response written to temporary file'
-            
-        else:
-            
-            ( parsed_response, size_of_response ) = self._ParseResponse( response, report_hooks )
-            
+        ( parsed_response, size_of_response ) = self._ReadResponse( response, report_hooks, temp_path )
         
         response_headers = { k : v for ( k, v ) in response.getheaders() if k != 'set-cookie' }
         

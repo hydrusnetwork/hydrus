@@ -2494,6 +2494,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 self._WorkOnFiles( job_key )
                 
+            except HydrusExceptions.NetworkException as e:
+                
+                HydrusData.Print( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
+                HydrusData.PrintException( e )
+                
+                job_key.SetVariable( 'popup_text_1', 'Encountered a network error, will retry again later' )
+                
+                self._last_error = HydrusData.GetNow()
+                
+                time.sleep( 5 )
+                
             except Exception as e:
                 
                 HydrusData.ShowText( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
@@ -2987,3 +2998,243 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_THREAD_WATCHER_IMPORT ] = ThreadWatcherImport
+
+class URLsImport( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+        
+        self._urls_cache = SeedCache()
+        self._import_file_options = import_file_options
+        self._paused = False
+        
+        self._seed_cache_status = ( 'initialising', ( 0, 1 ) )
+        self._file_download_hook = None
+        
+        self._lock = threading.Lock()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
+        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        
+        return ( serialisable_url_cache, serialisable_file_options, self._paused )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_url_cache, serialisable_file_options, self._paused ) = serialisable_info
+        
+        self._urls_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
+        self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
+        
+    
+    def _RegenerateSeedCacheStatus( self, page_key ):
+        
+        new_seed_cache_status = self._urls_cache.GetStatus()
+        
+        if self._seed_cache_status != new_seed_cache_status:
+            
+            self._seed_cache_status = new_seed_cache_status
+            
+            HydrusGlobals.client_controller.pub( 'update_status', page_key )
+            
+        
+    
+    def _WorkOnFiles( self, page_key ):
+        
+        do_wait = True
+        
+        file_url = self._urls_cache.GetNextSeed( CC.STATUS_UNKNOWN )
+        
+        if file_url is None:
+            
+            return
+            
+        
+        try:
+            
+            ( status, hash ) = HydrusGlobals.client_controller.Read( 'url_status', file_url )
+            
+            if status == CC.STATUS_DELETED:
+                
+                if not self._import_file_options.GetExcludeDeleted():
+                    
+                    status = CC.STATUS_NEW
+                    
+                
+            
+            if status == CC.STATUS_NEW:
+                
+                ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                
+                try:
+                    
+                    report_hooks = []
+                    
+                    with self._lock:
+                        
+                        if self._file_download_hook is not None:
+                            
+                            report_hooks.append( self._file_download_hook )
+                            
+                        
+                    
+                    HydrusGlobals.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
+                    
+                    client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                    
+                    ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options, url = file_url )
+                    
+                finally:
+                    
+                    HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                    
+                
+            else:
+                
+                do_wait = False
+                
+            
+            self._urls_cache.UpdateSeedStatus( file_url, status )
+            
+            if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
+                
+                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', ( hash, ) )
+                
+                HydrusGlobals.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                
+            
+        except HydrusExceptions.MimeException as e:
+            
+            status = CC.STATUS_UNINTERESTING_MIME
+            
+            self._urls_cache.UpdateSeedStatus( file_url, status )
+            
+        except Exception as e:
+            
+            status = CC.STATUS_FAILED
+            
+            self._urls_cache.UpdateSeedStatus( file_url, status, exception = e )
+            
+        
+        with self._lock:
+            
+            self._RegenerateSeedCacheStatus( page_key )
+            
+        
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
+        
+        if do_wait:
+            
+            ClientData.WaitPolitely( page_key )
+            
+        
+    
+    def _THREADWork( self, page_key ):
+        
+        with self._lock:
+            
+            self._RegenerateSeedCacheStatus( page_key )
+            
+        
+        HydrusGlobals.client_controller.pub( 'update_status', page_key )
+        
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
+            
+            if self._paused or HydrusGlobals.client_controller.PageHidden( page_key ):
+                
+                time.sleep( 0.1 )
+                
+            else:
+                
+                try:
+                    
+                    self._WorkOnFiles( page_key )
+                    
+                    time.sleep( 0.1 )
+                    
+                    HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    return
+                    
+                
+            
+        
+    
+    def GetSeedCache( self ):
+        
+        return self._urls_cache
+        
+    
+    def GetOptions( self ):
+        
+        with self._lock:
+            
+            return self._import_file_options
+            
+        
+    
+    def GetStatus( self ):
+        
+        with self._lock:
+            
+            return ( self._seed_cache_status, self._paused )
+            
+        
+    
+    def PausePlay( self ):
+        
+        with self._lock:
+            
+            self._paused = not self._paused
+            
+        
+    
+    def PendURLs( self, urls ):
+        
+        with self._lock:
+            
+            for url in urls:
+                
+                if not self._urls_cache.HasSeed( url ):
+                    
+                    self._urls_cache.AddSeed( url )
+                    
+                
+            
+        
+    
+    def SetDownloadHook( self, hook ):
+        
+        with self._lock:
+            
+            self._file_download_hook = hook
+            
+        
+    
+    def SetImportFileOptions( self, import_file_options ):
+        
+        with self._lock:
+            
+            self._import_file_options = import_file_options
+            
+        
+    
+    def Start( self, page_key ):
+        
+        threading.Thread( target = self._THREADWork, args = ( page_key, ) ).start()
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT ] = URLsImport

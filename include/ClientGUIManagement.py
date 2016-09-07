@@ -14,7 +14,7 @@ import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMedia
-import ClientGUIPanels
+import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
@@ -48,6 +48,7 @@ MANAGEMENT_TYPE_IMPORT_HDD = 3
 MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER = 4
 MANAGEMENT_TYPE_PETITIONS = 5
 MANAGEMENT_TYPE_QUERY = 6
+MANAGEMENT_TYPE_IMPORT_URLS = 7
 
 management_panel_types_to_classes = {}
 
@@ -105,6 +106,16 @@ def CreateManagementControllerImportThreadWatcher():
     thread_watcher_import = ClientImporting.ThreadWatcherImport()
     
     management_controller.SetVariable( 'thread_watcher_import', thread_watcher_import )
+    
+    return management_controller
+    
+def CreateManagementControllerImportURLs():
+    
+    management_controller = CreateManagementController( MANAGEMENT_TYPE_IMPORT_URLS )
+    
+    urls_import = ClientImporting.URLsImport()
+    
+    management_controller.SetVariable( 'urls_import', urls_import )
     
     return management_controller
     
@@ -1834,7 +1845,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
@@ -1982,7 +1993,7 @@ class ManagementPanelHDDImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
@@ -2191,6 +2202,16 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
             current_action = ''
             
         
+        if self._parser_status.GetLabelText() != parser_status:
+            
+            self._parser_status.SetLabelText( parser_status )
+            
+        
+        if self._current_action.GetLabelText() != current_action:
+            
+            self._current_action.SetLabelText( current_action )
+            
+        
         if paused:
             
             if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
@@ -2204,16 +2225,6 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
                 
                 self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
                 
-            
-        
-        if self._parser_status.GetLabelText() != parser_status:
-            
-            self._parser_status.SetLabelText( parser_status )
-            
-        
-        if self._current_action.GetLabelText() != current_action:
-            
-            self._current_action.SetLabelText( current_action )
             
         
     
@@ -2359,7 +2370,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
@@ -3158,7 +3169,7 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
@@ -3206,3 +3217,252 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER ] = ManagementPanelThreadWatcherImport
+
+class ManagementPanelURLsImport( ManagementPanel ):
+    
+    def __init__( self, parent, page, controller, management_controller ):
+        
+        ManagementPanel.__init__( self, parent, page, controller, management_controller )
+        
+        self._url_panel = ClientGUICommon.StaticBox( self, 'raw url downloader' )
+        
+        self._overall_status = wx.StaticText( self._url_panel )
+        self._current_action = wx.StaticText( self._url_panel )
+        self._file_gauge = ClientGUICommon.Gauge( self._url_panel )
+        self._overall_gauge = ClientGUICommon.Gauge( self._url_panel )
+        
+        self._pause_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
+        
+        self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._url_panel, self._page_key )
+        
+        self._seed_cache_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.seed_cache )
+        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
+        
+        self._url_input = wx.TextCtrl( self._url_panel, style = wx.TE_PROCESS_ENTER )
+        self._url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self._url_paste = wx.Button( self._url_panel, label = 'paste urls' )
+        self._url_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
+        
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._url_panel )
+        
+        #
+        
+        button_sizer = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
+        button_sizer.AddF( self._pause_button, CC.FLAGS_VCENTER )
+        
+        input_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        input_hbox.AddF( self._url_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        input_hbox.AddF( self._url_paste, CC.FLAGS_VCENTER )
+        
+        self._url_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.AddF( self._file_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
+        self._url_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._url_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._MakeSort( vbox )
+        
+        vbox.AddF( self._url_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._MakeCurrentSelectionTagsBox( vbox )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+        self._controller.sub( self, 'UpdateStatus', 'update_status' )
+        
+        self._urls_import = self._management_controller.GetVariable( 'urls_import' )
+        
+        def file_download_hook( gauge_range, gauge_value ):
+            
+            self._file_gauge.SetRange( gauge_range )
+            self._file_gauge.SetValue( gauge_value )
+            
+        
+        self._urls_import.SetDownloadHook( file_download_hook )
+        
+        import_file_options = self._urls_import.GetOptions()
+        
+        self._import_file_options.SetOptions( import_file_options )
+        
+        self._Update()
+        
+        self._urls_import.Start( self._page_key )
+        
+    
+    def _Update( self ):
+        
+        ( ( overall_status, ( overall_value, overall_range ) ), paused ) = self._urls_import.GetStatus()
+        
+        if self._overall_status.GetLabelText() != overall_status:
+            
+            self._overall_status.SetLabelText( overall_status )
+            
+        
+        self._overall_gauge.SetRange( overall_range )
+        self._overall_gauge.SetValue( overall_value )
+        
+        if overall_value < overall_range:
+            
+            if paused:
+                
+                current_action = 'paused at ' + HydrusData.ConvertValueRangeToPrettyString( overall_value + 1, overall_range )
+                
+            else:
+                
+                current_action = 'processing ' + HydrusData.ConvertValueRangeToPrettyString( overall_value + 1, overall_range )
+                
+            
+        else:
+            
+            current_action = ''
+            
+        
+        if self._current_action.GetLabelText() != current_action:
+            
+            self._current_action.SetLabelText( current_action )
+            
+        
+        if paused:
+            
+            if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
+                
+                self._pause_button.SetBitmap( CC.GlobalBMPs.play )
+                
+            
+        else:
+            
+            if self._pause_button.GetBitmap() != CC.GlobalBMPs.pause:
+                
+                self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
+                
+            
+        
+    
+    def EventKeyDown( self, event ):
+        
+        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            url = self._url_input.GetValue()
+            
+            if url != '':
+                
+                self._urls_import.PendURLs( ( url, ) )
+                
+                self._url_input.SetValue( '' )
+                
+                self._Update()
+                
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
+    def EventMenu( self, event ):
+        
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'import_file_options_changed':
+                
+                import_file_options = self._import_file_options.GetOptions()
+                
+                self._urls_import.SetImportFileOptions( import_file_options )
+                
+            else:
+                
+                event.Skip()
+                
+            
+        
+    
+    def EventPaste( self, event ):
+    
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            raw_text = data.GetText()
+            
+            try:
+                
+                urls = HydrusData.SplitByLinesep( raw_text )
+                
+                if len( urls ) > 0:
+                    
+                    self._urls_import.PendURLs( urls )
+                    
+                
+                self._Update()
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        else:
+            
+            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+    
+    def EventPause( self, event ):
+        
+        self._urls_import.PausePlay()
+        
+        self._Update()
+        
+    
+    def EventSeedCache( self, event ):
+        
+        seed_cache = self._urls_import.GetSeedCache()
+        
+        title = 'file import status'
+        frame_key = 'file_import_status'
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
+        
+    
+    def SetSearchFocus( self, page_key ):
+        
+        if page_key == self._page_key: self._url_input.SetFocus()
+        
+    
+    def UpdateStatus( self, page_key ):
+        
+        if page_key == self._page_key:
+            
+            self._Update()
+            
+        
+    
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_URLS ] = ManagementPanelURLsImport

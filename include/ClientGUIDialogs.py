@@ -2828,8 +2828,9 @@ class DialogPageChooser( Dialog ):
             
             button.SetLabelText( text )
             
-        elif entry_type == 'page_import_thread_watcher': button.SetLabelText( 'thread watcher' )
         elif entry_type == 'page_import_page_of_images': button.SetLabelText( 'page of images' )
+        elif entry_type == 'page_import_thread_watcher': button.SetLabelText( 'thread watcher' )
+        elif entry_type == 'page_import_urls': button.SetLabelText( 'raw urls' )
         
         button.Show()
         
@@ -2867,9 +2868,10 @@ class DialogPageChooser( Dialog ):
             
         elif menu_keyword == 'download':
             
-            entries.append( ( 'page_import_page_of_images', None ) )
+            entries.append( ( 'page_import_urls', None ) )
             entries.append( ( 'page_import_thread_watcher', None ) )
             entries.append( ( 'menu', 'gallery' ) )
+            entries.append( ( 'page_import_page_of_images', None ) )
             
         elif menu_keyword == 'gallery':
             
@@ -2957,13 +2959,17 @@ class DialogPageChooser( Dialog ):
                     
                     HydrusGlobals.client_controller.pub( 'new_import_gallery', site_type )
                     
+                elif entry_type == 'page_import_page_of_images':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_import_page_of_images' )
+                    
                 elif entry_type == 'page_import_thread_watcher':
                     
                     HydrusGlobals.client_controller.pub( 'new_page_import_thread_watcher' )
                     
-                elif entry_type == 'page_import_page_of_images':
+                elif entry_type == 'page_import_urls':
                     
-                    HydrusGlobals.client_controller.pub( 'new_page_import_page_of_images' )
+                    HydrusGlobals.client_controller.pub( 'new_page_import_urls' )
                     
                 elif entry_type == 'page_petitions':
                     

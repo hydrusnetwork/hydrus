@@ -135,6 +135,7 @@ FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_VCENTER = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_SIZER_VCENTER = wx.SizerFlags( 0 ).Align( wx.ALIGN_CENTRE_VERTICAL )
 FLAGS_VCENTER_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 DAY = 0
@@ -203,6 +204,7 @@ else:
 
 media_viewer_capabilities[ HC.APPLICATION_PDF ] = no_support
 media_viewer_capabilities[ HC.VIDEO_FLV ] = animated_full_support
+media_viewer_capabilities[ HC.VIDEO_MOV ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_MP4 ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_MKV ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_WEBM ] = animated_full_support

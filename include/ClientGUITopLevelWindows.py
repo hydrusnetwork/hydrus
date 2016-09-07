@@ -197,7 +197,6 @@ def SetTLWSizeAndPosition( tlw, frame_key ):
         wx.CallAfter( tlw.ShowFullScreen, True, wx.FULLSCREEN_ALL )
         
     
-
 class NewDialog( wx.Dialog ):
     
     def __init__( self, parent, title ):

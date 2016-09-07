@@ -8174,7 +8174,13 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( namespace_id, tag_id, hash_ids ) in pending_mappings_ids:
                 
-                existing_current_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ) }
+                self._c.execute( 'CREATE TABLE mem.temp_pending_hash_ids ( hash_id INTEGER );' )
+                
+                self._c.executemany( 'INSERT INTO temp_pending_hash_ids ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
+                
+                existing_current_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM temp_pending_hash_ids, ' + current_mappings_table_name + ' USING ( hash_id ) WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ) }
+                
+                self._c.execute( 'DROP TABLE mem.temp_pending_hash_ids;' )
                 
                 valid_hash_ids = set( hash_ids ).difference( existing_current_hash_ids )
                 

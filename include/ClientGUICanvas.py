@@ -7,7 +7,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIHoverFrames
-import ClientGUIPanels
+import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientMedia
 import ClientRatings
@@ -1161,7 +1161,7 @@ class Canvas( wx.Window ):
             
             manage_tags = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
             
-            panel = ClientGUIPanels.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_display_media, ), immediate_commit = True, canvas_key = self._canvas_key )
+            panel = ClientGUIScrolledPanels.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_display_media, ), immediate_commit = True, canvas_key = self._canvas_key )
             
             manage_tags.SetPanel( panel )
             
@@ -3589,7 +3589,7 @@ class MediaContainer( wx.Window ):
         
         if do_embed_button and self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED ):
             
-            self._embed_button = EmbedButton( self, media_initial_size )
+            self._embed_button = EmbedButton( self, self._media, media_initial_size )
             self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
             
             return
@@ -3784,15 +3784,30 @@ class MediaContainer( wx.Window ):
     
 class EmbedButton( wx.Window ):
     
-    def __init__( self, parent, size ):
+    def __init__( self, parent, media, size ):
         
         wx.Window.__init__( self, parent, size = size )
+        
+        self._media = media
         
         self._dirty = True
         
         ( x, y ) = size
         
         self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
+        
+        if self._media.GetLocationsManager().HasLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+            
+            hash = self._media.GetHash()
+            
+            thumbnail_path = HydrusGlobals.client_controller.GetClientFilesManager().GetFullSizeThumbnailPath( hash )
+            
+            self._thumbnail_bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path ).GetWxBitmap()
+            
+        else:
+            
+            self._thumbnail_bmp = None
+            
         
         self.SetCursor( wx.StockCursor( wx.CURSOR_HAND ) )
         
@@ -3805,41 +3820,63 @@ class EmbedButton( wx.Window ):
         
         ( x, y ) = self.GetClientSize()
         
-        background_brush = wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) )
-        
-        dc.SetBackground( background_brush )
-        
-        dc.Clear()
-        
         center_x = x / 2
         center_y = y / 2
-        radius = min( center_x, center_y ) - 5
+        radius = min( 50, center_x, center_y ) - 5
         
-        dc.SetPen( wx.TRANSPARENT_PEN )
+        if self._thumbnail_bmp is not None:
+            
+            # animations will have the animation bar space underneath in this case, so colour it in
+            dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
+            
+            dc.Clear()
+            
+            ( thumb_width, thumb_height ) = self._thumbnail_bmp.GetSize()
+            
+            scale = x / float( thumb_width )
+            
+            dc.SetUserScale( scale, scale )
+            
+            dc.DrawBitmap( self._thumbnail_bmp, 0, 0 )
+            
+            dc.SetUserScale( 1.0, 1.0 )
+            
+        else:
+            
+            dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
+            
+            dc.Clear()
+            
         
-        dc.SetBrush( wx.Brush( wx.Colour( 235, 235, 235 ) ) )
+        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) ) )
         
         dc.DrawCircle( center_x, center_y, radius )
         
-        dc.SetBrush( background_brush )
+        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) ) )
         
-        m = ( 2 ** 0.5 ) / 2 # 45 degree angle
+        # play symbol is a an equilateral triangle
         
-        half_radius = radius / 2
+        triangle_side = radius * 0.8
         
-        angle_half_radius = m * half_radius
+        half_triangle_side = int( triangle_side / 2 )
+        
+        cos30 = 0.866
+        
+        triangle_width = triangle_side * 0.866
+        
+        third_triangle_width = int( triangle_width / 3 )
         
         points = []
         
-        points.append( ( center_x - angle_half_radius, center_y - angle_half_radius ) )
-        points.append( ( center_x + half_radius, center_y ) )
-        points.append( ( center_x - angle_half_radius, center_y + angle_half_radius ) )
+        points.append( ( center_x - third_triangle_width, center_y - half_triangle_side ) )
+        points.append( ( center_x + third_triangle_width * 2, center_y ) )
+        points.append( ( center_x - third_triangle_width, center_y + half_triangle_side ) )
         
         dc.DrawPolygon( points )
         
         #
         
-        dc.SetPen( wx.Pen( wx.Colour( 215, 215, 215 ) ) )
+        dc.SetPen( wx.Pen( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNSHADOW ) ) )
         
         dc.SetBrush( wx.TRANSPARENT_BRUSH )
         

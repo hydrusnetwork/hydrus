@@ -81,6 +81,7 @@ def WrapInGrid( parent, rows, expand_text = False ):
         
         text_flags = CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY # Trying to expand both ways nixes the center. This seems to work right.
         control_flags = CC.FLAGS_VCENTER
+        sizer_flags = CC.FLAGS_SIZER_VCENTER
         
     else:
         
@@ -88,12 +89,22 @@ def WrapInGrid( parent, rows, expand_text = False ):
         
         text_flags = CC.FLAGS_VCENTER
         control_flags = CC.FLAGS_EXPAND_BOTH_WAYS
+        sizer_flags = CC.FLAGS_EXPAND_SIZER_BOTH_WAYS
         
     
     for ( text, control ) in rows:
         
+        if isinstance( control, wx.Sizer ):
+            
+            cflags = sizer_flags
+            
+        else:
+            
+            cflags = control_flags
+            
+        
         gridbox.AddF( wx.StaticText( parent, label = text ), text_flags )
-        gridbox.AddF( control, control_flags )
+        gridbox.AddF( control, cflags )
         
     
     return gridbox
@@ -2398,6 +2409,16 @@ class ListBox( wx.ScrolledWindow ):
     
     def _GetTextColour( self, text ): return ( 0, 111, 250 )
     
+    def _HandleClick( self, event ):
+        
+        hit_index = self._GetIndexUnderMouse( event )
+        
+        shift = event.ShiftDown()
+        ctrl = event.CmdDown()
+        
+        self._Hit( shift, ctrl, hit_index )
+        
+    
     def _Hit( self, shift, ctrl, hit_index ):
         
         if hit_index is not None:
@@ -2690,12 +2711,7 @@ class ListBox( wx.ScrolledWindow ):
     
     def EventMouseSelect( self, event ):
         
-        hit_index = self._GetIndexUnderMouse( event )
-        
-        shift = event.ShiftDown()
-        ctrl = event.CmdDown()
-        
-        self._Hit( shift, ctrl, hit_index )
+        self._HandleClick( event )
         
         event.Skip()
         
@@ -2760,6 +2776,8 @@ class ListBox( wx.ScrolledWindow ):
 class ListBoxTags( ListBox ):
     
     has_counts = False
+    
+    can_spawn_new_windows = True
     
     def __init__( self, *args, **kwargs ):
         
@@ -2856,7 +2874,7 @@ class ListBoxTags( ListBox ):
                             
                         else:
                             
-                            text = term
+                            text = HydrusData.ToUnicode( term )
                             
                         
                         if command == 'copy_sub_terms' and ':' in text:
@@ -2920,27 +2938,20 @@ class ListBoxTags( ListBox ):
     
     def EventMouseMiddleClick( self, event ):
         
-        hit_index = self._GetIndexUnderMouse( event )
+        self._HandleClick( event )
         
-        shift = event.ShiftDown()
-        ctrl = event.CmdDown()
-        
-        self._Hit( shift, ctrl, hit_index )
-        
-        self._NewSearchPage()
+        if self.can_spawn_new_windows:
+            
+            self._NewSearchPage()
+            
         
     
     def EventMouseRightClick( self, event ):
         
-        hit_index = self._GetIndexUnderMouse( event )
-        
-        shift = event.ShiftDown()
-        ctrl = event.CmdDown()
-        
-        self._Hit( shift, ctrl, hit_index )
+        self._HandleClick( event )
         
         if len( self._ordered_strings ) > 0:
-        
+            
             menu = wx.Menu()
             
             if len( self._selected_terms ) > 0:
@@ -2962,7 +2973,7 @@ class ListBoxTags( ListBox ):
                         
                     else:
                         
-                        selection_string = '"' + term + '"'
+                        selection_string = '"' + HydrusData.ToUnicode( term ) + '"'
                         
                     
                 else:
@@ -3005,9 +3016,15 @@ class ListBoxTags( ListBox ):
                         
                     
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for ' + selection_string )
+                if self.can_spawn_new_windows:
+                    
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for ' + selection_string )
+                    
                 
-                menu.AppendSeparator()
+                if menu.GetMenuItemCount() > 0:
+                    
+                    menu.AppendSeparator()
+                    
                 
                 menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_terms' ), 'copy ' + selection_string )
                 
@@ -3037,7 +3054,7 @@ class ListBoxTags( ListBox ):
                 if self.has_counts: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
                 
             
-            if len( self._selected_terms ) > 0:
+            if self.can_spawn_new_windows and len( self._selected_terms ) > 0:
                 
                 term_types = [ type( term ) for term in self._selected_terms ]
                 
@@ -3390,6 +3407,8 @@ class ListBoxTagsCensorship( ListBoxTags ):
         
     
 class ListBoxTagsColourOptions( ListBoxTags ):
+    
+    can_spawn_new_windows = False
     
     def __init__( self, parent, initial_namespace_colours ):
         
@@ -4381,9 +4400,15 @@ class PopupWindow( wx.Window ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
     
-    def TryToDismiss( self ): self.GetParent().Dismiss( self )
+    def TryToDismiss( self ):
+        
+        self.GetParent().Dismiss( self )
+        
     
-    def EventDismiss( self, event ): self.TryToDismiss()
+    def EventDismiss( self, event ):
+        
+        self.TryToDismiss()
+        
     
 class PopupDismissAll( PopupWindow ):
     
@@ -4406,11 +4431,20 @@ class PopupDismissAll( PopupWindow ):
         self.SetSizer( hbox )
         
     
-    def TryToDismiss( self ): pass
+    def TryToDismiss( self ):
+        
+        pass
+        
     
-    def EventButton( self, event ): self.GetParent().DismissAll()
+    def EventButton( self, event ):
+        
+        self.GetParent().DismissAll()
+        
     
-    def SetNumMessages( self, num_messages_pending ): self._text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
+    def SetNumMessages( self, num_messages_pending ):
+        
+        self._text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
+        
     
 class PopupMessage( PopupWindow ):
     
@@ -4641,20 +4675,24 @@ class PopupMessage( PopupWindow ):
         return self._job_key
         
     
-    def TryToDismiss( self ):
+    def IsDeleted( self ):
         
-        if self._job_key.IsPausable() or self._job_key.IsCancellable(): return
-        else: PopupWindow.TryToDismiss( self )
+        return self._job_key.IsDeleted()
         
     
-    def Update( self ):
+    def TryToDismiss( self ):
         
-        if self._job_key.IsDeleted():
-            
-            self.TryToDismiss()
+        if self._job_key.IsPausable() or self._job_key.IsCancellable():
             
             return
             
+        else:
+            
+            PopupWindow.TryToDismiss( self )
+            
+        
+    
+    def Update( self ):
         
         if self._job_key.HasVariable( 'popup_title' ):
             
@@ -4858,6 +4896,8 @@ class PopupMessageManager( wx.Frame ):
         
         num_messages_displayed = self._message_vbox.GetItemCount()
         
+        self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if not job_key.IsDeleted() ]
+        
         if len( self._pending_job_keys ) > 0 and num_messages_displayed < self._max_messages_to_display:
             
             job_key = self._pending_job_keys.pop( 0 )
@@ -4901,39 +4941,60 @@ class PopupMessageManager( wx.Frame ):
         
         try:
             
-            self.Fit()
-            
-            parent = self.GetParent()
-            
-            ( parent_width, parent_height ) = parent.GetClientSize()
-            
-            ( my_width, my_height ) = self.GetClientSize()
-            
-            my_x = ( parent_width - my_width ) - 5
-            my_y = ( parent_height - my_height ) - 15
-            
-            self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
+            do_restore = False
+            do_show = False
             
             num_messages_displayed = self._message_vbox.GetItemCount()
             
-            if num_messages_displayed > 0:
+            if self.GetParent().IsIconized():
                 
-                current_focus = wx.Window.FindFocus()
-                
-                tlp = wx.GetTopLevelParent( current_focus )
-                
-                show_happened = self.Show()
-                
-                if show_happened and tlp is not None:
+                if not self.IsIconized():
                     
-                    self.Raise()
-                    
-                    tlp.Raise()
+                    self.Iconize()
                     
                 
             else:
                 
-                self.Hide()
+                if self.IsIconized():
+                    
+                    self.Restore()
+                    
+                
+            
+            if num_messages_displayed > 0:
+                
+                if not self.IsShown():
+                    
+                    do_show = True
+                    
+                
+            else:
+                
+                if self.IsShown():
+                    
+                    self.Hide()
+                    
+                
+            
+            if do_show or self.IsShown():
+            
+                self.Fit()
+                
+                parent = self.GetParent()
+                
+                ( parent_width, parent_height ) = parent.GetClientSize()
+                
+                ( my_width, my_height ) = self.GetClientSize()
+                
+                my_x = ( parent_width - my_width ) - 5
+                my_y = ( parent_height - my_height ) - 15
+                
+                self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
+                
+            
+            if do_show:
+                
+                self.Show()
                 
             
         except:
@@ -5005,7 +5066,8 @@ class PopupMessageManager( wx.Frame ):
         
         self._message_vbox.Detach( window )
         
-        window.Destroy()
+        # OS X segfaults if this is instant
+        wx.CallAfter( window.Destroy )
         
         self._SizeAndPositionAndShow()
         
@@ -5056,7 +5118,16 @@ class PopupMessageManager( wx.Frame ):
                 
                 message_window = sizer_item.GetWindow()
                 
-                message_window.Update()
+                if message_window.IsDeleted():
+                    
+                    message_window.TryToDismiss()
+                    
+                    break
+                    
+                else:
+                    
+                    message_window.Update()
+                    
                 
             
             self._SizeAndPositionAndShow()

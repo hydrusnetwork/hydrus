@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 222</h3></li>
+				<ul>
+					<li>created a 'raw url' downloader page that just downloads urls and tries to import the result. it has a 'paste urls' button to make mass import of a list of urls easy</li>
+					<li>fixed an options update bug when updating to v221 from any version before v220</li>
+					<li>added support for 'ftypqt' quicktime (usually .mov) video</li>
+					<li>embed button now uses system gui colours</li>
+					<li>embed button now puts the thumbnail of the media, if one exists, behind the 'play' button</li>
+					<li>sped up an inefficient existing mapping check that was slowing new pending mappings for popular tags</li>
+					<li>'last session' will no longer be listed on the gui session delete menu</li>
+					<li>cleaned up the main gui's initialisation events--a sizing bug often triggered after system reboot may be fixed</li>
+					<li>popup messages are initialised in a safer way</li>
+					<li>popup messages are dismissed in a safer way</li>
+					<li>popup messages will hide/restore themselves more reliably when the main gui window is minimised/restored</li>
+					<li>the pending popup message queue is now regularly purged of already deleted messages</li>
+					<li>new popup messages will no longer raise the main gui window to the top</li>
+					<li>subscription http errors during the gallery sync phase are now caught and handled gracefully, with exact error text written quietly to the log</li>
+					<li>network timeouts during successful response read are caught and converted to a hydrus network exception that will be caught and handled more reliably up the chain</li>
+					<li>the client's upnp daemon will now silence upnp mapping errors that are due to the router being too busy or full or any other unknown errors. a simple statement about the error and an instruction to explore the problem with the manual upnp manager will be written to the log</li>
+					<li>finished flexgrid refactoring</li>
+					<li>the new automatic flexgrid creation detects subsizers and lines them up more accurately with standard controls</li>
+					<li>wrapped the different sections of the 'speed and memory' options panel into staticboxes</li>
+					<li>wraped the misc crap up top the 'tags' options panel into a neater staticbox</li>
+					<li>taglists with unusual tags will copy them more reliably and present fewer invalid menu options</li>
+					<li>misc layout fixes</li>
+				</ul>
 				<li><h3>version 221</h3></li>
 				<ul>
 					<li>fixed the 8chan thread parser for the new sha256 file urls. legacy links should still work!</li>

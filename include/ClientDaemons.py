@@ -405,7 +405,20 @@ def DAEMONUPnP( controller ):
                 
                 duration = 3600
                 
-                HydrusNATPunch.AddUPnPMapping( local_ip, internal_port, external_port, protocol, description, duration = duration )
+                try:
+                    
+                    HydrusNATPunch.AddUPnPMapping( local_ip, internal_port, external_port, protocol, description, duration = duration )
+                    
+                except HydrusExceptions.FirewallException:
+                    
+                    HydrusData.Print( 'The UPnP Daemon tried to add ' + local_ip + ':' + internal_port + '->external:' + external_port + ' but it failed due to router error. Please try it manually to get a full log of what happened.' )
+                    
+                    return
+                    
+                except:
+                    
+                    raise
+                    
                 
             
         

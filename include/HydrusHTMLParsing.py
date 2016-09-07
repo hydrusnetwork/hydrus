@@ -1,16 +1,45 @@
 import bs4
+import HydrusData
 import HydrusSerialisable
 
+def RenderTagRule( ( name, attrs, index ) ):
+    
+    if index is None:
+        
+        result = 'all ' + name + ' tags'
+        
+    else:
+        
+        result = HydrusData.ConvertIntToFirst( index + 1 ) + name + ' tag'
+        
+    
+    if len( attrs ) > 0:
+        
+        result += ' with ' + ' and '.join( [ key + ' = ' + value for ( key, value ) in attrs.items() ] )
+        
+    
+    return result
+    
 class ParseFormula( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_HTML_PARSE_FORMULA
     SERIALISABLE_VERSION = 1
     
-    def __init__( self ):
+    def __init__( self, tag_rules = None, content_rule = None ):
         
-        self._tag_rules = []
+        if tag_rules is None:
+            
+            tag_rules = [ ( 'a', {}, None ) ]
+            
         
-        self._content_rule = None
+        if content_rule is None:
+            
+            content_rule = 'src'
+            
+        
+        self._tag_rules = tag_rules
+        
+        self._content_rule = content_rule
         
     
     def _GetSerialisableInfo( self ):
@@ -58,35 +87,6 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         return results
         
     
-    def IsValid( self ):
-        
-        return len( self._tag_rules ) > 0 and self._content_rule is not None
-        
-    
-    def PopTagsRule( self ):
-        
-        self._tag_rules.pop()
-        
-    
-    def PushTagsRule( self, name = None, attrs = {}, index = None ):
-        
-        self._tag_rules.append( ( name, attrs, index ) )
-        
-    
-    def Duplicate( self ):
-        
-        new_formula = ParseFormula()
-        
-        for ( name, attrs, index ) in self._tag_rules:
-            
-            new_formula.PushTagsRule( name, dict( attrs ), index )
-            
-        
-        new_formula.SetContentRule( self._content_rule )
-        
-        return new_formula
-        
-    
     def Parse( self, html ):
         
         root = bs4.BeautifulSoup( html, 'lxml' )
@@ -110,9 +110,9 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         return contents
         
     
-    def SetContentRule( self, attr = None ):
+    def ToTuple( self ):
         
-        self._content_rule = attr
+        return ( self._tag_rules, self._content_rule )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_HTML_PARSE_FORMULA ] = ParseFormula

@@ -10,7 +10,7 @@ import ClientGUIDialogs
 import ClientDownloading
 import ClientGUIOptionsPanels
 import ClientGUIPredicates
-import ClientGUIPanels
+import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
@@ -3062,7 +3062,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
             
-            panel = ClientGUIPanels.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
+            panel = ClientGUIScrolledPanels.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
             
             dlg.SetPanel( panel )
             
@@ -5560,7 +5560,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
                 
-                panel = ClientGUIPanels.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
+                panel = ClientGUIScrolledPanels.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
                 
                 dlg.SetPanel( panel )
                 

@@ -7,7 +7,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUICanvas
-import ClientGUIPanels
+import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientMedia
 import collections
@@ -799,7 +799,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUIPanels.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
+                panel = ClientGUIScrolledPanels.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
                 
                 dlg.SetPanel( panel )
                 
