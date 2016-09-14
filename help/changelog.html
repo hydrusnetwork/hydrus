@@ -8,6 +8,23 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 223</h3></li>
+				<ul>
+					<li>fixed the popup message manager's bad minimise recovery</li>
+					<li>added an option to automatically 'hide' the popup message manager on main gui minimise (which has patchy multiplat support--some mindow managers don't do this automatically, some do but break when you force it)</li>
+					<li>added an option to automatically hide the popup message manager on main gui dofocus, which may help with window managers that minimise to the system tray, which wx cannot detect</li>
+					<li>added a 'make some popups' test job to the help->debug menu</li>
+					<li>siblings will now present in a more service-specific way</li>
+					<li>many gui elements that display tags are now aware of their tag service for the purpose of collapsing siblings</li>
+					<li>simplified a whole load of the siblings code</li>
+					<li>in some conditions, media will load faster</li>
+					<li>autocomplete tag censorship will now also apply on in a service-specific way in 'all known tags' queries</li>
+					<li>another remote connection reset exception is now properly caught by the network engine</li>
+					<li>the embed button will now draw the correct background colour behind transparent thumbnails</li>
+					<li>the animation scanbar will no longer scan if it has not previously experienced a mouse_down event--it could sometimes inherit this status from a previous media filter or embed reveal, resulting in undesired instant scan and undefined animation canvas behaviour</li>
+					<li>advanced content update panel will no longer list 'copy' as an action if 'local tags' is the only tag service</li>
+					<li>fixed a bug when performing a 'go!' action in the advanced content update panel when 'local tags' is the only tag service</li>
+				</ul>
 				<li><h3>version 222</h3></li>
 				<ul>
 					<li>created a 'raw url' downloader page that just downloads urls and tries to import the result. it has a 'paste urls' button to make mass import of a list of urls easy</li>
@@ -29,7 +46,7 @@
 					<li>finished flexgrid refactoring</li>
 					<li>the new automatic flexgrid creation detects subsizers and lines them up more accurately with standard controls</li>
 					<li>wrapped the different sections of the 'speed and memory' options panel into staticboxes</li>
-					<li>wraped the misc crap up top the 'tags' options panel into a neater staticbox</li>
+					<li>wrapped the misc crap up top the 'tags' options panel into a neater staticbox</li>
 					<li>taglists with unusual tags will copy them more reliably and present fewer invalid menu options</li>
 					<li>misc layout fixes</li>
 				</ul>
