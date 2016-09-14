@@ -3223,8 +3223,6 @@ class Thumbnail( Selectable ):
             
             if len( creators ) > 0:
                 
-                creators = siblings_manager.CollapseNamespacedTags( 'creator', creators )
-                
                 upper_info_string = ', '.join( creators )
                 
                 if len( series ) > 0 or len( titles ) > 0: upper_info_string += ' - '
@@ -3232,13 +3230,9 @@ class Thumbnail( Selectable ):
             
             if len( series ) > 0:
                 
-                series = siblings_manager.CollapseNamespacedTags( 'series', series )
-                
                 upper_info_string += ', '.join( series )
                 
             elif len( titles ) > 0:
-                
-                titles = siblings_manager.CollapseNamespacedTags( 'title', titles )
                 
                 upper_info_string += ', '.join( titles )
                 

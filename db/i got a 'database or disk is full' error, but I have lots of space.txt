@@ -1,3 +1,0 @@
-If you have plenty of disk space on your hydrus drive but got an 'out of disk space' error, usually during a big job like a vacuum, the problem is probably that you do not have enough space on your system drive.
-
-Sometimes, the db needs to create a journal file in your system temporary folder. Typically, the largest this file can get is about as large as your client.db. So, if you have a 3GB client.db file, make sure you have at least 3GB free on your system drive.

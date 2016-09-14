@@ -89,81 +89,88 @@ def BuildSimpleChildrenToParents( pairs ):
     
     return simple_children_to_parents
     
-def CollapseTagSiblingChains( processed_siblings ):
+def CollapseTagSiblingPairs( pairs ):
     
-    # now to collapse chains
-    # A -> B and B -> C goes to A -> C and B -> C
+    # a pair is invalid if:
+    # it causes a loop (a->b, b->c, c->a)
+    # there is already a relationship for the 'bad' sibling (a->b, a->c)
+    
+    valid_chains = {}
+    
+    pairs = list( pairs )
+    
+    pairs.sort()
+    
+    for ( bad, good ) in pairs:
+        
+        if bad == good:
+            
+            # a->a is a loop!
+            
+            continue
+            
+        
+        if bad not in valid_chains:
+            
+            we_have_a_loop = False
+            
+            current_best = good
+            
+            while current_best in valid_chains:
+                
+                current_best = valid_chains[ current_best ]
+                
+                if current_best == bad:
+                    
+                    we_have_a_loop = True
+                    
+                    break
+                    
+                
+            
+            if not we_have_a_loop:
+                
+                valid_chains[ bad ] = good
+                
+            
+        
+    
+    # now we collapse the chains, turning:
+    # a->b, b->c ... e->f
+    # into
+    # a->f, b->f ... e->f
     
     siblings = {}
     
-    for ( old_tag, new_tag ) in processed_siblings.items():
+    for ( bad, good ) in valid_chains.items():
         
-        # adding A -> B
+        # given a->b, want to find f
         
-        if new_tag in siblings:
+        if good in siblings:
             
-            # B -> F already calculated and added, so add A -> F
+            # f already calculated and added
             
-            siblings[ old_tag ] = siblings[ new_tag ]
+            best = siblings[ good ]
             
         else:
             
-            while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
+            # we don't know f for this chain, so let's figure it out
             
-            siblings[ old_tag ] = new_tag
+            current_best = good
             
-        
-    
-    reverse_lookup = collections.defaultdict( list )
-    
-    for ( old_tag, new_tag ) in siblings.items():
-        
-        reverse_lookup[ new_tag ].append( old_tag )
-        
-    
-    return ( siblings, reverse_lookup )
-    
-def CombineTagSiblingPairs( service_keys_to_statuses_to_pairs ):
-    
-    # first combine the services
-    # if A map already exists, don't overwrite
-    # if A -> B forms a loop, don't write it
-    
-    processed_siblings = {}
-    current_deleted_pairs = set()
-    
-    for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
-        
-        pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
-        
-        for ( old, new ) in pairs:
-            
-            if old == new: continue
-            
-            if old not in processed_siblings:
+            while current_best in valid_chains:
                 
-                next_new = new
-                
-                we_have_a_loop = False
-                
-                while next_new in processed_siblings:
-                    
-                    next_new = processed_siblings[ next_new ]
-                    
-                    if next_new == old:
-                        
-                        we_have_a_loop = True
-                        
-                        break
-                        
-                    
-                
-                if not we_have_a_loop: processed_siblings[ old ] = new
+                current_best = valid_chains[ current_best ] # pursue endpoint f
                 
             
+            best = current_best
+            
+        
+        # add a->f
+        siblings[ bad ] = best
         
     
-    return processed_siblings
+    return siblings
     
 def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
@@ -2169,7 +2176,7 @@ class TagParentsManager( object ):
             
             for ( status, pairs ) in statuses_to_pairs.items():
                 
-                pairs = sibling_manager.CollapsePairs( pairs )
+                pairs = sibling_manager.CollapsePairs( service_key, pairs )
                 
                 collapsed_service_keys_to_statuses_to_pairs[ service_key ][ status ] = pairs
                 
@@ -2291,6 +2298,9 @@ class TagSiblingsManager( object ):
         
         self._controller = controller
         
+        self._service_keys_to_siblings = collections.defaultdict( dict )
+        self._service_keys_to_reverse_lookup = collections.defaultdict( dict )
+        
         self._RefreshSiblings()
         
         self._lock = threading.Lock()
@@ -2298,48 +2308,87 @@ class TagSiblingsManager( object ):
         self._controller.sub( self, 'RefreshSiblings', 'notify_new_siblings_data' )
         
     
-    def _CollapseTags( self, tags ):
+    def _CollapseTags( self, service_key, tags ):
+    
+        siblings = self._service_keys_to_siblings[ service_key ]
         
-        return { self._siblings[ tag ] if tag in self._siblings else tag for tag in tags }
+        return { siblings[ tag ] if tag in siblings else tag for tag in tags }
         
     
     def _RefreshSiblings( self ):
         
+        self._service_keys_to_siblings = collections.defaultdict( dict )
+        self._service_keys_to_reverse_lookup = collections.defaultdict( dict )
+        
+        combined_pairs = set()
+        
         service_keys_to_statuses_to_pairs = self._controller.Read( 'tag_siblings' )
         
-        processed_siblings = CombineTagSiblingPairs( service_keys_to_statuses_to_pairs )
+        for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
+            
+            all_pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+            
+            combined_pairs.update( all_pairs )
+            
+            siblings = CollapseTagSiblingPairs( all_pairs )
+            
+            self._service_keys_to_siblings[ service_key ] = siblings
+            
+            reverse_lookup = collections.defaultdict( list )
+            
+            for ( bad, good ) in siblings.items():
+                
+                reverse_lookup[ good ].append( bad )
+                
+            
+            self._service_keys_to_reverse_lookup[ service_key ] = reverse_lookup
+            
         
-        ( self._siblings, self._reverse_lookup ) = CollapseTagSiblingChains( processed_siblings )
+        combined_siblings = CollapseTagSiblingPairs( combined_pairs )
+        
+        self._service_keys_to_siblings[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_siblings
+        
+        combined_reverse_lookup = collections.defaultdict( list )
+        
+        for ( bad, good ) in combined_siblings.items():
+            
+            combined_reverse_lookup[ good ].append( bad )
+            
+        
+        self._service_keys_to_reverse_lookup[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_reverse_lookup
         
         self._controller.pub( 'new_siblings_gui' )
         
     
-    def GetAutocompleteSiblings( self, search_text, exact_match = False ):
+    def GetAutocompleteSiblings( self, service_key, search_text, exact_match = False ):
         
         with self._lock:
+            
+            siblings = self._service_keys_to_siblings[ service_key ]
+            reverse_lookup = self._service_keys_to_reverse_lookup[ service_key ]
             
             if exact_match:
                 
                 key_based_matching_values = set()
                 
-                if search_text in self._siblings:
+                if search_text in siblings:
                     
-                    key_based_matching_values = { self._siblings[ search_text ] }
+                    key_based_matching_values = { siblings[ search_text ] }
                     
                 else:
                     
                     key_based_matching_values = set()
                     
                 
-                value_based_matching_values = { value for value in self._siblings.values() if value == search_text }
+                value_based_matching_values = { value for value in siblings.values() if value == search_text }
                 
             else:
                 
-                matching_keys = ClientSearch.FilterTagsBySearchEntry( search_text, self._siblings.keys(), search_siblings = False )
+                matching_keys = ClientSearch.FilterTagsBySearchEntry( service_key, search_text, siblings.keys(), search_siblings = False )
                 
-                key_based_matching_values = { self._siblings[ key ] for key in matching_keys }
+                key_based_matching_values = { siblings[ key ] for key in matching_keys }
                 
-                value_based_matching_values = ClientSearch.FilterTagsBySearchEntry( search_text, self._siblings.values(), search_siblings = False )
+                value_based_matching_values = ClientSearch.FilterTagsBySearchEntry( service_key, search_text, siblings.values(), search_siblings = False )
                 
             
             matching_values = key_based_matching_values.union( value_based_matching_values )
@@ -2347,7 +2396,7 @@ class TagSiblingsManager( object ):
             # all the matching values have a matching sibling somewhere in their network
             # so now fetch the networks
             
-            lists_of_matching_keys = [ self._reverse_lookup[ value ] for value in matching_values ]
+            lists_of_matching_keys = [ reverse_lookup[ value ] for value in matching_values ]
             
             matching_keys = itertools.chain.from_iterable( lists_of_matching_keys )
             
@@ -2357,29 +2406,46 @@ class TagSiblingsManager( object ):
             
         
     
-    def GetSibling( self, tag ):
+    def GetSibling( self, service_key, tag ):
         
         with self._lock:
             
-            if tag in self._siblings: return self._siblings[ tag ]
-            else: return None
+            siblings = self._service_keys_to_siblings[ service_key ]
+            
+            if tag in siblings:
+                
+                return siblings[ tag ]
+                
+            else:
+                
+                return None
+                
             
         
     
-    def GetAllSiblings( self, tag ):
+    def GetAllSiblings( self, service_key, tag ):
         
         with self._lock:
             
-            if tag in self._siblings:
-                
-                new_tag = self._siblings[ tag ]
-                
-            elif tag in self._reverse_lookup: new_tag = tag
-            else: return [ tag ]
+            siblings = self._service_keys_to_siblings[ service_key ]
+            reverse_lookup = self._service_keys_to_reverse_lookup[ service_key ]
             
-            all_siblings = list( self._reverse_lookup[ new_tag ] )
+            if tag in siblings:
+                
+                best_tag = siblings[ tag ]
+                
+            elif tag in reverse_lookup:
+                
+                best_tag = tag
+                
+            else:
+                
+                return [ tag ]
+                
             
-            all_siblings.append( new_tag )
+            all_siblings = list( reverse_lookup[ best_tag ] )
+            
+            all_siblings.append( best_tag )
             
             return all_siblings
             
@@ -2387,37 +2453,17 @@ class TagSiblingsManager( object ):
     
     def RefreshSiblings( self ):
         
-        with self._lock: self._RefreshSiblings()
-        
-    
-    def CollapseNamespacedTags( self, namespace, tags ):
-        
         with self._lock:
             
-            results = set()
-            
-            for tag in tags:
-                
-                full_tag = namespace + ':' + tag
-                
-                if full_tag in self._siblings:
-                    
-                    sibling = self._siblings[ full_tag ]
-                    
-                    if ':' in sibling: sibling = sibling.split( ':', 1 )[1]
-                    
-                    results.add( sibling )
-                    
-                else: results.add( tag )
-                
-            
-            return results
+            self._RefreshSiblings()
             
         
     
-    def CollapsePredicates( self, predicates ):
+    def CollapsePredicates( self, service_key, predicates ):
         
         with self._lock:
+            
+            siblings = self._service_keys_to_siblings[ service_key ]
             
             results = [ predicate for predicate in predicates if predicate.GetType() != HC.PREDICATE_TYPE_TAG ]
             
@@ -2431,12 +2477,12 @@ class TagSiblingsManager( object ):
             
             for tag in tags:
                 
-                if tag in self._siblings:
+                if tag in siblings:
                     
                     old_tag = tag
                     old_predicate = tags_to_predicates[ old_tag ]
                     
-                    new_tag = self._siblings[ old_tag ]
+                    new_tag = siblings[ old_tag ]
                     
                     if new_tag not in tags_to_predicates:
                         
@@ -2465,16 +2511,25 @@ class TagSiblingsManager( object ):
             
         
     
-    def CollapsePairs( self, pairs ):
+    def CollapsePairs( self, service_key, pairs ):
         
         with self._lock:
+            
+            siblings = self._service_keys_to_siblings[ service_key ]
             
             result = set()
             
             for ( a, b ) in pairs:
                 
-                if a in self._siblings: a = self._siblings[ a ]
-                if b in self._siblings: b = self._siblings[ b ]
+                if a in siblings:
+                    
+                    a = siblings[ a ]
+                    
+                
+                if b in siblings:
+                    
+                    b = siblings[ b ]
+                    
                 
                 result.add( ( a, b ) )
                 
@@ -2483,7 +2538,7 @@ class TagSiblingsManager( object ):
             
         
     
-    def CollapseStatusesToTags( self, statuses_to_tags ):
+    def CollapseStatusesToTags( self, service_key, statuses_to_tags ):
         
         with self._lock:
             
@@ -2493,30 +2548,52 @@ class TagSiblingsManager( object ):
             
             for status in statuses:
                 
-                new_statuses_to_tags[ status ] = self._CollapseTags( statuses_to_tags[ status ] )
+                new_statuses_to_tags[ status ] = self._CollapseTags( service_key, statuses_to_tags[ status ] )
                 
             
             return new_statuses_to_tags
             
         
     
-    def CollapseTags( self, tags ):
+    def CollapseTag( self, service_key, tag ):
         
         with self._lock:
             
-            return self._CollapseTags( tags )
+            siblings = self._service_keys_to_siblings[ service_key ]
+            
+            if tag in siblings:
+                
+                return siblings[ tag ]
+                
+            else:
+                
+                return tag
+                
             
         
     
-    def CollapseTagsToCount( self, tags_to_count ):
+    def CollapseTags( self, service_key, tags ):
         
         with self._lock:
+            
+            return self._CollapseTags( service_key, tags )
+            
+        
+    
+    def CollapseTagsToCount( self, service_key, tags_to_count ):
+        
+        with self._lock:
+            
+            siblings = self._service_keys_to_siblings[ service_key ]
             
             results = collections.Counter()
             
             for ( tag, count ) in tags_to_count.items():
                 
-                if tag in self._siblings: tag = self._siblings[ tag ]
+                if tag in siblings:
+                    
+                    tag = siblings[ tag ]
+                    
                 
                 results[ tag ] += count
                 

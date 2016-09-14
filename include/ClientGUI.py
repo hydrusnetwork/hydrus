@@ -1183,6 +1183,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             force_idle_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle_mode' )
             
             debug = wx.Menu()
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_make_popups' ), p( 'Make Some Popups' ) )
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
             debug.AppendCheckItem( pubsub_profile_mode_id, p( '&PubSub Profile Mode' ) )
@@ -2337,6 +2338,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                 
                 HydrusData.Print( 'garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+                
+            elif command == 'debug_make_popups':
+                
+                for i in range( 1, 9 ):
+                    
+                    HydrusData.ShowText( 'This is a test popup message -- ' + str( i ) )
+                    
+                
+                for i in range( 1, 4 ):
+                    
+                    wx.CallLater( 1000 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
+                    
                 
             elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
             elif command == 'delete_gui_session':

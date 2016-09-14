@@ -8,7 +8,7 @@ import HydrusTags
 import re
 import wx
 
-def FilterPredicatesBySearchEntry( search_entry, predicates ):
+def FilterPredicatesBySearchEntry( service_key, search_entry, predicates ):
     
     tags_to_predicates = {}
     
@@ -22,13 +22,13 @@ def FilterPredicatesBySearchEntry( search_entry, predicates ):
             
         
     
-    matching_tags = FilterTagsBySearchEntry( search_entry, tags_to_predicates.keys() )
+    matching_tags = FilterTagsBySearchEntry( service_key, search_entry, tags_to_predicates.keys() )
     
     matches = [ tags_to_predicates[ tag ] for tag in matching_tags ]
     
     return matches
     
-def FilterTagsBySearchEntry( search_entry, tags, search_siblings = True ):
+def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = True ):
     
     def compile_re( s ):
         
@@ -66,7 +66,7 @@ def FilterTagsBySearchEntry( search_entry, tags, search_siblings = True ):
         
         if search_siblings:
             
-            possible_tags = sibling_manager.GetAllSiblings( tag )
+            possible_tags = sibling_manager.GetAllSiblings( service_key, tag )
             
         else:
             
@@ -814,7 +814,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._predicate_type
         
     
-    def GetUnicode( self, with_count = True ):
+    def GetUnicode( self, with_count = True, sibling_service_key = None ):
         
         count_text = u''
         
@@ -1042,11 +1042,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             base += count_text
             
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-            
-            sibling = siblings_manager.GetSibling( tag )
-            
-            if sibling is not None: base += u' (will display as ' + HydrusTags.RenderTag( sibling ) + ')'
+            if sibling_service_key is not None:
+                
+                siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+                
+                sibling = siblings_manager.GetSibling( sibling_service_key, tag )
+                
+                if sibling is not None:
+                    
+                    base += u' (will display as ' + HydrusTags.RenderTag( sibling ) + ')'
+                    
+                
             
         elif self._predicate_type == HC.PREDICATE_TYPE_PARENT:
             

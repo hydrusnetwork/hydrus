@@ -335,7 +335,7 @@ class MediaList( object ):
             
             if len( namespaces_to_collect_by ) > 0:
                 
-                namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by, collapse_siblings = True )
+                namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by )
                 
             else:
                 
@@ -421,7 +421,7 @@ class MediaList( object ):
                 
                 x_tags_manager = x.GetTagsManager()
                 
-                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), collapse_siblings = True ) for namespace in namespaces ]
+                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ) ) for namespace in namespaces ]
                 
             
             sort_function = lambda x: namespace_sort_function( sort_by_data, x )
@@ -1250,8 +1250,6 @@ class MediaSingleton( Media ):
         
         if len( creators ) > 0:
             
-            creators = siblings_manager.CollapseNamespacedTags( 'creator', creators )
-            
             title_string_append = ', '.join( creators )
             
             if len( title_string ) > 0: title_string += ' - ' + title_string_append
@@ -1260,8 +1258,6 @@ class MediaSingleton( Media ):
         
         if len( series ) > 0:
             
-            series = siblings_manager.CollapseNamespacedTags( 'series', series )
-            
             title_string_append = ', '.join( series )
             
             if len( title_string ) > 0: title_string += ' - ' + title_string_append
@@ -1269,8 +1265,6 @@ class MediaSingleton( Media ):
             
         
         if len( titles ) > 0:
-            
-            titles = siblings_manager.CollapseNamespacedTags( 'title', titles )
             
             title_string_append = ', '.join( titles )
             
@@ -1606,6 +1600,11 @@ class TagsManagerSimple( object ):
         self._combined_namespaces_cache = None
         
     
+    def _RecalcCombinedIfNeeded( self ):
+        
+        pass
+        
+    
     def Duplicate( self ):
         
         dupe_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
@@ -1627,6 +1626,8 @@ class TagsManagerSimple( object ):
     
     def GetCombinedNamespaces( self, namespaces ):
         
+        self._RecalcCombinedIfNeeded()
+        
         if self._combined_namespaces_cache is None:
     
             combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
@@ -1642,7 +1643,9 @@ class TagsManagerSimple( object ):
         return result
         
     
-    def GetComparableNamespaceSlice( self, namespaces, collapse_siblings = False ):
+    def GetComparableNamespaceSlice( self, namespaces ):
+        
+        self._RecalcCombinedIfNeeded()
         
         combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
@@ -1650,13 +1653,6 @@ class TagsManagerSimple( object ):
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
         
         combined = combined_current.union( combined_pending )
-        
-        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-        
-        if collapse_siblings:
-            
-            combined = list( siblings_manager.CollapseTags( combined ) )
-            
         
         slice = []
         
@@ -1676,7 +1672,9 @@ class TagsManagerSimple( object ):
         return tuple( slice )
         
     
-    def GetNamespaceSlice( self, namespaces, collapse_siblings = False ):
+    def GetNamespaceSlice( self, namespaces ):
+        
+        self._RecalcCombinedIfNeeded()
         
         combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
@@ -1684,13 +1682,6 @@ class TagsManagerSimple( object ):
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
         
         combined = combined_current.union( combined_pending )
-        
-        if collapse_siblings:
-            
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-            
-            combined = siblings_manager.CollapseTags( combined )
-            
         
         slice = { tag for tag in combined if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
         
@@ -1705,26 +1696,42 @@ class TagsManager( TagsManagerSimple ):
         
         TagsManagerSimple.__init__( self, service_keys_to_statuses_to_tags )
         
-        self._RecalcCombined()
+        self._combined_is_calculated = False
+        
+        HydrusGlobals.client_controller.sub( self, 'NewSiblings', 'notify_new_siblings_data' )
         
     
-    def _RecalcCombined( self ):
+    def _RecalcCombinedIfNeeded( self ):
         
-        combined_statuses_to_tags = collections.defaultdict( set )
-        
-        for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
+        if not self._combined_is_calculated:
             
-            if service_key == CC.COMBINED_TAG_SERVICE_KEY: continue
+            # Combined tags are pre-collapsed by siblings
             
-            combined_statuses_to_tags[ HC.CURRENT ].update( statuses_to_tags[ HC.CURRENT ] )
-            combined_statuses_to_tags[ HC.PENDING ].update( statuses_to_tags[ HC.PENDING ] )
-            combined_statuses_to_tags[ HC.PETITIONED ].update( statuses_to_tags[ HC.PETITIONED ] )
-            combined_statuses_to_tags[ HC.DELETED ].update( statuses_to_tags[ HC.DELETED ] )
+            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
             
-        
-        self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
-        
-        self._combined_namespaces_cache = None
+            combined_statuses_to_tags = collections.defaultdict( set )
+            
+            for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
+                
+                if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                    
+                    continue
+                    
+                
+                statuses_to_tags = siblings_manager.CollapseStatusesToTags( service_key, statuses_to_tags )
+                
+                combined_statuses_to_tags[ HC.CURRENT ].update( statuses_to_tags[ HC.CURRENT ] )
+                combined_statuses_to_tags[ HC.PENDING ].update( statuses_to_tags[ HC.PENDING ] )
+                combined_statuses_to_tags[ HC.PETITIONED ].update( statuses_to_tags[ HC.PETITIONED ] )
+                combined_statuses_to_tags[ HC.DELETED ].update( statuses_to_tags[ HC.DELETED ] )
+                
+            
+            self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
+            
+            self._combined_namespaces_cache = None
+            
+            self._combined_is_calculated = True
+            
         
     
     def DeletePending( self, service_key ):
@@ -1736,7 +1743,7 @@ class TagsManager( TagsManagerSimple ):
             statuses_to_tags[ HC.PENDING ] = set()
             statuses_to_tags[ HC.PETITIONED ] = set()
             
-            self._RecalcCombined()
+            self._combined_is_calculated = False
             
         
     
@@ -1761,6 +1768,11 @@ class TagsManager( TagsManagerSimple ):
     
     def GetCurrent( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
         
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            self._RecalcCombinedIfNeeded()
+            
+        
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.CURRENT ] )
@@ -1768,12 +1780,22 @@ class TagsManager( TagsManagerSimple ):
     
     def GetDeleted( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
         
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            self._RecalcCombinedIfNeeded()
+            
+        
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.DELETED ] )
         
     
     def GetNumTags( self, service_key, include_current_tags = True, include_pending_tags = False ):
+        
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            self._RecalcCombinedIfNeeded()
+            
         
         num_tags = 0
         
@@ -1787,6 +1809,11 @@ class TagsManager( TagsManagerSimple ):
     
     def GetPending( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
         
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            self._RecalcCombinedIfNeeded()
+            
+        
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.PENDING ] )
@@ -1794,20 +1821,45 @@ class TagsManager( TagsManagerSimple ):
     
     def GetPetitioned( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
         
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            self._RecalcCombinedIfNeeded()
+            
+        
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.PETITIONED ] )
         
     
-    def GetServiceKeysToStatusesToTags( self ): return self._service_keys_to_statuses_to_tags
+    def GetServiceKeysToStatusesToTags( self ):
+        
+        self._RecalcCombinedIfNeeded()
+        
+        return self._service_keys_to_statuses_to_tags
+        
     
-    def GetStatusesToTags( self, service_key ): return self._service_keys_to_statuses_to_tags[ service_key ]
+    def GetStatusesToTags( self, service_key ):
+        
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            self._RecalcCombinedIfNeeded()
+            
+        
+        return self._service_keys_to_statuses_to_tags[ service_key ]
+        
     
     def HasTag( self, tag ):
+        
+        self._RecalcCombinedIfNeeded()
         
         combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
         return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
+        
+    
+    def NewSiblings( self ):
+        
+        self._combined_is_calculated = False
         
     
     def ProcessContentUpdate( self, service_key, content_update ):
@@ -1850,7 +1902,7 @@ class TagsManager( TagsManagerSimple ):
             
         elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.PETITIONED ].discard( tag )
         
-        self._RecalcCombined()
+        self._combined_is_calculated = False
         
     
     def ResetService( self, service_key ):
@@ -1859,7 +1911,7 @@ class TagsManager( TagsManagerSimple ):
             
             del self._service_keys_to_statuses_to_tags[ service_key ]
             
-            self._RecalcCombined()
+            self._combined_is_calculated = False
             
         
     

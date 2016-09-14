@@ -5914,8 +5914,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
-            self._children = ClientGUICommon.ListBoxTagsStringsAddRemove( self, show_sibling_text = False )
-            self._parents = ClientGUICommon.ListBoxTagsStringsAddRemove( self, show_sibling_text = False )
+            self._children = ClientGUICommon.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            self._parents = ClientGUICommon.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             
             expand_parents = True
             
@@ -6504,7 +6504,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             removed_callable = lambda tags: 1
             
-            self._old_siblings = ClientGUICommon.ListBoxTagsStringsAddRemove( self, show_sibling_text = False )
+            self._old_siblings = ClientGUICommon.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._new_sibling = wx.StaticText( self )
             
             expand_parents = False

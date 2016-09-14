@@ -2552,13 +2552,13 @@ class DB( HydrusDB.HydrusDB ):
             search_tag_service_ids = [ tag_service_id ]
             
         
-        cache_results = []
-        
         if file_service_id == self._combined_file_service_id:
             
-            cache_results.extend( self._CacheCombinedFilesMappingsGetAutocompleteCounts( tag_service_id, namespace_ids_to_tag_ids ) )
+            cache_results = self._CacheCombinedFilesMappingsGetAutocompleteCounts( tag_service_id, namespace_ids_to_tag_ids )
             
         else:
+            
+            cache_results = []
             
             for search_tag_service_id in search_tag_service_ids:
                 
@@ -2630,7 +2630,7 @@ class DB( HydrusDB.HydrusDB ):
         return ids_to_count
         
     
-    def _GetAutocompleteNamespaceIdTagIds( self, search_text, exact_match ):
+    def _GetAutocompleteNamespaceIdTagIds( self, service_key, search_text, exact_match ):
         
         if exact_match:
             
@@ -2748,7 +2748,7 @@ class DB( HydrusDB.HydrusDB ):
         
         siblings_manager = self._controller.GetManager( 'tag_siblings' )
         
-        all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( search_text, exact_match )
+        all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( service_key, search_text, exact_match )
         
         for sibling_tag in all_associated_sibling_tags:
             
@@ -2761,28 +2761,55 @@ class DB( HydrusDB.HydrusDB ):
         return namespace_id_tag_ids
         
     
-    def _GetAutocompletePredicates( self, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, inclusive = True, include_current = True, include_pending = True, add_namespaceless = False ):
+    def _GetAutocompletePredicates( self, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, inclusive = True, include_current = True, include_pending = True, add_namespaceless = False, collapse_siblings = False ):
         
-        namespace_id_tag_ids = self._GetAutocompleteNamespaceIdTagIds( search_text, exact_match )
+        namespace_id_tag_ids = self._GetAutocompleteNamespaceIdTagIds( tag_service_key, search_text, exact_match )
         
         tag_service_id = self._GetServiceId( tag_service_key )
         file_service_id = self._GetServiceId( file_service_key )
         
         there_was_a_namespace = ':' in search_text
         
-        ids_to_count = self._GetAutocompleteCounts( tag_service_id, file_service_id, namespace_id_tag_ids, there_was_a_namespace, add_namespaceless )
+        if tag_service_id == self._combined_tag_service_id:
+            
+            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            
+        else:
+            
+            search_tag_service_ids = [ tag_service_id ]
+            
         
-        #
+        all_predicates = []
         
-        tags_to_ids = { self._GetNamespaceTag( namespace_id, tag_id ) : ( namespace_id, tag_id ) for ( namespace_id, tag_id ) in ids_to_count.keys() }
+        for search_tag_service_id in search_tag_service_ids:
+            
+            search_tag_service_key = self._GetService( search_tag_service_id ).GetServiceKey()
+            
+            ids_to_count = self._GetAutocompleteCounts( search_tag_service_id, file_service_id, namespace_id_tag_ids, there_was_a_namespace, add_namespaceless )
+            
+            #
+            
+            tags_to_ids = { self._GetNamespaceTag( namespace_id, tag_id ) : ( namespace_id, tag_id ) for ( namespace_id, tag_id ) in ids_to_count.keys() }
+            
+            if collapse_siblings:
+                
+                siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+                
+                tags_to_ids = { siblings_manager.CollapseTag( search_tag_service_key, tag ) : id for ( tag, id ) in tags_to_ids.items() }
+                
+            
+            tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+            
+            filtered_tags = tag_censorship_manager.FilterTags( search_tag_service_key, tags_to_ids.keys() )
+            
+            filtered_tags_and_counts = [ ( tag, ids_to_count[ tags_to_ids[ tag ] ] ) for tag in filtered_tags ]
+            
+            predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count) ) in filtered_tags_and_counts ]
+            
+            all_predicates.extend( predicates )
+            
         
-        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
-        
-        filtered_tags = tag_censorship_manager.FilterTags( tag_service_key, tags_to_ids.keys() )
-        
-        filtered_tags_and_counts = [ ( tag, ids_to_count[ tags_to_ids[ tag ] ] ) for tag in filtered_tags ]
-        
-        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count) ) in filtered_tags_and_counts ]
+        predicates = ClientData.MergePredicates( all_predicates )
         
         return predicates
         
@@ -3464,7 +3491,7 @@ class DB( HydrusDB.HydrusDB ):
         
         siblings_manager = self._controller.GetManager( 'tag_siblings' )
         
-        tags = siblings_manager.GetAllSiblings( tag )
+        tags = siblings_manager.GetAllSiblings( tag_service_key, tag )
         
         file_service_id = self._GetServiceId( file_service_key )
         
@@ -4333,7 +4360,7 @@ class DB( HydrusDB.HydrusDB ):
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
-        search_tags = siblings_manager.CollapseTags( search_tags )
+        search_tags = siblings_manager.CollapseTags( service_key, search_tags )
         
         start = HydrusData.GetNowPrecise()
         
@@ -4449,7 +4476,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tags_to_counts = { self._GetNamespaceTag( namespace_id, tag_id ) : count for ( ( namespace_id, tag_id ), count ) in results }
         
-        tags_to_counts = siblings_manager.CollapseTagsToCount( tags_to_counts )
+        tags_to_counts = siblings_manager.CollapseTagsToCount( service_key, tags_to_counts )
         
         tags_to_do = tags_to_counts.keys()
         

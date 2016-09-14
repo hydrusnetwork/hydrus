@@ -32,7 +32,7 @@ def GenerateExportFilename( media, terms ):
             
         elif term_type == 'namespace':
             
-            tags = tags_manager.GetNamespaceSlice( ( term, ), collapse_siblings = True )
+            tags = tags_manager.GetNamespaceSlice( ( term, ) )
             
             filename += ', '.join( [ tag.split( ':' )[1] for tag in tags ] )
             

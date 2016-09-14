@@ -690,13 +690,13 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def __init__( self, parent, file_service_key, tag_service_key ):
         
+        self._file_service_key = file_service_key
+        self._tag_service_key = tag_service_key
+        
         AutoCompleteDropdown.__init__( self, parent )
         
         self._current_namespace = ''
         self._current_matches = []
-        
-        self._file_service_key = file_service_key
-        self._tag_service_key = tag_service_key
         
         file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
         tag_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._tag_service_key )
@@ -739,6 +739,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._tag_service_key = tag_service_key
         
+        self._dropdown_list.SetTagService( self._tag_service_key )
+        
         tag_service = tag_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._tag_service_key )
         
         name = tag_service.GetName()
@@ -750,8 +752,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         wx.CallAfter( self.RefreshList )
         
-    
-    def _InitDropDownList( self ): return ListBoxTagsAutocompleteDropdown( self._dropdown_window, self.BroadcastChoices, min_height = self._list_height )
     
     def _UpdateList( self ):
         
@@ -938,6 +938,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
         
     
+    def _InitDropDownList( self ):
+        
+        return ListBoxTagsAutocompleteDropdownRead( self._dropdown_window, self._tag_service_key, self.BroadcastChoices, min_height = self._list_height )
+        
+    
     def _ParseSearchText( self ):
         
         raw_entry = self._text_ctrl.GetValue()
@@ -959,7 +964,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
-        sibling = siblings_manager.GetSibling( search_text )
+        sibling = siblings_manager.GetSibling( self._tag_service_key, search_text )
         
         if sibling is None:
             
@@ -1065,11 +1070,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
                         
-                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
-                        
-                        predicates = siblings_manager.CollapsePredicates( predicates )
-                        
-                        predicates = ClientSearch.SortPredicates( predicates )
+                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = True, collapse_siblings = True )
                         
                     else:
                         
@@ -1077,9 +1078,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._cache_text = search_text
                             
-                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = True )
-                            
-                            self._cached_results = siblings_manager.CollapsePredicates( self._cached_results )
+                            self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = True, collapse_siblings = True )
                             
                         
                         predicates = self._cached_results
@@ -1111,7 +1110,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
                         
-                        current_tags_flat = ClientSearch.FilterTagsBySearchEntry( search_text, current_tags_flat_iterable )
+                        current_tags_flat = ClientSearch.FilterTagsBySearchEntry( self._tag_service_key, search_text, current_tags_flat_iterable )
                         
                         current_tags_to_count.update( current_tags_flat )
                         
@@ -1124,7 +1123,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
                         
-                        pending_tags_flat = ClientSearch.FilterTagsBySearchEntry( search_text, pending_tags_flat_iterable )
+                        pending_tags_flat = ClientSearch.FilterTagsBySearchEntry( self._tag_service_key, search_text, pending_tags_flat_iterable )
                         
                         pending_tags_to_count.update( pending_tags_flat )
                         
@@ -1133,12 +1132,15 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]
                     
-                    predicates = siblings_manager.CollapsePredicates( predicates )
+                    if self._tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
+                        
+                        predicates = siblings_manager.CollapsePredicates( self._tag_service_key, predicates )
+                        
                     
                     self._next_updatelist_is_probably_fast = True
                     
                 
-                matches = ClientSearch.FilterPredicatesBySearchEntry( search_text, predicates )
+                matches = ClientSearch.FilterPredicatesBySearchEntry( self._tag_service_key, search_text, predicates )
                 
                 matches = ClientSearch.SortPredicates( matches )
                 
@@ -1289,7 +1291,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
-        sibling = siblings_manager.GetSibling( search_text )
+        sibling = siblings_manager.GetSibling( self._tag_service_key, search_text )
         
         if sibling is not None:
             
@@ -1358,7 +1360,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
                 
-                predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, add_namespaceless = False )
+                predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, add_namespaceless = False, collapse_siblings = False )
                 
             else:
                 
@@ -1366,7 +1368,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._cache_text = half_complete_tag
                     
-                    self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, add_namespaceless = False )
+                    self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, add_namespaceless = False, collapse_siblings = False )
                     
                 
                 predicates = self._cached_results
@@ -1374,7 +1376,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 self._next_updatelist_is_probably_fast = True
                 
             
-            matches = ClientSearch.FilterPredicatesBySearchEntry( half_complete_tag, predicates )
+            matches = ClientSearch.FilterPredicatesBySearchEntry( self._tag_service_key, half_complete_tag, predicates )
             
             matches = ClientSearch.SortPredicates( matches )
             
@@ -1394,6 +1396,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
         return matches
+        
+    
+    def _InitDropDownList( self ):
+        
+        return ListBoxTagsAutocompleteDropdownWrite( self._dropdown_window, self._tag_service_key, self.BroadcastChoices, min_height = self._list_height )
         
     
     def _PutAtTopOfMatches( self, matches, predicate ):
@@ -3106,10 +3113,11 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
     
     has_counts = True
     
-    def __init__( self, parent, callable, **kwargs ):
+    def __init__( self, parent, service_key, callable, **kwargs ):
         
         ListBoxTags.__init__( self, parent, **kwargs )
         
+        self._service_key = service_key
         self._callable = callable
         
         self._predicates = {}
@@ -3165,6 +3173,11 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
         return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
+        
+    
+    def _GetTagString( self, predicate ):
+        
+        raise NotImplementedError()
         
     
     def _Hit( self, shift, ctrl, hit_index ):
@@ -3302,7 +3315,7 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
             
             for predicate in predicates:
                 
-                tag_string = predicate.GetUnicode()
+                tag_string = self._GetTagString( predicate )
                 
                 self._ordered_strings.append( tag_string )
                 self._strings_to_terms[ tag_string ] = predicate
@@ -3316,6 +3329,25 @@ class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
                 self._Hit( False, False, 0 )
                 
             
+        
+    
+    def SetTagService( self, service_key ):
+        
+        self._service_key = service_key
+        
+    
+class ListBoxTagsAutocompleteDropdownRead( ListBoxTagsAutocompleteDropdown ):
+    
+    def _GetTagString( self, predicate ):
+        
+        return predicate.GetUnicode()
+        
+    
+class ListBoxTagsAutocompleteDropdownWrite( ListBoxTagsAutocompleteDropdown ):
+    
+    def _GetTagString( self, predicate ):
+        
+        return predicate.GetUnicode( sibling_service_key = self._service_key )
         
     
 class ListBoxTagsCensorship( ListBoxTags ):
@@ -3495,10 +3527,16 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
 class ListBoxTagsStrings( ListBoxTags ):
     
-    def __init__( self, parent, show_sibling_text = True ):
+    def __init__( self, parent, service_key = None, show_sibling_text = True ):
         
         ListBoxTags.__init__( self, parent )
         
+        if service_key is not None:
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        self._service_key = service_key
         self._show_sibling_text = show_sibling_text
         self._tags = set()
         
@@ -3515,7 +3553,7 @@ class ListBoxTagsStrings( ListBoxTags ):
             
             if self._show_sibling_text:
                 
-                sibling = siblings_manager.GetSibling( tag )
+                sibling = siblings_manager.GetSibling( self._service_key, tag )
                 
                 if sibling is not None:
                     
@@ -3552,9 +3590,9 @@ class ListBoxTagsStrings( ListBoxTags ):
     
 class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
-    def __init__( self, parent, removed_callable = None, show_sibling_text = True ):
+    def __init__( self, parent, service_key = None, removed_callable = None, show_sibling_text = True ):
         
-        ListBoxTagsStrings.__init__( self, parent, show_sibling_text = show_sibling_text )
+        ListBoxTagsStrings.__init__( self, parent, service_key = service_key, show_sibling_text = show_sibling_text )
         
         self._removed_callable = removed_callable
         
@@ -3851,7 +3889,7 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
             
-            sibling = siblings_manager.GetSibling( tag )
+            sibling = siblings_manager.GetSibling( self._tag_service_key, tag )
             
             if sibling is not None:
                 
@@ -4941,46 +4979,43 @@ class PopupMessageManager( wx.Frame ):
         
         try:
             
-            do_restore = False
-            do_show = False
+            parent = self.GetParent()
             
-            num_messages_displayed = self._message_vbox.GetItemCount()
+            new_options = HydrusGlobals.client_controller.GetNewOptions()
             
-            if self.GetParent().IsIconized():
+            if new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ):
                 
-                if not self.IsIconized():
-                    
-                    self.Iconize()
-                    
-                
-            else:
-                
-                if self.IsIconized():
-                    
-                    self.Restore()
-                    
-                
-            
-            if num_messages_displayed > 0:
-                
-                if not self.IsShown():
-                    
-                    do_show = True
-                    
-                
-            else:
-                
-                if self.IsShown():
+                if parent.IsIconized():
                     
                     self.Hide()
                     
+                    return
+                    
                 
             
-            if do_show or self.IsShown():
+            if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ):
+                
+                # Hiding while parent iconised in Windows leads to grey window syndrome
+                
+                going_to_bug_out = HC.PLATFORM_WINDOWS and parent.IsIconized()
+                
+                current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
+                
+                if current_focus_tlp not in ( self, parent ) and not going_to_bug_out:
+                    
+                    self.Hide()
+                    
+                    return
+                    
+                
             
+            num_messages_displayed = self._message_vbox.GetItemCount()
+            
+            there_is_stuff_to_display = num_messages_displayed > 0
+            
+            if there_is_stuff_to_display:
+                
                 self.Fit()
-                
-                parent = self.GetParent()
                 
                 ( parent_width, parent_height ) = parent.GetClientSize()
                 
@@ -4991,17 +5026,16 @@ class PopupMessageManager( wx.Frame ):
                 
                 self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
                 
-            
-            if do_show:
-                
                 self.Show()
+                
+                self.Refresh()
+                
+            else:
+                
+                self.Hide()
                 
             
         except:
-            
-            # I don't understand the error here.
-            # It happened for someone in Fit(), causing 'C++ assertion 'm_hDWP failed at blah ... EndRepositioningChildren Shouldn't be called'
-            # It might be related to an id-cache overflow error I had before, in which case it is fixed
             
             text = 'The popup message manager experienced a fatal error and will now stop working! Please restart the client as soon as possible! If this keeps happening, please email the details and your client.log to the hydrus developer.'
             

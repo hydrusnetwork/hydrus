@@ -1689,6 +1689,12 @@ class ManageOptionsPanel( ManagePanel ):
             self._show_thumbnail_title_banner = wx.CheckBox( self )
             self._show_thumbnail_page = wx.CheckBox( self )
             
+            self._hide_message_manager_on_gui_iconise = wx.CheckBox( self )
+            self._hide_message_manager_on_gui_iconise.SetToolTipString( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
+            
+            self._hide_message_manager_on_gui_deactive = wx.CheckBox( self )
+            self._hide_message_manager_on_gui_deactive.SetToolTipString( 'If your message manager stays up after you minimise the program to the system tray using a custom window manager, try this out! It hides the popup messages as soon as the main gui loses focus.' )
+            
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
             self._frame_locations = ClientGUICommon.SaneListCtrl( frame_locations_panel, 200, [ ( 'name', -1 ), ( 'remember size', 90 ), ( 'remember position', 90 ), ( 'last size', 90 ), ( 'last position', 90 ), ( 'default gravity', 90 ), ( 'default position', 90 ), ( 'maximised', 90 ), ( 'fullscreen', 90 ) ], activation_callback = self.EditFrameLocations )
@@ -1729,6 +1735,9 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._show_thumbnail_page.SetValue( self._new_options.GetBoolean( 'show_thumbnail_page' ) )
             
+            self._hide_message_manager_on_gui_iconise.SetValue( self._new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) )
+            self._hide_message_manager_on_gui_deactive.SetValue( self._new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) )
+            
             for ( name, info ) in self._new_options.GetFrameLocations():
                 
                 listctrl_list = [ name ] + list( info )
@@ -1753,6 +1762,8 @@ class ManageOptionsPanel( ManagePanel ):
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Show \'title\' banner on thumbnails: ', self._show_thumbnail_title_banner ) )
             rows.append( ( 'Show volume/chapter/page number on thumbnails: ', self._show_thumbnail_page ) )
+            rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
+            rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -1827,6 +1838,9 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
             self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
+            
+            self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.GetValue() )
+            self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.GetValue() )
             
             for listctrl_list in self._frame_locations.GetClientData():
                 
@@ -3394,7 +3408,7 @@ class ManageTagsPanel( ManagePanel ):
                 
                 siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
                 
-                tags = siblings_manager.CollapseTags( tags )
+                tags = siblings_manager.CollapseTags( self._tag_service_key, tags )
                 
             
             if len( tags ) > 0:

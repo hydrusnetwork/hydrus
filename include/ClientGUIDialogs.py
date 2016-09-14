@@ -377,7 +377,13 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         #
         
-        self._action_dropdown.Append( 'copy', self.COPY )
+        services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
+        
+        if len( services ) > 0:
+            
+            self._action_dropdown.Append( 'copy', self.COPY )
+            
+        
         if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
             
             self._action_dropdown.Append( 'delete', self.DELETE )
@@ -397,8 +403,6 @@ class DialogAdvancedContentUpdate( Dialog ):
         self._tag_type_dropdown.Select( 0 )
         
         #
-        
-        services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
         
         for service in services:
             
@@ -549,14 +553,14 @@ class DialogAdvancedContentUpdate( Dialog ):
             tag = ( 'unnamespaced', None )
             
         
-        service_key_target = self._service_key_dropdown.GetChoice()
-        
         with DialogYesNo( self, 'Are you sure?' ) as dlg:
             
             if dlg.ShowModal() != wx.ID_YES: return
             
         
         if action == self.COPY:
+            
+            service_key_target = self._service_key_dropdown.GetChoice()
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
             
@@ -2254,7 +2258,7 @@ class DialogInputTags( Dialog ):
         
         self._service_key = service_key
         
-        self._tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self )
+        self._tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self, service_key = service_key )
         
         expand_parents = True
         
@@ -3450,7 +3454,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
                 
-                self._tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self._tags_panel, self.TagsRemoved )
+                self._tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self._tags_panel, self._service_key, self.TagsRemoved )
                 
                 expand_parents = True
                 
@@ -3462,7 +3466,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._paths_to_single_tags = collections.defaultdict( set )
                 
-                self._single_tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self._single_tags_panel, self.SingleTagsRemoved )
+                self._single_tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self._single_tags_panel, self._service_key, self.SingleTagsRemoved )
                 
                 expand_parents = True
                 

@@ -245,9 +245,10 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, coll
         
         statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key )
         
-        if collapse_siblings:
+        # combined is already collapsed
+        if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY and collapse_siblings:
             
-            statuses_to_tags = siblings_manager.CollapseStatusesToTags( statuses_to_tags )
+            statuses_to_tags = siblings_manager.CollapseStatusesToTags( tag_service_key, statuses_to_tags )
             
         
         current_tags_to_count.update( statuses_to_tags[ HC.CURRENT ] )
@@ -308,6 +309,26 @@ def MergeCounts( min_a, max_a, min_b, max_b ):
         
     
     return ( min_answer, max_answer )
+    
+def MergePredicates( predicates ):
+    
+    master_predicate_dict = {}
+    
+    for predicate in predicates:
+        
+        # this works because predicate.__hash__ exists
+        
+        if predicate in master_predicate_dict:
+            
+            master_predicate_dict[ predicate ].AddToCount( predicate )
+            
+        else:
+            
+            master_predicate_dict[ predicate ] = predicate
+            
+        
+    
+    return master_predicate_dict.values()
     
 def ShowExceptionClient( e ):
     
@@ -514,6 +535,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
         
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
+        self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_OSX
+        self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_deactive' ] = False
         
         #
         
@@ -1241,7 +1264,7 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( tags_to_add_here ) > 0:
                 
-                tags_to_add_here = siblings_manager.CollapseTags( tags_to_add_here )
+                tags_to_add_here = siblings_manager.CollapseTags( service_key, tags_to_add_here )
                 tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
                 
                 service_keys_to_tags[ service_key ].update( tags_to_add_here )
@@ -1254,7 +1277,7 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( tags_to_add_here ) > 0:
                 
-                tags_to_add_here = siblings_manager.CollapseTags( tags_to_add_here )
+                tags_to_add_here = siblings_manager.CollapseTags( service_key, tags_to_add_here )
                 tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
                 
                 service_keys_to_tags[ service_key ].update( tags_to_add_here )

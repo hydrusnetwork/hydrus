@@ -446,6 +446,13 @@ class HTTPConnection( object ):
             
             raise HydrusExceptions.NetworkException( 'Connection timed out during response read.' )
             
+        except socket.error as e:
+            
+            if e.errno == errno.WSAECONNRESET:
+                
+                raise HydrusExceptions.NetworkException( 'Connection reset by remote host.' )
+                
+            
         
         return ( parsed_response, size_of_response )
         

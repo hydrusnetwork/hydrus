@@ -602,6 +602,7 @@ class AnimationBar( wx.Window ):
         self._current_frame_index = 0
         self._buffer_indices = None
         
+        self._has_experienced_mouse_down = False
         self._currently_in_a_drag = False
         self._it_was_playing = False
         
@@ -727,9 +728,24 @@ class AnimationBar( wx.Window ):
         
         CC.CAN_HIDE_MOUSE = False
         
+        if event.ButtonDown( wx.MOUSE_BTN_ANY ):
+            
+            self._has_experienced_mouse_down = True
+            
+        
+        # sometimes, this can inherit mouse-down from previous filter or embed button reveal, resulting in undesired scan
+        
+        if not self._has_experienced_mouse_down:
+            
+            return
+            
+        
         ( my_width, my_height ) = self.GetClientSize()
         
-        if event.Dragging(): self._currently_in_a_drag = True
+        if event.Dragging():
+            
+            self._currently_in_a_drag = True
+            
         
         if event.ButtonIsDown( wx.MOUSE_BTN_ANY ):
             
@@ -1613,11 +1629,9 @@ class CanvasWithDetails( Canvas ):
             
             tags_manager = self._current_media.GetDisplayMedia().GetTagsManager()
             
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-            
-            current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
-            pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
-            petitioned = siblings_manager.CollapseTags( tags_manager.GetPetitioned() )
+            current = tags_manager.GetCurrent()
+            pending = tags_manager.GetPending()
+            petitioned = tags_manager.GetPetitioned()
             
             tags_i_want_to_display = set()
             
@@ -3824,12 +3838,16 @@ class EmbedButton( wx.Window ):
         center_y = y / 2
         radius = min( 50, center_x, center_y ) - 5
         
+        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
+        
+        dc.Clear()
+        
         if self._thumbnail_bmp is not None:
             
             # animations will have the animation bar space underneath in this case, so colour it in
             dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
             
-            dc.Clear()
+            dc.DrawRectangle( 0, y - ANIMATED_SCANBAR_HEIGHT, x, ANIMATED_SCANBAR_HEIGHT )
             
             ( thumb_width, thumb_height ) = self._thumbnail_bmp.GetSize()
             
@@ -3840,12 +3858,6 @@ class EmbedButton( wx.Window ):
             dc.DrawBitmap( self._thumbnail_bmp, 0, 0 )
             
             dc.SetUserScale( 1.0, 1.0 )
-            
-        else:
-            
-            dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
-            
-            dc.Clear()
             
         
         dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) ) )
