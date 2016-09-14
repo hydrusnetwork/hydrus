@@ -320,7 +320,7 @@ def MergePredicates( predicates ):
         
         if predicate in master_predicate_dict:
             
-            master_predicate_dict[ predicate ].AddToCount( predicate )
+            master_predicate_dict[ predicate ].AddCounts( predicate )
             
         else:
             
