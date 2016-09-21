@@ -4,6 +4,7 @@ import ClientData
 import ClientDefaults
 import ClientDragDrop
 import ClientFiles
+import ClientGUIACDropdown
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
@@ -1650,7 +1651,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._query_box, self._page_key, predicates )
         
-        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context )
+        self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context )
         
         #
         
@@ -5919,8 +5920,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             expand_parents = True
             
-            self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-            self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
@@ -6509,8 +6510,8 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             expand_parents = False
             
-            self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-            self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )

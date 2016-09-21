@@ -49,6 +49,84 @@ def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
     return HydrusBitmap( pil_image.tobytes(), buffer_format, pil_image.size, compressed = compressed )
     
+class ImageRenderer( object ):
+    
+    def __init__( self, media ):
+        
+        self._media = media
+        self._numpy_image = None
+        
+        hash = self._media.GetHash()
+        mime = self._media.GetMime()
+        
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        self._path = client_files_manager.GetFilePath( hash, mime )
+        
+        HydrusGlobals.client_controller.CallToThread( self._Initialise )
+        
+    
+    def _Initialise( self ):
+        
+        time.sleep( 0.00001 )
+        
+        self._numpy_image = ClientImageHandling.GenerateNumpyImage( self._path )
+        
+    
+    def GetEstimatedMemoryFootprint( self ):
+        
+        if self._numpy_image is None:
+            
+            ( width, height ) = self.GetResolution()
+            
+            return width * height * 3
+            
+        else:
+            
+            ( height, width, depth ) = self._numpy_image.shape
+            
+            return height * width * depth
+            
+        
+    
+    def GetHash( self ): return self._media.GetHash()
+    
+    def GetNumFrames( self ): return self._media.GetNumFrames()
+    
+    def GetResolution( self ): return self._media.GetResolution()
+    
+    def GetWXBitmap( self, target_resolution = None ):
+        
+        # add region param to this to allow clipping before resize
+        
+        if target_resolution is None:
+            
+            wx_numpy_image = self._numpy_image
+            
+        else:
+            
+            wx_numpy_image = ClientImageHandling.ResizeNumpyImage( self._media.GetMime(), self._numpy_image, target_resolution )
+            
+        
+        ( wx_height, wx_width, wx_depth ) = wx_numpy_image.shape
+        
+        wx_data = wx_numpy_image.data
+        
+        if wx_depth == 3:
+            
+            return wx.BitmapFromBuffer( wx_width, wx_height, wx_data )
+            
+        else:
+            
+            return wx.BitmapFromBufferRGBA( wx_width, wx_height, wx_data )
+            
+        
+    
+    def IsReady( self ):
+        
+        return self._numpy_image is not None
+        
+    
 class RasterContainer( object ):
     
     def __init__( self, media, target_resolution = None ):
@@ -90,60 +168,6 @@ class RasterContainer( object ):
         
         if self._zoom > 1.0: self._zoom = 1.0
         
-    
-class RasterContainerImage( RasterContainer ):
-    
-    def __init__( self, media, target_resolution = None ):
-        
-        RasterContainer.__init__( self, media, target_resolution )
-        
-        self._hydrus_bitmap = None
-        
-        HydrusGlobals.client_controller.CallToThread( self._InitialiseHydrusBitmap )
-        
-    
-    def _InitialiseHydrusBitmap( self ):
-        
-        time.sleep( 0.00001 )
-        
-        numpy_image = ClientImageHandling.GenerateNumpyImage( self._path )
-        
-        resized_numpy_image = ClientImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
-        
-        hydrus_bitmap = GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
-        
-        self._hydrus_bitmap = hydrus_bitmap
-        
-    
-    def GetEstimatedMemoryFootprint( self ):
-        
-        if self._hydrus_bitmap is None:
-            
-            ( width, height ) = self._target_resolution
-            
-            return width * height * 3
-            
-        else:
-            
-            return self._hydrus_bitmap.GetEstimatedMemoryFootprint()
-            
-        
-    
-    def GetHash( self ): return self._media.GetHash()
-    
-    def GetHydrusBitmap( self ): return self._hydrus_bitmap
-    
-    def GetNumFrames( self ): return self._media.GetNumFrames()
-    
-    def GetResolution( self ): return self._media.GetResolution()
-    
-    def GetSize( self ): return self._target_resolution
-    
-    def GetZoom( self ): return self._zoom
-    
-    def IsRendered( self ): return self._hydrus_bitmap is not None
-    
-    def IsScaled( self ): return self._zoom != 1.0
     
 class RasterContainerVideo( RasterContainer ):
     
@@ -484,8 +508,6 @@ class RasterContainerVideo( RasterContainer ):
         if self._media.GetMime() == HC.IMAGE_GIF: return sum( self._durations )
         else: return self._average_frame_duration * self.GetNumFrames()
         
-    
-    def GetZoom( self ): return self._zoom
     
     def HasFrame( self, index ):
         

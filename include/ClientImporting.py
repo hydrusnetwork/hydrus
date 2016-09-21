@@ -2630,17 +2630,21 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             tags = [ 'filename:' + file_original_filename ]
             
-            if file_url in self._urls_to_md5_base64:
+            # we now do both url and md5 tests here because cloudflare was sometimes giving optimised versions of images, meaning the api's md5 was unreliable
+            # if someone set up a thread watcher of a thread they had previously watched, any optimised images would be redownloaded
+            
+            ( status, hash ) = HydrusGlobals.client_controller.Read( 'url_status', file_url )
+            
+            if status == CC.STATUS_NEW:
                 
-                file_md5_base64 = self._urls_to_md5_base64[ file_url ]
-                
-                file_md5 = file_md5_base64.decode( 'base64' )
-                
-                ( status, hash ) = HydrusGlobals.client_controller.Read( 'md5_status', file_md5 )
-                
-            else:
-                
-                status = CC.STATUS_NEW
+                if file_url in self._urls_to_md5_base64:
+                    
+                    file_md5_base64 = self._urls_to_md5_base64[ file_url ]
+                    
+                    file_md5 = file_md5_base64.decode( 'base64' )
+                    
+                    ( status, hash ) = HydrusGlobals.client_controller.Read( 'md5_status', file_md5 )
+                    
                 
             
             if status == CC.STATUS_DELETED:

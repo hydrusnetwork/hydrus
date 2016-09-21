@@ -1045,7 +1045,7 @@ class DraftPanel( wx.Panel ):
             for name in contacts_to: self._recipients_list.Append( ( name, ) )
             self._recipients_list.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventRemove )
             
-            self._new_recipient = ClientGUICommon.AutoCompleteDropdownContacts( self._to_panel, self._compose_key, self._contact_from )
+            self._new_recipient = ClientGUIACDropdown.AutoCompleteDropdownContacts( self._to_panel, self._compose_key, self._contact_from )
             
             self._recipients_visible = wx.CheckBox( self._to_panel )
             self._recipients_visible.SetValue( recipients_visible )

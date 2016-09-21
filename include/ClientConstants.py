@@ -364,8 +364,8 @@ wxk_code_string_lookup = {
     wx.WXK_NUMPAD_DECIMAL: 'numpad decimal'
     }
 
-ZOOM_NEAREST = 0 # pixelly?
-ZOOM_LINEAR = 1 # simple quick garbage
+ZOOM_NEAREST = 0 # pixelly garbage
+ZOOM_LINEAR = 1 # simple and quick
 ZOOM_AREA = 2 # for shrinking without moire
 ZOOM_CUBIC = 3 # for interpolating, pretty good
 ZOOM_LANCZOS4 = 4 # for interpolating, noice

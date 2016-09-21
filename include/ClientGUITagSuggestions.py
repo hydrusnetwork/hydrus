@@ -9,9 +9,9 @@ import wx
 
 class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
     
-    def __init__( self, parent, activate_callable ):
+    def __init__( self, parent, activate_callable, sort_tags = True ):
         
-        ClientGUICommon.ListBoxTagsStrings.__init__( self, parent )
+        ClientGUICommon.ListBoxTagsStrings.__init__( self, parent, sort_tags = sort_tags )
         
         self._activate_callable = activate_callable
         
@@ -108,7 +108,7 @@ class RecentTagsPanel( wx.Panel ):
         clear_button = wx.Button( self, label = 'clear' )
         clear_button.Bind( wx.EVT_BUTTON, self.EventClear )
         
-        self._recent_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable )
+        self._recent_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = False )
         
         vbox.AddF( clear_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._recent_tags, CC.FLAGS_EXPAND_BOTH_WAYS )

@@ -1590,48 +1590,31 @@ class RenderedImageCache( object ):
     
     def Clear( self ): self._data_cache.Clear()
     
-    def GetImage( self, media, target_resolution = None ):
+    def GetImageRenderer( self, media ):
         
         hash = media.GetHash()
         
-        if target_resolution is None:
-            
-            target_resolution = media.GetResolution()
-            
-        
-        ( media_width, media_height ) = media.GetResolution()
-        ( target_width, target_height ) = target_resolution
-        
-        if target_width > media_width or target_height > media_height:
-            
-            target_resolution = media.GetResolution()
-            
-        else:
-            
-            target_resolution = ( target_width, target_height ) # to convert from wx.size or list to tuple for the cache key
-            
-        
-        key = ( hash, target_resolution )
+        key = hash
         
         result = self._data_cache.GetIfHasData( key )
         
         if result is None:
             
-            image_container = ClientRendering.RasterContainerImage( media, target_resolution )
+            image_renderer = ClientRendering.ImageRenderer( media )
             
-            self._data_cache.AddData( key, image_container )
+            self._data_cache.AddData( key, image_renderer )
             
         else:
             
-            image_container = result
+            image_renderer = result
             
         
-        return image_container
+        return image_renderer
         
     
-    def HasImage( self, hash, target_resolution ):
+    def HasImageRenderer( self, hash ):
         
-        key = ( hash, target_resolution )
+        key = hash
         
         return self._data_cache.HasData( key )
         

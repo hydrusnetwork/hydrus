@@ -538,6 +538,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_OSX
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_deactive' ] = False
         
+        self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = True
+        
         #
         
         self._dictionary[ 'integers' ] = {}
@@ -863,6 +865,16 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return list( self._dictionary[ 'media_zooms' ] )
+            
+        
+    
+    def GetMediaZoomQuality( self, mime ):
+        
+        with self._lock:
+            
+            ( media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            return ( scale_up_quality, scale_down_quality )
             
         
     

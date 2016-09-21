@@ -8,6 +8,20 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 224</h3></li>
+				<ul>
+					<li>rewrote the static image rendering and caching pipeline -- images are now resized on the fly, and only the master image is cached</li>
+					<li>all image rendering and zooming is faster and consumes less memory</li>
+					<li>image rendering now obeys the zoom quality options in the 'media' options page!</li>
+					<li>static image zooming will take advantage of OpenCL (video card acceleration) wherever available</li>
+					<li>added an option to the 'media' panel to allow fast but potentially unstable opencv image loading</li>
+					<li>fixed the tumblr gallery downloader (tumblr put an extra character in their API response, wew)</li>
+					<li>the debug code profiler now prints more information</li>
+					<li>cleaned and updated reducing lag help page to match new profiler</li>
+					<li>'recent' suggested tags are now sorted by recency</li>
+					<li>the thread watcher now checks url history as well as md5 match to compensate for cloudflare optimisation making for unreliable api and causing dupe downloads</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 223</h3></li>
 				<ul>
 					<li>fixed the popup message manager's bad minimise recovery</li>

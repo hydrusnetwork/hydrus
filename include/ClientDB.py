@@ -4324,7 +4324,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_id = self._GetServiceId( service_key )
         
-        # we could be clever and do LIMIT and ORDER BY to do the delete, but not all compilations of SQLite have that turned on, so let's KISS
+        # we could be clever and do LIMIT and ORDER BY in the delete, but not all compilations of SQLite have that turned on, so let's KISS
         
         tag_ids_to_timestamp = { ( namespace_id, tag_id ) : timestamp for ( namespace_id, tag_id, timestamp ) in self._c.execute( 'SELECT namespace_id, tag_id, timestamp FROM recent_tags WHERE service_id = ?;', ( service_id, ) ) }
         

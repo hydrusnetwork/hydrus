@@ -1,6 +1,7 @@
 import HydrusConstants as HC
 import ClientDefaults
 import ClientDownloading
+import ClientGUIACDropdown
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
@@ -926,7 +927,7 @@ class DialogInputCustomFilterAction( Dialog ):
         
         expand_parents = False
         
-        self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
+        self._tag_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
         
         self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
         self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
@@ -2262,7 +2263,7 @@ class DialogInputTags( Dialog ):
         
         expand_parents = True
         
-        self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.Ok )
+        self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.Ok )
         
         self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -3458,7 +3459,7 @@ class DialogPathsToTags( Dialog ):
                 
                 expand_parents = True
                 
-                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+                self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
                 #
                 
@@ -3470,7 +3471,7 @@ class DialogPathsToTags( Dialog ):
                 
                 expand_parents = True
                 
-                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+                self._single_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.EnterTagsSingle, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
                 self.SetSelectedPaths( [] )
                 

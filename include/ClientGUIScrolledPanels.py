@@ -2,6 +2,7 @@ import ClientCaches
 import ClientConstants as CC
 import ClientData
 import ClientDownloading
+import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIPredicates
@@ -388,7 +389,7 @@ class EditHTMLFormulaPanel( EditPanel ):
             content_rule = None
             
         
-        formula = HydrusHTMLParsing.ParseFormula( tags_rules, content_rule )
+        formula = HydrusHTMLParsing.ParseFormulaHTML( tags_rules, content_rule )
         
         return formula
         
@@ -509,7 +510,7 @@ class EditMediaViewOptionsPanel( EditPanel ):
             
             vbox.AddF( self._exact_zooms_only, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( wx.StaticText( self, label = 'These zoom quality controls don\'t do anything yet!' ), CC.FLAGS_VCENTER )
+            vbox.AddF( wx.StaticText( self, label = 'Nearest neighbour is fast and ugly, 8x8 lanczos and area resampling are slower but beautiful.' ), CC.FLAGS_VCENTER )
             
             vbox.AddF( ClientGUICommon.WrapInText( self._scale_up_quality, self, '>100% (interpolation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( ClientGUICommon.WrapInText( self._scale_down_quality, self, '<100% (decimation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1861,7 +1862,11 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
             
-            self._disable_cv_for_gifs = wx.CheckBox( self, label = '' )
+            self._disable_cv_for_gifs = wx.CheckBox( self )
+            self._disable_cv_for_gifs.SetToolTipString( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead.' )
+            
+            self._load_images_with_pil = wx.CheckBox( self )
+            self._load_images_with_pil.SetToolTipString( 'OpenCV is much faster than PIL, but the current release crashes on certain images. You can try turning this off, but switch it back on if you have any problems.' )
             
             self._media_zooms = wx.TextCtrl( self )
             self._media_zooms.Bind( wx.EVT_TEXT, self.EventZoomsChanged )
@@ -1877,6 +1882,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
             self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
+            self._load_images_with_pil.SetValue( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
             
@@ -1904,6 +1910,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
             rows.append( ( 'Disable OpenCV for gifs: ', self._disable_cv_for_gifs ) )
+            rows.append( ( 'Load images with PIL: ', self._load_images_with_pil ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -1993,6 +2000,7 @@ class ManageOptionsPanel( ManagePanel ):
             HC.options[ 'animation_start_position' ] = float( self._animation_start_position.GetValue() ) / 100.0
             
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
+            self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.GetValue() )
             
             try:
                 
@@ -2648,7 +2656,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             expand_parents = False
             
-            self._suggested_favourites_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
+            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
             
             suggested_tags_related_panel = ClientGUICommon.StaticBox( suggested_tags_panel, 'related' )
             
@@ -3052,7 +3060,7 @@ class ManageTagsPanel( ManagePanel ):
             
             expand_parents = True
             
-            self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.Ok )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.Ok )
             
             self._advanced_content_update_button = wx.Button( self, label = 'advanced operation' )
             self._advanced_content_update_button.Bind( wx.EVT_BUTTON, self.EventAdvancedContentUpdate )

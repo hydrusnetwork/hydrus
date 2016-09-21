@@ -10,6 +10,7 @@ import ClientData
 import ClientDefaults
 import ClientCaches
 import ClientFiles
+import ClientGUIACDropdown
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
@@ -2688,7 +2689,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             synchronised = self._management_controller.GetVariable( 'synchronised' )
             
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_callable = self._page.GetMedia, synchronised = synchronised )
+            self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_callable = self._page.GetMedia, synchronised = synchronised )
             self._search_panel.AddF( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._search_panel.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             

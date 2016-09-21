@@ -901,6 +901,17 @@ def Profile( code, g, l ):
     
     DebugPrint( output.read() )
     
+    output.seek( 0 )
+    
+    output.write( 'Callees' )
+    output.write( os.linesep )
+    
+    stats.print_callees()
+    
+    output.seek( 0 )
+    
+    DebugPrint( output.read() )
+    
 def RecordRunningStart( db_path, instance ):
     
     path = os.path.join( db_path, instance + '_running' )

@@ -901,7 +901,6 @@ class Canvas( wx.Window ):
         wx.Window.__init__( self, parent, style = self.BORDER )
         
         self._file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-        self._image_cache = HydrusGlobals.client_controller.GetCache( 'images' )
         
         self._new_options = HydrusGlobals.client_controller.GetNewOptions()
         
@@ -2171,6 +2170,8 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
+        image_cache = HydrusGlobals.client_controller.GetCache( 'images' )
+        
         for ( media, delay ) in to_render:
             
             hash = media.GetHash()
@@ -2178,15 +2179,9 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
             
             if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
                 
-                ( media_width, media_height ) = media.GetResolution()
-                
-                ( default_zoom, canvas_fit_zoom ) = CalculateCanvasZooms( self, media )
-                
-                resolution_to_request = ( int( round( default_zoom * media_width ) ), int( round( default_zoom * media_height ) ) )
-                
-                if not self._image_cache.HasImage( hash, resolution_to_request ):
+                if not image_cache.HasImageRenderer( hash ):
                     
-                    wx.CallLater( delay, self._image_cache.GetImage, media, resolution_to_request )
+                    wx.CallLater( delay, image_cache.GetImageRenderer, media )
                     
                 
             
@@ -3990,8 +3985,10 @@ class StaticImage( wx.Window ):
         self._dirty = True
         
         self._media = media
-        self._image_cache = HydrusGlobals.client_controller.GetCache( 'images' )
-        self._image_container = self._image_cache.GetImage( self._media, initial_size )
+        
+        image_cache = HydrusGlobals.client_controller.GetCache( 'images' )
+        
+        self._image_renderer = image_cache.GetImageRenderer( self._media )
         
         self._is_rendered = False
         
@@ -4007,7 +4004,7 @@ class StaticImage( wx.Window ):
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
-        if not self._image_container.IsRendered():
+        if not self._image_renderer.IsReady():
             
             self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
             
@@ -4019,28 +4016,9 @@ class StaticImage( wx.Window ):
         
         dc.Clear()
         
-        if self._image_container.IsRendered():
+        if self._image_renderer.IsReady():
             
-            hydrus_bitmap = self._image_container.GetHydrusBitmap()
-            
-            ( my_width, my_height ) = self._canvas_bmp.GetSize()
-            
-            ( frame_width, frame_height ) = hydrus_bitmap.GetSize()
-            
-            if frame_height != my_height:
-                
-                image = hydrus_bitmap.GetWxImage()
-                
-                image = image.Scale( my_width, my_height, wx.IMAGE_QUALITY_HIGH )
-                
-                wx_bitmap = wx.BitmapFromImage( image )
-                
-                image.Destroy()
-                
-            else:
-                
-                wx_bitmap = hydrus_bitmap.GetWxBitmap()
-                
+            wx_bitmap = self._image_renderer.GetWXBitmap( self._canvas_bmp.GetSize() )
             
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
@@ -4096,32 +4074,11 @@ class StaticImage( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                ( renderer_width, renderer_height ) = self._image_container.GetSize()
-                
-                # replace all this garbage with resize the bmp and setdirty--the image renderer will do it on the fly in the paint event
-                
-                we_just_zoomed_in = my_width > renderer_width or my_height > renderer_height
-                
-                if we_just_zoomed_in and self._image_container.IsScaled():
-                    
-                    ( media_width, media_height ) = self._media.GetResolution()
-                    
-                    target_width = min( media_width, my_width )
-                    target_height = min( media_height, my_height )
-                    
-                    self._image_container = self._image_cache.GetImage( self._media, ( target_width, target_height ) )
-                    
-                
                 self._canvas_bmp.Destroy()
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
                 self._SetDirty()
-                
-                if not self._image_container.IsRendered():
-                    
-                    self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
-                    
                 
             
         
@@ -4135,7 +4092,7 @@ class StaticImage( wx.Window ):
         
         try:
             
-            if self._image_container.IsRendered():
+            if self._image_renderer.IsReady():
                 
                 self._SetDirty()
                 

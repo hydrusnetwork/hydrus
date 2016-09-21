@@ -1765,7 +1765,7 @@ class GalleryTumblr( Gallery ):
         
         definitely_no_more_pages = False
         
-        processed_raw_json = data.split( 'var tumblr_api_read = ' )[1][:-1] # -1 takes a js ';' off the end
+        processed_raw_json = data.split( 'var tumblr_api_read = ' )[1][:-2] # -1 takes a js ';' off the end
         
         json_object = json.loads( processed_raw_json )
         

@@ -249,15 +249,13 @@ class Controller( HydrusController.HydrusController ):
             
             media = data
             
-            image_container = self.GetCache( 'images' ).GetImage( media )
+            image_renderer = self.GetCache( 'images' ).GetImageRenderer( media )
             
             def CopyToClipboard():
                 
                 if wx.TheClipboard.Open():
                     
-                    hydrus_bmp = image_container.GetHydrusBitmap()
-                    
-                    wx_bmp = hydrus_bmp.GetWxBitmap()
+                    wx_bmp = image_renderer.GetWXBitmap()
                     
                     data = wx.BitmapDataObject( wx_bmp )
                     
@@ -265,7 +263,10 @@ class Controller( HydrusController.HydrusController ):
                     
                     wx.TheClipboard.Close()
                     
-                else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+                else:
+                    
+                    wx.MessageBox( 'I could not get permission to access the clipboard.' )
+                    
                 
             
             def THREADWait():
@@ -274,7 +275,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 start_time = time.time()
                 
-                while not image_container.IsRendered():
+                while not image_renderer.IsReady():
                     
                     if HydrusData.TimeHasPassed( start_time + 15 ): raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
                     
