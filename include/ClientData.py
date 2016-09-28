@@ -408,11 +408,6 @@ def ShowTextClient( text ):
     
 def SortTagsList( tags, sort_type ):
     
-    if sort_type in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
-        
-        sort_type = CC.SORT_BY_INCIDENCE_ASC
-        
-    
     if sort_type in ( CC.SORT_BY_LEXICOGRAPHIC_DESC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
         
         reverse = True

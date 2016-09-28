@@ -2341,14 +2341,36 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'debug_make_popups':
                 
-                for i in range( 1, 9 ):
+                for i in range( 1, 7 ):
                     
                     HydrusData.ShowText( 'This is a test popup message -- ' + str( i ) )
                     
                 
+                #
+                
+                job_key = ClientThreading.JobKey( pausable = True, cancellable = True)
+                
+                job_key.SetVariable( 'title', 'test job' )
+                
+                job_key.SetVariable( 'popup_text_1', 'Currently processing test job 5/8' )
+                job_key.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
+                
+                self._controller.pub( 'message', job_key )
+                
+                wx.CallLater( 2000, job_key.SetVariable, 'popup_text_2', 'Pulsing subjob' )
+                wx.CallLater( 2000, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
+                
+                #
+                
+                e = HydrusExceptions.DataMissing( 'This is a test exception' )
+                
+                HydrusData.ShowException( e )
+                
+                #
+                
                 for i in range( 1, 4 ):
                     
-                    wx.CallLater( 1000 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
+                    wx.CallLater( 500 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
                     
                 
             elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()

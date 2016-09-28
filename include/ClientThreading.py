@@ -141,12 +141,22 @@ class JobKey( object ):
     
     def Finish( self ): self._done.set()
     
-    def GetKey( self ): return self._key
+    def GetIfHasVariable( self, name ):
+        
+        with self._variable_lock:
+            
+            if name in self._variables:
+                
+                return self._variables[ name ]
+                
+            else:
+                
+                return None
+                
+            
+        
     
-    def GetVariable( self, name ):
-        
-        with self._variable_lock: return self._variables[ name ]
-        
+    def GetKey( self ): return self._key
     
     def HasVariable( self, name ):
         
@@ -241,8 +251,6 @@ class JobKey( object ):
             if 'popup_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_traceback' ] )
             
             if 'popup_caller_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_caller_traceback' ] )
-            
-            if 'popup_db_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_db_traceback' ] )
             
         
         stuff_to_print = [ HydrusData.ToUnicode( s ) for s in stuff_to_print ]

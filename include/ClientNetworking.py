@@ -8,6 +8,7 @@ import os
 import requests
 import socket
 import socks
+import ssl
 import threading
 import time
 import urllib
@@ -425,6 +426,23 @@ class HTTPConnection( object ):
                 raise
                 
             
+        except ssl.SSLEOFError:
+            
+            time.sleep( 5 )
+            
+            if attempt_number <= 3:
+                
+                self._RefreshConnection()
+                
+                return self._GetResponse( method_string, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
+                
+            else:
+                
+                text = 'The hydrus client\'s ssl connection to ' + HydrusData.ToUnicode( self._host ) + ' kept terminating abruptly, so the attempt was abandoned.'
+                
+                raise HydrusExceptions.NetworkException( text )
+                
+            
         
     
     def _ReadResponse( self, response, report_hooks, temp_path = None ):
@@ -452,6 +470,10 @@ class HTTPConnection( object ):
                 
                 raise HydrusExceptions.NetworkException( 'Connection reset by remote host.' )
                 
+            
+        except ssl.SSLEOFError:
+            
+            raise HydrusExceptions.NetworkException( 'Secure connection terminated abruptly.' )
             
         
         return ( parsed_response, size_of_response )

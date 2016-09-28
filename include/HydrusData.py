@@ -1851,7 +1851,6 @@ class JobDatabase( object ):
         self._args = args
         self._kwargs = kwargs
         
-        self._result = None
         self._result_ready = threading.Event()
         
     
@@ -1864,13 +1863,21 @@ class JobDatabase( object ):
         
         while True:
             
-            if self._result_ready.wait( 2 ) == True: break
-            elif HydrusGlobals.model_shutdown: raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
+            if self._result_ready.wait( 2 ) == True:
+                
+                break
+                
+            elif HydrusGlobals.model_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
+                
             
         
         if isinstance( self._result, Exception ):
             
-            raise self._result
+            e = self._result
+            
+            raise e
             
         else:
             
@@ -1878,7 +1885,10 @@ class JobDatabase( object ):
             
         
     
-    def GetType( self ): return self._type
+    def GetType( self ):
+        
+        return self._type
+        
     
     def IsSynchronous( self ): return self._synchronous
     

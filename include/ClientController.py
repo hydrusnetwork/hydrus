@@ -130,16 +130,21 @@ class Controller( HydrusController.HydrusController ):
         
         if job_key.HasVariable( 'result' ):
             
-            return job_key.GetVariable( 'result' )
+            # result can be None, for wx_code that has no return variable
             
-        elif job_key.HasVariable( 'error' ):
+            result = job_key.GetIfHasVariable( 'result' )
             
-            raise job_key.GetVariable( 'error' )
+            return result
             
-        else:
+        
+        error = job_key.GetIfHasVariable( 'error' )
+        
+        if error is not None:
             
-            raise HydrusExceptions.ShutdownException()
+            raise error
             
+        
+        raise HydrusExceptions.ShutdownException()
         
     
     def CheckAlreadyRunning( self ):

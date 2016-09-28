@@ -89,7 +89,7 @@ class GIFRenderer( object ):
             
         else:
             
-            current_frame = pil_image = HydrusImageHandling.Dequantize( self._pil_image )
+            current_frame = HydrusImageHandling.Dequantize( self._pil_image )
             
             if current_frame.mode == 'RGBA':
                 

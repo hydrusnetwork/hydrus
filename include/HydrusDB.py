@@ -701,3 +701,30 @@ class HydrusDB( object ):
         if synchronous: return job.GetResult()
         
     
+class TemporaryIntegerTable( object ):
+    
+    def __init__( self, cursor, integer_iterable, column_name ):
+        
+        self._cursor = cursor
+        self._integer_iterable = integer_iterable
+        self._column_name = column_name
+        
+        self._table_name = 'mem.tempint' + os.urandom( 32 ).encode( 'hex' )
+        
+    
+    def __enter__( self ):
+        
+        self._cursor.execute( 'CREATE TABLE ' + self._table_name + ' ( ' + self._column_name + ' INTEGER PRIMARY KEY );' )
+        
+        self._cursor.executemany( 'INSERT INTO ' + self._table_name + ' ( ' + self._column_name + ' ) VALUES ( ? );', ( ( i, ) for i in self._integer_iterable ) )
+        
+        return self._table_name
+        
+    
+    def __exit__( self, exc_type, exc_val, exc_tb ):
+        
+        self._cursor.execute( 'DROP TABLE ' + self._table_name + ';' )
+        
+        return False
+        
+    

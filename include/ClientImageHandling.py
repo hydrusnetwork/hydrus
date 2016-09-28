@@ -64,15 +64,26 @@ def GenerateNumpyImage( path ):
             
         else:
             
-            ( im_y, im_x, depth ) = numpy_image.shape
+            shape = numpy_image.shape
             
-            if depth == 4:
+            if len( shape ) == 2:
                 
-                convert = cv2.COLOR_BGRA2RGBA
+                # monochrome image
+                
+                convert = cv2.COLOR_GRAY2RGB
                 
             else:
                 
-                convert = cv2.COLOR_BGR2RGB
+                ( im_y, im_x, depth ) = shape
+                
+                if depth == 4:
+                    
+                    convert = cv2.COLOR_BGRA2RGBA
+                    
+                else:
+                    
+                    convert = cv2.COLOR_BGR2RGB
+                    
                 
             
             numpy_image = cv2.cvtColor( numpy_image, convert )

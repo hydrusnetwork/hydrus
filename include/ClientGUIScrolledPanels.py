@@ -667,7 +667,7 @@ class ManageOptionsPanel( ManagePanel ):
         
         self.SetSizer( vbox )
         
-
+    
     class _ClientFilesPanel( wx.Panel ):
         
         def __init__( self, parent ):
@@ -2622,6 +2622,8 @@ class ManageOptionsPanel( ManagePanel ):
             self._default_tag_sort.Append( 'lexicographic (z-a) (grouped by namespace)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
             self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
             self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
+            self._default_tag_sort.Append( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
+            self._default_tag_sort.Append( 'incidence (asc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_ASC )
             
             self._default_tag_repository = ClientGUICommon.BetterChoice( general_panel )
             
@@ -2680,6 +2682,8 @@ class ManageOptionsPanel( ManagePanel ):
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC: self._default_tag_sort.Select( 3 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 4 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 5 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_DESC: self._default_tag_sort.Select( 6 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_ASC: self._default_tag_sort.Select( 7 )
             
             services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
             
@@ -2836,6 +2840,110 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.MessageBox( traceback.format_exc() )
             
+        
+        
+class ManageParsingScriptsPanel( ManagePanel ):
+    
+    def __init__( self, parent ):
+        
+        ManagePanel.__init__( self, parent )
+        
+        self._scripts = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'name', -1 ), ( 'query type', 50 ), ( 'starting url', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
+        
+        self._add_button = wx.Button( self, label = 'add' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        
+        self._edit_button = wx.Button( self, label = 'edit' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._delete_button = wx.Button( self, label = 'delete' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        #
+        
+        scripts = [] # fetch all scripts from the db, populate listctrl using name column's data to store the script itself or w/e
+        
+        for script in scripts:
+            
+            ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( script )
+            
+            self._scripts.Append( display_tuple, data_tuple )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        
+        vbox.AddF( self._scripts, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertScriptToTuples( self, script ):
+        
+        # fetch these vars from the script, return display/data tuples for the listctrl
+        
+        name = 'blah'
+        query_type = 'GET'
+        starting_url = 'muh_booru.com'
+        
+        return ( ( name, query_type, starting_url ), ( script, query_type, starting_url ) )
+        
+    
+    def Add( self ):
+        
+        # blank edit script dlg, append it
+        
+        pass
+        
+    
+    def CommitChanges( self ):
+        
+        scripts = [ script for ( script, query_type, starting_url ) in self._scripts.GetClientData() ]
+        
+        # save them to db
+        
+    
+    def Delete( self ):
+        
+        self._scripts.RemoveAllSelected()
+        
+    
+    def Edit( self ):
+        
+        for i in self._scripts.GetAllSelected():
+            
+            ( script, query_type, starting_url ) = self._scripts.GetClientData( i )
+            
+            # throw it at edit script dlg
+            # if ok:
+            
+            ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( script )
+            
+            self._scripts.UpdateRow( i, display_tuple, data_tuple )
+            
+        
+    
+    def EventAdd( self, event ):
+        
+        self.Add()
+        
+    
+    def EventDelete( self, event ):
+        
+        self.Delete()
+        
+    
+    def EventEdit( self, event ):
+        
+        self.Edit()
         
     
 class ManageTagsPanel( ManagePanel ):

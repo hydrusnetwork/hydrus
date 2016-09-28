@@ -2274,7 +2274,7 @@ class ListBoxTagsStrings( ListBoxTags ):
         self._service_key = service_key
         self._show_sibling_text = show_sibling_text
         self._sort_tags = sort_tags
-        self._tags = set()
+        self._tags = []
         
     
     def _RecalcTags( self ):
@@ -2350,7 +2350,13 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
     def _RemoveTags( self, tags ):
         
-        self._tags.difference_update( tags )
+        for tag in tags:
+            
+            if tag in self._tags:
+                
+                self._tags.remove( tag )
+                
+            
         
         self._RecalcTags()
         
@@ -2362,14 +2368,20 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
     def AddTags( self, tags ):
         
-        self._tags.update( tags )
+        for tag in tags:
+            
+            if tag not in self._tags:
+                
+                self._tags.append( tag )
+                
+            
         
         self._RecalcTags()
         
     
     def Clear( self ):
         
-        self._tags = set()
+        self._tags = []
         
         self._RecalcTags()
         
@@ -2382,13 +2394,13 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
             
             if tag in self._tags:
                 
-                self._tags.discard( tag )
+                self._tags.remove( tag )
                 
                 removed.add( tag )
                 
             else:
                 
-                self._tags.add( tag )
+                self._tags.append( tag )
                 
             
         
@@ -2573,7 +2585,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
-        if not include_counts and self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
+        if not include_counts and self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
             
             self._sort = CC.SORT_BY_LEXICOGRAPHIC_ASC
             
@@ -2710,7 +2722,7 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def _SortTags( self ):
         
-        if self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
+        if self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
             
             tags_to_count = collections.Counter()
             
@@ -2718,27 +2730,54 @@ class ListBoxTagsSelection( ListBoxTags ):
             if self._show_deleted: tags_to_count.update( self._deleted_tags_to_count )
             if self._show_pending: tags_to_count.update( self._pending_tags_to_count )
             if self._show_petitioned: tags_to_count.update( self._petitioned_tags_to_count )
+
+            def key( unordered_string ):
+                
+                return ( tags_to_count[ self._strings_to_terms[ unordered_string ] ], unordered_string )
+                
             
-            if self._sort == CC.SORT_BY_INCIDENCE_ASC:
-        
-                def key( a ):
-                    
-                    return ( tags_to_count[ self._strings_to_terms[ a ] ], a )
-                    
+            if self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC ):
                 
                 reverse = False
                 
-            elif self._sort == CC.SORT_BY_INCIDENCE_DESC:
+            elif self._sort in ( CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
                 
-                def key( a ):
-                    
-                    return ( - tags_to_count[ self._strings_to_terms[ a ] ], a )
-                    
-                
-                reverse = False
+                reverse = True
                 
             
             self._ordered_strings.sort( key = key, reverse = reverse )
+            
+            if self._sort in ( CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
+                
+                # python list sort is stable, so lets now sort again
+                
+                def secondary_key( unordered_string ):
+                    
+                    tag = self._strings_to_terms[ unordered_string ]
+                    
+                    if ':' in tag:
+                        
+                        ( namespace, subtag ) = tag.split( ':', 1 )
+                        
+                    else:
+                        
+                        namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
+                        
+                    
+                    return namespace
+                    
+                
+                if self._sort == CC.SORT_BY_INCIDENCE_NAMESPACE_ASC:
+                    
+                    reverse = True
+                    
+                elif self._sort == CC.SORT_BY_INCIDENCE_NAMESPACE_DESC:
+                    
+                    reverse = False
+                    
+                
+                self._ordered_strings.sort( key = secondary_key, reverse = reverse )
+                
             
         else:
             
@@ -3287,16 +3326,6 @@ class PopupMessage( PopupWindow ):
         self._caller_tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._caller_tb_text.Hide()
         
-        self._show_db_tb_button = wx.Button( self, label = 'show db traceback' )
-        self._show_db_tb_button.Bind( wx.EVT_BUTTON, self.EventShowDBTBButton )
-        self._show_db_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._show_db_tb_button.Hide()
-        
-        self._db_tb_text = FitResistantStaticText( self )
-        self._db_tb_text.Wrap( 380 )
-        self._db_tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._db_tb_text.Hide()
-        
         self._copy_tb_button = wx.Button( self, label = 'copy traceback information' )
         self._copy_tb_button.Bind( wx.EVT_BUTTON, self.EventCopyTBButton )
         self._copy_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
@@ -3328,8 +3357,6 @@ class PopupMessage( PopupWindow ):
         vbox.AddF( self._tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._show_caller_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._caller_tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._show_db_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._db_tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._copy_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
         
@@ -3367,9 +3394,14 @@ class PopupMessage( PopupWindow ):
     
     def EventCopyToClipboardButton( self, event ):
         
-        ( title, text ) = self._job_key.GetVariable( 'popup_clipboard' )
+        result = self._job_key.GetIfHasVariable( 'popup_clipboard' )
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+        if result is not None:
+            
+            ( title, text ) = result
+            
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+            
         
     
     def EventPauseButton( self, event ):
@@ -3404,31 +3436,18 @@ class PopupMessage( PopupWindow ):
         self.GetParent().MakeSureEverythingFits()
         
     
-    def EventShowDBTBButton( self, event ):
-        
-        if self._db_tb_text.IsShown():
-            
-            self._show_db_tb_button.SetLabelText( 'show db traceback' )
-            
-            self._db_tb_text.Hide()
-            
-        else:
-            
-            self._show_db_tb_button.SetLabelText( 'hide db traceback' )
-            
-            self._db_tb_text.Show()
-            
-        
-        self.GetParent().MakeSureEverythingFits()
-        
-    
     def EventShowFilesButton( self, event ):
         
-        hashes = self._job_key.GetVariable( 'popup_files' )
+        result = self._job_key.GetIfHasVariable( 'popup_files' )
         
-        media_results = HydrusGlobals.client_controller.Read( 'media_results', hashes )
-        
-        HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+        if result is not None:
+            
+            hashes = result
+            
+            media_results = HydrusGlobals.client_controller.Read( 'media_results', hashes )
+            
+            HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+            
         
     
     def EventShowTBButton( self, event ):
@@ -3473,38 +3492,58 @@ class PopupMessage( PopupWindow ):
     
     def Update( self ):
         
-        if self._job_key.HasVariable( 'popup_title' ):
+        paused = self._job_key.IsPaused()
+        
+        title = self._job_key.GetIfHasVariable( 'popup_title' )
+        
+        if title is not None:
             
-            text = self._job_key.GetVariable( 'popup_title' )
+            text = title
             
             if self._title.GetLabelText() != text: self._title.SetLabelText( text )
             
             self._title.Show()
             
-        else: self._title.Hide()
-        
-        if self._job_key.HasVariable( 'popup_text_1' ) or self._job_key.IsPaused():
+        else:
             
-            if self._job_key.IsPaused():
+            self._title.Hide()
+            
+        
+        popup_text_1 = self._job_key.GetIfHasVariable( 'popup_text_1' )
+        
+        if popup_text_1 is not None or paused:
+            
+            if paused:
                 
                 text = 'paused'
                 
             else:
                 
-                text = self._job_key.GetVariable( 'popup_text_1' )
+                text = popup_text_1
                 
             
-            if self._text_1.GetLabelText() != text: self._text_1.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            if self._text_1.GetLabelText() != text:
+                
+                self._text_1.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+                
             
             self._text_1.Show()
             
-        else: self._text_1.Hide()
+        else:
+            
+            self._text_1.Hide()
+            
         
-        if self._job_key.HasVariable( 'popup_gauge_1' ) and not self._job_key.IsPaused():
+        popup_gauge_1 = self._job_key.GetIfHasVariable( 'popup_gauge_1' )
+        
+        if popup_gauge_1 is not None and not paused:
             
-            ( gauge_value, gauge_range ) = self._job_key.GetVariable( 'popup_gauge_1' )
+            ( gauge_value, gauge_range ) = popup_gauge_1
             
-            if gauge_range is None or gauge_value is None: self._gauge_1.Pulse()
+            if gauge_range is None or gauge_value is None:
+                
+                self._gauge_1.Pulse()
+                
             else:
                 
                 self._gauge_1.SetRange( gauge_range )
@@ -3513,23 +3552,39 @@ class PopupMessage( PopupWindow ):
             
             self._gauge_1.Show()
             
-        else: self._gauge_1.Hide()
+        else:
+            
+            self._gauge_1.Hide()
+            
         
-        if self._job_key.HasVariable( 'popup_text_2' ) and not self._job_key.IsPaused():
+        popup_text_2 = self._job_key.GetIfHasVariable( 'popup_text_2' )
+        
+        if popup_text_2 is not None and not paused:
             
-            text = self._job_key.GetVariable( 'popup_text_2' )
+            text = popup_text_2
             
-            if self._text_2.GetLabelText() != text: self._text_2.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            if self._text_2.GetLabelText() != text:
+                
+                self._text_2.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+                
             
             self._text_2.Show()
             
-        else: self._text_2.Hide()
+        else:
+            
+            self._text_2.Hide()
+            
         
-        if self._job_key.HasVariable( 'popup_gauge_2' ) and not self._job_key.IsPaused():
+        popup_gauge_2 = self._job_key.GetIfHasVariable( 'popup_gauge_2' )
+        
+        if popup_gauge_2 is not None and not paused:
             
-            ( gauge_value, gauge_range ) = self._job_key.GetVariable( 'popup_gauge_2' )
+            ( gauge_value, gauge_range ) = popup_gauge_2
             
-            if gauge_range is None or gauge_value is None: self._gauge_2.Pulse()
+            if gauge_range is None or gauge_value is None:
+                
+                self._gauge_2.Pulse()
+                
             else:
                 
                 self._gauge_2.SetRange( gauge_range )
@@ -3538,11 +3593,16 @@ class PopupMessage( PopupWindow ):
             
             self._gauge_2.Show()
             
-        else: self._gauge_2.Hide()
-        
-        if self._job_key.HasVariable( 'popup_clipboard' ):
+        else:
             
-            ( title, text ) = self._job_key.GetVariable( 'popup_clipboard' )
+            self._gauge_2.Hide()
+            
+        
+        popup_clipboard = self._job_key.GetIfHasVariable( 'popup_clipboard' )
+        
+        if popup_clipboard is not None:
+            
+            ( title, text ) = popup_clipboard
             
             if self._copy_to_clipboard_button.GetLabelText() != title:
                 
@@ -3556,9 +3616,11 @@ class PopupMessage( PopupWindow ):
             self._copy_to_clipboard_button.Hide()
             
         
-        if self._job_key.HasVariable( 'popup_files' ):
+        popup_files = self._job_key.GetIfHasVariable( 'popup_files' )
+        
+        if popup_files is not None:
             
-            hashes = self._job_key.GetVariable( 'popup_files' )
+            hashes = popup_files
             
             text = 'show ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
             
@@ -3574,14 +3636,26 @@ class PopupMessage( PopupWindow ):
             self._show_files_button.Hide()
             
         
-        if self._job_key.HasVariable( 'popup_traceback' ) or self._job_key.HasVariable( 'popup_caller_traceback' ) or self._job_key.HasVariable( 'popup_db_traceback' ): self._copy_tb_button.Show()
-        else: self._copy_tb_button.Hide()
+        popup_traceback = self._job_key.GetIfHasVariable( 'popup_traceback' )
+        popup_caller_traceback = self._job_key.GetIfHasVariable( 'popup_traceback' )
         
-        if self._job_key.HasVariable( 'popup_traceback' ):
+        if popup_traceback is not None or popup_caller_traceback is not None:
             
-            text = self._job_key.GetVariable( 'popup_traceback' )
+            self._copy_tb_button.Show()
             
-            if self._tb_text.GetLabelText() != text: self._tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+        else:
+            
+            self._copy_tb_button.Hide()
+            
+        
+        if popup_traceback is not None:
+            
+            text = popup_traceback
+            
+            if self._tb_text.GetLabelText() != text:
+                
+                self._tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+                
             
             self._show_tb_button.Show()
             
@@ -3591,11 +3665,14 @@ class PopupMessage( PopupWindow ):
             self._tb_text.Hide()
             
         
-        if self._job_key.HasVariable( 'popup_caller_traceback' ):
+        if popup_caller_traceback is not None:
             
-            text = self._job_key.GetVariable( 'popup_caller_traceback' )
+            text = popup_caller_traceback
             
-            if self._caller_tb_text.GetLabelText() != text: self._caller_tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            if self._caller_tb_text.GetLabelText() != text:
+                
+                self._caller_tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+                
             
             self._show_caller_tb_button.Show()
             
@@ -3605,25 +3682,23 @@ class PopupMessage( PopupWindow ):
             self._caller_tb_text.Hide()
             
         
-        if self._job_key.HasVariable( 'popup_db_traceback' ):
+        if self._job_key.IsPausable():
             
-            text = self._job_key.GetVariable( 'popup_db_traceback' )
-            
-            if self._db_tb_text.GetLabelText() != text: self._db_tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
-            
-            self._show_db_tb_button.Show()
+            self._pause_button.Show()
             
         else:
             
-            self._show_db_tb_button.Hide()
-            self._db_tb_text.Hide()
+            self._pause_button.Hide()
             
         
-        if self._job_key.IsPausable(): self._pause_button.Show()
-        else: self._pause_button.Hide()
-        
-        if self._job_key.IsCancellable(): self._cancel_button.Show()
-        else: self._cancel_button.Hide()
+        if self._job_key.IsCancellable():
+            
+            self._cancel_button.Show()
+            
+        else:
+            
+            self._cancel_button.Hide()
+            
         
     
 class PopupMessageManager( wx.Frame ):
@@ -3756,20 +3831,28 @@ class PopupMessageManager( wx.Frame ):
             
             if there_is_stuff_to_display:
                 
-                self.Fit()
+                best_size = self.GetBestSize()
+                
+                if best_size != self.GetSize():
+                    
+                    self.Fit()
+                    
                 
                 ( parent_width, parent_height ) = parent.GetClientSize()
                 
                 ( my_width, my_height ) = self.GetClientSize()
                 
-                my_x = ( parent_width - my_width ) - 5
-                my_y = ( parent_height - my_height ) - 15
+                my_x = ( parent_width - my_width ) - 25
+                my_y = ( parent_height - my_height ) - 5
                 
-                self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
+                my_position = parent.ClientToScreenXY( my_x, my_y )
+                
+                if my_position != self.GetPosition():
+                    
+                    self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
+                    
                 
                 self.Show()
-                
-                self.Refresh()
                 
             else:
                 
@@ -5068,6 +5151,8 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         self._sorter.Append( 'lexicographic (z-a) (grouped by namespace)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
         self._sorter.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
         self._sorter.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
+        self._sorter.Append( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
+        self._sorter.Append( 'incidence (asc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_ASC )
         
         if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._sorter.Select( 0 )
         elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._sorter.Select( 1 )
@@ -5075,6 +5160,8 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC: self._sorter.Select( 3 )
         elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._sorter.Select( 4 )
         elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._sorter.Select( 5 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_DESC: self._sorter.Select( 6 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_ASC: self._sorter.Select( 7 )
         
         self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
         
