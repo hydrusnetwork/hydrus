@@ -8,6 +8,20 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 225</h3></li>
+				<ul>
+					<li>system:numtags is now much faster when applied to 'local files' or a file repository</li>
+					<li>system:numtags now correctly counts same-tag-different-namespace tags as distinct (for instance, [page:1, chapter:1] was previously being counted as only one)</li>
+					<li>refactored fast db integer iterable access code into a context manager</li>
+					<li>media result building is faster</li>
+					<li>added namespace-grouped incidental tag sorting</li>
+					<li>fixed the OpenCV image loader for monochrome images</li>
+					<li>fixed a thread interaction issue when drawing popup messages</li>
+					<li>popup messages should no longer flicker while static</li>
+					<li>popup debug test is richer</li>
+					<li>fixed editing of some taglists such as in explicit tags and import tag editing</li>
+					<li>SSL EOF errors are now caught by the networking engine</li>
+				</ul>
 				<li><h3>version 224</h3></li>
 				<ul>
 					<li>rewrote the static image rendering and caching pipeline -- images are now resized on the fly, and only the master image is cached</li>
