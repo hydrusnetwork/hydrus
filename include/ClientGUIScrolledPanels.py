@@ -15,8 +15,8 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals
-import HydrusHTMLParsing
 import HydrusNATPunch
+import HydrusParsing
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
@@ -172,7 +172,7 @@ class EditHTMLFormulaPanel( EditPanel ):
         
         self._test_html = wx.TextCtrl( testing_panel, style = wx.TE_MULTILINE )
         
-        self._fetch_from_url = wx.Button( testing_panel, label = 'fetch html from url' )
+        self._fetch_from_url = wx.Button( testing_panel, label = 'fetch result from url' )
         self._fetch_from_url.Bind( wx.EVT_BUTTON, self.EventFetchFromURL )
         
         self._run_test = wx.Button( testing_panel, label = 'run test' )
@@ -186,7 +186,7 @@ class EditHTMLFormulaPanel( EditPanel ):
         
         for rule in tag_rules:
             
-            pretty_rule = HydrusHTMLParsing.RenderTagRule( rule )
+            pretty_rule = HydrusParsing.RenderTagRule( rule )
             
             self._tag_rules.Append( pretty_rule, rule )
             
@@ -389,7 +389,7 @@ class EditHTMLFormulaPanel( EditPanel ):
             content_rule = None
             
         
-        formula = HydrusHTMLParsing.ParseFormulaHTML( tags_rules, content_rule )
+        formula = HydrusParsing.ParseFormulaHTML( tags_rules, content_rule )
         
         return formula
         
@@ -575,6 +575,199 @@ class EditMediaViewOptionsPanel( EditPanel ):
         scale_down_quality = self._scale_down_quality.GetChoice()
         
         return ( self._mime, media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
+        
+    
+class EditParsingScriptFileLookupPanel( EditPanel ):
+    
+    def __init__( self, parent, script ):
+        
+        EditPanel.__init__( self, parent )
+        
+        ( name, example_url, query_type, file_identifier_type, file_identifier_encoding, file_identifier_arg_name, static_args, children ) = script.ToTuple()
+        
+        #
+        
+        self._name = wx.TextCtrl( self )
+        
+        query_panel = ClientGUICommon.StaticBox( self, 'query' )
+        
+        self._query_type = ClientGUICommon.BetterChoice( query_panel )
+        
+        self._query_type.Append( 'GET', HC.GET )
+        self._query_type.Append( 'POST', HC.POST )
+        
+        self._file_identifier_type = ClientGUICommon.BetterChoice( query_panel )
+        
+        for t in [ HydrusParsing.FILE_IDENTIFIER_TYPE_FILE, HydrusParsing.FILE_IDENTIFIER_TYPE_MD5, HydrusParsing.FILE_IDENTIFIER_TYPE_SHA1, HydrusParsing.FILE_IDENTIFIER_TYPE_SHA256, HydrusParsing.FILE_IDENTIFIER_TYPE_SHA512, HydrusParsing.FILE_IDENTIFIER_TYPE_USER_INPUT ]:
+            
+            self._file_identifier_type.Append( HydrusParsing.file_identifier_string_lookup[ t ], t )
+            
+        
+        self._file_identifier_encoding = ClientGUICommon.BetterChoice( query_panel )
+        
+        for e in [ HC.ENCODING_RAW, HC.ENCODING_HEX, HC.ENCODING_BASE64 ]:
+            
+            self._file_identifier_encoding.Append( HC.encoding_string_lookup[ e ], e )
+            
+        
+        self._file_identifier_arg_name = wx.TextCtrl( query_panel )
+        
+        static_args_panel = ClientGUICommon.StaticBox( query_panel, 'static arguments' )
+        
+        self._static_args = ClientGUICommon.EditStringToStringDict( static_args_panel, static_args )
+        
+        #
+        
+        children_panel = ClientGUICommon.StaticBox( self, 'content parsing children' )
+        
+        self._children = wx.Panel( children_panel )
+        
+        wx.StaticText( self._children, label = 'flexible edit children panel goes here' )
+        
+        #
+        
+        testing_panel = ClientGUICommon.StaticBox( self, 'testing' )
+        
+        # need a url here for the url param
+        
+        self._test_url = wx.TextCtrl( testing_panel )
+        
+        self._test_url.SetValue( example_url )
+        
+        self._test_arg = wx.TextCtrl( testing_panel )
+        
+        self._test_arg.SetValue( 'enter example file path, hex hash, or raw user input here' )
+        
+        self._run_test = wx.Button( testing_panel, label = 'run test' )
+        self._run_test.Bind( wx.EVT_BUTTON, self.EventRunTest )
+        
+        self._results = wx.TextCtrl( testing_panel, style = wx.TE_MULTILINE )
+        
+        self._results.SetMinSize( ( -1, 200 ) )
+        
+        #
+        
+        self._name.SetValue( name )
+        
+        self._query_type.SelectClientData( query_type )
+        self._file_identifier_type.SelectClientData( file_identifier_type )
+        self._file_identifier_encoding.SelectClientData( file_identifier_encoding )
+        self._file_identifier_arg_name.SetValue( file_identifier_arg_name )
+        
+        # set children
+        
+        #
+        
+        static_args_panel.AddF( self._static_args, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'query type: ', self._query_type ) )
+        rows.append( ( 'file identifier type: ', self._file_identifier_type ) )
+        rows.append( ( 'file identifier encoding: ', self._file_identifier_encoding ) )
+        rows.append( ( 'file identifier GET/POST argument name: ', self._file_identifier_arg_name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( query_panel, rows )
+        
+        query_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        query_panel.AddF( static_args_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        children_message = 'The data returned by the query will be passed to each of these children for content parsing.'
+        
+        children_panel.AddF( wx.StaticText( children_panel, label = children_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        children_panel.AddF( self._children, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        testing_panel.AddF( self._test_url, CC.FLAGS_EXPAND_PERPENDICULAR )
+        testing_panel.AddF( self._test_arg, CC.FLAGS_EXPAND_PERPENDICULAR )
+        testing_panel.AddF( self._run_test, CC.FLAGS_EXPAND_PERPENDICULAR )
+        testing_panel.AddF( self._results, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        rows = []
+        
+        rows.append( ( 'script name: ', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( query_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( children_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( testing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _RunTest( self ):
+        
+        script = self.GetValue()
+        
+        test_url = self._test_url.GetValue()
+        test_arg = self._test_arg.GetValue()
+        
+        file_identifier_type = self._file_identifier_type.GetChoice()
+        
+        if file_identifier_type == HydrusParsing.FILE_IDENTIFIER_TYPE_FILE:
+            
+            if not os.path.exists( test_arg ):
+                
+                wx.MessageBox( 'That file does not exist!' )
+                
+                return
+                
+            
+            with open( test_arg, 'rb' ) as f:
+                
+                file_identifier = f.read()
+                
+            
+        elif file_identifier_type == HydrusParsing.FILE_IDENTIFIER_TYPE_USER_INPUT:
+            
+            file_identifier = test_arg
+            
+        else:
+            
+            file_identifier = test_arg.decode( 'hex' )
+            
+        
+        try:
+            
+            data = script.FetchData( test_url, file_identifier )
+            
+            self._results.SetValue( data )
+            
+        except Exception as e:
+            
+            message = 'Could not parse! Full error written to log!'
+            message += os.linesep * 2
+            message += HydrusData.ToUnicode( e )
+            
+            wx.MessageBox( message )
+            
+        
+    
+    def EventRunTest( self, event ):
+        
+        self._RunTest()
+        
+    
+    def GetValue( self ):
+        
+        name = self._name.GetValue()
+        example_url = self._test_url.GetValue()
+        query_type = self._query_type.GetChoice()
+        file_identifier_type = self._file_identifier_type.GetChoice()
+        file_identifier_encoding = self._file_identifier_encoding.GetChoice()
+        file_identifier_arg_name = self._file_identifier_arg_name.GetValue()
+        
+        # static args
+        static_args = {}
+        # children
+        children = []
+        
+        script = HydrusParsing.ParseRootFileLookup( name, example_url = example_url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children )
+        
+        return script
         
     
 class EditSeedCachePanel( EditPanel ):
@@ -1204,6 +1397,8 @@ class ManageOptionsPanel( ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
+            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
             self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
@@ -1235,7 +1430,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            self._maintenance_vacuum_period = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 1, max = 365, multiplier = 86400, none_phrase = 'do not automatically vacuum' )
+            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 1, max = 365, none_phrase = 'do not automatically vacuum' )
             
             #
             
@@ -1252,7 +1447,7 @@ class ManageOptionsPanel( ManagePanel ):
             self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
             self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
             
-            self._maintenance_vacuum_period.SetValue( HC.options[ 'maintenance_vacuum_period' ] )
+            self._maintenance_vacuum_period_days.SetValue( self._new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' ) )
             
             self._processing_phase.SetValue( HC.options[ 'processing_phase' ] )
             
@@ -1302,7 +1497,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Number of days to wait between vacuums: ', self._maintenance_vacuum_period ) )
+            rows.append( ( 'Number of days to wait between vacuums: ', self._maintenance_vacuum_period_days ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._maintenance_panel, rows )
             
@@ -1381,9 +1576,9 @@ class ManageOptionsPanel( ManagePanel ):
             HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
             HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
             
-            HC.options[ 'maintenance_vacuum_period' ] = self._maintenance_vacuum_period.GetValue()
-            
             HC.options[ 'processing_phase' ] = self._processing_phase.GetValue()
+            
+            self._new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', self._maintenance_vacuum_period_days.GetValue() )
             
         
     
@@ -2848,16 +3043,25 @@ class ManageParsingScriptsPanel( ManagePanel ):
         
         ManagePanel.__init__( self, parent )
         
-        self._scripts = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'name', -1 ), ( 'query type', 50 ), ( 'starting url', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
+        self._scripts = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'name', -1 ), ( 'query type', 80 ), ( 'script type', 240 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
         
         self._add_button = wx.Button( self, label = 'add' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
         
+        self._copy_button = wx.Button( self, label = 'copy' )
+        self._copy_button.Bind( wx.EVT_BUTTON, self.EventCopy )
+        
+        self._paste_button = wx.Button( self, label = 'paste' )
+        self._paste_button.Bind( wx.EVT_BUTTON, self.EventPaste )
+        
+        self._duplicate_button = wx.Button( self, label = 'duplicate' )
+        self._duplicate_button.Bind( wx.EVT_BUTTON, self.EventDuplicate )
+        
         self._edit_button = wx.Button( self, label = 'edit' )
-        self._add_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
         
         self._delete_button = wx.Button( self, label = 'delete' )
-        self._add_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
         
         #
         
@@ -2877,6 +3081,9 @@ class ManageParsingScriptsPanel( ManagePanel ):
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         button_hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._copy_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._paste_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._duplicate_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
         
@@ -2889,26 +3096,97 @@ class ManageParsingScriptsPanel( ManagePanel ):
     def _ConvertScriptToTuples( self, script ):
         
         # fetch these vars from the script, return display/data tuples for the listctrl
+        ( name, query_type, script_type ) = script.ToPrettyStrings()
         
-        name = 'blah'
-        query_type = 'GET'
-        starting_url = 'muh_booru.com'
+        return ( ( name, query_type, script_type ), ( script, query_type, script_type ) )
         
-        return ( ( name, query_type, starting_url ), ( script, query_type, starting_url ) )
+    
+    def _SetNonDupeName( self, script ):
+        
+        name = script.GetName()
+        
+        current_names = { script.GetName() for ( script, query_type, script_type ) in self._scripts.GetClientData() }
+        
+        if name in current_names:
+            
+            i = 1
+            
+            original_name = name
+            
+            while name in current_names:
+                
+                name = original_name + ' (' + str( i ) + ')'
+                
+                i += 1
+                
+            
+            script.SetName( name )
+            
         
     
     def Add( self ):
         
-        # blank edit script dlg, append it
-        
-        pass
+        with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select the script type', [ 'file lookup' ] ) as dlg_type:
+            
+            if dlg_type.ShowModal() == wx.ID_OK:
+                
+                script_type_string = dlg_type.GetString()
+                
+                if script_type_string == 'file lookup':
+                    
+                    name = 'new script'
+                    example_url = 'enter example url here'
+                    query_type = HC.GET
+                    file_identifier_type = HydrusParsing.FILE_IDENTIFIER_TYPE_MD5
+                    file_identifier_encoding = HC.ENCODING_BASE64
+                    file_identifier_arg_name = 'md5'
+                    static_args = {}
+                    children = []
+                    
+                    empty_script = HydrusParsing.ParseRootFileLookup( name, example_url = example_url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
+                    
+                    panel_class = EditParsingScriptFileLookupPanel
+                    
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit script' ) as dlg_edit:
+                    
+                    panel = panel_class( dlg_edit, empty_script )
+                    
+                    dlg_edit.SetPanel( panel )
+                    
+                    if dlg_edit.ShowModal() == wx.ID_OK:
+                        
+                        new_script = panel.GetValue()
+                        
+                        self._SetNonDupeName( new_script )
+                        
+                        ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( new_script )
+                        
+                        self._scripts.Append( display_tuple, data_tuple )
+                        
+                    
+                
+            
         
     
     def CommitChanges( self ):
         
-        scripts = [ script for ( script, query_type, starting_url ) in self._scripts.GetClientData() ]
+        scripts = [ script for ( script, query_type, script_type ) in self._scripts.GetClientData() ]
         
         # save them to db
+        # this should completely delete and replace the old stuff in the db to allow for renames
+        
+    
+    def Copy( self ):
+        
+        for i in self._scripts.GetAllSelected():
+            
+            ( script, query_type, script_type ) = self._scripts.GetClientData( i )
+            
+            script_json = script.DumpToString()
+            
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', script_json )
+            
         
     
     def Delete( self ):
@@ -2916,18 +3194,103 @@ class ManageParsingScriptsPanel( ManagePanel ):
         self._scripts.RemoveAllSelected()
         
     
+    def Duplicate( self ):
+        
+        scripts_to_dupe = []
+        
+        for i in self._scripts.GetAllSelected():
+            
+            ( script, query_type, script_type ) = self._scripts.GetClientData( i )
+            
+            scripts_to_dupe.append( script )
+            
+        
+        for script in scripts_to_dupe:
+            
+            dupe_script = script.Duplicate()
+            
+            self._SetNonDupeName( dupe_script )
+            
+            ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( dupe_script )
+            
+            self._scripts.Append( display_tuple, data_tuple )
+            
+        
+    
     def Edit( self ):
         
         for i in self._scripts.GetAllSelected():
             
-            ( script, query_type, starting_url ) = self._scripts.GetClientData( i )
+            ( script, query_type, script_type ) = self._scripts.GetClientData( i )
             
-            # throw it at edit script dlg
-            # if ok:
+            original_name = script.GetName()
             
-            ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( script )
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit script' ) as dlg:
+                
+                if isinstance( script, HydrusParsing.ParseRootFileLookup ):
+                    
+                    panel_class = EditParsingScriptFileLookupPanel
+                    
+                
+                panel = panel_class( dlg, script )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_script = panel.GetValue()
+                    
+                    name = edited_script.GetName()
+                    
+                    if name != original_name:
+                        
+                        self._SetNonDupeName( edited_script )
+                        
+                    
+                    ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( edited_script )
+                    
+                    self._scripts.UpdateRow( i, display_tuple, data_tuple )
+                    
+                
+                
             
-            self._scripts.UpdateRow( i, display_tuple, data_tuple )
+        
+    
+    def Paste( self ):
+        
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            raw_text = data.GetText()
+            
+            try:
+                
+                obj = HydrusSerialisable.CreateFromString( raw_text )
+                
+                if isinstance( obj, HydrusParsing.ParseRootFileLookup ):
+                    
+                    script = obj
+                    
+                    self._SetNonDupeName( script )
+                    
+                    ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( script )
+                    
+                    self._scripts.Append( display_tuple, data_tuple )
+                    
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        else:
+            
+            wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
         
     
@@ -2936,14 +3299,29 @@ class ManageParsingScriptsPanel( ManagePanel ):
         self.Add()
         
     
+    def EventCopy( self, event ):
+        
+        self.Copy()
+        
+    
     def EventDelete( self, event ):
         
         self.Delete()
         
     
+    def EventDuplicate( self, event ):
+        
+        self.Duplicate()
+        
+    
     def EventEdit( self, event ):
         
         self.Edit()
+        
+    
+    def EventPaste( self, event ):
+        
+        self.Paste()
         
     
 class ManageTagsPanel( ManagePanel ):

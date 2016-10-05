@@ -1815,16 +1815,6 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         HydrusGlobals.client_controller.pub( 'seed_cache_seed_updated', seed )
         
     
-    def Duplicate( self ):
-        
-        new_seed_cache = SeedCache()
-        
-        new_seed_cache._seeds_ordered = list( self._seeds_ordered )
-        new_seed_cache._seeds_to_info = { seed : dict( info ) for ( seed, info ) in self._seeds_to_info.items() }
-        
-        return new_seed_cache
-        
-    
     def GetNextSeed( self, status ):
         
         with self._lock:

@@ -1803,7 +1803,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
     
     def EventPaste( self, event ):
-    
+        
         if wx.TheClipboard.Open():
             
             data = wx.TextDataObject()

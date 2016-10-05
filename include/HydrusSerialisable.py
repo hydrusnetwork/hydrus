@@ -30,10 +30,10 @@ SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER = 25
 SERIALISABLE_TYPE_LIST = 26
 SERIALISABLE_TYPE_PARSE_FORMULA_HTML = 27
 SERIALISABLE_TYPE_URLS_IMPORT = 28
-SERIALISABLE_TYPE_PARSE_NODE_LINK = 29
+SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK = 29
 SERIALISABLE_TYPE_PARSE_NODE_CONTENT = 30
 SERIALISABLE_TYPE_PARSE_FORMULA_JSON = 31
-SERIALISABLE_TYPE_PARSE_ROOT_QUERY = 32
+SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP = 32
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -100,6 +100,11 @@ class SerialisableBase( object ):
         obj_tuple = self.GetSerialisableTuple()
         
         return json.dumps( obj_tuple )
+        
+    
+    def Duplicate( self ):
+        
+        return CreateFromString( self.DumpToString() )
         
     
     def GetSerialisableTuple( self ):

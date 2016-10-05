@@ -1135,6 +1135,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
             menu.AppendSeparator()
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_parsing_scripts' ), p( 'Manage &Parsing Scripts (under construction!)' ), p( 'Manage how the client parses different types of web content.' ) )
+            menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
@@ -1182,14 +1184,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             pubsub_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pubsub_profile_mode' )
             force_idle_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle_mode' )
             
+            no_focus_changed_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'no_focus_changed' )
+            
             debug = wx.Menu()
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_make_popups' ), p( 'Make Some Popups' ) )
+            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_make_a_delayed_popup' ), p( 'Make a Popup in Five Seconds' ) )
             debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
             debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
             debug.AppendCheckItem( pubsub_profile_mode_id, p( '&PubSub Profile Mode' ) )
             debug.Check( pubsub_profile_mode_id, HydrusGlobals.pubsub_profile_mode )
             debug.AppendCheckItem( force_idle_mode_id, p( '&Force Idle Mode' ) )
             debug.Check( force_idle_mode_id, HydrusGlobals.force_idle_mode )
+            debug.AppendCheckItem( no_focus_changed_id, p( '&No Focus Changed Mode' ) )
+            debug.Check( no_focus_changed_id, HydrusGlobals.no_focus_changed )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
@@ -1368,6 +1375,21 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller.pub( 'wake_daemons' )
         self._controller.pub( 'refresh_status' )
+        
+    
+    def _ManageParsingScripts( self ):
+        
+        title = 'manage parsing scripts'
+        frame_key = 'regular_dialog'
+        
+        with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.ManageParsingScriptsPanel( dlg )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
     
     def _ManagePixivAccount( self ):
@@ -2339,6 +2361,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HydrusData.Print( 'garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
                 
+            elif command == 'debug_make_a_delayed_popup':
+                
+                wx.CallLater( 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
+                
             elif command == 'debug_make_popups':
                 
                 for i in range( 1, 7 ):
@@ -2406,6 +2432,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_boorus': self._ManageBoorus()
             elif command == 'manage_export_folders': self._ManageExportFolders()
             elif command == 'manage_import_folders': self._ManageImportFolders()
+            elif command == 'manage_parsing_scripts': self._ManageParsingScripts()
             elif command == 'manage_pixiv_account': self._ManagePixivAccount()
             elif command == 'manage_server_services': self._ManageServer( data )
             elif command == 'manage_services': self._ManageServices()
@@ -2434,6 +2461,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
+            elif command == 'no_focus_changed':
+                
+                HydrusGlobals.no_focus_changed = not HydrusGlobals.no_focus_changed
+                
             elif command == 'open_export_folder': self._OpenExportFolder()
             elif command == 'open_install_folder': self._OpenInstallFolder()
             elif command == 'options': self._ManageOptions()
@@ -2582,7 +2613,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            if HC.options[ 'default_gui_session' ] == 'last session' and not self._loading_session:
+            if not self._loading_session:
                 
                 self._SaveGUISession( 'last session' )
                 

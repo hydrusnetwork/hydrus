@@ -1515,6 +1515,7 @@ class MenuEventIdToActionCache( object ):
                 self._temporary_ids.add( new_id )
                 self._free_temporary_ids.add( new_id )
                 
+                
             
             return self._free_temporary_ids.pop()
             
@@ -2041,6 +2042,21 @@ class TagCensorshipManager( object ):
         rows = self._controller.Read( 'tag_censorship' )
         
         self._service_keys_to_info = { service_key : ( blacklist, censorships ) for ( service_key, blacklist, censorships ) in rows }
+        
+    
+    def FilterPredicates( self, service_key, predicates ):
+        
+        for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
+            
+            if service_key_lookup in self._service_keys_to_info:
+                
+                ( blacklist, censorships ) = self._service_keys_to_info[ service_key_lookup ]
+                
+                predicates = [ predicate for predicate in predicates if predicate.GetType() != HC.PREDICATE_TYPE_TAG or self._CensorshipMatches( predicate.GetValue(), blacklist, censorships ) ]
+                
+            
+        
+        return predicates
         
     
     def FilterStatusesToPairs( self, service_key, statuses_to_pairs ):

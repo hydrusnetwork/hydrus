@@ -48,7 +48,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 225
+SOFTWARE_VERSION = 226
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -100,6 +100,16 @@ content_update_string_lookup[ CONTENT_UPDATE_RATING ] = 'rating'
 content_update_string_lookup[ CONTENT_UPDATE_DENY_PEND ] = 'deny pend'
 content_update_string_lookup[ CONTENT_UPDATE_DENY_PETITION ] = 'deny petition'
 content_update_string_lookup[ CONTENT_UPDATE_UNDELETE ] = 'undelete'
+
+ENCODING_RAW = 0
+ENCODING_HEX = 1
+ENCODING_BASE64 = 2
+
+encoding_string_lookup = {}
+
+encoding_string_lookup[ ENCODING_RAW ] = 'raw bytes'
+encoding_string_lookup[ ENCODING_HEX ] = 'hexadecimal'
+encoding_string_lookup[ ENCODING_BASE64 ] = 'base64'
 
 IMPORT_FOLDER_TYPE_DELETE = 0
 IMPORT_FOLDER_TYPE_SYNCHRONISE = 1
@@ -249,6 +259,12 @@ DENY = 1
 GET = 0
 POST = 1
 OPTIONS = 2
+
+query_type_string_lookup = {}
+
+query_type_string_lookup[ GET ] = 'GET'
+query_type_string_lookup[ POST ] = 'POST'
+query_type_string_lookup[ OPTIONS ] = 'OPTIONS'
 
 APPLICATION_HYDRUS_CLIENT_COLLECTION = 0
 IMAGE_JPEG = 1

@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 226</h3></li>
+				<ul>
+					<li>fleshed out a bunch of parsing script engine and gui framework and added an 'under construction' entry to the services menu. feel free to play around with it!</li>
+					<li>fixed autocomplete same-service sibling count merging</li>
+					<li>sped up how autocomplete counts are put together</li>
+					<li>results will build faster due to an improvement in how tag rows are fetched</li>
+					<li>results will build faster due to an improvement in how tag strings are fetched</li>
+					<li>incidence taglist sorting now secondary sorts by lexicographic in the 'correct' direction (a-z for desc, z-a for asc)</li>
+					<li>all listctrls now support ctrl+a to select all</li>
+					<li>cleaned up some superfluous and possibly buggy canvas zoom calc when using the open externally button</li>
+					<li>the zoom_switch event will now reset the drag coordinates (recentering the image) if the resultant zoom fits into the canvas frame</li>
+					<li>the mouse cursor hides itself more quickly on media drag on Windows (so warppointer jitter is hidden)</li>
+					<li>the popup message manager will be careful about switching from hide to show while the parent gui is minimised on windows, which should reduce the grey box problem</li>
+					<li>the popup message manager will specifically re-layout on a transition from hidden to shown to stop the 'crushed into a corner' layout problem that would sometimes happen here</li>
+					<li>popup message manager will now consider a minimsed gui as unfocused for the purposes the of the focus BUGFIX option</li>
+					<li>added a new delayed popup message item to the debug menu for testing minimised popup creation</li>
+					<li>vacuum maintenance period option is moved, reset to larger default of 30 days</li>
+					<li>'last session' will now always be updated on client close, even if it is not the default session</li>
+				</ul>
 				<li><h3>version 225</h3></li>
 				<ul>
 					<li>system:numtags is now much faster when applied to 'local files' or a file repository</li>

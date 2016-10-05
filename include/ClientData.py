@@ -559,6 +559,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = None
         
+        self._dictionary[ 'noneable_integers' ][ 'maintenance_vacuum_period_days' ] = 30
+        
         #
         
         client_files_default = os.path.join( HC.DB_DIR, 'client_files' )

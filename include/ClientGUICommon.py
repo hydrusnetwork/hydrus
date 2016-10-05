@@ -487,6 +487,136 @@ class ChoiceSort( BetterChoice ):
         if self._page_key is not None: self._BroadcastSort()
         
     
+class EditStringToStringDict( wx.Panel ):
+    
+    def __init__( self, parent, initial_dict ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._listctrl = SaneListCtrl( self, 120, [ ( 'key', -1 ), ( 'value', 200 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        
+        self._add = wx.Button( self, label = 'add' )
+        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+        
+        self._edit = wx.Button( self, label = 'edit' )
+        self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._delete = wx.Button( self, label = 'delete' )
+        self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        #
+        
+        for display_tuple in initial_dict.items():
+            
+            self._listctrl.Append( display_tuple, display_tuple )
+            
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._add, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._edit, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._delete, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def Add( self ):
+        
+        import ClientGUIDialogs
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'enter the key', allow_blank = False ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                key = dlg.GetValue()
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'enter the value', allow_blank = True ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        value = dlg.GetValue()
+                        
+                        display_tuple = ( key, value )
+                        
+                        self._listctrl.Append( display_tuple, display_tuple )
+                        
+                    
+                
+            
+        
+    
+    def Delete( self ):
+        
+        self._listctrl.RemoveAllSelected()
+        
+    
+    def Edit( self ):
+        
+        for i in self._listctrl.GetAllSelected():
+            
+            ( key, value ) = self._listctrl.GetClientData( i )
+            
+            import ClientGUIDialogs
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = key, allow_blank = False ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    key = dlg.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the value', default = value, allow_blank = True ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    value = dlg.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            display_tuple = ( key, value )
+            
+            self._listctrl.UpdateRow( i, display_tuple, display_tuple )
+            
+        
+    
+    def EventAdd( self, event ):
+        
+        self.Add()
+        
+    
+    def EventDelete( self, event ):
+        
+        self.Delete()
+        
+    
+    def EventEdit( self, event ):
+        
+        self.Edit()
+        
+    
+    def GetValue( self ):
+        
+        value_dict = { key : value for ( key, value ) in self._listctrl.GetClientData() }
+        
+        return value_dict
+        
+    
 class ExportPatternButton( wx.Button ):
     
     ID_HASH = 0
@@ -2733,14 +2863,20 @@ class ListBoxTagsSelection( ListBoxTags ):
 
             def key( unordered_string ):
                 
-                return ( tags_to_count[ self._strings_to_terms[ unordered_string ] ], unordered_string )
+                return tags_to_count[ self._strings_to_terms[ unordered_string ] ]
                 
             
+            # we do a plain sort here to establish a-z for equal values later
+            # don't incorporate it into the key as a tuple because it is in the opposite direction to what we want
             if self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC ):
+                
+                self._ordered_strings.sort( reverse = True )
                 
                 reverse = False
                 
             elif self._sort in ( CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
+                
+                self._ordered_strings.sort()
                 
                 reverse = True
                 
@@ -3797,6 +3933,9 @@ class PopupMessageManager( wx.Frame ):
             
             parent = self.GetParent()
             
+            # changing show status while parent iconised in Windows leads to grey window syndrome
+            going_to_bug_out_at_hide_or_show = HC.PLATFORM_WINDOWS and parent.IsIconized()
+            
             new_options = HydrusGlobals.client_controller.GetNewOptions()
             
             if new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ):
@@ -3811,15 +3950,24 @@ class PopupMessageManager( wx.Frame ):
             
             if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ):
                 
-                # Hiding while parent iconised in Windows leads to grey window syndrome
-                
-                going_to_bug_out = HC.PLATFORM_WINDOWS and parent.IsIconized()
-                
                 current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
                 
-                if current_focus_tlp not in ( self, parent ) and not going_to_bug_out:
+                gui_is_active = current_focus_tlp in ( self, parent )
+                
+                if gui_is_active:
                     
-                    self.Hide()
+                    # gui can have focus even while minimised to the taskbar--let's not show in this case
+                    if not self.IsShown() and parent.IsIconized():
+                        
+                        return
+                        
+                    
+                else:
+                    
+                    if not going_to_bug_out_at_hide_or_show:
+                        
+                        self.Hide()
+                        
                     
                     return
                     
@@ -3852,11 +4000,24 @@ class PopupMessageManager( wx.Frame ):
                     self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
                     
                 
-                self.Show()
+                if not going_to_bug_out_at_hide_or_show:
+                    
+                    was_hidden = not self.IsShown()
+                    
+                    self.Show()
+                    
+                    if was_hidden:
+                        
+                        self.Layout()
+                        
+                    
                 
             else:
                 
-                self.Hide()
+                if not going_to_bug_out_at_hide_or_show:
+                    
+                    self.Hide()
+                    
                 
             
         except:
@@ -4737,6 +4898,10 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
                 self._delete_key_callback()
                 
             
+        elif event.KeyCode in ( ord( 'A' ), ord( 'a' ) ) and event.CmdDown():
+            
+            self.SelectAll()
+            
         else:
             
             event.Skip()
@@ -4856,6 +5021,18 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         indices.reverse() # so we don't screw with the indices of deletees below
         
         for index in indices: self.DeleteItem( index )
+        
+    
+    def SelectAll( self ):
+        
+        currently_selected = set( self.GetAllSelected() )
+        
+        currently_not_selected = [ index for index in range( self.GetItemCount() ) if index not in currently_selected ]
+        
+        for index in currently_not_selected:
+            
+            self.Select( index )
+            
         
     
     def UpdateValue( self, index, column, display_value, data_value ):

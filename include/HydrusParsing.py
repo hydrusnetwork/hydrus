@@ -3,6 +3,19 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusSerialisable
 
+def ConvertParsableContentToPrettyString( parsable_content ):
+    
+    if len( parsable_content ) == 0:
+        
+        return 'nothing'
+        
+    else:
+        
+        # make this prettier
+        
+        return ', '.join( parsable_content )
+        
+    
 def RenderTagRule( ( name, attrs, index ) ):
     
     if index is None:
@@ -172,16 +185,16 @@ class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT ] = ParseNodeContent
 
-class ParseNodeLink( HydrusSerialisable.SerialisableBase ):
+class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_LINK
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, name = None, formula = None, children = None ):
+    def __init__( self, formula = None, children = None, description = None ):
         
-        self._name = name
         self._formula = formula
         self._children = children
+        self._description = description
         
     
     def _GetSerialisableInfo( self ):
@@ -189,12 +202,12 @@ class ParseNodeLink( HydrusSerialisable.SerialisableBase ):
         serialisable_formula = self._formula.GetSerialisableTuple()
         serialisable_children = [ child.GetSerialisableTuple() for child in self._children ]
         
-        return ( self._name, serialisable_formula, serialisable_children )
+        return ( serialisable_formula, serialisable_children, self._description )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._name, serialisable_formula, serialisable_children ) = serialisable_info
+        ( serialisable_formula, serialisable_children, self._description ) = serialisable_info
         
         self._formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
         self._children = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_child ) for serialisable_child in serialisable_children ]
@@ -241,19 +254,38 @@ class ParseNodeLink( HydrusSerialisable.SerialisableBase ):
         self._children = children
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_LINK ] = ParseNodeLink
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK ] = ParseNodeContentLink
 
-class ParseRootQuery( HydrusSerialisable.SerialisableBase ):
+FILE_IDENTIFIER_TYPE_FILE = 0
+FILE_IDENTIFIER_TYPE_MD5 = 1
+FILE_IDENTIFIER_TYPE_SHA1 = 2
+FILE_IDENTIFIER_TYPE_SHA256 = 3
+FILE_IDENTIFIER_TYPE_SHA512 = 3
+FILE_IDENTIFIER_TYPE_USER_INPUT = 5
+
+file_identifier_string_lookup = {}
+
+file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_FILE ] = 'the actual file (POST only)'
+file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_MD5 ] = 'md5 hash'
+file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_SHA1 ] = 'sha1 hash'
+file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_SHA256 ] = 'sha256 hash'
+file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_SHA512 ] = 'sha512 hash'
+file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_USER_INPUT ] = 'custom user input'
+
+class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_QUERY
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, name = None, url = None, query_type = None, file_identifier_arg = None, static_args = None, children = None ):
+    def __init__( self, name, example_url = None, query_type = None, file_identifier_type = None, file_identifier_encoding = None, file_identifier_arg_name = None, static_args = None, children = None ):
         
-        self._name = name
-        self._url = url
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._example_url = example_url
         self._query_type = query_type
-        self._file_identifier_arg = file_identifier_arg
+        self._file_identifier_type = file_identifier_type
+        self._file_identifier_encoding = file_identifier_encoding
+        self._file_identifier_arg_name = file_identifier_arg_name
         self._static_args = static_args
         self._children = children
         
@@ -262,14 +294,28 @@ class ParseRootQuery( HydrusSerialisable.SerialisableBase ):
         
         serialisable_children = [ child.GetSerialisableTuple() for child in self._children ]
         
-        return ( self._name, self._url, self._query_type, self._file_identifier_arg, self._static_args, serialisable_children )
+        return ( self._example_url, self._query_type, self._file_identifier_type, self._file_identifier_encoding, self._file_identifier_arg_name, self._static_args, serialisable_children )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._name, self._url, self._query_type, self._file_identifier_arg, self._static_args, serialisable_children ) = serialisable_info
+        ( self._example_url, self._query_type, self._file_identifier_type, self._file_identifier_encoding, self._file_identifier_arg_name, self._static_args, serialisable_children ) = serialisable_info
         
         self._children = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_child ) for serialisable_child in serialisable_children ]
+        
+    
+    def FetchData( self, url, file_identifier ):
+        
+        if self._query_type == HC.POST and self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+            
+            raise Exception( 'Cannot have a file as an argument on a GET query!' )
+            
+        
+        # do a query on url in GET/POST, using the provided arg
+        
+        data = 'blah'
+        
+        return data
         
     
     def GetParsableContent( self ):
@@ -284,11 +330,11 @@ class ParseRootQuery( HydrusSerialisable.SerialisableBase ):
         return children_parsable_content
         
     
-    def DoQuery( self, args, desired_content ):
+    def DoQuery( self, url, file_identifier, desired_content ):
         
-        # do a query on _url in GET/POST, using the provided args, which should match arg_info
+        # this should take a job_key that will be propagated down and will have obeyed cancel and so on
         
-        data = 'blah'
+        data = self.FetchData( url, file_identifier )
         
         content = []
         
@@ -296,20 +342,15 @@ class ParseRootQuery( HydrusSerialisable.SerialisableBase ):
             
             # if what the child provides is in our desired list:
             
-            content.extend( child.Parse( data, self._url, desired_content ) )
+            content.extend( child.Parse( data, url, desired_content ) )
             
         
         return content
         
     
-    def GetFileIdentifierArg( self ):
+    def GetFileIdentifierInfo( self ):
         
-        # hash type, like md5, or the actual file
-        # if I am feeling clever at a later date, a namespace like pixiv_id:123456
-        
-        # and a name for the arg in the form
-        
-        return self._file_identifier_arg
+        return ( self._file_identifier_type, self._file_identifier_encoding )
         
     
     def SetChildren( self, children ):
@@ -317,18 +358,14 @@ class ParseRootQuery( HydrusSerialisable.SerialisableBase ):
         self._children = children
         
     
-    def SetTuple( self, name, url, query_type, file_identifier_arg, static_args ):
+    def ToPrettyStrings( self ):
         
-        self._name = name
-        self._url = url
-        self._query_type = query_type
-        self._file_identifier_arg = file_identifier_arg
-        self._static_args = static_args
+        return ( self._name, HC.query_type_string_lookup[ self._query_type ], 'File Lookup returning ' + ConvertParsableContentToPrettyString( self.GetParsableContent() ) )
         
     
     def ToTuple( self ):
         
-        return ( self._name, self._url, self._query_type, self._file_identifier_arg, self._static_args )
+        return ( self._name, self._example_url, self._query_type, self._file_identifier_type, self._file_identifier_encoding,  self._file_identifier_arg_name, self._static_args, self._children )
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_QUERY ] = ParseRootQuery
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ] = ParseRootFileLookup

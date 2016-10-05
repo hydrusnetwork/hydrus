@@ -10,6 +10,8 @@ pubsub_profile_mode = False
 force_idle_mode = False
 server_busy = False
 
+no_focus_changed = False
+
 do_idle_shutdown_work = False
 shutdown_complete = False
 restart = False

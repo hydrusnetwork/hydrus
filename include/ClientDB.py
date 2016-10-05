@@ -2781,6 +2781,10 @@ class DB( HydrusDB.HydrusDB ):
         
         all_predicates = []
         
+        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+        
+        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+        
         for search_tag_service_id in search_tag_service_ids:
             
             search_tag_service_key = self._GetService( search_tag_service_id ).GetServiceKey()
@@ -2789,22 +2793,18 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            tags_to_ids = { self._GetNamespaceTag( namespace_id, tag_id ) : ( namespace_id, tag_id ) for ( namespace_id, tag_id ) in ids_to_count.keys() }
+            namespace_id_tag_ids_to_namespace_tags = self._GetNamespaceIdTagIdsToNamespaceTags( ids_to_count.keys() )
+            
+            tags_and_counts_generator = ( ( namespace_id_tag_ids_to_namespace_tags[ id ], ids_to_count[ id ] ) for id in ids_to_count.keys() )
+            
+            predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tags_and_counts_generator ]
             
             if collapse_siblings:
                 
-                siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-                
-                tags_to_ids = { siblings_manager.CollapseTag( search_tag_service_key, tag ) : id for ( tag, id ) in tags_to_ids.items() }
+                predicates = siblings_manager.CollapsePredicates( search_tag_service_key, predicates )
                 
             
-            tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
-            
-            filtered_tags = tag_censorship_manager.FilterTags( search_tag_service_key, tags_to_ids.keys() )
-            
-            filtered_tags_and_counts = [ ( tag, ids_to_count[ tags_to_ids[ tag ] ] ) for tag in filtered_tags ]
-            
-            predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count) ) in filtered_tags_and_counts ]
+            predicates = tag_censorship_manager.FilterPredicates( search_tag_service_key, predicates )
             
             all_predicates.extend( predicates )
             
@@ -3992,14 +3992,32 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._c.execute( 'SELECT hash_id, service_id, filename FROM service_filenames, ' + temp_table_name + ' USING ( hash_id );' ) ) )
             
-            hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( [ ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._c.execute( 'SELECT service_id, hash_id, rating FROM local_ratings, ' + temp_table_name + ' USING ( hash_id );' ) ] )
+            hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._c.execute( 'SELECT service_id, hash_id, rating FROM local_ratings, ' + temp_table_name + ' USING ( hash_id );' ) ) )
+            
+            tag_data = []
+            
+            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            
+            for tag_service_id in tag_service_ids:
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+                
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CURRENT, namespace_id, tag_id ) ) for ( hash_id, namespace_id, tag_id ) in self._c.execute( 'SELECT hash_id, namespace_id, tag_id FROM ' + current_mappings_table_name + ', ' + temp_table_name + ' USING ( hash_id );' ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.DELETED, namespace_id, tag_id ) ) for ( hash_id, namespace_id, tag_id ) in self._c.execute( 'SELECT hash_id, namespace_id, tag_id FROM ' + deleted_mappings_table_name + ', ' + temp_table_name + ' USING ( hash_id );' ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.PENDING, namespace_id, tag_id ) ) for ( hash_id, namespace_id, tag_id ) in self._c.execute( 'SELECT hash_id, namespace_id, tag_id FROM ' + pending_mappings_table_name + ', ' + temp_table_name + ' USING ( hash_id );' ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.PETITIONED, namespace_id, tag_id ) ) for ( hash_id, namespace_id, tag_id ) in self._c.execute( 'SELECT hash_id, namespace_id, tag_id FROM ' + petitioned_mappings_table_name + ', ' + temp_table_name + ' USING ( hash_id );' ) )
+                
+            
+            seen_namespace_id_tag_ids = { ( namespace_id, tag_id ) for ( hash_id, ( tag_service_id, status, namespace_id, tag_id ) ) in tag_data }
+            
+            hash_ids_to_raw_tag_data = HydrusData.BuildKeyToListDict( tag_data )
+            
+            namespace_id_tag_ids_to_tags = self._GetNamespaceIdTagIdsToNamespaceTags( seen_namespace_id_tag_ids )
             
         
         # build it
         
         service_ids_to_service_keys = { service_id : service_key for ( service_id, service_key ) in self._c.execute( 'SELECT service_id, service_key FROM services;' ) }
-        
-        tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
         
         media_results = []
         
@@ -4015,28 +4033,15 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            raw_tag_ids = []
+            # service_id, status, namespace_id, tag_id
+            raw_tag_data = hash_ids_to_raw_tag_data[ hash_id ]
             
-            # now I have fast integer list access above, I should move this up to that
-            # furthermore, look into pulling them from the caches instead, at least for current/pending
-            for tag_service_id in tag_service_ids:
-                
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
-                
-                raw_tag_ids.extend( ( ( tag_service_id, ( HC.CURRENT, HydrusTags.CombineTag( namespace, tag ) ) ) for ( namespace, tag ) in self._c.execute( 'SELECT namespace, tag FROM namespaces, ( tags, ' + current_mappings_table_name + ' USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id = ?;', ( hash_id, ) ) ) )
-                
-                raw_tag_ids.extend( ( ( tag_service_id, ( HC.DELETED, HydrusTags.CombineTag( namespace, tag ) ) ) for ( namespace, tag ) in self._c.execute( 'SELECT namespace, tag FROM namespaces, ( tags, ' + deleted_mappings_table_name + ' USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id = ?;', ( hash_id, ) ) ) )
-                
-                raw_tag_ids.extend( ( ( tag_service_id, ( HC.PENDING, HydrusTags.CombineTag( namespace, tag ) ) ) for ( namespace, tag ) in self._c.execute( 'SELECT namespace, tag FROM namespaces, ( tags, ' + pending_mappings_table_name + ' USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id = ?;', ( hash_id, ) ) ) )
-                
-                raw_tag_ids.extend( ( ( tag_service_id, ( HC.PETITIONED, HydrusTags.CombineTag( namespace, tag ) ) ) for ( namespace, tag ) in self._c.execute( 'SELECT namespace, tag FROM namespaces, ( tags, ' + petitioned_mappings_table_name + ' USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id = ?;', ( hash_id, ) ) ) )
-                
-            
-            raw_tag_ids_dict = HydrusData.BuildKeyToListDict( raw_tag_ids )
+            # service_id -> ( status, tag )
+            service_ids_to_tag_data = HydrusData.BuildKeyToListDict( ( ( tag_service_id, ( status, namespace_id_tag_ids_to_tags[ ( namespace_id, tag_id ) ] ) ) for ( tag_service_id, status, namespace_id, tag_id ) in raw_tag_data ) )
             
             service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
             
-            service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tags_info ) for ( service_id, tags_info ) in raw_tag_ids_dict.items() } )
+            service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tag_data ) for ( service_id, tag_data ) in service_ids_to_tag_data.items() } )
             
             service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
             
@@ -4164,6 +4169,24 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return ( namespace_id, tag_id )
+        
+    
+    def _GetNamespaceIdTagIdsToNamespaceTags( self, pairs ):
+        
+        namespace_ids = { namespace_id for ( namespace_id, tag_id ) in pairs }
+        tag_ids = { tag_id for ( namespace_id, tag_id ) in pairs }
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, namespace_ids, 'namespace_id' ) as temp_table_name:
+            
+            namespace_ids_to_namespaces = { namespace_id : namespace for ( namespace_id, namespace ) in self._c.execute( 'SELECT namespace_id, namespace FROM namespaces, ' + temp_table_name + ' USING ( namespace_id );' ) }
+            
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, tag_ids, 'tag_id' ) as temp_table_name:
+            
+            tag_ids_to_tags = { tag_id : tag for ( tag_id, tag ) in self._c.execute( 'SELECT tag_id, tag FROM tags, ' + temp_table_name + ' USING ( tag_id );' ) }
+            
+        
+        return { ( namespace_id, tag_id ) : HydrusTags.CombineTag( namespace_ids_to_namespaces[ namespace_id ], tag_ids_to_tags[ tag_id ] ) for ( namespace_id, tag_id ) in pairs }
         
     
     def _GetNamespaceTag( self, namespace_id, tag_id ):
@@ -5386,9 +5409,13 @@ class DB( HydrusDB.HydrusDB ):
         
         # vacuum
         
-        stale_time_delta = HC.options[ 'maintenance_vacuum_period' ]
+        new_options = self._controller.GetNewOptions()
         
-        if stale_time_delta is not None:
+        maintenance_vacuum_period_days = new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+        
+        if maintenance_vacuum_period_days is not None:
+            
+            stale_time_delta = maintenance_vacuum_period_days * 86400
             
             existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
             
@@ -8594,12 +8621,16 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Vacuum( self, stop_time = None, force_vacuum = False ):
         
-        stale_time_delta = HC.options[ 'maintenance_vacuum_period' ]
+        new_options = self._controller.GetNewOptions()
         
-        if stale_time_delta is None:
+        maintenance_vacuum_period_days = new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+        
+        if maintenance_vacuum_period_days is None:
             
             return
             
+        
+        stale_time_delta = maintenance_vacuum_period_days * 86400
         
         existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
         
@@ -8681,7 +8712,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self._c.execute( 'BEGIN IMMEDIATE;' )
                         
-                        HC.options[ 'maintenance_vacuum_period' ] = None
+                        new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', None )
                         
                         self._SaveOptions( HC.options )
                         

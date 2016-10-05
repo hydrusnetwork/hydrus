@@ -60,9 +60,14 @@ def CalculateCanvasMediaSize( media, ( canvas_width, canvas_height ) ):
     
     return ( canvas_width, canvas_height )
     
-def CalculateCanvasZooms( canvas, media ):
+def CalculateCanvasZooms( canvas, media, show_action ):
     
     if media is None:
+        
+        return ( 1.0, 1.0 )
+        
+    
+    if show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON ):
         
         return ( 1.0, 1.0 )
         
@@ -192,7 +197,10 @@ def CalculateMediaContainerSize( media, zoom, action ):
         
         ( media_width, media_height ) = CalculateMediaSize( media, zoom )
         
-        if ShouldHaveAnimationBar( media ): media_height += ANIMATED_SCANBAR_HEIGHT
+        if ShouldHaveAnimationBar( media ):
+            
+            media_height += ANIMATED_SCANBAR_HEIGHT
+            
         
         return ( media_width, media_height )
         
@@ -1209,7 +1217,9 @@ class Canvas( wx.Window ):
     
     def _ReinitZoom( self ):
         
-        ( self._current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_display_media )
+        show_action = self._GetShowAction( self._current_display_media )
+        
+        ( self._current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_display_media, show_action )
         
         HydrusGlobals.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         
@@ -1400,6 +1410,11 @@ class Canvas( wx.Window ):
             else:
                 
                 new_zoom = 1.0
+                
+            
+            if new_zoom <= self._canvas_zoom:
+                
+                self._total_drag_delta = ( 0, 0 )
                 
             
             self._SetZoom( new_zoom )
@@ -1826,8 +1841,6 @@ class CanvasPanel( Canvas ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        wx.CallAfter( self.Refresh )
-        
     
     def EventMenu( self, event ):
         
@@ -1953,7 +1966,15 @@ class CanvasPanel( Canvas ):
     
     def FocusChanged( self, page_key, media ):
         
-        if page_key == self._page_key: self.SetMedia( media )
+        if HydrusGlobals.no_focus_changed:
+            
+            return
+            
+        
+        if page_key == self._page_key:
+            
+            self.SetMedia( media )
+            
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -2201,14 +2222,20 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
         
         ClientMedia.ListeningMediaList._RemoveMedia( self, singleton_media, {} )
         
-        if self.HasNoMedia(): self._Close()
+        if self.HasNoMedia():
+            
+            self._Close()
+            
         elif self.HasMedia( self._current_media ):
             
             HydrusGlobals.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
             self._SetDirty()
             
-        else: self.SetMedia( next_media )
+        else:
+            
+            self.SetMedia( next_media )
+            
         
     
     def _ShowFirst( self ): self.SetMedia( self._GetFirst() )
@@ -2288,10 +2315,14 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
             
         
         if show_mouse:
-        
+            
             self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
             
             self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+            
+        else:
+            
+            self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
             
         
     
@@ -2334,14 +2365,20 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
         
         ClientMedia.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
-        if self.HasNoMedia(): self._Close()
+        if self.HasNoMedia():
+            
+            self._Close()
+            
         elif self.HasMedia( self._current_media ):
             
             HydrusGlobals.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
             self._SetDirty()
             
-        else: self.SetMedia( next_media )
+        else:
+            
+            self.SetMedia( next_media )
+            
         
     
     def TIMEREventCursorHide( self, event ):
