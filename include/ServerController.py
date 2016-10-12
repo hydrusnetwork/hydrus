@@ -17,75 +17,15 @@ import traceback
 from twisted.internet import reactor
 from twisted.internet import defer
 
-def GetStartingAction():
+def ProcessStartingAction( db_dir, action ):
     
-    action = 'help'
+    already_running = HydrusData.IsAlreadyRunning( db_dir, 'server' )
     
-    args = sys.argv[1:]
-    
-    if len( args ) > 0:
+    if action == 'start':
         
-        command = args[0]
-        
-        while command.startswith( '-' ):
+        if already_running:
             
-            command = command[ 1: ]
-            
-        
-        if command == 'help':
-            
-            action = 'help'
-            
-        else:
-            
-            already_running = HydrusData.IsAlreadyRunning( HC.DB_DIR, 'server' )
-            
-            if command == 'start':
-                
-                if already_running:
-                    
-                    raise HydrusExceptions.PermissionException( 'The server is already running!' )
-                    
-                else:
-                    
-                    action = 'start'
-                    
-                
-            elif command == 'stop':
-                
-                if already_running:
-                    
-                    action = 'stop'
-                    
-                else:
-                    
-                    raise HydrusExceptions.PermissionException( 'The server is not running, so it cannot be stopped!' )
-                    
-                
-            elif command == 'restart':
-                
-                if already_running:
-                    
-                    action = 'restart'
-                    
-                else:
-                    
-                    action = 'start'
-                    
-                
-            
-        
-    else:
-        
-        already_running = HydrusData.IsAlreadyRunning( HC.DB_DIR, 'server' )
-        
-        if not already_running:
-            
-            action = 'start'
-            
-        else:
-            
-            HydrusData.Print( 'The server is already running. Would you like to [s]top it, or [r]estart it?' )
+            HydrusData.Print( 'The server is already running. Would you like to [s]top it, [r]estart it, or e[x]it?' )
             
             answer = raw_input()
             
@@ -95,23 +35,49 @@ def GetStartingAction():
                 
                 if answer == 's':
                     
-                    action = 'stop'
+                    return 'stop'
                     
                 elif answer == 'r':
                     
-                    action = 'restart'
+                    return 'restart'
                     
                 
             
+            raise HydrusExceptions.PermissionException( 'Exiting!' )
+            
+        else:
+            
+            return action
+            
+        
+    elif action == 'stop':
+        
+        if already_running:
+            
+            return action
+            
+        else:
+            
+            raise HydrusExceptions.PermissionException( 'The server is not running, so it cannot be stopped!' )
+            
+        
+    elif action == 'restart':
+        
+        if already_running:
+            
+            return action
+            
+        else:
+            
+            return 'start'
+            
         
     
-    return action
-    
-def ShutdownSiblingInstance():
+def ShutdownSiblingInstance( db_dir ):
     
     port_found = False
     
-    ports = HydrusData.GetSiblingProcessPorts( HC.DB_DIR, 'server' )
+    ports = HydrusData.GetSiblingProcessPorts( db_dir, 'server' )
     
     if ports is None:
         
@@ -164,7 +130,7 @@ def ShutdownSiblingInstance():
             
             time_waited = 0
             
-            while HydrusData.IsAlreadyRunning( HC.DB_DIR, 'server' ):
+            while HydrusData.IsAlreadyRunning( db_dir, 'server' ):
                 
                 time.sleep( 1 )
                 
@@ -189,16 +155,16 @@ def ShutdownSiblingInstance():
     
 class Controller( HydrusController.HydrusController ):
     
-    def __init__( self ):
+    def __init__( self, db_dir ):
         
-        HydrusController.HydrusController.__init__( self )
+        HydrusController.HydrusController.__init__( self, db_dir )
         
         HydrusGlobals.server_controller = self
         
     
     def _InitDB( self ):
         
-        return ServerDB.DB( self, HC.DB_DIR, 'server', no_wal = self._no_wal )
+        return ServerDB.DB( self, self._db_dir, 'server', no_wal = self._no_wal )
         
     
     def ActionService( self, service_key, action ):
@@ -267,29 +233,6 @@ class Controller( HydrusController.HydrusController ):
         reactor.callFromThread( TWISTEDDoIt )
         
     
-    def CheckIfAdminPortInUse( self ):
-        
-        ( service_type, options ) = self.Read( 'service_info', HC.SERVER_ADMIN_KEY )
-        
-        port = options[ 'port' ]
-        
-        already_bound = False
-        
-        try:
-            
-            connection = HydrusNetworking.GetLocalConnection( port )
-            connection.close()
-            
-            already_bound = True
-            
-        except: pass
-        
-        if already_bound:
-            
-            raise HydrusExceptions.PermissionException( 'Something was already bound to port ' + str( port ) )
-            
-        
-    
     def Exit( self ):
         
         HydrusData.Print( 'Shutting down daemons and services...' )
@@ -300,12 +243,22 @@ class Controller( HydrusController.HydrusController ):
         
         self.ShutdownModel()
         
-        HydrusData.CleanRunningFile( HC.DB_DIR, 'server' )
+        HydrusData.CleanRunningFile( self._db_dir, 'server' )
+        
+
+    def GetFilesDir( self ):
+        
+        return self._db.GetFilesDir()
         
     
     def GetServerSessionManager( self ):
         
         return self._server_session_manager
+        
+
+    def GetUpdatesDir( self ):
+        
+        return self._db.GetUpdatesDir()
         
     
     def InitModel( self ):
@@ -335,11 +288,33 @@ class Controller( HydrusController.HydrusController ):
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'UPnP', ServerDaemons.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 ) )
             
         
-        self.CheckIfAdminPortInUse()
+        #
         
-        service_keys = self.Read( 'service_keys' )
+        ( service_type, options ) = self.Read( 'service_info', HC.SERVER_ADMIN_KEY )
         
-        for service_key in service_keys: self.ActionService( service_key, 'start' )
+        port = options[ 'port' ]
+        
+        already_bound = False
+        
+        try:
+            
+            connection = HydrusNetworking.GetLocalConnection( port )
+            connection.close()
+            
+            already_bound = True
+            
+        except: pass
+        
+        if already_bound:
+            
+            HydrusData.Print( 'Something is already bound to port ' + str( port ) + ', so your administration service cannot be started. Please quit the server and retry once the port is clear.' )
+            
+        else:
+            
+            service_keys = self.Read( 'service_keys' )
+            
+            for service_key in service_keys: self.ActionService( service_key, 'start' )
+            
         
     
     def JustWokeFromSleep( self ): return False
@@ -358,7 +333,7 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        HydrusData.RecordRunningStart( HC.DB_DIR, 'server' )
+        HydrusData.RecordRunningStart( self._db_dir, 'server' )
         
         HydrusData.Print( 'Initialising db...' )
         

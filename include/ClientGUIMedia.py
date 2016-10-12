@@ -356,18 +356,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     do_it = True
                     
                 
-                if num_to_delete == 1: text = 'Are you sure you want to send this file to the trash?'
-                else: text = 'Are you sure you want send these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files to the trash?'
+                if num_to_delete == 1: text = 'Send this file to the trash?'
+                else: text = 'Send these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files to the trash?'
                 
             elif file_service_key == CC.TRASH_SERVICE_KEY:
                 
-                if num_to_delete == 1: text = 'Are you sure you want to permanently delete this file?'
-                else: text = 'Are you sure you want to permanently delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
+                if num_to_delete == 1: text = 'Permanently delete this file?'
+                else: text = 'Permanently delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
                 
             else:
                 
-                if num_to_delete == 1: text = 'Are you sure you want to admin-delete this file?'
-                else: text = 'Are you sure you want to admin-delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
+                if num_to_delete == 1: text = 'Admin-delete this file?'
+                else: text = 'Admin-delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
                 
             
             if not do_it:

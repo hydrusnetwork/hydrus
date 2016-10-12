@@ -492,15 +492,20 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
     SERIALISABLE_VERSION = 2
     
-    def __init__( self ):
+    def __init__( self, db_dir = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        if db_dir is None:
+            
+            db_dir = os.path.join( HC.BASE_DIR, 'db' )
+            
         
         self._dictionary = HydrusSerialisable.SerialisableDictionary()
         
         self._lock = threading.Lock()
         
-        self._InitialiseDefaults()
+        self._InitialiseDefaults( db_dir )
         
     
     def _GetSerialisableInfo( self ):
@@ -513,7 +518,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _InitialiseDefaults( self ):
+    def _InitialiseDefaults( self, db_dir ):
         
         self._dictionary[ 'booleans' ] = {}
         
@@ -527,6 +532,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
         
+        self._dictionary[ 'booleans' ][ 'add_parents_on_manage_tags' ] = True
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
         
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
@@ -563,7 +569,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        client_files_default = os.path.join( db_dir, 'client_files' )
         
         self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
         self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = None

@@ -102,6 +102,14 @@ class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'access_key', 'immediate_content_update', 'init', 'registration_keys' ]
     
+    def __init__( self, controller, db_dir, db_name, no_wal = False ):
+        
+        self._files_dir = os.path.join( db_dir, 'server_files' )
+        self._updates_dir = os.path.join( db_dir, 'server_updates' )
+        
+        HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name, no_wal = no_wal )
+        
+    
     def _AccountTypeExists( self, service_id, title ): return self._c.execute( 'SELECT 1 FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
     
     def _AddFile( self, service_key, account_key, file_dict ):
@@ -473,7 +481,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            backup_path = os.path.join( HC.DB_DIR, 'server_backup' )
+            backup_path = os.path.join( self._db_dir, 'server_backup' )
             
             HydrusPaths.MakeSureDirectoryExists( backup_path )
             
@@ -488,10 +496,10 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             HydrusData.Print( 'backing up: copying files' )
-            HydrusPaths.MirrorTree( HC.SERVER_FILES_DIR, os.path.join( backup_path, 'server_files' ) )
+            HydrusPaths.MirrorTree( self._files_dir, os.path.join( backup_path, 'server_files' ) )
             
             HydrusData.Print( 'backing up: copying updates' )
-            HydrusPaths.MirrorTree( HC.SERVER_UPDATES_DIR, os.path.join( backup_path, 'server_updates' ) )
+            HydrusPaths.MirrorTree( self._updates_dir, os.path.join( backup_path, 'server_updates' ) )
             
         finally:
             
@@ -610,14 +618,14 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CreateDB( self ):
         
-        dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_UPDATES_DIR )
+        dirs = ( self._files_dir, self._updates_dir )
         
         for dir in dirs:
             
             HydrusPaths.MakeSureDirectoryExists( dir )
             
         
-        dirs = ( HC.SERVER_FILES_DIR, )
+        dirs = ( self._files_dir, )
         
         for dir in dirs:
             
@@ -2305,7 +2313,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusData.Print( 'moving updates about' )
             
-            for filename in os.listdir( HC.SERVER_UPDATES_DIR ):
+            for filename in os.listdir( self._updates_dir ):
                 
                 try:
                     
@@ -2316,11 +2324,11 @@ class DB( HydrusDB.HydrusDB ):
                     continue
                     
                 
-                dest_dir = os.path.join( HC.SERVER_UPDATES_DIR, service_key_encoded )
+                dest_dir = os.path.join( self._updates_dir, service_key_encoded )
                 
                 HydrusPaths.MakeSureDirectoryExists( dest_dir )
                 
-                source_path = os.path.join( HC.SERVER_UPDATES_DIR, filename )
+                source_path = os.path.join( self._updates_dir, filename )
                 dest_path = os.path.join( dest_dir, gumpf )
                 
                 HydrusPaths.MergeFile( source_path, dest_path )
@@ -2512,7 +2520,7 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.Print( 'moving thumbnails: ' + prefix )
                 
                 source_dir = os.path.join( old_thumbnail_dir, prefix )
-                dest_dir = os.path.join( HC.SERVER_FILES_DIR, prefix )
+                dest_dir = os.path.join( self._files_dir, prefix )
                 
                 source_filenames = os.listdir( source_dir )
                 
@@ -2552,7 +2560,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for prefix in HydrusData.IterateHexPrefixes():
                 
-                dir = os.path.join( HC.SERVER_FILES_DIR, prefix )
+                dir = os.path.join( self._files_dir, prefix )
                 
                 for filename in os.listdir( dir ):
                     
@@ -2630,5 +2638,15 @@ class DB( HydrusDB.HydrusDB ):
         else: raise Exception( 'db received an unknown write command: ' + action )
         
         return result
+        
+    
+    def GetFilesDir( self ):
+        
+        return self._files_dir
+        
+    
+    def GetUpdatesDir( self ):
+        
+        return self._updates_dir
         
     

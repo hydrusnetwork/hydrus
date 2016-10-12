@@ -37,17 +37,17 @@ class Controller( HydrusController.HydrusController ):
     
     pubsub_binding_errors_to_ignore = [ wx.PyDeadObjectError ]
     
-    def __init__( self ):
+    def __init__( self, db_dir ):
         
         self._last_shutdown_was_bad = False
         
-        HydrusController.HydrusController.__init__( self )
+        HydrusController.HydrusController.__init__( self, db_dir )
         
         HydrusGlobals.client_controller = self
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
         self._options = ClientDefaults.GetClientDefaultOptions()
-        self._new_options = ClientData.ClientOptions()
+        self._new_options = ClientData.ClientOptions( self._db_dir )
         
         HC.options = self._options
         
@@ -59,7 +59,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ClientDB.DB( self, HC.DB_DIR, 'client', no_wal = self._no_wal )
+        return ClientDB.DB( self, self._db_dir, 'client', no_wal = self._no_wal )
         
     
     def BackupDatabase( self ):
@@ -149,7 +149,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CheckAlreadyRunning( self ):
     
-        while HydrusData.IsAlreadyRunning( HC.DB_DIR, 'client' ):
+        while HydrusData.IsAlreadyRunning( self._db_dir, 'client' ):
             
             self.pub( 'splash_set_status_text', 'client already running' )
             
@@ -172,7 +172,7 @@ class Controller( HydrusController.HydrusController ):
             
             for i in range( 10, 0, -1 ):
                 
-                if not HydrusData.IsAlreadyRunning( HC.DB_DIR, 'client' ):
+                if not HydrusData.IsAlreadyRunning( self._db_dir, 'client' ):
                     
                     break
                     
@@ -500,6 +500,11 @@ class Controller( HydrusController.HydrusController ):
     def GetServicesManager( self ):
         
         return self._services_manager
+        
+    
+    def GetUpdatesDir( self ):
+        
+        return self._db.GetUpdatesDir()
         
     
     def InitModel( self ):
@@ -1080,9 +1085,9 @@ class Controller( HydrusController.HydrusController ):
             
             self.CheckAlreadyRunning()
             
-            self._last_shutdown_was_bad = HydrusData.LastShutdownWasBad( HC.DB_DIR, 'client' )
+            self._last_shutdown_was_bad = HydrusData.LastShutdownWasBad( self._db_dir, 'client' )
             
-            HydrusData.RecordRunningStart( HC.DB_DIR, 'client' )
+            HydrusData.RecordRunningStart( self._db_dir, 'client' )
             
             self.InitModel()
             
@@ -1129,7 +1134,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.ShutdownModel()
             
-            HydrusData.CleanRunningFile( HC.DB_DIR, 'client' )
+            HydrusData.CleanRunningFile( self._db_dir, 'client' )
             
         except HydrusExceptions.PermissionException: pass
         except HydrusExceptions.ShutdownException: pass

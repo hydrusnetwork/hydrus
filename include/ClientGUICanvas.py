@@ -1971,6 +1971,11 @@ class CanvasPanel( Canvas ):
             return
             
         
+        if HC.options[ 'hide_preview' ]:
+            
+            return
+            
+        
         if page_key == self._page_key:
             
             self.SetMedia( media )

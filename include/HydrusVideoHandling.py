@@ -48,14 +48,25 @@ def GetFFMPEGVideoProperties( path ):
     
 def GetMatroskaOrWebm( path ):
     
-    tags = matroska.parse( path )
+    try:
+        
+        # a whole bunch of otherwise good webms aren't parseable by this, so default to 'I guess it is a webm, then.'
+        
+        tags = matroska.parse( path )
+        
+        ebml = tags[ 'EBML' ][0]
+        
+        if ebml[ 'DocType' ][0] == 'matroska':
+            
+            return HC.VIDEO_MKV
+            
+        
+    except:
+        
+        pass
+        
     
-    ebml = tags[ 'EBML' ][0]
-    
-    if ebml[ 'DocType' ][0] == 'matroska': return HC.VIDEO_MKV
-    elif ebml[ 'DocType' ][0] == 'webm': return HC.VIDEO_WEBM
-    
-    raise Exception()
+    return HC.VIDEO_WEBM
     
 def GetMatroskaOrWebMProperties( path ):
     

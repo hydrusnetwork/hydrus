@@ -16,6 +16,7 @@ try:
     from include import HydrusExceptions
     from include import HydrusConstants as HC
     from include import HydrusData
+    from include import HydrusPaths
     
     import os
     import sys
@@ -28,67 +29,80 @@ try:
     from include import HydrusLogger
     import traceback
     
-    action = ServerController.GetStartingAction()
+    import argparse
     
-    if action == 'help':
+    argparser = argparse.ArgumentParser( description = 'hydrus network server' )
     
-        HydrusData.Print( 'This is the hydrus server. It accepts these commands:' )
-        HydrusData.Print( '' )
-        HydrusData.Print( 'server start - runs the server' )
-        HydrusData.Print( 'server stop - stops an existing instance of this server' )
-        HydrusData.Print( 'server restart - stops an existing instance of this server, then runs itself' )
-        HydrusData.Print( '' )
-        HydrusData.Print( 'You can also run \'server\' without arguments. Depending on what is going on, it will try to start or it will ask you if you want to stop or restart.' )
-        HydrusData.Print( 'You can also stop the running server just by hitting Ctrl+C.')
+    argparser.add_argument( 'action', default = 'start', nargs = '?', choices = [ 'start', 'stop', 'restart' ], help = 'either start this server (default), or stop an existing server, or both' )
+    argparser.add_argument( '-d', '--db_dir', help = 'set an external db location' )
+    
+    result = argparser.parse_args()
+    
+    if result.db_dir is None:
+        
+        db_dir = os.path.join( HC.BASE_DIR, 'db' )
         
     else:
         
-        log_path = os.path.join( HC.DB_DIR, 'server.log' )
+        db_dir = result.db_dir
         
-        with HydrusLogger.HydrusLogger( log_path ) as logger:
+    
+    try:
+        
+        HydrusPaths.MakeSureDirectoryExists( db_dir )
+        
+    except:
+        
+        raise Exception( 'Could not ensure db path ' + db_dir + ' exists! Check the location is correct and that you have permission to write to it!' )
+        
+    
+    action = ServerController.ProcessStartingAction( db_dir, result.action )
+    
+    log_path = os.path.join( db_dir, 'server.log' )
+    
+    with HydrusLogger.HydrusLogger( log_path ) as logger:
+        
+        try:
             
-            try:
+            if action in ( 'stop', 'restart' ):
                 
-                if action in ( 'stop', 'restart' ):
-                    
-                    ServerController.ShutdownSiblingInstance()
-                    
+                ServerController.ShutdownSiblingInstance( db_dir )
                 
-                if action in ( 'start', 'restart' ):
-                    
-                    HydrusData.Print( 'Initialising controller...' )
-                    
-                    threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
-                    
-                    controller = ServerController.Controller()
-                    
-                    controller.Run()
-                    
+            
+            if action in ( 'start', 'restart' ):
                 
-            except HydrusExceptions.PermissionException as e:
+                HydrusData.Print( 'Initialising controller...' )
                 
-                error = str( e )
+                threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
                 
-                HydrusData.Print( error )
+                controller = ServerController.Controller( db_dir )
                 
-            except:
+                controller.Run()
                 
-                error = traceback.format_exc()
-                
-                HydrusData.Print( 'Hydrus server failed' )
-                
-                HydrusData.Print( traceback.format_exc() )
-                
-            finally:
-                
-                HydrusGlobals.view_shutdown = True
-                HydrusGlobals.model_shutdown = True
-                
-                try: controller.pubimmediate( 'wake_daemons' )
-                except: pass
-                
-                reactor.callFromThread( reactor.stop )
-                
+            
+        except HydrusExceptions.PermissionException as e:
+            
+            error = str( e )
+            
+            HydrusData.Print( error )
+            
+        except:
+            
+            error = traceback.format_exc()
+            
+            HydrusData.Print( 'Hydrus server failed' )
+            
+            HydrusData.Print( traceback.format_exc() )
+            
+        finally:
+            
+            HydrusGlobals.view_shutdown = True
+            HydrusGlobals.model_shutdown = True
+            
+            try: controller.pubimmediate( 'wake_daemons' )
+            except: pass
+            
+            reactor.callFromThread( reactor.stop )
             
         
     
@@ -96,14 +110,16 @@ except HydrusExceptions.PermissionException as e:
     
     HydrusData.Print( e )
     
-except:
+except Exception as e:
     
     import traceback
     import os
     
-    try:
+    print( traceback.format_exc() )
+    
+    if 'db_dir' in locals() and os.path.exists( db_dir ):
         
-        dest_path = os.path.join( HC.DB_DIR, 'crash.log' )
+        dest_path = os.path.join( db_dir, 'crash.log' )
         
         with open( dest_path, 'wb' ) as f:
             
@@ -112,9 +128,4 @@ except:
         
         print( 'Critical error occured! Details written to crash.log!' )
         
-    except NameError, IOError:
-        
-        print( 'Critical error occured!' )
-        
-        traceback.print_exc()
-        
+    

@@ -1,6 +1,7 @@
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
+import HydrusGlobals
 import itertools
 import os
 
@@ -10,21 +11,25 @@ def GetAllHashes( file_type ):
     
 def GetExpectedFilePath( hash ):
     
+    files_dir = HydrusGlobals.server_controller.GetFilesDir()
+    
     hash_encoded = hash.encode( 'hex' )
     
     first_two_chars = hash_encoded[:2]
     
-    path = os.path.join( HC.SERVER_FILES_DIR, first_two_chars, hash_encoded )
+    path = os.path.join( files_dir, first_two_chars, hash_encoded )
     
     return path
     
 def GetExpectedThumbnailPath( hash ):
     
+    files_dir = HydrusGlobals.server_controller.GetFilesDir()
+    
     hash_encoded = hash.encode( 'hex' )
     
     first_two_chars = hash_encoded[:2]
     
-    path = os.path.join( HC.SERVER_FILES_DIR, first_two_chars, hash_encoded + '.thumbnail' )
+    path = os.path.join( files_dir, first_two_chars, hash_encoded + '.thumbnail' )
     
     return path
     
@@ -42,7 +47,9 @@ def GetExpectedServiceUpdatePackagePath( service_key, begin ):
     
 def GetExpectedUpdateDir( service_key ):
     
-    return os.path.join( HC.SERVER_UPDATES_DIR, service_key.encode( 'hex' ) )
+    updates_dir = HydrusGlobals.server_controller.GetUpdatesDir()
+    
+    return os.path.join( updates_dir, service_key.encode( 'hex' ) )
     
 def GetContentUpdatePackagePath( service_key, begin, subindex ):
     
@@ -90,9 +97,11 @@ def GetThumbnailPath( hash ):
     
 def IterateAllPaths( file_type ):
     
+    files_dir = HydrusGlobals.server_controller.GetFilesDir()
+    
     for prefix in HydrusData.IterateHexPrefixes():
         
-        dir = os.path.join( HC.SERVER_FILES_DIR, prefix )
+        dir = os.path.join( files_dir, prefix )
         
         filenames = os.listdir( dir )
         

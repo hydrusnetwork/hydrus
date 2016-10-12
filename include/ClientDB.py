@@ -1029,6 +1029,13 @@ class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'service_info', 'system_predicates' ]
     
+    def __init__( self, controller, db_dir, db_name, no_wal = False ):
+        
+        self._updates_dir = os.path.join( db_dir, 'client_updates' )
+        
+        HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name, no_wal = no_wal )
+        
+    
     def _AddFilesInfo( self, rows, overwrite = False ):
         
         if overwrite:
@@ -1386,7 +1393,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.SetVariable( 'popup_text_1', 'copying updates directory' )
             
-            HydrusPaths.MirrorTree( os.path.join( self._db_dir, 'client_updates' ), os.path.join( path, 'client_updates' ) )
+            HydrusPaths.MirrorTree( self._updates_dir, os.path.join( path, 'client_updates' ) )
             
         finally:
             
@@ -1958,7 +1965,7 @@ class DB( HydrusDB.HydrusDB ):
         
         other_dirs = []
         
-        other_dirs.append( os.path.join( self._db_dir, 'client_updates' ) )
+        other_dirs.append( self._updates_dir )
         
         for path in other_dirs:
             
@@ -2150,7 +2157,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in ClientDefaults.GetDefaultImageboards() ) )
         
-        new_options = ClientData.ClientOptions()
+        new_options = ClientData.ClientOptions( self._db_dir )
         
         self._SetJSONDump( new_options )
         
@@ -3250,7 +3257,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if len( result ) == 0:
                     
-                    query_hash_ids = {}
+                    query_hash_ids = set()
                     
                 else:
                     
@@ -5367,7 +5374,7 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            paths = [ os.path.join( HC.DB_DIR, filename ) for filename in self._db_filenames.values() ]
+            paths = [ os.path.join( self._db_dir, filename ) for filename in self._db_filenames.values() ]
             
             paths.sort( key = os.path.getsize )
             
@@ -6740,7 +6747,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'splash_set_status_text', 'moving updates about' )
             
-            for filename in os.listdir( HC.CLIENT_UPDATES_DIR ):
+            for filename in os.listdir( self._updates_dir ):
                 
                 try:
                     
@@ -6751,11 +6758,11 @@ class DB( HydrusDB.HydrusDB ):
                     continue
                     
                 
-                dest_dir = os.path.join( HC.CLIENT_UPDATES_DIR, service_key_encoded )
+                dest_dir = os.path.join( self._updates_dir, service_key_encoded )
                 
                 HydrusPaths.MakeSureDirectoryExists( dest_dir )
                 
-                source_path = os.path.join( HC.CLIENT_UPDATES_DIR, filename )
+                source_path = os.path.join( self._updates_dir, filename )
                 dest_path = os.path.join( dest_dir, gumpf )
                 
                 HydrusPaths.MergeFile( source_path, dest_path )
@@ -7033,7 +7040,7 @@ class DB( HydrusDB.HydrusDB ):
             
             old_options = self._GetOptions()
             
-            new_options = ClientData.ClientOptions()
+            new_options = ClientData.ClientOptions( self._db_dir )
             
             self._controller._new_options = new_options
             
@@ -7870,11 +7877,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 209:
             
-            update_dirnames = os.listdir( HC.CLIENT_UPDATES_DIR )
+            update_dirnames = os.listdir( self._updates_dir )
             
             for update_dirname in update_dirnames:
                 
-                update_dir = os.path.join( HC.CLIENT_UPDATES_DIR, update_dirname )
+                update_dir = os.path.join( self._updates_dir, update_dirname )
                 
                 if os.path.isdir( update_dir ):
                     
@@ -8792,6 +8799,11 @@ class DB( HydrusDB.HydrusDB ):
         self.pub_after_commit( 'service_updates_gui', service_keys_to_service_updates )
         
     
+    def GetUpdatesDir( self ):
+        
+        return self._updates_dir
+        
+    
     def RestoreBackup( self, path ):
         
         for filename in self._db_filenames.values():
@@ -8820,6 +8832,6 @@ class DB( HydrusDB.HydrusDB ):
             HydrusPaths.MirrorTree( client_files_source, client_files_default )
             
         
-        HydrusPaths.MirrorTree( os.path.join( path, 'client_updates' ), os.path.join( self._db_dir, 'client_updates' ) )
+        HydrusPaths.MirrorTree( os.path.join( path, 'client_updates' ), self._updates_dir )
         
     

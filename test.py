@@ -48,14 +48,14 @@ class Controller( object ):
     
     def __init__( self ):
         
-        HC.DB_DIR = tempfile.mkdtemp()
+        self._db_dir = tempfile.mkdtemp()
         
-        HC.CLIENT_UPDATES_DIR = os.path.join( HC.DB_DIR, 'client_updates' )
+        TestConstants.DB_DIR = self._db_dir
         
-        HC.SERVER_FILES_DIR = os.path.join( HC.DB_DIR, 'server_files' )
-        HC.SERVER_UPDATES_DIR = os.path.join( HC.DB_DIR, 'server_updates' )
+        self._server_files_dir = os.path.join( self._db_dir, 'server_files' )
+        self._updates_dir = os.path.join( self._db_dir, 'test_updates' )
         
-        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        client_files_default = os.path.join( self._db_dir, 'client_files' )
         
         HydrusPaths.MakeSureDirectoryExists( client_files_default )
         
@@ -66,7 +66,7 @@ class Controller( object ):
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         
-        self._new_options = ClientData.ClientOptions()
+        self._new_options = ClientData.ClientOptions( self._db_dir )
         
         def show_text( text ): pass
         
@@ -186,6 +186,11 @@ class Controller( object ):
         return self._client_session_manager
         
     
+    def GetFilesDir( self ):
+        
+        return self._server_files_dir
+        
+    
     def GetHTTP( self ): return self._http
     
     def GetNewOptions( self ):
@@ -208,6 +213,11 @@ class Controller( object ):
     def GetServerSessionManager( self ):
         
         return self._server_session_manager
+        
+    
+    def GetUpdatesDir( self ):
+        
+        return self._updates_dir
         
     
     def GetWrite( self, name ):
@@ -267,7 +277,7 @@ class Controller( object ):
     
     def TidyUp( self ):
         
-        shutil.rmtree( HC.DB_DIR )
+        shutil.rmtree( self._db_dir )
         
     
     def ViewIsShutdown( self ):
@@ -307,8 +317,6 @@ if __name__ == '__main__':
     
     try:
         
-        original_db_dir = HC.DB_DIR
-        
         threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
         app = wx.App()
@@ -342,10 +350,7 @@ if __name__ == '__main__':
             
             controller.pubimmediate( 'wake_daemons' )
             
-            if HC.DB_DIR != original_db_dir:
-                
-                controller.TidyUp()
-                
+            controller.TidyUp()
             
         
     except:

@@ -3534,6 +3534,10 @@ class ManageTagsPanel( ManagePanel ):
             
             self._new_options = HydrusGlobals.client_controller.GetNewOptions()
             
+            self._add_parents_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-add entered tags\' parents' )
+            self._add_parents_checkbox.SetValue( self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
+            self._add_parents_checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckAddParents )
+            
             self._collapse_siblings_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-replace entered siblings' )
             self._collapse_siblings_checkbox.SetValue( self._new_options.GetBoolean( 'replace_siblings_on_manage_tags' ) )
             self._collapse_siblings_checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckCollapseSiblings )
@@ -3541,6 +3545,7 @@ class ManageTagsPanel( ManagePanel ):
             self._show_deleted_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'show deleted' )
             self._show_deleted_checkbox.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
             
+            self._tags_box_sorter.AddF( self._add_parents_checkbox, CC.FLAGS_LONE_BUTTON )
             self._tags_box_sorter.AddF( self._collapse_siblings_checkbox, CC.FLAGS_LONE_BUTTON )
             self._tags_box_sorter.AddF( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
             
@@ -3851,7 +3856,7 @@ class ManageTagsPanel( ManagePanel ):
                     content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes ) ) )
                     
                 
-                if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ):
+                if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ) and self._add_parents_checkbox.GetValue():
                     
                     tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
                     
@@ -3933,6 +3938,11 @@ class ManageTagsPanel( ManagePanel ):
                 
             
             wx.CallAfter( do_it )
+            
+        
+        def EventCheckAddParents( self, event ):
+            
+            self._new_options.SetBoolean( 'add_parents_on_manage_tags', self._add_parents_checkbox.GetValue() )
             
         
         def EventCheckCollapseSiblings( self, event ):

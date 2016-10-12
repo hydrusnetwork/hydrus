@@ -19,9 +19,11 @@ class HydrusController( object ):
     
     pubsub_binding_errors_to_ignore = []
     
-    def __init__( self ):
+    def __init__( self, db_dir ):
         
         HydrusGlobals.controller = self
+        
+        self._db_dir = db_dir
         
         self._db = None
         
@@ -30,7 +32,7 @@ class HydrusController( object ):
         
         self._InitArgsBools()
         
-        self._no_wal_path = os.path.join( HC.DB_DIR, 'no-wal' )
+        self._no_wal_path = os.path.join( self._db_dir, 'no-wal' )
         
         if os.path.exists( self._no_wal_path ):
             

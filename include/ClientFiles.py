@@ -145,7 +145,9 @@ def GetExpectedServiceUpdatePackagePath( service_key, begin ):
     
 def GetExpectedUpdateDir( service_key ):
     
-    return os.path.join( HC.CLIENT_UPDATES_DIR, service_key.encode( 'hex' ) )
+    updates_dir = HydrusGlobals.client_controller.GetUpdatesDir()
+    
+    return os.path.join( updates_dir, service_key.encode( 'hex' ) )
     
 def ParseExportPhrase( phrase ):
     

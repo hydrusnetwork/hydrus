@@ -117,7 +117,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        client_files_default = os.path.join( TestConstants.DB_DIR, 'client_files' )
 
         hash_encoded = self._file_hash.encode( 'hex' )
         
@@ -245,7 +245,7 @@ class TestServer( unittest.TestCase ):
         share_key = HydrusData.GenerateKey()
         hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
         
-        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        client_files_default = os.path.join( TestConstants.DB_DIR, 'client_files' )
         
         hash_encoded = hashes[0].encode( 'hex' )
         

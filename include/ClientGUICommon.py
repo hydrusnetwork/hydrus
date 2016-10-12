@@ -3380,6 +3380,7 @@ class PopupDismissAll( PopupWindow ):
         button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
         hbox.AddF( self._text, CC.FLAGS_VCENTER )
+        hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
         hbox.AddF( button, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )

@@ -65,7 +65,7 @@ class TestClientDB( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._db = ClientDB.DB( HydrusGlobals.test_controller, HC.DB_DIR, 'client' )
+        self._db = ClientDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'client' )
         
     
     @classmethod
@@ -682,8 +682,8 @@ class TestClientDB( unittest.TestCase ):
     
     def test_import_folders( self ):
         
-        import_folder_1 = ClientImporting.ImportFolder( 'imp 1', path = HC.DB_DIR, mimes = HC.VIDEO, open_popup = False )
-        import_folder_2 = ClientImporting.ImportFolder( 'imp 2', path = HC.DB_DIR, mimes = HC.IMAGES, period = 1200, open_popup = False )
+        import_folder_1 = ClientImporting.ImportFolder( 'imp 1', path = TestConstants.DB_DIR, mimes = HC.VIDEO, open_popup = False )
+        import_folder_2 = ClientImporting.ImportFolder( 'imp 2', path = TestConstants.DB_DIR, mimes = HC.IMAGES, period = 1200, open_popup = False )
         
         #
         
@@ -716,11 +716,11 @@ class TestClientDB( unittest.TestCase ):
     
     def test_init( self ):
         
-        self.assertTrue( os.path.exists( HC.DB_DIR ) )
+        self.assertTrue( os.path.exists( TestConstants.DB_DIR ) )
         
-        self.assertTrue( os.path.exists( os.path.join( HC.DB_DIR, 'client.db' ) ) )
+        self.assertTrue( os.path.exists( os.path.join( TestConstants.DB_DIR, 'client.db' ) ) )
         
-        client_files_default = os.path.join( HC.DB_DIR, 'client_files' )
+        client_files_default = os.path.join( TestConstants.DB_DIR, 'client_files' )
         
         self.assertTrue( os.path.exists( client_files_default ) )
         
@@ -1182,7 +1182,7 @@ class TestServerDB( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._db = ServerDB.DB( HydrusGlobals.test_controller, HC.DB_DIR, 'server' )
+        self._db = ServerDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'server' )
         
     
     @classmethod

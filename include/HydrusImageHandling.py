@@ -114,8 +114,14 @@ def GeneratePILImageFromNumpyImage( numpy_image ):
     
     ( h, w, depth ) = numpy_image.shape
     
-    if depth == 3: format = 'RGB'
-    elif depth == 4: format = 'RGBA'
+    if depth == 3:
+        
+        format = 'RGB'
+        
+    elif depth == 4:
+        
+        format = 'RGBA'
+        
     
     pil_image = PILImage.frombytes( format, ( w, h ), numpy_image.data )
     

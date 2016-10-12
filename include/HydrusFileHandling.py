@@ -37,6 +37,7 @@ header_and_mime = [
     ( 4, 'ftypmp4', HC.VIDEO_MP4 ),
     ( 4, 'ftypisom', HC.VIDEO_MP4 ),
     ( 4, 'ftypM4V', HC.VIDEO_MP4 ),
+    ( 4, 'ftypMSNV', HC.VIDEO_MP4 ),
     ( 4, 'ftypqt', HC.VIDEO_MOV ),
     ( 0, 'fLaC', HC.AUDIO_FLAC ),
     ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
@@ -109,6 +110,11 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
         renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, cropped_dimensions )
         
         numpy_image = renderer.read_frame()
+        
+        if numpy_image is None:
+            
+            raise Exception( 'Could not create a thumbnail from that video!' )
+            
         
         pil_image = HydrusImageHandling.GeneratePILImageFromNumpyImage( numpy_image )
         

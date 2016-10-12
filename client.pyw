@@ -13,8 +13,10 @@ try:
     try: locale.setlocale( locale.LC_ALL, '' )
     except: pass
     
+    from include import HydrusExceptions
     from include import HydrusConstants as HC
     from include import HydrusData
+    from include import HydrusPaths
     
     import os
     import sys
@@ -27,7 +29,33 @@ try:
     from include import HydrusLogger
     import traceback
     
-    log_path = os.path.join( HC.DB_DIR, 'client.log' )
+    import argparse
+    
+    argparser = argparse.ArgumentParser( description = 'hydrus network client (windowed)' )
+    
+    argparser.add_argument( '-d', '--db_dir', help = 'set an external db location' )
+    
+    result = argparser.parse_args()
+    
+    if result.db_dir is None:
+        
+        db_dir = os.path.join( HC.BASE_DIR, 'db' )
+        
+    else:
+        
+        db_dir = result.db_dir
+        
+    
+    try:
+        
+        HydrusPaths.MakeSureDirectoryExists( db_dir )
+        
+    except:
+        
+        raise Exception( 'Could not ensure db path ' + db_dir + ' exists! Check the location is correct and that you have permission to write to it!' )
+        
+    
+    log_path = os.path.join( db_dir, 'client.log' )
     
     with HydrusLogger.HydrusLogger( log_path ) as logger:
         
@@ -37,7 +65,7 @@ try:
             
             threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
             
-            controller = ClientController.Controller()
+            controller = ClientController.Controller( db_dir )
             
             controller.Run()
             
@@ -74,14 +102,16 @@ try:
         HydrusData.RestartProcess()
         
     
-except:
+except Exception as e:
     
     import traceback
     import os
     
-    try:
+    print( traceback.format_exc() )
+    
+    if 'db_dir' in locals() and os.path.exists( db_dir ):
         
-        dest_path = os.path.join( HC.DB_DIR, 'crash.log' )
+        dest_path = os.path.join( db_dir, 'crash.log' )
         
         with open( dest_path, 'wb' ) as f:
             
@@ -90,9 +120,4 @@ except:
         
         print( 'Critical error occured! Details written to crash.log!' )
         
-    except NameError, IOError:
-        
-        print( 'Critical error occured!' )
-        
-        traceback.print_exc()
-        
+    

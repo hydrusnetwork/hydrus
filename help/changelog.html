@@ -8,6 +8,21 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 227</h3></li>
+				<ul>
+					<li>both the client and server now use standard command line input and will produce a proper help with a -h switch (although the 'windowed' frozen client executable can't print back to console)</li>
+					<li>both the client and server now support a -d or --db_dir to set a db directory outside of the install directory. you can now run multiple clients off the same install!</li>
+					<li>critical boot error reporting is more reliable</li>
+					<li>if the admin port is in use on server boot, the error is handled better and the program will quit more easily</li>
+					<li>fixed mime parsing for some unusual webms</li>
+					<li>added support for even more unusual webms</li>
+					<li>added support for SonyPSP mp4s</li>
+					<li>fixed system:hash when searching for a non-existent non-sha256 hash</li>
+					<li>fixed layout of the 'dismiss all' popup button</li>
+					<li>preview windows will no longer update in the background if the 'hide preview window' option is set</li>
+					<li>misc fixes</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 226</h3></li>
 				<ul>
 					<li>fleshed out a bunch of parsing script engine and gui framework and added an 'under construction' entry to the services menu. feel free to play around with it!</li>

@@ -21,10 +21,6 @@ else:
         
     
 BIN_DIR = os.path.join( BASE_DIR, 'bin' )
-DB_DIR = os.path.join( BASE_DIR, 'db' )
-SERVER_FILES_DIR = os.path.join( DB_DIR, 'server_files' )
-CLIENT_UPDATES_DIR = os.path.join( DB_DIR, 'client_updates' )
-SERVER_UPDATES_DIR = os.path.join( DB_DIR, 'server_updates' )
 HELP_DIR = os.path.join( BASE_DIR, 'help' )
 INCLUDE_DIR = os.path.join( BASE_DIR, 'include' )
 STATIC_DIR = os.path.join( BASE_DIR, 'static' )
@@ -48,7 +44,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 226
+SOFTWARE_VERSION = 227
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
