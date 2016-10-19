@@ -184,6 +184,45 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
             
         
     
+class BetterButton( wx.Button ):
+    
+    def __init__( self, parent, label, callable ):
+        
+        wx.Button.__init__( self, parent, label = label )
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        
+    
+    def EventButton( self, event ):
+        
+        callable()
+        
+    
+class BetterChoice( wx.Choice ):
+    
+    def GetChoice( self ):
+        
+        selection = self.GetSelection()
+        
+        if selection != wx.NOT_FOUND: return self.GetClientData( selection )
+        else: return self.GetClientData( 0 )
+        
+    
+    def SelectClientData( self, client_data ):
+        
+        for i in range( self.GetCount() ):
+            
+            if client_data == self.GetClientData( i ):
+                
+                self.Select( i )
+                
+                return
+                
+            
+        
+        self.Select( 0 )
+        
+    
 class BufferedWindow( wx.Window ):
     
     def __init__( self, *args, **kwargs ):
@@ -261,31 +300,6 @@ class BufferedWindowIcon( BufferedWindow ):
         dc.DrawBitmap( self._bmp, 0, 0 )
         
         self._dirty = False
-        
-    
-class BetterChoice( wx.Choice ):
-    
-    def GetChoice( self ):
-        
-        selection = self.GetSelection()
-        
-        if selection != wx.NOT_FOUND: return self.GetClientData( selection )
-        else: return self.GetClientData( 0 )
-        
-    
-    def SelectClientData( self, client_data ):
-        
-        for i in range( self.GetCount() ):
-            
-            if client_data == self.GetClientData( i ):
-                
-                self.Select( i )
-                
-                return
-                
-            
-        
-        self.Select( 0 )
         
     
 class CheckboxCollect( wx.combo.ComboCtrl ):

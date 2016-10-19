@@ -374,7 +374,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 text = str( e )
                 
-                traceback.print_exc()
+                HydrusData.DebugPrint( traceback.format_exc() )
                 
             
             with self._lock:

@@ -29,11 +29,15 @@ try:
     from include import HydrusLogger
     import traceback
     
+    #
+    
     import argparse
     
     argparser = argparse.ArgumentParser( description = 'hydrus network client (windowed)' )
     
     argparser.add_argument( '-d', '--db_dir', help = 'set an external db location' )
+    argparser.add_argument( '--no_daemons', action='store_true', help = 'run without background daemons' )
+    argparser.add_argument( '--no_wal', action='store_true', help = 'run without WAL db journalling' )
     
     result = argparser.parse_args()
     
@@ -46,6 +50,8 @@ try:
         db_dir = result.db_dir
         
     
+    db_dir = HydrusPaths.ConvertPortablePathToAbsPath( db_dir )
+    
     try:
         
         HydrusPaths.MakeSureDirectoryExists( db_dir )
@@ -54,6 +60,11 @@ try:
         
         raise Exception( 'Could not ensure db path ' + db_dir + ' exists! Check the location is correct and that you have permission to write to it!' )
         
+    
+    no_daemons = result.no_daemons
+    no_wal = result.no_wal
+    
+    #
     
     log_path = os.path.join( db_dir, 'client.log' )
     
@@ -65,7 +76,7 @@ try:
             
             threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
             
-            controller = ClientController.Controller( db_dir )
+            controller = ClientController.Controller( db_dir, no_daemons, no_wal )
             
             controller.Run()
             

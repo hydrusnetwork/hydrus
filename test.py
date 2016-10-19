@@ -338,7 +338,7 @@ if __name__ == '__main__':
             
             import traceback
             
-            traceback.print_exc()
+            HydrusData.DebugPrint( traceback.format_exc() )
             
         finally:
             
@@ -357,7 +357,7 @@ if __name__ == '__main__':
         
         import traceback
         
-        traceback.print_exc()
+        HydrusData.DebugPrint( traceback.format_exc() )
         
     finally:
         

@@ -479,6 +479,11 @@ class Animation( wx.Window ):
     
     def GotoFrame( self, frame_index ):
         
+        if not self._video_container.IsInitialised():
+            
+            return
+            
+        
         if frame_index != self._current_frame_index:
             
             self._current_frame_index = frame_index

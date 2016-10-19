@@ -554,6 +554,12 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'keys' ] = {}
+        
+        self._dictionary[ 'keys' ][ 'default_tag_service_search_page' ] = CC.COMBINED_TAG_SERVICE_KEY.encode( 'hex' )
+        
+        #
+        
         self._dictionary[ 'noneable_integers' ] = {}
         
         self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
@@ -620,6 +626,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
         self._dictionary[ 'media_view' ][ HC.APPLICATION_PDF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_AVI ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
         self._dictionary[ 'media_view' ][ HC.VIDEO_FLV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
         self._dictionary[ 'media_view' ][ HC.VIDEO_MOV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
         self._dictionary[ 'media_view' ][ HC.VIDEO_MP4 ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
@@ -819,12 +826,18 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     def GetFrameLocation( self, frame_key ):
         
-        return self._dictionary[ 'frame_locations' ][ frame_key ]
+        with self._lock:
+            
+            return self._dictionary[ 'frame_locations' ][ frame_key ]
+            
         
     
     def GetFrameLocations( self ):
         
-        return self._dictionary[ 'frame_locations' ].items()
+        with self._lock:
+            
+            return self._dictionary[ 'frame_locations' ].items()
+            
         
     
     def GetInteger( self, name ):
@@ -832,6 +845,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dictionary[ 'integers' ][ name ]
+            
+        
+    
+    def GetKey( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'keys' ][ name ].decode( 'hex' )
             
         
     
@@ -954,7 +975,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     def SetFrameLocation( self, frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ):
         
-        self._dictionary[ 'frame_locations' ][ frame_key ] = ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+        with self._lock:
+            
+            self._dictionary[ 'frame_locations' ][ frame_key ] = ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+            
         
     
     def SetInteger( self, name, value ):
@@ -962,6 +986,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'integers' ][ name ] = value
+            
+        
+    
+    def SetKey( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'keys' ][ name ] = value.encode( 'hex' )
             
         
     

@@ -37,11 +37,11 @@ class Controller( HydrusController.HydrusController ):
     
     pubsub_binding_errors_to_ignore = [ wx.PyDeadObjectError ]
     
-    def __init__( self, db_dir ):
+    def __init__( self, db_dir, no_daemons, no_wal ):
         
         self._last_shutdown_was_bad = False
         
-        HydrusController.HydrusController.__init__( self, db_dir )
+        HydrusController.HydrusController.__init__( self, db_dir, no_daemons, no_wal )
         
         HydrusGlobals.client_controller = self
         
@@ -627,7 +627,7 @@ class Controller( HydrusController.HydrusController ):
             message += os.linesep * 2
             message += 'Don\'t forget to check out the help if you haven\'t already.'
             message += os.linesep * 2
-            message += 'You can right-click popup messages like this to dismiss them.'
+            message += 'To dismiss popup messages like this, right-click them.'
             
             HydrusData.ShowText( message )
             
@@ -1107,7 +1107,7 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.DebugPrint( text )
             
-            traceback.print_exc()
+            HydrusData.DebugPrint( traceback.format_exc() )
             
             wx.CallAfter( wx.MessageBox, traceback.format_exc() )
             wx.CallAfter( wx.MessageBox, text )
@@ -1144,7 +1144,7 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.DebugPrint( text )
             
-            traceback.print_exc()
+            HydrusData.DebugPrint( traceback.format_exc() )
             
             wx.CallAfter( wx.MessageBox, traceback.format_exc() )
             wx.CallAfter( wx.MessageBox, text )

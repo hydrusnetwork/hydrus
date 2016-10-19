@@ -139,8 +139,6 @@ def CreateManagementControllerQuery( file_service_key, file_search_context, sear
     
     management_controller = CreateManagementController( MANAGEMENT_TYPE_QUERY, file_service_key = file_service_key )
     
-    management_controller.SetKey( 'tag_service', CC.COMBINED_TAG_SERVICE_KEY )
-    
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'search_enabled', search_enabled )
     management_controller.SetVariable( 'synchronised', True )

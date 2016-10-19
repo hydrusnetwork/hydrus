@@ -19,18 +19,13 @@ class HydrusController( object ):
     
     pubsub_binding_errors_to_ignore = []
     
-    def __init__( self, db_dir ):
+    def __init__( self, db_dir, no_daemons, no_wal ):
         
         HydrusGlobals.controller = self
         
         self._db_dir = db_dir
-        
-        self._db = None
-        
-        self._no_daemons = False
-        self._no_wal = False
-        
-        self._InitArgsBools()
+        self._no_daemons = no_daemons
+        self._no_wal = no_wal
         
         self._no_wal_path = os.path.join( self._db_dir, 'no-wal' )
         
@@ -38,6 +33,8 @@ class HydrusController( object ):
             
             self._no_wal = True
             
+        
+        self._db = None
         
         self._model_shutdown = False
         self._view_shutdown = False
@@ -82,29 +79,6 @@ class HydrusController( object ):
         call_to_thread.start()
         
         return call_to_thread
-        
-    
-    def _InitArgsBools( self ):
-        
-        args = sys.argv[1:]
-        
-        for arg in args:
-            
-            while arg.startswith( '-' ):
-                
-                arg = arg[ 1: ]
-                
-            
-            if arg in ( 'no-daemon', 'no-daemons' ):
-                
-                self._no_daemons = True
-                
-            
-            if arg == 'no-wal':
-                
-                self._no_wal = True
-                
-            
         
     
     def _InitDB( self ):
@@ -190,9 +164,20 @@ class HydrusController( object ):
             
         
     
-    def GetCache( self, name ): return self._caches[ name ]
+    def GetCache( self, name ):
+        
+        return self._caches[ name ]
+        
     
-    def GetManager( self, name ): return self._managers[ name ]
+    def GetDBDir( self ):
+        
+        return self._db_dir
+        
+    
+    def GetManager( self, name ):
+        
+        return self._managers[ name ]
+        
     
     def GoodTimeToDoBackgroundWork( self ):
         

@@ -1254,7 +1254,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Analyze( self, stop_time = None, only_when_idle = False, force_reanalyze = False ):
         
-        stale_time_delta = 14 * 86400
+        stale_time_delta = 30 * 86400
         
         existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
         
@@ -5462,7 +5462,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # analyze
         
-        stale_time_delta = 14 * 86400
+        stale_time_delta = 30 * 86400
         
         existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
         
@@ -6968,7 +6968,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 except:
                     
-                    traceback.print_exc()
+                    HydrusData.DebugPrint( traceback.format_exc() )
                     
                     self._controller.pub( 'splash_set_status_text', 'error updating subscription ' + name )
                     
@@ -7023,7 +7023,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                         except:
                             
-                            traceback.print_exc()
+                            HydrusData.DebugPrint( traceback.format_exc() )
                             
                             continue
                             
@@ -7085,7 +7085,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 except:
                     
-                    traceback.print_exc()
+                    HydrusData.DebugPrint( traceback.format_exc() )
                     
                     continue
                     

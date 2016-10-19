@@ -2008,6 +2008,14 @@ class ServicesManager( object ):
             
         
     
+    def ServiceExists( self, service_key ):
+        
+        with self._lock:
+            
+            return service_key in self._keys_to_services
+            
+        
+    
 class TagCensorshipManager( object ):
     
     def __init__( self, controller ):

@@ -256,7 +256,16 @@ class HTTPConnectionManager( object ):
                 
             else:
                 
-                if num_redirects_permitted == 0: raise Exception( 'Too many redirects!' )
+                if num_redirects_permitted == 0:
+                    
+                    message = 'Too many redirects!'
+                    message += os.linesep
+                    message += 'Location was: ' + HydrusData.ToUnicode( location ) + ' and path and query was ' + path_and_query + '.'
+                    message += os.linesep
+                    message += 'Redirect info was: ' + HydrusData.ToUnicode( redirect_info )
+                    
+                    raise Exception( message )
+                    
                 
                 ( new_method, new_url ) = redirect_info
                 

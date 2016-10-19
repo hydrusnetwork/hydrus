@@ -175,6 +175,10 @@ class RasterContainerVideo( RasterContainer ):
         
         RasterContainer.__init__( self, media, target_resolution )
         
+        self._init_position = init_position
+        
+        self._initialised = False
+        
         self._frames = {}
         self._buffer_start_index = -1
         self._buffer_end_index = -1
@@ -208,24 +212,6 @@ class RasterContainerVideo( RasterContainer ):
         self._num_frames_backwards = frame_buffer_length * 2 / 3
         self._num_frames_forwards = frame_buffer_length / 3
         
-        hash = self._media.GetHash()
-        mime = self._media.GetMime()
-        
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
-        
-        path = client_files_manager.GetFilePath( hash, mime )
-        
-        if self._media.GetMime() == HC.IMAGE_GIF:
-            
-            self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
-            
-            self._renderer = ClientVideoHandling.GIFRenderer( path, num_frames, self._target_resolution )
-            
-        else:
-            
-            self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, self._target_resolution )
-            
-        
         self._render_lock = threading.Lock()
         self._buffer_lock = threading.Lock()
         
@@ -234,8 +220,6 @@ class RasterContainerVideo( RasterContainer ):
         self._render_to_index = -1
         self._rendered_first_frame = False
         self._rush_to_index = None
-        
-        self.GetReadyForFrame( init_position )
         
         HydrusGlobals.client_controller.CallToThread( self.THREADRender )
         
@@ -286,6 +270,8 @@ class RasterContainerVideo( RasterContainer ):
                 
                 self._render_event.set()
                 
+                self._initialised = True
+                
             
         
     
@@ -307,6 +293,8 @@ class RasterContainerVideo( RasterContainer ):
                 
                 self._render_event.set()
                 
+                self._initialised = True
+                
             
         
     
@@ -318,11 +306,31 @@ class RasterContainerVideo( RasterContainer ):
             
             self._render_event.set()
             
+            self._initialised = True
+            
         
     
     def THREADRender( self ):
         
+        hash = self._media.GetHash()
+        mime = self._media.GetMime()
+        duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()
+        
+        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        
+        if self._media.GetMime() == HC.IMAGE_GIF:
+            
+            self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
+            
+            self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames, self._target_resolution )
+            
+        else:
+            
+            self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames, self._target_resolution )
+            
+        
+        self.GetReadyForFrame( self._init_position )
         
         while True:
             
@@ -331,7 +339,10 @@ class RasterContainerVideo( RasterContainer ):
                 return
                 
             
-            if not self._rendered_first_frame or self._next_render_index != ( self._render_to_index + 1 ) % num_frames:
+            ready_to_render = self._initialised
+            frames_needed = not self._rendered_first_frame or self._next_render_index != ( self._render_to_index + 1 ) % num_frames
+            
+            if ready_to_render and frames_needed:
                 
                 with self._render_lock:
                     
@@ -515,6 +526,11 @@ class RasterContainerVideo( RasterContainer ):
             
             return index in self._frames
             
+        
+    
+    def IsInitialised( self ):
+        
+        return self._initialised
         
     
     def IsScaled( self ): return self._zoom != 1.0

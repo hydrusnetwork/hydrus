@@ -175,8 +175,17 @@ def DeletePath( path ):
             
         except Exception as e:
             
-            HydrusData.ShowText( 'Trying to delete ' + path + ' caused the following error:' )
-            HydrusData.ShowException( e )
+            if 'Error 32' in str( e ):
+                
+                # file in use by another process
+                
+                HydrusData.DebugPrint( 'Trying to delete ' + path + ' failed because it was in use by another process.' )
+                
+            else:
+                
+                HydrusData.ShowText( 'Trying to delete ' + path + ' caused the following error:' )
+                HydrusData.ShowException( e )
+                
             
         
     
@@ -506,7 +515,8 @@ def RecyclePath( path ):
             except:
                 
                 HydrusData.Print( 'Trying to prepare ' + path + ' for recycling created this error:' )
-                traceback.print_exc()
+                
+                HydrusData.DebugPrint( traceback.format_exc() )
                 
                 return
                 
@@ -524,7 +534,8 @@ def RecyclePath( path ):
         except:
             
             HydrusData.Print( 'Trying to recycle ' + path + ' created this error:' )
-            traceback.print_exc()
+            
+            HydrusData.DebugPrint( traceback.format_exc() )
             
             HydrusData.Print( 'It has been fully deleted instead.' )
             

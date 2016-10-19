@@ -2,6 +2,7 @@ import bs4
 import HydrusConstants as HC
 import HydrusData
 import HydrusSerialisable
+import os
 
 def ConvertParsableContentToPrettyString( parsable_content ):
     
@@ -11,9 +12,32 @@ def ConvertParsableContentToPrettyString( parsable_content ):
         
     else:
         
-        # make this prettier
+        pretty_strings = []
         
-        return ', '.join( parsable_content )
+        content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( parsable_content )
+        
+        for ( content_type, additional_infos ) in content_type_to_additional_infos.items():
+            
+            if content_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                namespaces = [ namespace for namespace in additional_infos if namespace != '' ]
+                
+                if '' in additional_infos:
+                    
+                    namespaces.append( 'unnamespaced' )
+                    
+                
+                pretty_strings.append( 'tags: ' + ', '.join( namespaces ) )
+                
+            if content_type == HC.CONTENT_TYPE_RATINGS:
+                
+                # I assume additional_info will have star info or whatever
+                
+                pass
+                
+            
+        
+        return ', '.join( pretty_strings )
         
     
 def RenderTagRule( ( name, attrs, index ) ):
@@ -54,6 +78,8 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         self._tag_rules = tag_rules
         
         self._content_rule = content_rule
+        
+        # I need extra rules here for chopping stuff off the beginning or end and appending or prepending strings
         
     
     def _GetSerialisableInfo( self ):
@@ -124,6 +150,51 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         return contents
         
     
+    def ToPrettyMultilineString( self ):
+        
+        pretty_strings = []
+        
+        for ( name, attrs, index ) in self._tag_rules:
+            
+            s = ''
+            
+            if index is None:
+                
+                s += 'get every '
+                
+            else:
+                
+                num = index + 1
+                
+                s += 'get the ' + HydrusData.ConvertIntToPrettyOrdinalString( num ) + ' '
+                
+            
+            s += '<' + name + '> tag'
+            
+            if len( attrs ) > 0:
+                
+                s += 'with attributes ' + ', '.join( key + '=' + value for ( key, value ) in attrs.items() )
+                
+            
+            pretty_strings.append( s )
+            
+        
+        if self._content_rule is None:
+            
+            pretty_strings.append( 'get the text content of those tags' )
+            
+        else:
+            
+            pretty_strings.append( 'get the ' + self._content_rule + ' attribute of those tags' )
+            
+        
+        separator = os.linesep + 'and then '
+        
+        pretty_multiline_string = separator.join( pretty_strings )
+        
+        return pretty_multiline_string
+        
+    
     def ToTuple( self ):
         
         return ( self._tag_rules, self._content_rule )
@@ -137,6 +208,29 @@ class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_VERSION = 1
     
     def __init__( self, name = None, content_type = None, formula = None, additional_info = None ):
+        
+        if name is None:
+            
+            name = ''
+            
+        
+        if content_type is None:
+            
+            content_type = HC.CONTENT_TYPE_MAPPINGS
+            
+        
+        if formula is None:
+            
+            formula = ParseFormulaHTML()
+            
+        
+        if additional_info is None:
+            
+            if content_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                additional_info = ''
+                
+            
         
         self._name = name
         self._content_type = content_type
@@ -160,7 +254,7 @@ class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
     
     def GetParsableContent( self ):
         
-        return ( self._name, self._content_type )
+        return [ ( self._content_type, self._additional_info ) ]
         
     
     def Parse( self, data, referral_url, desired_content ):
@@ -178,9 +272,14 @@ class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
         return [ ( self._name, self._content_type, parsed_text, self._additional_info ) for parsed_text in parsed_texts ]
         
     
-    def SetChildren( self, children ):
+    def ToPrettyStrings( self ):
         
-        self._children = children
+        return ( self._name, 'content', ConvertParsableContentToPrettyString( self.GetParsableContent() ) )
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._name, self._content_type, self._formula, self._additional_info )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT ] = ParseNodeContent
@@ -190,11 +289,26 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, formula = None, children = None, description = None ):
+    def __init__( self, name = None, formula = None, children = None ):
         
+        if name is None:
+            
+            name = ''
+            
+        
+        if formula is None:
+            
+            formula = ParseFormulaHTML()
+            
+        
+        if children is None:
+            
+            children = []
+            
+        
+        self._name = name
         self._formula = formula
         self._children = children
-        self._description = description
         
     
     def _GetSerialisableInfo( self ):
@@ -202,12 +316,12 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         serialisable_formula = self._formula.GetSerialisableTuple()
         serialisable_children = [ child.GetSerialisableTuple() for child in self._children ]
         
-        return ( serialisable_formula, serialisable_children, self._description )
+        return ( self._name, serialisable_formula, serialisable_children )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_formula, serialisable_children, self._description ) = serialisable_info
+        ( self._name, serialisable_formula, serialisable_children ) = serialisable_info
         
         self._formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
         self._children = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_child ) for serialisable_child in serialisable_children ]
@@ -249,9 +363,9 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         return content
         
     
-    def SetChildren( self, children ):
+    def ToPrettyStrings( self ):
         
-        self._children = children
+        return ( self._name, 'link', ConvertParsableContentToPrettyString( self.GetParsableContent() ) )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK ] = ParseNodeContentLink
@@ -336,6 +450,16 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         
         data = self.FetchData( url, file_identifier )
         
+        return self.Parse( data, url, desired_content )
+        
+    
+    def GetFileIdentifierInfo( self ):
+        
+        return ( self._file_identifier_type, self._file_identifier_encoding )
+        
+    
+    def Parse( self, data, url, desired_content ):
+        
         content = []
         
         for child in self._children:
@@ -348,11 +472,6 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return content
         
     
-    def GetFileIdentifierInfo( self ):
-        
-        return ( self._file_identifier_type, self._file_identifier_encoding )
-        
-    
     def SetChildren( self, children ):
         
         self._children = children
@@ -360,7 +479,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToPrettyStrings( self ):
         
-        return ( self._name, HC.query_type_string_lookup[ self._query_type ], 'File Lookup returning ' + ConvertParsableContentToPrettyString( self.GetParsableContent() ) )
+        return ( self._name, HC.query_type_string_lookup[ self._query_type ], 'File Lookup', ConvertParsableContentToPrettyString( self.GetParsableContent() ) )
         
     
     def ToTuple( self ):

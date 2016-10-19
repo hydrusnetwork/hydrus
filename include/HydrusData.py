@@ -186,6 +186,29 @@ def ConvertIntToPixels( i ):
     elif i == 1000000: return 'megapixels'
     else: return 'megapixels'
     
+def ConvertIntToPrettyOrdinalString( num ):
+    
+    remainder = num % 10
+    
+    if remainder == 1:
+        
+        ordinal = 'st'
+        
+    elif remainder == 2:
+        
+        ordinal = 'nd'
+        
+    elif remainder == 3:
+        
+        ordinal = 'rd'
+        
+    else:
+        
+        ordinal = 'th'
+        
+    
+    return ConvertIntToPrettyString( num ) + ordinal
+    
 def ConvertIntToPrettyString( num ):
     
     # don't feed this a unicode string u'%d'--locale can't handle it

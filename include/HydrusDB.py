@@ -403,7 +403,7 @@ class HydrusDB( object ):
                     
                 except sqlite3.OperationalError:
                     
-                    traceback.print_exc()
+                    HydrusData.DebugPrint( traceback.format_exc() )
                     
                     def create_no_wal_file():
                         
@@ -533,11 +533,6 @@ class HydrusDB( object ):
     def CurrentlyDoingJob( self ):
         
         return self._currently_doing_job
-        
-    
-    def GetDBDir( self ):
-        
-        return self._db_dir
         
     
     def IsDBUpdated( self ):

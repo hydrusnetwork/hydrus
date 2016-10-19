@@ -10,6 +10,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIManagement
 import ClientGUIPages
+import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientDownloading
@@ -728,6 +729,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             open = wx.Menu()
             
             open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'open_install_folder' ), p( 'Installation Directory' ), p( 'Open the installation directory for this client.' ) )
+            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'open_db_folder' ), p( 'Database Directory' ), p( 'Open the database directory for this instance of the client.' ) )
             open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'open_export_folder' ), p( 'Quick Export Directory' ), p( 'Open the export directory so you can easily access the files you have exported.' ) )
             
             menu.AppendMenu( CC.ID_NULL, p( 'Open' ), open )
@@ -1384,7 +1386,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
             
-            panel = ClientGUIScrolledPanels.ManageParsingScriptsPanel( dlg )
+            panel = ClientGUIParsing.ManageParsingScriptsPanel( dlg )
             
             dlg.SetPanel( panel )
             
@@ -1557,7 +1559,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         search_enabled = len( initial_media_results ) == 0
         
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, predicates = initial_predicates )
+        new_options = self._controller.GetNewOptions()
+        
+        tag_service_key = new_options.GetKey( 'default_tag_service_search_page' )
+        
+        if not self._controller.GetServicesManager().ServiceExists( tag_service_key ):
+            
+            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, tag_service_key = tag_service_key, predicates = initial_predicates )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( file_service_key, file_search_context, search_enabled )
         
@@ -1567,6 +1578,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _News( self, service_key ):
         
         with ClientGUIDialogs.DialogNews( self, service_key ) as dlg: dlg.ShowModal()
+        
+    
+    def _OpenDBFolder( self ):
+        
+        HydrusPaths.LaunchDirectory( self._controller.GetDBDir() )
         
     
     def _OpenExportFolder( self ):
@@ -1791,6 +1807,21 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             wx.MessageBox( 'Sorry, you cannot have that name! Try another.' )
                             
                         else:
+                            
+                            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+                            
+                            if name in existing_session_names:
+                                
+                                message = 'Session \'' + name + '\' already exists! Do you want to overwrite it?'
+                                
+                                with ClientGUIDialogs.DialogYesNo( self , message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name' ) as yn_dlg:
+                                    
+                                    if yn_dlg.ShowModal() != wx.ID_YES:
+                                        
+                                        continue
+                                        
+                                    
+                                
                             
                             break
                             
@@ -2465,6 +2496,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HydrusGlobals.no_focus_changed = not HydrusGlobals.no_focus_changed
                 
+            elif command == 'open_db_folder': self._OpenDBFolder()
             elif command == 'open_export_folder': self._OpenExportFolder()
             elif command == 'open_install_folder': self._OpenInstallFolder()
             elif command == 'options': self._ManageOptions()
