@@ -8,6 +8,21 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 228</h3></li>
+				<ul>
+					<li>added support for RIFF .avi files</li>
+					<li>fleshed out parsing ui, made progress on node editing, moved edit/test panels to notebook pages to reduce clutter</li>
+					<li>the video renderer now initialises off the gui thread, which should reduce some video browsing chunkiness</li>
+					<li>trying to save a session that would overwrite another (from the same name) now throws up a yes/no warning</li>
+					<li>reintroduced '--no_daemons' and '--no_wal' to the new command line argument parser</li>
+					<li>you can now set the default tag service for new search pages under the file->options->tags page</li>
+					<li>since it can now be anywhere, added 'db directory' to the file->open menu</li>
+					<li>fixed a build capitalisation issue that was making the windows frozen exe release crash when trying to run from source</li>
+					<li>the 'too many redirects' error message is expanded to print the url called and its redirect request</li>
+					<li>errors from trying to delete files in use by another process will no longer make popups--they'll just write a note in the log</li>
+					<li>improved how some errors are written to the log</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 227</h3></li>
 				<ul>
 					<li>both the client and server now use standard command line input and will produce a proper help with a -h switch (although the 'windowed' frozen client executable can't print back to console)</li>
