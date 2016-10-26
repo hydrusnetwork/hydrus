@@ -8,6 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 229</h3></li>
+				<ul>
+					<li>edit html formula dialog can now be launched from edit content node panel</li>
+					<li>edit html tag rule dialog can now be launched from edit formula panel</li>
+					<li>edit formula panel test now works</li>
+					<li>edit content node panel test now works</li>
+					<li>edit script panel test now works</li>
+					<li>html formula now filters out missing content rather than complaining</li>
+					<li>misc parsing work</li>
+					<li>fixed some listctrl resize columns to be more helpful</li>
+					<li>attempting to size a resizing listctrl column will now move the resizing column to the last column, which will avoid the flickering scrollbar sperg-out of previous</li>
+					<li>attempts to resize the final column of a listctrl while it is the resizing column will be silently vetoed, which will avoid more resize event flickering</li>
+					<li>frame location options panel now allows for negative position coordinates (for multi-monitor setups)</li>
+					<li>all the new resizing panels now handle certain size updates in a more unified and reliable way</li>
+					<li>fixed an issue with hover windows' mouse position check breaking during media window init/shutdown edge cases</li>
+					<li>avc1 mp4 support added</li>
+					<li>ftypFACE mp4 support added</li>
+					<li>ftypdash mp4 support added</li>
+					<li>mpegts mpeg support added</li>
+					<li>to help migration, paths are now only stored as portable (i.e. relative to the base path) if they are beneath the base path (previously, this was true for any path on the same partition, permitting PITA '../../my_files' portable paths)</li>
+					<li>to help migration, portable paths are now relative to db_dir, not installation base_dir (existing client_files_locations, ideal client_files/thumbs_locations, export_path, and HTA paths will be updated)</li>
+					<li>started work on cleaning up button code across the program</li>
+					<li>created a better way to bind menu events that shouldn't suffer the id overflow bug</li>
+					<li>started work on replacing the old id_to_action_cache menu mess with the new system</li>
+					<li>too-many redirect exceptions are now richer and caught more sensibly</li>
+					<li>circular redirects are caught as soon as they occur</li>
+					<li>reduced sqlite cache size (with the new disk cache, this is now less important)</li>
+					<li>client.py is now included in the source and windows frozen releases</li>
+				</ul>
 				<li><h3>version 228</h3></li>
 				<ul>
 					<li>added support for RIFF .avi files</li>
