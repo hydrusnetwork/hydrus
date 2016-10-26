@@ -29,12 +29,23 @@ import traceback
 import wx
 import wx.lib.scrolledpanel
 
-class EditPanel( wx.lib.scrolledpanel.ScrolledPanel ):
+class ResizingScrolledPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def __init__( self, parent ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent )
         
+        self.Bind( CC.EVT_SIZE_CHANGED, self.EventSizeChanged )
+        
+    
+    def EventSizeChanged( self, event ):
+        
+        self.SetVirtualSize( self.DoGetBestSize() )
+        
+        event.Skip()
+        
+    
+class EditPanel( ResizingScrolledPanel ):
     
     def GetValue( self ):
         
@@ -53,7 +64,7 @@ class EditFrameLocationPanel( EditPanel ):
         self._remember_position = wx.CheckBox( self, label = 'remember position' )
         
         self._last_size = ClientGUICommon.NoneableSpinCtrl( self, 'last size', none_phrase = 'none set', min = 100, max = 1000000, unit = None, num_dimensions = 2 )
-        self._last_position = ClientGUICommon.NoneableSpinCtrl( self, 'last position', none_phrase = 'none set', min = 100, max = 1000000, unit = None, num_dimensions = 2 )
+        self._last_position = ClientGUICommon.NoneableSpinCtrl( self, 'last position', none_phrase = 'none set', min = -1000000, max = 1000000, unit = None, num_dimensions = 2 )
         
         self._default_gravity_x = ClientGUICommon.BetterChoice( self )
         
@@ -362,12 +373,7 @@ class EditSeedCachePanel( EditPanel ):
         self._UpdateText()
         
     
-class ManagePanel( wx.lib.scrolledpanel.ScrolledPanel ):
-    
-    def __init__( self, parent ):
-        
-        wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent )
-        
+class ManagePanel( ResizingScrolledPanel ):
     
     def CommitChanges( self ):
         
@@ -1617,7 +1623,7 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
-            self._media_viewer_options = ClientGUICommon.SaneListCtrl( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom info', 200 ) ], activation_callback = self.EditMediaViewerOptions, use_display_tuple_for_sort = True )
+            self._media_viewer_options = ClientGUICommon.SaneListCtrl( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom info', -1 ) ], activation_callback = self.EditMediaViewerOptions, use_display_tuple_for_sort = True )
             
             self._media_viewer_edit_button = wx.Button( self._media_viewer_panel, label = 'edit' )
             self._media_viewer_edit_button.Bind( wx.EVT_BUTTON, self.EventEditMediaViewerOptions )
@@ -3333,7 +3339,7 @@ class ManageTagsPanel( ManagePanel ):
             
         
     
-class ReviewPanel( wx.lib.scrolledpanel.ScrolledPanel ):
+class ReviewPanel( ResizingScrolledPanel ):
     
     pass
     
@@ -3359,7 +3365,6 @@ class ReviewServices( ReviewPanel ):
         self._notebook.AddPage( self._remote_listbook, 'remote' )
         
         self.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventPageChanged )
-        self.Bind( CC.EVT_SIZE_CHANGED, self.EventPageChanged )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -3416,8 +3421,6 @@ class ReviewServices( ReviewPanel ):
         
     
     def EventPageChanged( self, event ):
-        
-        self.SetVirtualSize( self.DoGetBestSize() )
         
         wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
         

@@ -53,7 +53,7 @@ try:
         db_dir = result.db_dir
         
     
-    db_dir = HydrusPaths.ConvertPortablePathToAbsPath( db_dir )
+    db_dir = HydrusPaths.ConvertPortablePathToAbsPath( db_dir, HC.BASE_DIR )
     
     try:
         

@@ -35,6 +35,20 @@ def AddPaddingToDimensions( dimensions, padding ):
     
     return ( x + padding, y + padding )
     
+def AppendMenuItem( menu, label, description, event_handler, callable, *args, **kwargs ):
+    
+    menu_item = menu.Append( wx.ID_ANY, label, description )
+    
+    BindMenuItemToCallable( menu_item, event_handler, callable, *args, **kwargs )
+    
+    return menu_item
+    
+def BindMenuItemToCallable( menu_item, event_handler, callable, *args, **kwargs ):
+    
+    l_callable = lambda event: callable( *args, **kwargs )
+    
+    event_handler.Bind( wx.EVT_MENU, l_callable, source = menu_item )
+    
 def CatchExceptionClient( etype, value, tb ):
     
     try:
@@ -490,7 +504,7 @@ sqlite3.register_adapter( Booru, yaml.safe_dump )
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, db_dir = None ):
         
@@ -697,6 +711,79 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            # as db_dir is now moveable, let's move portable base from base_dir to db_dir
+            
+            def update_portable_path( p ):
+                
+                if p is None:
+                    
+                    return p
+                    
+                
+                p = os.path.normpath( p ) # collapses .. stuff and converts / to \\ for windows only
+                
+                if os.path.isabs( p ):
+                    
+                    a_p = p
+                    
+                else:
+                    
+                    a_p = os.path.normpath( os.path.join( HC.BASE_DIR, p ) )
+                    
+                
+                if not HC.PLATFORM_WINDOWS and not os.path.exists( a_p ):
+                    
+                    a_p = a_p.replace( '\\', '/' )
+                    
+                
+                try:
+                    
+                    db_dir = HydrusGlobals.controller.GetDBDir()
+                    
+                    p = os.path.relpath( a_p, db_dir )
+                    
+                    if p.startswith( '..' ):
+                        
+                        p = a_p
+                        
+                    
+                except:
+                    
+                    p = a_p
+                    
+                
+                if HC.PLATFORM_WINDOWS:
+                    
+                    p = p.replace( '\\', '/' ) # store seps as /, to maintain multiplatform uniformity
+                    
+                
+                return p
+                
+            
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info )
+            
+            updated_cfliw = []
+            
+            for ( old_portable_path, weight ) in loaded_dictionary[ 'client_files_locations_ideal_weights' ]:
+                
+                new_portable_path = update_portable_path( old_portable_path )
+                
+                updated_cfliw.append( ( new_portable_path, weight ) )
+                
+            
+            loaded_dictionary[ 'client_files_locations_ideal_weights' ] = updated_cfliw
+            
+            loaded_dictionary[ 'client_files_locations_resized_thumbnail_override' ] = update_portable_path( loaded_dictionary[ 'client_files_locations_resized_thumbnail_override' ] )
+            
+            loaded_dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = update_portable_path( loaded_dictionary[ 'client_files_locations_full_size_thumbnail_override' ] )
+            
+            new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
+            
+            return ( 3, new_serialisable_info )
             
         
     

@@ -1,6 +1,7 @@
 import gc
 import HydrusConstants as HC
 import HydrusData
+import HydrusGlobals
 import os
 import psutil
 import send2trash
@@ -69,11 +70,25 @@ def CleanUpTempPath( os_file_handle, temp_path ):
             
         
     
-def ConvertAbsPathToPortablePath( abs_path ):
+def ConvertAbsPathToPortablePath( abs_path, base_dir_override = None ):
     
     try:
         
-        portable_path = os.path.relpath( abs_path, HC.BASE_DIR )
+        if base_dir_override is None:
+            
+            base_dir = HydrusGlobals.controller.GetDBDir()
+            
+        else:
+            
+            base_dir = base_dir_override
+            
+        
+        portable_path = os.path.relpath( abs_path, base_dir )
+        
+        if portable_path.startswith( '..' ):
+            
+            portable_path = abs_path
+            
         
     except:
         
@@ -87,7 +102,7 @@ def ConvertAbsPathToPortablePath( abs_path ):
     
     return portable_path
     
-def ConvertPortablePathToAbsPath( portable_path ):
+def ConvertPortablePathToAbsPath( portable_path, base_dir_override = None ):
     
     portable_path = os.path.normpath( portable_path ) # collapses .. stuff and converts / to \\ for windows only
     
@@ -97,7 +112,16 @@ def ConvertPortablePathToAbsPath( portable_path ):
         
     else:
         
-        abs_path = os.path.normpath( os.path.join( HC.BASE_DIR, portable_path ) )
+        if base_dir_override is None:
+            
+            base_dir = HydrusGlobals.controller.GetDBDir()
+            
+        else:
+            
+            base_dir = base_dir_override
+            
+        
+        abs_path = os.path.normpath( os.path.join( base_dir, portable_path ) )
         
     
     if not HC.PLATFORM_WINDOWS and not os.path.exists( abs_path ):

@@ -2,8 +2,20 @@ import bs4
 import HydrusConstants as HC
 import HydrusData
 import HydrusSerialisable
+import HydrusTags
 import os
 
+def ConvertContentResultToPrettyString( result ):
+    
+    ( name, content_type, parsed_text, additional_info ) = result
+    
+    if content_type == HC.CONTENT_TYPE_MAPPINGS:
+        
+        return 'tag: ' + HydrusTags.CombineTag( additional_info, parsed_text )
+        
+    
+    raise NotImplementedError()
+    
 def ConvertParsableContentToPrettyString( parsable_content ):
     
     if len( parsable_content ) == 0:
@@ -48,7 +60,7 @@ def RenderTagRule( ( name, attrs, index ) ):
         
     else:
         
-        result = HydrusData.ConvertIntToFirst( index + 1 ) + name + ' tag'
+        result = HydrusData.ConvertIntToFirst( index + 1 ) + ' ' + name + ' tag'
         
     
     if len( attrs ) > 0:
@@ -68,11 +80,6 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         if tag_rules is None:
             
             tag_rules = [ ( 'a', {}, None ) ]
-            
-        
-        if content_rule is None:
-            
-            content_rule = 'src'
             
         
         self._tag_rules = tag_rules
@@ -96,11 +103,27 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         
         if self._content_rule is None:
             
-            return root.string
+            result = root.string
             
         else:
             
-            return root[ self._content_rule ]
+            if root.has_attr( self._content_rule ):
+                
+                result = root[ self._content_rule ]
+                
+            else:
+                
+                result = None
+                
+            
+        
+        if result == '':
+            
+            return None
+            
+        else:
+            
+            return result
             
         
     
@@ -146,6 +169,8 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             
         
         contents = [ self._ParseContent( root ) for root in roots ]
+        
+        contents = [ content for content in contents if content is not None ]
         
         return contents
         

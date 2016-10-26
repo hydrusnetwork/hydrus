@@ -25,6 +25,7 @@ class NetworkVersionException( NetworkException ): pass
 class NoContentException( NetworkException ): pass
 class NotFoundException( NetworkException ): pass
 class NotModifiedException( NetworkException ): pass
+class RedirectionException( NetworkException ): pass
 class ServerBusyException( NetworkException ): pass
 class SessionException( NetworkException ): pass
 class WrongServiceTypeException( NetworkException ): pass

@@ -33,7 +33,7 @@ try:
     
     import argparse
     
-    argparser = argparse.ArgumentParser( description = 'hydrus network client (windowed)' )
+    argparser = argparse.ArgumentParser( description = 'hydrus network client (console)' )
     
     argparser.add_argument( '-d', '--db_dir', help = 'set an external db location' )
     argparser.add_argument( '--no_daemons', action='store_true', help = 'run without background daemons' )

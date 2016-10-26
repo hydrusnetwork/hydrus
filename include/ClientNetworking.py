@@ -264,14 +264,28 @@ class HTTPConnectionManager( object ):
                     message += os.linesep
                     message += 'Redirect info was: ' + HydrusData.ToUnicode( redirect_info )
                     
-                    raise Exception( message )
+                    raise HydrusExceptions.RedirectionException( message )
                     
                 
                 ( new_method, new_url ) = redirect_info
                 
                 ( new_location, new_path, new_query ) = ParseURL( new_url )
                 
-                if new_location is None: new_location = location
+                if new_location is None:
+                    
+                    new_location = location
+                    
+                
+                if new_method == method and new_location == location and new_path == path and new_query == query:
+                    
+                    message = 'Encountered a circular redirect!'
+                    message += os.linesep
+                    message += 'Location was: ' + HydrusData.ToUnicode( location ) + ' and path and query was ' + path_and_query + '.'
+                    message += os.linesep
+                    message += 'Redirect info was: ' + HydrusData.ToUnicode( redirect_info )
+                    
+                    raise HydrusExceptions.RedirectionException( message )
+                    
                 
                 return self._DoRequest( new_method, new_location, new_path, new_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path, num_redirects_permitted = num_redirects_permitted - 1 )
                 
@@ -713,7 +727,10 @@ class HTTPConnection( object ):
             
             location = response.getheader( 'Location' )
             
-            if location is None: raise Exception( 'Received an invalid redirection response.' )
+            if location is None:
+                
+                raise Exception( 'Received an invalid redirection response.' )
+                
             else:
                 
                 url = location

@@ -74,7 +74,10 @@ class CollapsibleOptionsTags( CollapsibleOptions ):
         
         self._options_panel.SetNamespaces( namespaces )
         
-        if self._collapsible_panel.IsExpanded(): self._collapsible_panel.EventChange( None )
+        if self._collapsible_panel.IsExpanded():
+            
+            self._collapsible_panel.ExpandCollapse()
+            
         
     
 class CollapsiblePanel( wx.Panel ):
@@ -90,8 +93,7 @@ class CollapsiblePanel( wx.Panel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._button = wx.Button( self, label = 'expand' )
-        self._button.Bind( wx.EVT_BUTTON, self.EventChange )
+        self._button = ClientGUICommon.BetterButton( self, 'expand', self.ExpandCollapse )
         
         line = wx.StaticLine( self, style = wx.LI_HORIZONTAL )
         
@@ -103,7 +105,7 @@ class CollapsiblePanel( wx.Panel ):
         self.SetSizer( self._vbox )
         
     
-    def _Change( self ):
+    def ExpandCollapse( self ):
         
         if self._expanded:
             
@@ -139,11 +141,10 @@ class CollapsiblePanel( wx.Panel ):
             
         
     
-    def ExpandCollapse( self ): self._Change()
-    
-    def EventChange( self, event ): self._Change()
-    
-    def IsExpanded( self ): return self._expanded
+    def IsExpanded( self ):
+        
+        return self._expanded
+        
     
     def SetPanel( self, panel ):
         

@@ -528,12 +528,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
         tag_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._tag_service_key )
         
-        self._file_repo_button = wx.Button( self._dropdown_window, label = file_service.GetName() )
-        self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
+        self._file_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, file_service.GetName(), self.FileButtonHit )
         self._file_repo_button.SetMinSize( ( 20, -1 ) )
         
-        self._tag_repo_button = wx.Button( self._dropdown_window, label = tag_service.GetName() )
-        self._tag_repo_button.Bind( wx.EVT_BUTTON, self.EventTagButton )
+        self._tag_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, tag_service.GetName(), self.TagButtonHit )
         self._tag_repo_button.SetMinSize( ( 20, -1 ) )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
@@ -600,33 +598,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
     
-    def SetFileService( self, file_service_key ):
-        
-        self._ChangeFileService( file_service_key )
-        
-    
-    def SetTagService( self, tag_service_key ):
-        
-        self._ChangeTagService( tag_service_key )
-        
-    
-    def EventFileButton( self, event ):
-        
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
-        
-        services = []
-        services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
-        services.append( services_manager.GetService( CC.LOCAL_FILE_SERVICE_KEY ) )
-        services.append( services_manager.GetService( CC.TRASH_SERVICE_KEY ) )
-        services.extend( services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) )
-        
-        menu = wx.Menu()
-        
-        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_service', service.GetServiceKey() ), service.GetName() )
-        
-        HydrusGlobals.client_controller.PopupMenu( self._file_repo_button, menu )
-        
-    
     def EventMenu( self, event ):
         
         action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -652,7 +623,34 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
     
-    def EventTagButton( self, event ):
+    def FileButtonHit( self ):
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        services = []
+        services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.LOCAL_FILE_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.TRASH_SERVICE_KEY ) )
+        services.extend( services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) )
+        
+        menu = wx.Menu()
+        
+        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_service', service.GetServiceKey() ), service.GetName() )
+        
+        HydrusGlobals.client_controller.PopupMenu( self._file_repo_button, menu )
+        
+    
+    def SetFileService( self, file_service_key ):
+        
+        self._ChangeFileService( file_service_key )
+        
+    
+    def SetTagService( self, tag_service_key ):
+        
+        self._ChangeTagService( tag_service_key )
+        
+    
+    def TagButtonHit( self ):
         
         services_manager = HydrusGlobals.client_controller.GetServicesManager()
         

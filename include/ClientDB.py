@@ -1389,7 +1389,10 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.SetVariable( 'popup_text_1', 'copying files directory' )
             
-            HydrusPaths.MirrorTree( client_files_default, os.path.join( path, 'client_files' ) )
+            if os.path.exists( client_files_default ):
+                
+                HydrusPaths.MirrorTree( client_files_default, os.path.join( path, 'client_files' ) )
+                
             
             job_key.SetVariable( 'popup_text_1', 'copying updates directory' )
             
@@ -7149,7 +7152,7 @@ class DB( HydrusDB.HydrusDB ):
             
             client_files_default = os.path.join( self._db_dir, 'client_files' )
             
-            location = HydrusPaths.ConvertAbsPathToPortablePath( client_files_default )
+            location = HydrusPaths.ConvertAbsPathToPortablePath( client_files_default, HC.BASE_DIR )
             
             for prefix in HydrusData.IterateHexPrefixes():
                 
@@ -7934,7 +7937,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         tas_flat = info[ 'tag_archive_sync' ].items()
                         
-                        info[ 'tag_archive_sync' ] = { HydrusPaths.ConvertAbsPathToPortablePath( os.path.join( client_archives_folder, archive_name + '.db' ) ) : namespaces for ( archive_name, namespaces ) in tas_flat }
+                        info[ 'tag_archive_sync' ] = { HydrusPaths.ConvertAbsPathToPortablePath( os.path.join( client_archives_folder, archive_name + '.db', HC.BASE_DIR ) ) : namespaces for ( archive_name, namespaces ) in tas_flat }
                         
                         self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                         
@@ -8062,7 +8065,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 't' + prefix, location ) )
                 self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'r' + prefix, location ) )
                 
-                location = HydrusPaths.ConvertPortablePathToAbsPath( location )
+                location = HydrusPaths.ConvertPortablePathToAbsPath( location, HC.BASE_DIR )
                 
                 text_prefix = 'rearranging client files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, 256 ) + ', '
                 
@@ -8111,6 +8114,129 @@ class DB( HydrusDB.HydrusDB ):
         if version == 220:
             
             self._c.execute( 'CREATE TABLE recent_tags ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, namespace_id, tag_id ) );' )
+            
+        
+        if version == 228:
+            
+            # now db_dir is moveable, updating portable path base from base_dir to db_dir
+            
+            def update_portable_path( p ):
+                
+                if p is None:
+                    
+                    return p
+                    
+                
+                p = os.path.normpath( p ) # collapses .. stuff and converts / to \\ for windows only
+                
+                if os.path.isabs( p ):
+                    
+                    a_p = p
+                    
+                else:
+                    
+                    a_p = os.path.normpath( os.path.join( HC.BASE_DIR, p ) )
+                    
+                
+                if not HC.PLATFORM_WINDOWS and not os.path.exists( a_p ):
+                    
+                    a_p = a_p.replace( '\\', '/' )
+                    
+                
+                try:
+                    
+                    p = os.path.relpath( a_p, self._db_dir )
+                    
+                    if p.startswith( '..' ):
+                        
+                        p = a_p
+                        
+                    
+                except:
+                    
+                    p = a_p
+                    
+                
+                if HC.PLATFORM_WINDOWS:
+                    
+                    p = p.replace( '\\', '/' ) # store seps as /, to maintain multiplatform uniformity
+                    
+                
+                return p
+                
+            
+            #
+            
+            try:
+                
+                service_data = self._c.execute( 'SELECT service_id, info FROM services;' ).fetchall()
+                
+                for ( service_id, info ) in service_data:
+                    
+                    if 'tag_archive_sync' in info:
+                        
+                        improved_tas = {}
+                        
+                        for ( old_portable_path, namespaces ) in info[ 'tag_archive_sync' ].items():
+                            
+                            new_portable_path = update_portable_path( old_portable_path )
+                            
+                            improved_tas[ new_portable_path ] = namespaces
+                            
+                        
+                        info[ 'tag_archive_sync' ] = improved_tas
+                        
+                        self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Trying to update tag archive portable location caused the following problem:' )
+                
+                HydrusData.PrintException( e )
+                
+            
+            #
+            
+            try:
+                
+                client_files_locations = self._c.execute( 'SELECT prefix, location FROM client_files_locations;' ).fetchall()
+                
+                improved_cfs = []
+                
+                for ( prefix, old_portable_location ) in client_files_locations:
+                    
+                    new_portable_location = update_portable_path( old_portable_location )
+                    
+                    improved_cfs.append( ( prefix, new_portable_location ) )
+                    
+                
+                self._c.executemany( 'REPLACE INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', improved_cfs )
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Trying to update client files portable locations caused the following problem:' )
+                
+                HydrusData.PrintException( e )
+                
+            
+            #
+            
+            try:
+                
+                options = self._GetOptions()
+                
+                options[ 'export_path' ] = update_portable_path( options[ 'export_path' ] )
+                
+                self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Trying to update export path portable location caused the following problem:' )
+                
+                HydrusData.PrintException( e )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

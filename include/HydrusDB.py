@@ -371,7 +371,7 @@ class HydrusDB( object ):
         
         self._c = self._db.cursor()
         
-        self._c.execute( 'PRAGMA main.cache_size = -100000;' )
+        self._c.execute( 'PRAGMA main.cache_size = -10000;' )
         
         self._c.execute( 'ATTACH ":memory:" AS mem;' )
         
@@ -381,7 +381,7 @@ class HydrusDB( object ):
         
         for db_name in db_names:
             
-            self._c.execute( 'PRAGMA ' + db_name + '.cache_size = -100000;' )
+            self._c.execute( 'PRAGMA ' + db_name + '.cache_size = -10000;' )
             
             if self._no_wal:
                 

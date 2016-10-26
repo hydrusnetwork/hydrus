@@ -111,7 +111,7 @@ def GetMimeFromFFMPEG( path ):
             
             return GetMatroskaOrWebm( path )
             
-        elif mime_text in ( 'mpeg', 'mpegvideo' ):
+        elif mime_text in ( 'mpeg', 'mpegvideo', 'mpegts' ):
             
             return HC.VIDEO_MPEG
             

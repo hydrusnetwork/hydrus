@@ -1508,6 +1508,11 @@ class Canvas( wx.Window ):
     
     def MouseIsOverMedia( self ):
         
+        if self._media_container is None:
+            
+            return False
+            
+        
         ( x, y ) = self._media_container.GetScreenPosition()
         ( width, height ) = self._media_container.GetSize()
         

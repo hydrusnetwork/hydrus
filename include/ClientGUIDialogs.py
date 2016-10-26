@@ -359,22 +359,18 @@ class DialogAdvancedContentUpdate( Dialog ):
         self._action_text = wx.StaticText( self._command_panel, label = 'initialising' )
         self._service_key_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
         
-        self._go = wx.Button( self._command_panel, label = 'Go!' )
-        self._go.Bind( wx.EVT_BUTTON, self.EventGo )
+        self._go = ClientGUICommon.BetterButton( self._command_panel, 'Go!', self.Go )
         
         #
         
         self._hta_panel = ClientGUICommon.StaticBox( self, 'hydrus tag archives' )
         
-        self._import_from_hta = wx.Button( self._hta_panel, label = 'one-time mass import or delete using a hydrus tag archive' )
-        self._import_from_hta.Bind( wx.EVT_BUTTON, self.EventImportFromHTA )
-        
-        self._export_to_hta = wx.Button( self._hta_panel, label = 'export to hydrus tag archive' )
-        self._export_to_hta.Bind( wx.EVT_BUTTON, self.EventExportToHTA )
+        self._import_from_hta = ClientGUICommon.BetterButton( self._hta_panel, 'one-time mass import or delete using a hydrus tag archive', self.ImportFromHTA )
+        self._export_to_hta = ClientGUICommon.BetterButton( self._hta_panel, 'export to hydrus tag archive', self.ExportToHTA )
         
         #
         
-        self._done = wx.Button( self, label = 'done' )
+        self._done = wx.Button( self, id = wx.ID_OK, label = 'done' )
         
         #
         
@@ -493,12 +489,12 @@ class DialogAdvancedContentUpdate( Dialog ):
         self.Layout()
         
     
-    def EventExportToHTA( self, event ):
+    def ExportToHTA( self ):
         
         ExportToHTA( self, self._service_key, self._hashes )
         
     
-    def EventGo( self, event ):
+    def Go( self ):
         
         # at some point, rewrite this to cope with multiple tags. setsometag is ready to go on that front
         # this should prob be with a listbox so people can enter their new multiple tags in several separate goes, rather than overwriting every time
@@ -579,7 +575,7 @@ class DialogAdvancedContentUpdate( Dialog ):
         HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
         
     
-    def EventImportFromHTA( self, event ):
+    def ImportFromHTA( self ):
         
         text = 'Select the Hydrus Tag Archive\'s location.'
         
@@ -4227,7 +4223,7 @@ class DialogSelectYoutubeURL( Dialog ):
         
         self._info = info
         
-        self._urls = ClientGUICommon.SaneListCtrl( self, 360, [ ( 'format', 150 ), ( 'resolution', 150 ) ] )
+        self._urls = ClientGUICommon.SaneListCtrl( self, 360, [ ( 'format', 150 ), ( 'resolution', -1 ) ] )
         self._urls.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventOK )
         
         self._urls.SetMinSize( ( 360, 200 ) )
@@ -4778,7 +4774,7 @@ class DialogShortcuts( Dialog ):
             
             self._original_shortcuts = shortcuts
             
-            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ], delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', 150 ), ( 'action', -1 ) ], delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )

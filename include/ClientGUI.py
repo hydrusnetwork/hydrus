@@ -945,22 +945,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def database():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'set_password' ), p( 'Set a &Password' ), p( 'Set a password for the database so only you can access it.' ) )
+            ClientData.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self, self._SetPassword )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'backup_database' ), p( 'Create Database Backup' ), p( 'Back the database up to an external location.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
+            ClientData.AppendMenuItem( menu, 'create a database backup', 'Back the database up to an external location.', self, self._controller.BackupDatabase )
+            ClientData.AppendMenuItem( menu, 'restore a database backup', 'Restore the database from an external location.', self, self._controller.RestoreDatabase )
             menu.AppendSeparator()
             
             submenu = wx.Menu()
             
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'analyze_db' ), p( '&Analyze' ), p( 'Reanalyze the Database.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'rebalance_client_files' ), p( '&Rebalance File Storage' ), p( 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_ac_cache' ), p( '&Regenerate Autocomplete Cache' ), p( 'Delete and recreate the tag autocomplete cache.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'regenerate_thumbnails' ), p( '&Regenerate Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'check_db_integrity' ), p( 'Check Database Integrity' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_orphans' ), p( '&Clear Orphans' ), p( 'Clear out surplus files that have found their way into the database.' ) )
+            ClientData.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self, self._VacuumDatabase )
+            ClientData.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self, self._AnalyzeDatabase )
+            ClientData.AppendMenuItem( submenu, 'rebalance file storage', 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.', self, self._RebalanceClientFiles )
+            ClientData.AppendMenuItem( submenu, 'regenerate autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self, self._RegenerateACCache )
+            ClientData.AppendMenuItem( submenu, 'regenerate thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self, self._RegenerateThumbnails )
+            ClientData.AppendMenuItem( submenu, 'check database integrity', 'Have the database examine all its records for internal consistency.', self, self._CheckDBIntegrity )
+            ClientData.AppendMenuItem( submenu, 'check file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self, self._CheckFileIntegrity )
+            ClientData.AppendMenuItem( submenu, 'clear orphans', 'Clear out surplus files that have found their way into the file structure.', self, self._ClearOrphans )
             
             menu.AppendMenu( CC.ID_NULL, p( '&Maintenance' ), submenu )
             
@@ -1865,7 +1865,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         message = '''You can set a password to be asked for whenever the client starts.
 
-Though not foolproof, it will stop noobs from easily seeing your files if you leave your machine unattended.
+Though not foolproof by any means, it will stop noobs from easily seeing your files if you leave your machine unattended.
 
 Do not ever forget your password! If you do, you'll have to manually insert a yaml-dumped python dictionary into a sqlite database or recompile from source to regain easy access. This is not trivial.
 
@@ -2343,14 +2343,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ( command, data ) = action
             
             if command == 'account_info': self._AccountInfo( data )
-            elif command == 'analyze_db': self._AnalyzeDatabase()
             elif command == 'auto_repo_setup': self._AutoRepoSetup()
             elif command == 'auto_server_setup': self._AutoServerSetup()
-            elif command == 'backup_database': self._controller.BackupDatabase()
             elif command == 'backup_service': self._BackupService( data )
-            elif command == 'check_db_integrity': self._CheckDBIntegrity()
             elif command == 'clear_caches': self._controller.ClearCaches()
-            elif command == 'clear_orphans': self._ClearOrphans()
             elif command == 'close_page': self._CloseCurrentPage()
             elif command == 'db_profile_mode':
                 
@@ -2390,7 +2386,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     if v > 100: print ( k, v )
                     
                 
-                HydrusData.Print( 'garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+                HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
                 
             elif command == 'debug_make_a_delayed_popup':
                 
@@ -2449,7 +2445,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 self._controller.ForceIdle()
                 
             elif command == '8chan_board': webbrowser.open( 'https://8ch.net/hydrus/index.html' )
-            elif command == 'file_integrity': self._CheckFileIntegrity()
             elif command == 'help': webbrowser.open( 'file://' + HC.HELP_DIR + '/index.html' )
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
@@ -2511,7 +2506,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HydrusGlobals.pubsub_profile_mode = not HydrusGlobals.pubsub_profile_mode
                 
-            elif command == 'rebalance_client_files': self._RebalanceClientFiles()
             elif command == 'redo': self._controller.pub( 'redo' )
             elif command == 'refresh':
                 
@@ -2519,16 +2513,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None: page.RefreshQuery()
                 
-            elif command == 'regenerate_ac_cache': self._RegenerateACCache()
-            elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
             elif command == 'restart':
                 
                 self.Exit( restart = True )
                 
-            elif command == 'restore_database': self._controller.RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()
-            elif command == 'set_password': self._SetPassword()
             elif command == 'set_media_focus': self._SetMediaFocus()
             elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'show_hide_splitters':
@@ -2549,7 +2539,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'unclose_page': self._UnclosePage( data )
             elif command == 'undo': self._controller.pub( 'undo' )
             elif command == 'upload_pending': self._UploadPending( data )
-            elif command == 'vacuum_db': self._VacuumDatabase()
             else: event.Skip()
             
         

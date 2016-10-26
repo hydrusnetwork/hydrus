@@ -190,12 +190,14 @@ class BetterButton( wx.Button ):
         
         wx.Button.__init__( self, parent, label = label )
         
+        self._callable = callable
+        
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         
     
     def EventButton( self, event ):
         
-        callable()
+        self._callable()
         
     
 class BetterChoice( wx.Choice ):
@@ -507,16 +509,11 @@ class EditStringToStringDict( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        self._listctrl = SaneListCtrl( self, 120, [ ( 'key', -1 ), ( 'value', 200 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._listctrl = SaneListCtrl( self, 120, [ ( 'key', 200 ), ( 'value', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
-        self._add = wx.Button( self, label = 'add' )
-        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-        
-        self._edit = wx.Button( self, label = 'edit' )
-        self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-        
-        self._delete = wx.Button( self, label = 'delete' )
-        self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+        self._add = BetterButton( self, 'add', self.Add )
+        self._edit = BetterButton( self, 'edit', self.Edit )
+        self._delete = BetterButton( self, 'delete', self.Delete )
         
         #
         
@@ -535,7 +532,7 @@ class EditStringToStringDict( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -607,21 +604,6 @@ class EditStringToStringDict( wx.Panel ):
             
             self._listctrl.UpdateRow( i, display_tuple, display_tuple )
             
-        
-    
-    def EventAdd( self, event ):
-        
-        self.Add()
-        
-    
-    def EventDelete( self, event ):
-        
-        self.Delete()
-        
-    
-    def EventEdit( self, event ):
-        
-        self.Edit()
         
     
     def GetValue( self ):
@@ -4858,7 +4840,10 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
             self.InsertColumn( i, name, width = width )
             
-            if width == -1: resize_column = i + 1
+            if width == -1:
+                
+                resize_column = i + 1
+                
             
         
         self.setResizeColumn( resize_column )
@@ -4870,6 +4855,8 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         self.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventItemActivated )
+        
+        self.Bind( wx.EVT_LIST_COL_BEGIN_DRAG, self.EventBeginColDrag )
         
     
     def Append( self, display_tuple, client_data ):
@@ -4890,6 +4877,29 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
         
         self._next_data_index += 1
+        
+    
+    def EventBeginColDrag( self, event ):
+        
+        # resizeCol is not zero-indexed
+        
+        if event.GetColumn() == self._resizeCol - 1:
+            
+            last_column = self.GetColumnCount()
+            
+            if self._resizeCol != last_column:
+                
+                self.setResizeColumn( last_column )
+                
+            else:
+                
+                event.Veto()
+                
+                return
+                
+            
+        
+        event.Skip()
         
     
     def EventItemActivated( self, event ):
