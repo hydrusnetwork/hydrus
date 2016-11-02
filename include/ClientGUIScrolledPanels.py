@@ -5,6 +5,7 @@ import ClientDownloading
 import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIFrames
 import ClientGUIPredicates
 import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
@@ -16,7 +17,6 @@ import HydrusData
 import HydrusExceptions
 import HydrusGlobals
 import HydrusNATPunch
-import HydrusParsing
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
@@ -4314,7 +4314,7 @@ class ReviewServices( ReviewPanel ):
             
             self._controller.Write( 'update_services', edit_log )
             
-            ClientGUITopLevelWindows.ShowKeys( 'access', ( access_key, ) )
+            ClientGUIFrames.ShowKeys( 'access', ( access_key, ) )
             
         
         def EventServiceRefreshAccount( self, event ):

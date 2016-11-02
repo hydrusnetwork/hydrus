@@ -1257,7 +1257,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                 
                 self._contact_address = wx.TextCtrl( self._contact_panel )
                 
-                self._public_key = wx.TextCtrl( self._contact_panel, style = wx.TE_MULTILINE )
+                self._public_key = ClientGUICommon.SaneMultilineTextCtrl( self._contact_panel )
                 
             
             def PopulateControls():

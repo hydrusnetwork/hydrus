@@ -35,20 +35,6 @@ def AddPaddingToDimensions( dimensions, padding ):
     
     return ( x + padding, y + padding )
     
-def AppendMenuItem( menu, label, description, event_handler, callable, *args, **kwargs ):
-    
-    menu_item = menu.Append( wx.ID_ANY, label, description )
-    
-    BindMenuItemToCallable( menu_item, event_handler, callable, *args, **kwargs )
-    
-    return menu_item
-    
-def BindMenuItemToCallable( menu_item, event_handler, callable, *args, **kwargs ):
-    
-    l_callable = lambda event: callable( *args, **kwargs )
-    
-    event_handler.Bind( wx.EVT_MENU, l_callable, source = menu_item )
-    
 def CatchExceptionClient( etype, value, tb ):
     
     try:

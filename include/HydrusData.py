@@ -640,6 +640,25 @@ def DeserialisePrettyTags( text ):
     
     return tags
     
+def EncodeBytes( encoding, data ):
+    
+    data = ToByteString( data )
+    
+    if encoding == HC.ENCODING_RAW:
+        
+        encoded_data = data
+        
+    elif encoding == HC.ENCODING_HEX:
+        
+        encoded_data = data.encode( 'hex' )
+        
+    elif encoding == HC.ENCODING_BASE64:
+        
+        encoded_data = data.encode( 'base64' )
+        
+    
+    return encoded_data
+    
 def GenerateKey():
     
     return os.urandom( HC.HYDRUS_KEY_LENGTH )

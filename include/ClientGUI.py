@@ -8,7 +8,9 @@ import ClientDragDrop
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
+import ClientGUIFrames
 import ClientGUIManagement
+import ClientGUIMenus
 import ClientGUIPages
 import ClientGUIParsing
 import ClientGUIScrolledPanels
@@ -399,7 +401,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             HydrusData.ShowText( 'Admin service initialised.' )
             
-            wx.CallAfter( ClientGUITopLevelWindows.ShowKeys, 'access', ( access_key, ) )
+            wx.CallAfter( ClientGUIFrames.ShowKeys, 'access', ( access_key, ) )
             
             admin_service = self._controller.GetServicesManager().GetService( admin_service_key )
             
@@ -945,24 +947,24 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def database():
             
-            ClientData.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self, self._SetPassword )
+            ClientGUIMenus.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self, self._SetPassword )
             menu.AppendSeparator()
-            ClientData.AppendMenuItem( menu, 'create a database backup', 'Back the database up to an external location.', self, self._controller.BackupDatabase )
-            ClientData.AppendMenuItem( menu, 'restore a database backup', 'Restore the database from an external location.', self, self._controller.RestoreDatabase )
+            ClientGUIMenus.AppendMenuItem( menu, 'create a database backup', 'Back the database up to an external location.', self, self._controller.BackupDatabase )
+            ClientGUIMenus.AppendMenuItem( menu, 'restore a database backup', 'Restore the database from an external location.', self, self._controller.RestoreDatabase )
             menu.AppendSeparator()
             
             submenu = wx.Menu()
             
-            ClientData.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self, self._VacuumDatabase )
-            ClientData.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self, self._AnalyzeDatabase )
-            ClientData.AppendMenuItem( submenu, 'rebalance file storage', 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.', self, self._RebalanceClientFiles )
-            ClientData.AppendMenuItem( submenu, 'regenerate autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self, self._RegenerateACCache )
-            ClientData.AppendMenuItem( submenu, 'regenerate thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self, self._RegenerateThumbnails )
-            ClientData.AppendMenuItem( submenu, 'check database integrity', 'Have the database examine all its records for internal consistency.', self, self._CheckDBIntegrity )
-            ClientData.AppendMenuItem( submenu, 'check file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self, self._CheckFileIntegrity )
-            ClientData.AppendMenuItem( submenu, 'clear orphans', 'Clear out surplus files that have found their way into the file structure.', self, self._ClearOrphans )
+            ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self, self._VacuumDatabase )
+            ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self, self._AnalyzeDatabase )
+            ClientGUIMenus.AppendMenuItem( submenu, 'rebalance file storage', 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.', self, self._RebalanceClientFiles )
+            ClientGUIMenus.AppendMenuItem( submenu, 'regenerate autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self, self._RegenerateACCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'regenerate thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self, self._RegenerateThumbnails )
+            ClientGUIMenus.AppendMenuItem( submenu, 'check database integrity', 'Have the database examine all its records for internal consistency.', self, self._CheckDBIntegrity )
+            ClientGUIMenus.AppendMenuItem( submenu, 'check file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self, self._CheckFileIntegrity )
+            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphans', 'Clear out surplus files that have found their way into the file structure.', self, self._ClearOrphans )
             
-            menu.AppendMenu( CC.ID_NULL, p( '&Maintenance' ), submenu )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'maintenance' )
             
             return ( menu, p( '&Database' ), True )
             
@@ -1011,8 +1013,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     submenu = wx.Menu()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'upload_pending', service_key ), p( '&Commit' ), p( 'Upload ' + name + '\'s pending content.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_pending', service_key ), p( '&Forget' ), p( 'Clear ' + name + '\'s pending content.' ) )
+                    ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload ' + name + '\'s pending content.', self, self._UploadPending, service_key )
+                    ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear ' + name + '\'s pending content.', self, self._DeletePending, service_key )
                     
                     submessages = []
                     
@@ -1028,7 +1030,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     message = name + ': ' + ', '.join( submessages )
                     
-                    menu.AppendMenu( CC.ID_NULL, p( message ), submenu )
+                    ClientGUIMenus.AppendMenu( menu, submenu, message )
                     
                 
                 total_num_pending += num_pending + num_petitioned
@@ -1137,7 +1139,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_parsing_scripts' ), p( 'Manage &Parsing Scripts (under construction!)' ), p( 'Manage how the client parses different types of web content.' ) )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_parsing_scripts' ), p( 'Manage &Parsing Scripts' ), p( 'Manage how the client parses different types of web content.' ) )
             menu.AppendSeparator()
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
@@ -1245,7 +1247,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ( menu, label, show ) = self._GenerateMenuInfo( name )
             
-            if show: self._menubar.Append( menu, label )
+            if show:
+                
+                self._menubar.Append( menu, label )
+                
             
             self._menus[ name ] = ( menu, label, show )
             
@@ -2433,7 +2438,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._controller.pub( 'notify_new_sessions' )
                 
-            elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'delete_service_info': self._DeleteServiceInfo()
             elif command == 'exit':
                 
@@ -2538,7 +2542,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'twitter': webbrowser.open( 'https://twitter.com/#!/hydrusnetwork' )
             elif command == 'unclose_page': self._UnclosePage( data )
             elif command == 'undo': self._controller.pub( 'undo' )
-            elif command == 'upload_pending': self._UploadPending( data )
             else: event.Skip()
             
         
@@ -2865,7 +2868,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._menus[ name ] = ( menu, label, show )
         
-        old_menu.Destroy()
+        ClientGUIMenus.DestroyMenu( old_menu )
         
     
     def RefreshStatusBar( self ):

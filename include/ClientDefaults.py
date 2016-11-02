@@ -78,6 +78,7 @@ def GetClientDefaultOptions():
     default_namespace_colours[ 'system' ] = ( 153, 101, 21 )
     default_namespace_colours[ 'creator' ] = ( 170, 0, 0 )
     default_namespace_colours[ 'character' ] = ( 0, 170, 0 )
+    default_namespace_colours[ 'person' ] = ( 0, 128, 0 )
     default_namespace_colours[ 'series' ] = ( 170, 0, 170 )
     default_namespace_colours[ None ] = ( 114, 160, 193 )
     default_namespace_colours[ '' ] = ( 0, 111, 250 )
@@ -560,4 +561,12 @@ def GetDefaultImageboards():
     imageboards.append( ( '4chan', fourchan_imageboards ) )
     
     return imageboards
+    
+def GetDefaultScriptRows():
+    
+    script_info = []
+    
+    script_info.append( ( 32, 'gelbooru md5', 1, '''["http://gelbooru.com/index.php", 0, 1, 1, "md5", {"s": "list", "page": "post"}, [[30, 1, ["we got sent back to main gallery page -- title test", 8, [27, 1, [[["head", {}, 0], ["title", {}, 0]], null]], [true, true, "Image List"]]], [30, 1, ["", 0, [27, 1, [[["li", {"class": "tag-type-general"}, null], ["a", {}, 1]], null]], ""]], [30, 1, ["", 0, [27, 1, [[["li", {"class": "tag-type-copyright"}, null], ["a", {}, 1]], null]], "series"]], [30, 1, ["", 0, [27, 1, [[["li", {"class": "tag-type-artist"}, null], ["a", {}, 1]], null]], "creator"]], [30, 1, ["", 0, [27, 1, [[["li", {"class": "tag-type-character"}, null], ["a", {}, 1]], null]], "character"]], [30, 1, ["we got sent back to main gallery page -- page links exist", 8, [27, 1, [[["div", {}, null]], "class"]], [true, true, "pagination"]]]]]''' ) )
+    
+    return script_info
     

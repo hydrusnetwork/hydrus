@@ -447,9 +447,9 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
         self._comment_panel = ClientGUICommon.StaticBox( self, 'comment' )
         
-        self._comment = wx.TextCtrl( self._comment_panel, value = '', style = wx.TE_MULTILINE | wx.TE_READONLY, size = ( -1, 120 ) )
+        self._comment = ClientGUICommon.SaneMultilineTextCtrl( self._comment_panel, style = wx.TE_READONLY )
         
-        self._comment_append = wx.TextCtrl( self._comment_panel, value = '', style = wx.TE_MULTILINE | wx.TE_PROCESS_ENTER, size = ( -1, 120 ) )
+        self._comment_append = ClientGUICommon.SaneMultilineTextCtrl( self._comment_panel, style = wx.TE_PROCESS_ENTER )
         self._comment_append.Bind( wx.EVT_KEY_UP, self.EventKeyDown )
         
         self._comment_panel.AddF( self._comment, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2421,7 +2421,9 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._petition_panel = ClientGUICommon.StaticBox( self, 'petition' )
         
         self._action_text = wx.StaticText( self._petition_panel, label = '' )
-        self._reason_text = wx.TextCtrl( self._petition_panel, size = ( -1, 80 ), style = wx.TE_MULTILINE | wx.TE_READONLY )
+        
+        self._reason_text = ClientGUICommon.SaneMultilineTextCtrl( self._petition_panel, style = wx.TE_READONLY )
+        self._reason_text.SetMinSize( ( -1, 80 ) )
         
         self._contents = wx.CheckListBox( self._petition_panel, size = ( -1, 300 ) )
         self._contents.Bind( wx.EVT_LISTBOX_DCLICK, self.EventContentDoubleClick )

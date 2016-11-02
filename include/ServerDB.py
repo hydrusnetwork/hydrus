@@ -2309,32 +2309,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusData.Print( 'The server is updating to version ' + str( version + 1 ) )
         
-        if version == 179:
-            
-            HydrusData.Print( 'moving updates about' )
-            
-            for filename in os.listdir( self._updates_dir ):
-                
-                try:
-                    
-                    ( service_key_encoded, gumpf ) = filename.split( '_', 1 )
-                    
-                except ValueError:
-                    
-                    continue
-                    
-                
-                dest_dir = os.path.join( self._updates_dir, service_key_encoded )
-                
-                HydrusPaths.MakeSureDirectoryExists( dest_dir )
-                
-                source_path = os.path.join( self._updates_dir, filename )
-                dest_path = os.path.join( dest_dir, gumpf )
-                
-                HydrusPaths.MergeFile( source_path, dest_path )
-                
-            
-        
         if version == 182:
             
             HydrusData.Print( 'generating swf thumbnails' )

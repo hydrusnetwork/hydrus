@@ -1,7 +1,20 @@
 import HydrusConstants as HC
+import ClientConstants as CC
+import ClientData
 import ClientDefaults
 import ClientDownloading
+import ClientDragDrop
+import ClientCaches
+import ClientFiles
 import ClientGUIACDropdown
+import ClientGUIFrames
+import ClientGUICommon
+import ClientGUICollapsible
+import ClientGUIPredicates
+import ClientGUITopLevelWindows
+import ClientThreading
+import collections
+import gc
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
@@ -10,18 +23,6 @@ import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
-import ClientConstants as CC
-import ClientData
-import ClientDragDrop
-import ClientCaches
-import ClientFiles
-import ClientGUICommon
-import ClientGUICollapsible
-import ClientGUIPredicates
-import ClientGUITopLevelWindows
-import ClientThreading
-import collections
-import gc
 import itertools
 import os
 import random
@@ -826,7 +827,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
             registration_keys = response[ 'registration_keys' ]
             
-            ClientGUITopLevelWindows.ShowKeys( 'registration', registration_keys )
+            ClientGUIFrames.ShowKeys( 'registration', registration_keys )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -1346,7 +1347,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         self._name = wx.TextCtrl( self )
         
-        self._text = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._text = ClientGUICommon.SaneMultilineTextCtrl( self )
         self._text.SetMinSize( ( -1, 100 ) )
         
         message = 'expires in' 
@@ -2649,7 +2650,7 @@ class DialogNews( Dialog ):
         
         Dialog.__init__( self, parent, 'news' )
         
-        self._news = wx.TextCtrl( self, style = wx.TE_READONLY | wx.TE_MULTILINE )
+        self._news = ClientGUICommon.SaneMultilineTextCtrl( self, style = wx.TE_READONLY )
         
         self._previous = wx.Button( self, label = '<' )
         self._previous.Bind( wx.EVT_BUTTON, self.EventPrevious )

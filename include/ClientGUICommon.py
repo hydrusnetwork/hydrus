@@ -4819,6 +4819,40 @@ class RegexButton( wx.Button ):
         if phrase is not None: HydrusGlobals.client_controller.pub( 'clipboard', 'text', phrase )
         
     
+class SaneMultilineTextCtrl( wx.TextCtrl ):
+    
+    def __init__( self, parent, style = None ):
+        
+        if style is None:
+            
+            style = wx.TE_MULTILINE
+            
+        else:
+            
+            style |= wx.TE_MULTILINE
+            
+        
+        wx.TextCtrl.__init__( self, parent, style = style )
+        
+        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+    
+    def EventKeyDown( self, event ):
+        
+        ctrl = event.CmdDown()
+        
+        key_code = event.GetKeyCode()
+        
+        if ctrl and key_code in ( ord( 'A' ), ord( 'a' ) ):
+            
+            self.SelectAll()
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
     def __init__( self, parent, height, columns, delete_key_callback = None, activation_callback = None, use_display_tuple_for_sort = False ):

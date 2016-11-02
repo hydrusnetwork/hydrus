@@ -1066,7 +1066,8 @@ class DraftPanel( wx.Panel ):
         self.Bind( wx.richtext.EVT_RICHTEXT_RETURN, self.EventChanged )
         self.Bind( wx.richtext.EVT_RICHTEXT_DELETE, self.EventChanged )
         
-        self._attachments = wx.TextCtrl( self, value = os.linesep.join( [ hash.encode( 'hex' ) for hash in attachment_hashes ] ), style = wx.TE_MULTILINE )
+        self._attachments = ClientGUICommon.SaneMultilineTextCtrl( self )
+        self._attachments.SetValue( os.linesep.join( [ hash.encode( 'hex' ) for hash in attachment_hashes ] ) )
         self._attachments.Bind( wx.EVT_KEY_DOWN, self.EventChanged )
         # do thumbnails later! for now, do a listbox or whatever
         

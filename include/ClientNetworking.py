@@ -111,15 +111,29 @@ def ConvertHydrusGETArgsToQuery( request_args ):
     
     return query
     
-def RequestsGet( url, stream = False ):
+def RequestsGet( url, params = None, stream = False, headers = None ):
     
-    response = requests.get( url, stream = stream )
+    if headers is None:
+        
+        headers = {}
+        
+    
+    headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
+    
+    response = requests.get( url, params = params, stream = stream, headers = headers )
     
     RequestsCheckResponse( response )
     
     return response
     
-def RequestsPost( url, data = None, files = None ):
+def RequestsPost( url, data = None, files = None, headers = None ):
+    
+    if headers is None:
+        
+        headers = {}
+        
+    
+    headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
     
     response = requests.post( url, data = data, files = files )
     
@@ -185,7 +199,10 @@ def ParseURL( url ):
         starts_http = url.startswith( 'http://' )
         starts_https = url.startswith( 'https://' )
         
-        if not starts_http and not starts_https: url = 'http://' + url
+        if not starts_http and not starts_https:
+            
+            url = 'http://' + url
+            
         
         parse_result = urlparse.urlparse( url )
         
@@ -199,11 +216,17 @@ def ParseURL( url ):
         path = parse_result.path
         
         # this happens when parsing 'index.html' rather than 'hostname/index.html' or '/index.html'
-        if not path.startswith( '/' ): path = '/' + path
+        if not path.startswith( '/' ):
+            
+            path = '/' + path
+            
         
         query = parse_result.query
         
-    except: raise Exception( 'Could not parse that URL' )
+    except:
+        
+        raise Exception( 'Could not parse the URL: ' + HydrusData.ToUnicode( url ) )
+        
     
     return ( location, path, query )
     

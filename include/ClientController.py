@@ -2,6 +2,7 @@ import ClientCaches
 import ClientData
 import ClientDaemons
 import ClientDefaults
+import ClientGUIMenus
 import ClientNetworking
 import ClientThreading
 import hashlib
@@ -740,7 +741,7 @@ class Controller( HydrusController.HydrusController ):
             self._menu_open = False
             
         
-        menu.Destroy()
+        ClientGUIMenus.DestroyMenu( menu )
         
     
     def PrepStringForDisplay( self, text ):

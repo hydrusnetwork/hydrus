@@ -3,10 +3,11 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
+import ClientNetworking
+import ClientParsing
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals
-import HydrusParsing
 import HydrusSerialisable
 import HydrusTags
 import os
@@ -100,7 +101,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
-        self._example_data = wx.TextCtrl( test_panel, style = wx.TE_MULTILINE )
+        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
         self._example_data.SetMinSize( ( -1, 200 ) )
         
@@ -109,9 +110,29 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         self._run_test = wx.Button( test_panel, label = 'test parse' )
         self._run_test.Bind( wx.EVT_BUTTON, self.EventTestParse )
         
-        self._results = wx.TextCtrl( test_panel, style = wx.TE_MULTILINE )
+        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
         self._results.SetMinSize( ( -1, 200 ) )
+        
+        #
+        
+        info_panel = wx.Panel( notebook )
+        
+        message = '''This searches html for simple strings, which it returns to its parent.
+
+The html's branches will be searched recursively by each tag rule in turn and then the given attribute of the final tags will be returned.
+
+So, to find the 'src' of the first <img> tag beneath all <span> tags with the class 'content', use:
+
+'all span tags with class=content'
+1st img tag'
+attribute: src'
+
+Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p>).'''
+        
+        info_st = wx.StaticText( info_panel, label = message )
+        
+        info_st.Wrap( 400 )
         
         #
         
@@ -119,7 +140,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for rule in tag_rules:
             
-            pretty_rule = HydrusParsing.RenderTagRule( rule )
+            pretty_rule = ClientParsing.RenderTagRule( rule )
             
             self._tag_rules.Append( pretty_rule, rule )
             
@@ -153,21 +174,10 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         ae_button_hbox.AddF( self._add_rule, CC.FLAGS_VCENTER )
         ae_button_hbox.AddF( self._edit_rule, CC.FLAGS_VCENTER )
         
-        message = 'The html will be searched recursively by each rule in turn and then the attribute of the final tags will be returned.'
-        message += os.linesep * 2
-        message += 'So, to find the \'src\' of the first <img> tag beneath all <span> tags with the class \'content\', use:'
-        message += os.linesep * 2
-        message += 'all span tags with class=content'
-        message += os.linesep
-        message += '1st img tag'
-        message += os.linesep
-        message += 'attribute: src'
-        message += os.linesep * 2
-        message += 'Leave the attribute blank to fetch the string of the tag (i.e. <p>This part</p>).'
+        
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( wx.StaticText( edit_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( ClientGUICommon.WrapInText( self._content_rule, edit_panel, 'attribute to fetch: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -186,8 +196,17 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        info_panel.SetSizer( vbox )
+        
+        #
+        
         notebook.AddPage( edit_panel, 'edit', select = True )
         notebook.AddPage( test_panel, 'test', select = False )
+        notebook.AddPage( info_panel, 'info', select = False )
         
         #
         
@@ -214,7 +233,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 rule = panel.GetValue()
                 
-                pretty_rule = HydrusParsing.RenderTagRule( rule )
+                pretty_rule = ClientParsing.RenderTagRule( rule )
                 
                 self._tag_rules.Append( pretty_rule, rule )
                 
@@ -258,7 +277,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     rule = panel.GetValue()
                     
-                    pretty_rule = HydrusParsing.RenderTagRule( rule )
+                    pretty_rule = ClientParsing.RenderTagRule( rule )
                     
                     self._tag_rules.SetString( selection, pretty_rule )
                     self._tag_rules.SetClientData( selection, rule )
@@ -333,17 +352,18 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             content_rule = None
             
         
-        formula = HydrusParsing.ParseFormulaHTML( tags_rules, content_rule )
+        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule )
         
         return formula
         
     
 class EditNodes( wx.Panel ):
     
-    def __init__( self, parent, nodes, example_data_callable ):
+    def __init__( self, parent, nodes, referral_url_callable, example_data_callable ):
         
         wx.Panel.__init__( self, parent )
         
+        self._referral_url_callable = referral_url_callable
         self._example_data_callable = example_data_callable
         
         self._nodes = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'name', 120 ), ( 'node type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
@@ -411,22 +431,27 @@ class EditNodes( wx.Panel ):
                 
                 if node_type_string == 'content':
                     
-                    empty_node = HydrusParsing.ParseNodeContent()
+                    dlg_title = 'edit content node'
+                    
+                    empty_node = ClientParsing.ParseNodeContent()
                     
                     panel_class = EditParseNodeContentPanel
                     
                 elif node_type_string == 'link':
                     
-                    empty_node = HydrusParsing.ParseNodeContentLink()
+                    dlg_title = 'edit link node'
+                    
+                    empty_node = ClientParsing.ParseNodeContentLink()
                     
                     panel_class = EditParseNodeContentLinkPanel
                     
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit node' ) as dlg_edit:
+                with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg_edit:
                     
+                    referral_url = self._referral_url_callable()
                     example_data = self._example_data_callable()
                     
-                    panel = panel_class( dlg_edit, empty_node, example_data )
+                    panel = panel_class( dlg_edit, empty_node, referral_url, example_data )
                     
                     dlg_edit.SetPanel( panel )
                     
@@ -489,16 +514,19 @@ class EditNodes( wx.Panel ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit node' ) as dlg:
                 
-                if isinstance( node, HydrusParsing.ParseNodeContent):
+                if isinstance( node, ClientParsing.ParseNodeContent):
                     
                     panel_class = EditParseNodeContentPanel
                     
-                elif isinstance( node, HydrusParsing.ParseNodeContentLink ):
+                elif isinstance( node, ClientParsing.ParseNodeContentLink ):
                     
                     panel_class = EditParseNodeContentLinkPanel
                     
                 
-                panel = panel_class( dlg, node )
+                referral_url = self._referral_url_callable()
+                example_data = self._example_data_callable()
+                
+                panel = panel_class( dlg, node, referral_url, example_data )
                 
                 dlg.SetPanel( panel )
                 
@@ -538,7 +566,7 @@ class EditNodes( wx.Panel ):
                 
                 obj = HydrusSerialisable.CreateFromString( raw_text )
                 
-                if isinstance( obj, ( HydrusParsing.ParseNodeContent, HydrusParsing.ParseNodeContentLink ) ):
+                if isinstance( obj, ( ClientParsing.ParseNodeContent, ClientParsing.ParseNodeContentLink ) ):
                     
                     node = obj
                     
@@ -590,9 +618,16 @@ class EditNodes( wx.Panel ):
     
 class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, node, example_data = None ):
+    def __init__( self, parent, node, referral_url = None, example_data = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        if referral_url is None:
+            
+            referral_url = 'test-url.com/test_query'
+            
+        
+        self._referral_url = referral_url
         
         if example_data is None:
             
@@ -603,27 +638,38 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        edit_panel = wx.Panel( notebook )
+        self._edit_panel = wx.Panel( notebook )
         
-        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        self._edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
-        self._name = wx.TextCtrl( edit_panel )
+        self._name = wx.TextCtrl( self._edit_panel )
         
-        content_panel = ClientGUICommon.StaticBox( edit_panel, 'content type' )
+        self._content_panel = ClientGUICommon.StaticBox( self._edit_panel, 'content type' )
         
-        self._content_type = ClientGUICommon.BetterChoice( content_panel )
+        self._content_type = ClientGUICommon.BetterChoice( self._content_panel )
         
         self._content_type.Append( 'tags', HC.CONTENT_TYPE_MAPPINGS )
+        self._content_type.Append( 'veto', HC.CONTENT_TYPE_VETO )
+        
+        self._content_type.Bind( wx.EVT_CHOICE, self.EventContentTypeChange )
         
         # bind an event here when I add new content types that will dynamically hide/show the namespace/rating stuff and relayout as needed
         # it should have a forced name or something. whatever we'll use to discriminate between rating services on 'import options - ratings'
         # (this probably means sending and EditPanel size changed event or whatever)
         
-        self._namespace = wx.TextCtrl( content_panel )
+        self._mappings_panel = wx.Panel( self._content_panel )
         
-        formula_panel = ClientGUICommon.StaticBox( edit_panel, 'formula' )
+        self._namespace = wx.TextCtrl( self._mappings_panel )
         
-        self._formula_description = wx.TextCtrl( formula_panel, style = wx.TE_MULTILINE )
+        self._veto_panel = wx.Panel( self._content_panel )
+        
+        self._veto_if_matches_found = wx.CheckBox( self._veto_panel )
+        self._match_if_text_present = wx.CheckBox( self._veto_panel )
+        self._search_text = wx.TextCtrl( self._veto_panel )
+        
+        formula_panel = ClientGUICommon.StaticBox( self._edit_panel, 'formula' )
+        
+        self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( formula_panel )
         
         self._formula_description.SetMinSize( ( -1, 200 ) )
         
@@ -638,16 +684,30 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
-        self._example_data = wx.TextCtrl( test_panel, style = wx.TE_MULTILINE )
+        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
         self._example_data.SetMinSize( ( -1, 200 ) )
         
         self._test_parse = wx.Button( test_panel, label = 'test parse' )
         self._test_parse.Bind( wx.EVT_BUTTON, self.EventTestParse )
         
-        self._results = wx.TextCtrl( test_panel, style = wx.TE_MULTILINE )
+        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
         self._results.SetMinSize( ( -1, 200 ) )
+        
+        #
+        
+        info_panel = wx.Panel( notebook )
+        
+        message = '''This node takes html from its parent and applies a parsing formula to it to search for content.
+
+Select the content type and set any additional info to further modify what the formula returns.
+
+The 'veto' type will tell the parent panel that this page, while it returned 200 OK, is nonetheless incorrect (e.g. the searched-for image does not exist, so you have been redirected back to a default gallery page) and so no parsing should be done on it. If the value in the additional info box exists anywhere in what the formula finds, the veto will be raised.'''
+        
+        info_st = wx.StaticText( info_panel, label = message )
+        
+        info_st.Wrap( 400 )
         
         #
         
@@ -659,7 +719,17 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if content_type == HC.CONTENT_TYPE_MAPPINGS:
             
-            self._namespace.SetValue( additional_info )
+            namespace = additional_info
+            
+            self._namespace.SetValue( namespace )
+            
+        elif content_type == HC.CONTENT_TYPE_VETO:
+            
+            ( veto_if_matches_found, match_if_text_present, search_text ) = additional_info
+            
+            self._veto_if_matches_found.SetValue( veto_if_matches_found )
+            self._match_if_text_present.SetValue( match_if_text_present )
+            self._search_text.SetValue( search_text )
             
         
         self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
@@ -669,19 +739,37 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        # hide namespace, ratings additional info, as needed
-        # since I do it as a gridbox right now, this needs to be rewritten
+        rows = []
+        
+        rows.append( ( 'namespace: ', self._namespace ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._mappings_panel, rows )
+        
+        self._mappings_panel.SetSizer( gridbox )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'veto if matches found: ', self._veto_if_matches_found ) )
+        rows.append( ( 'match if text present: ', self._match_if_text_present ) )
+        rows.append( ( 'search text: ', self._search_text ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._veto_panel, rows )
+        
+        self._veto_panel.SetSizer( gridbox )
         
         #
         
         rows = []
         
         rows.append( ( 'content type: ', self._content_type ) )
-        rows.append( ( 'namespace: ', self._namespace ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( content_panel, rows )
+        gridbox = ClientGUICommon.WrapInGrid( self._content_panel, rows )
         
-        content_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.AddF( self._mappings_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.AddF( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -696,13 +784,13 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'name or description (optional): ', self._name ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        gridbox = ClientGUICommon.WrapInGrid( self._edit_panel, rows )
         
         vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        edit_panel.SetSizer( vbox )
+        self._edit_panel.SetSizer( vbox )
         
         #
         
@@ -716,8 +804,17 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        notebook.AddPage( edit_panel, 'edit', select = True )
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        info_panel.SetSizer( vbox )
+        
+        #
+        
+        notebook.AddPage( self._edit_panel, 'edit', select = True )
         notebook.AddPage( test_panel, 'test', select = False )
+        notebook.AddPage( info_panel, 'info', select = False )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -725,10 +822,31 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.SetSizer( vbox )
         
+        self.EventContentTypeChange( None )
+        
+    
+    def EventContentTypeChange( self, event ):
+        
+        choice = self._content_type.GetChoice()
+        
+        if choice == HC.CONTENT_TYPE_MAPPINGS:
+            
+            self._veto_panel.Hide()
+            self._mappings_panel.Show()
+            
+        elif choice == HC.CONTENT_TYPE_VETO:
+            
+            self._mappings_panel.Hide()
+            self._veto_panel.Show()
+            
+        
+        self._content_panel.Layout()
+        self._edit_panel.Layout()
+        
     
     def EventEditFormula( self, event ):
         
-        dlg_title = 'edit formula'
+        dlg_title = 'edit html formula'
         
         with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
             
@@ -754,14 +872,14 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         try:
             
             data = self._example_data.GetValue()
-            url = 'test-url.com/test_query'
+            referral_url = self._referral_url
             desired_content = 'all'
             
-            results = node.Parse( data, url, desired_content )
+            results = node.Parse( data, referral_url, desired_content )
             
             result_lines = [ '*** RESULTS BEGIN ***' ]
             
-            result_lines.extend( ( HydrusParsing.ConvertContentResultToPrettyString( result ) for result in results ) )
+            result_lines.extend( ( ClientParsing.ConvertContentResultToPrettyString( result ) for result in results ) )
             
             result_lines.append( '*** RESULTS END ***' )
             
@@ -787,26 +905,280 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if content_type == HC.CONTENT_TYPE_MAPPINGS:
             
-            additional_info = self._namespace.GetValue()
+            namespace = self._namespace.GetValue()
+            
+            additional_info = namespace
+            
+        else:
+            
+            veto_if_matches_found = self._veto_if_matches_found.GetValue()
+            match_if_text_present = self._match_if_text_present.GetValue()
+            search_text = self._search_text.GetValue()
+            
+            additional_info = ( veto_if_matches_found, match_if_text_present, search_text )
             
         
         formula = self._current_formula
         
-        node = HydrusParsing.ParseNodeContent( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
+        node = ClientParsing.ParseNodeContent( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
         
         return node
         
     
 class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, node, example_data = None ):
+    def __init__( self, parent, node, referral_url = None, example_data = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        if referral_url is None:
+            
+            referral_url = 'test-url.com/test_query'
+            
+        
+        self._referral_url = referral_url
         
         if example_data is None:
             
             example_data = ''
             
+        
+        self._my_example_url = None
+        
+        notebook = wx.Notebook( self )
+        
+        ( name, self._current_formula, children ) = node.ToTuple()
+        
+        #
+        
+        edit_panel = wx.Panel( notebook )
+        
+        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._name = wx.TextCtrl( edit_panel )
+        
+        formula_panel = ClientGUICommon.StaticBox( edit_panel, 'formula' )
+        
+        self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( formula_panel )
+        
+        self._formula_description.SetMinSize( ( -1, 200 ) )
+        
+        self._formula_description.Disable()
+        
+        self._edit_formula = wx.Button( formula_panel, label = 'edit formula' )
+        self._edit_formula.Bind( wx.EVT_BUTTON, self.EventEditFormula )
+        
+        children_panel = ClientGUICommon.StaticBox( edit_panel, 'content parsing children' )
+        
+        self._children = EditNodes( children_panel, children, self.GetExampleURL, self.GetExampleData )
+        
+        #
+        
+        test_panel = wx.Panel( notebook )
+        
+        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        self._example_data.SetMinSize( ( -1, 200 ) )
+        
+        self._example_data.SetValue( example_data )
+        
+        self._test_parse = wx.Button( test_panel, label = 'test parse' )
+        self._test_parse.Bind( wx.EVT_BUTTON, self.EventTestParse )
+        
+        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        self._results.SetMinSize( ( -1, 200 ) )
+        
+        self._test_fetch_result = wx.Button( test_panel, label = 'try fetching the first result' )
+        self._test_fetch_result.Bind( wx.EVT_BUTTON, self.EventTestFetchResult )
+        self._test_fetch_result.Disable()
+        
+        self._my_example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        #
+        
+        info_panel = wx.Panel( notebook )
+        
+        message = '''This node looks for one or more urls in the data it is given, requests each in turn, and gives the results to its children for further parsing.
+
+If your previous query result responds with links to where the actual content is, use this node to bridge the gap.
+
+The formula should attempt to parse full or relative urls. If the url is relative (like href="/page/123"), it will be appended to the referral url given by this node's parent. It will then attempt to GET them all.'''
+        
+        info_st = wx.StaticText( info_panel, label = message )
+        
+        info_st.Wrap( 400 )
+        
+        #
+        
+        self._name.SetValue( name )
+        
+        self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
+        
+        #
+        
+        formula_panel.AddF( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        formula_panel.AddF( self._edit_formula, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        children_panel.AddF( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        rows = []
+        
+        rows.append( ( 'name or description (optional): ', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        edit_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._test_fetch_result, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._my_example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        test_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        info_panel.SetSizer( vbox )
+        
+        #
+        
+        notebook.AddPage( edit_panel, 'edit', select = True )
+        notebook.AddPage( test_panel, 'test', select = False )
+        notebook.AddPage( info_panel, 'info', select = False )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        
+    
+    def EventEditFormula( self, event ):
+        
+        dlg_title = 'edit html formula'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
+            
+            example_data = self._example_data.GetValue()
+            
+            panel = EditHTMLFormulaPanel( dlg, self._current_formula, example_data )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._current_formula = panel.GetValue()
+                
+                self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
+                
+            
+        
+    
+    def EventTestFetchResult( self, event ):
+        
+        try:
+            
+            headers = { 'Referer' : self._referral_url }
+            
+            response = ClientNetworking.RequestsGet( self._my_example_url, headers = headers )
+            
+            self._my_example_data.SetValue( response.content )
+            
+        except Exception as e:
+            
+            self._my_example_data.SetValue( 'fetch failed' )
+            
+            raise
+            
+        
+    
+    def EventTestParse( self, event ):
+        
+        node = self.GetValue()
+        
+        try:
+            
+            data = self._example_data.GetValue()
+            referral_url = self._referral_url
+            desired_content = 'all'
+            
+            parsed_urls = node.ParseURLs( data, referral_url )
+            
+            if len( parsed_urls ) > 0:
+                
+                self._my_example_url = parsed_urls[0]
+                self._test_fetch_result.Enable()
+                
+            
+            result_lines = [ '*** RESULTS BEGIN ***' ]
+            
+            result_lines.extend( parsed_urls )
+            
+            result_lines.append( '*** RESULTS END ***' )
+            
+            results_text = os.linesep.join( result_lines )
+            
+            self._results.SetValue( results_text )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            message = 'Could not parse!'
+            
+            wx.MessageBox( message )
+            
+        
+    
+    def GetExampleData( self ):
+        
+        return self._my_example_data.GetValue()
+        
+    
+    def GetExampleURL( self ):
+        
+        if self._my_example_url is not None:
+            
+            return self._my_example_url
+            
+        else:
+            
+            return ''
+            
+        
+    
+    def GetValue( self ):
+        
+        name = self._name.GetValue()
+        
+        formula = self._current_formula
+        
+        children = self._children.GetValue()
+        
+        node = ClientParsing.ParseNodeContentLink( name = name, formula = formula, children = children )
+        
+        return node
         
     
 class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -815,7 +1187,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        ( name, example_url, query_type, file_identifier_type, file_identifier_encoding, file_identifier_arg_name, static_args, children ) = script.ToTuple()
+        ( name, url, query_type, file_identifier_type, file_identifier_encoding, file_identifier_arg_name, static_args, children ) = script.ToTuple()
         
         #
         
@@ -831,6 +1203,10 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query_panel = ClientGUICommon.StaticBox( edit_panel, 'query' )
         
+        self._url = wx.TextCtrl( query_panel )
+        
+        self._url.SetValue( url )
+        
         self._query_type = ClientGUICommon.BetterChoice( query_panel )
         
         self._query_type.Append( 'GET', HC.GET )
@@ -838,9 +1214,9 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._file_identifier_type = ClientGUICommon.BetterChoice( query_panel )
         
-        for t in [ HydrusParsing.FILE_IDENTIFIER_TYPE_FILE, HydrusParsing.FILE_IDENTIFIER_TYPE_MD5, HydrusParsing.FILE_IDENTIFIER_TYPE_SHA1, HydrusParsing.FILE_IDENTIFIER_TYPE_SHA256, HydrusParsing.FILE_IDENTIFIER_TYPE_SHA512, HydrusParsing.FILE_IDENTIFIER_TYPE_USER_INPUT ]:
+        for t in [ ClientParsing.FILE_IDENTIFIER_TYPE_FILE, ClientParsing.FILE_IDENTIFIER_TYPE_MD5, ClientParsing.FILE_IDENTIFIER_TYPE_SHA1, ClientParsing.FILE_IDENTIFIER_TYPE_SHA256, ClientParsing.FILE_IDENTIFIER_TYPE_SHA512, ClientParsing.FILE_IDENTIFIER_TYPE_USER_INPUT ]:
             
-            self._file_identifier_type.Append( HydrusParsing.file_identifier_string_lookup[ t ], t )
+            self._file_identifier_type.Append( ClientParsing.file_identifier_string_lookup[ t ], t )
             
         
         self._file_identifier_encoding = ClientGUICommon.BetterChoice( query_panel )
@@ -858,7 +1234,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         children_panel = ClientGUICommon.StaticBox( edit_panel, 'content parsing children' )
         
-        self._children = EditNodes( children_panel, children, self.GetExampleData )
+        self._children = EditNodes( children_panel, children, self.GetExampleURL, self.GetExampleData )
         
         #
         
@@ -868,10 +1244,6 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_data = ''
         
-        self._test_url = wx.TextCtrl( test_panel )
-        
-        self._test_url.SetValue( example_url )
-        
         self._test_arg = wx.TextCtrl( test_panel )
         
         self._test_arg.SetValue( 'enter example file path, hex hash, or raw user input here' )
@@ -879,16 +1251,34 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         self._fetch_data = wx.Button( test_panel, label = 'fetch response' )
         self._fetch_data.Bind( wx.EVT_BUTTON, self.EventFetchData )
         
-        self._example_data = wx.TextCtrl( test_panel, style = wx.TE_MULTILINE )
+        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
         self._example_data.SetMinSize( ( -1, 200 ) )
         
-        self._test_parsing = wx.Button( test_panel, label = 'test parse' )
+        self._test_parsing = wx.Button( test_panel, label = 'test parse (note if you have \'link\' nodes, they will make their requests)' )
         self._test_parsing.Bind( wx.EVT_BUTTON, self.EventTestParse )
         
-        self._results = wx.TextCtrl( test_panel, style = wx.TE_MULTILINE )
+        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
         self._results.SetMinSize( ( -1, 200 ) )
+        
+        #
+        
+        info_panel = wx.Panel( notebook )
+        
+        message = '''This script looks up tags for a single file.
+
+It will download the result of a query that might look something like this:
+
+http://www.file-lookup.com/form.php?q=getsometags&md5=[md5-in-hex]
+
+And pass that html to a number of 'parsing children' that will each look through it in turn and try to find tags.'''
+        
+        info_st = wx.StaticText( info_panel )
+        
+        info_st.SetLabelText( message )
+        
+        info_st.Wrap( 400 )
         
         #
         
@@ -905,6 +1295,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
+        rows.append( ( 'url', self._url ) )
         rows.append( ( 'query type: ', self._query_type ) )
         rows.append( ( 'file identifier type: ', self._file_identifier_type ) )
         rows.append( ( 'file identifier encoding: ', self._file_identifier_encoding ) )
@@ -914,6 +1305,9 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         static_args_panel.AddF( self._static_args, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        query_message = 'This query will be executed first.'
+        
+        query_panel.AddF( wx.StaticText( query_panel, label = query_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
         query_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         query_panel.AddF( static_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -940,7 +1334,6 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._test_url, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._test_arg, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._fetch_data, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -951,8 +1344,17 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        info_panel.SetSizer( vbox )
+        
+        #
+        
         notebook.AddPage( edit_panel, 'edit', select = True )
         notebook.AddPage( test_panel, 'test', select = False )
+        notebook.AddPage( info_panel, 'info', select = False )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -963,22 +1365,13 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventFetchData( self, event ):
         
-        example_for_now = '''<p>This is just an example for now!</p>
-
-<ul id="tag-sidebar"><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=1girl">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=1girl">1girl</a> <span style='color: #a0a0a0;'>1946847</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=anus">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=anus">anus</a> <span style='color: #a0a0a0;'>82016</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=areolae">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=areolae">areolae</a> <span style='color: #a0a0a0;'>93162</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=ass">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=ass">ass</a> <span style='color: #a0a0a0;'>312664</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=bare_shoulders">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=bare_shoulders">bare shoulders</a> <span style='color: #a0a0a0;'>212219</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=black-framed_glasses">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=black-framed_glasses">black-framed glasses</a> <span style='color: #a0a0a0;'>1470</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=blush">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=blush">blush</a> <span style='color: #a0a0a0;'>1117240</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=breasts">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=breasts">breasts</a> <span style='color: #a0a0a0;'>1246474</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=brown_eyes">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=brown_eyes">brown eyes</a> <span style='color: #a0a0a0;'>387263</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=brown_hair">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=brown_hair">brown hair</a> <span style='color: #a0a0a0;'>671702</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=gradient_background">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=gradient_background">gradient background</a> <span style='color: #a0a0a0;'>72923</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=hair_bun">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=hair_bun">hair bun</a> <span style='color: #a0a0a0;'>16962</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=hairpin">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=hairpin">hairpin</a> <span style='color: #a0a0a0;'>10698</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=looking_at_viewer">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=looking_at_viewer">looking at viewer</a> <span style='color: #a0a0a0;'>502725</span></li><li class="tag-type-character"><a href="index.php?page=wiki&amp;s=list&amp;search=mei_%28overwatch%29">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=mei_%28overwatch%29">mei (overwatch)</a> <span style='color: #a0a0a0;'>916</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=nipples">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=nipples">nipples</a> <span style='color: #a0a0a0;'>480016</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=on_side">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=on_side">on side</a> <span style='color: #a0a0a0;'>25304</span></li><li class="tag-type-copyright"><a href="index.php?page=wiki&amp;s=list&amp;search=overwatch">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=overwatch">overwatch</a> <span style='color: #a0a0a0;'>6773</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=pants_down">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=pants_down">pants down</a> <span style='color: #a0a0a0;'>2368</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=pussy">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=pussy">pussy</a> <span style='color: #a0a0a0;'>288434</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=shirt_lift">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=shirt_lift">shirt lift</a> <span style='color: #a0a0a0;'>45320</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=side_boob">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=side_boob">side boob</a> <span style='color: #a0a0a0;'>204</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=solo">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=solo">solo</a> <span style='color: #a0a0a0;'>1551410</span></li><li class="tag-type-general"><a href="index.php?page=wiki&amp;s=list&amp;search=zetxsuna">?</a> <a href="index.php?page=post&amp;s=list&amp;tags=zetxsuna">zetxsuna</a> <span style='color: #a0a0a0;'>10</span></li></ul><br /><div id="stats">'''
-        
-        self._example_data.SetValue( example_for_now )
-        
-        return
-        
         script = self.GetValue()
         
-        test_url = self._test_url.GetValue()
         test_arg = self._test_arg.GetValue()
         
         file_identifier_type = self._file_identifier_type.GetChoice()
         
-        if file_identifier_type == HydrusParsing.FILE_IDENTIFIER_TYPE_FILE:
+        if file_identifier_type == ClientParsing.FILE_IDENTIFIER_TYPE_FILE:
             
             if not os.path.exists( test_arg ):
                 
@@ -987,12 +1380,9 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
                 return
                 
             
-            with open( test_arg, 'rb' ) as f:
-                
-                file_identifier = f.read()
-                
+            file_identifier = test_arg
             
-        elif file_identifier_type == HydrusParsing.FILE_IDENTIFIER_TYPE_USER_INPUT:
+        elif file_identifier_type == ClientParsing.FILE_IDENTIFIER_TYPE_USER_INPUT:
             
             file_identifier = test_arg
             
@@ -1003,7 +1393,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            example_data = script.FetchData( test_url, file_identifier )
+            example_data = script.FetchData( file_identifier )
             
             self._example_data.SetValue( example_data )
             
@@ -1026,14 +1416,13 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         try:
             
             data = self._example_data.GetValue()
-            url = self._test_url.GetValue()
             desired_content = 'all'
             
-            results = script.Parse( data, url, desired_content )
+            results = script.Parse( data, desired_content )
             
             result_lines = [ '*** RESULTS BEGIN ***' ]
             
-            result_lines.extend( ( HydrusParsing.ConvertContentResultToPrettyString( result ) for result in results ) )
+            result_lines.extend( ( ClientParsing.ConvertContentResultToPrettyString( result ) for result in results ) )
             
             result_lines.append( '*** RESULTS END ***' )
             
@@ -1056,10 +1445,15 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._example_data.GetValue()
         
     
+    def GetExampleURL( self ):
+        
+        return self._url.GetValue()
+        
+    
     def GetValue( self ):
         
         name = self._name.GetValue()
-        example_url = self._test_url.GetValue()
+        url = self._url.GetValue()
         query_type = self._query_type.GetChoice()
         file_identifier_type = self._file_identifier_type.GetChoice()
         file_identifier_encoding = self._file_identifier_encoding.GetChoice()
@@ -1067,7 +1461,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         static_args = self._static_args.GetValue()
         children = self._children.GetValue()
         
-        script = HydrusParsing.ParseRootFileLookup( name, example_url = example_url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children )
+        script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children )
         
         return script
         
@@ -1100,7 +1494,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        scripts = [] # fetch all scripts from the db, populate listctrl using name column's data to store the script itself or w/e
+        scripts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
         
         for script in scripts:
             
@@ -1160,29 +1554,31 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def Add( self ):
         
-        with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select the script type', [ 'file lookup' ] ) as dlg_type:
+        with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select the script type', [ 'file metadata lookup' ] ) as dlg_type:
             
             if dlg_type.ShowModal() == wx.ID_OK:
                 
                 script_type_string = dlg_type.GetString()
                 
-                if script_type_string == 'file lookup':
+                if script_type_string == 'file metadata lookup':
                     
                     name = 'new script'
-                    example_url = 'enter example url here'
+                    url = ''
                     query_type = HC.GET
-                    file_identifier_type = HydrusParsing.FILE_IDENTIFIER_TYPE_MD5
+                    file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
                     file_identifier_encoding = HC.ENCODING_BASE64
                     file_identifier_arg_name = 'md5'
                     static_args = {}
                     children = []
                     
-                    empty_script = HydrusParsing.ParseRootFileLookup( name, example_url = example_url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
+                    empty_script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
+                    
+                    dlg_title = 'edit file metadata lookup script'
                     
                     panel_class = EditParsingScriptFileLookupPanel
                     
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit script' ) as dlg_edit:
+                with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg_edit:
                     
                     panel = panel_class( dlg_edit, empty_script )
                     
@@ -1207,8 +1603,30 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         scripts = [ script for ( script, query_type, script_type, produces ) in self._scripts.GetClientData() ]
         
-        # save them to db
-        # this should completely delete and replace the old stuff in the db to allow for renames
+        file_lookup_scripts = [ script for script in scripts if isinstance( script, ClientParsing.ParseRootFileLookup ) ]
+        
+        stuff_to_save = []
+        
+        stuff_to_save.append( ( HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP, file_lookup_scripts ) )
+        
+        for ( serialisable_type, scripts ) in stuff_to_save:
+            
+            existing_names = set( HydrusGlobals.client_controller.Read( 'serialisable_names', serialisable_type ) )
+            
+            save_names = { script.GetName() for script in scripts }
+            
+            for script in scripts:
+                
+                HydrusGlobals.client_controller.Write( 'serialisable', script )
+                
+            
+            deletee_names = existing_names.difference( save_names )
+            
+            for name in deletee_names:
+                
+                HydrusGlobals.client_controller.Write( 'delete_serialisable_named', serialisable_type, name )
+                
+            
         
     
     def Copy( self ):
@@ -1257,7 +1675,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             ( script, query_type, script_type, produces ) = self._scripts.GetClientData( i )
             
-            if isinstance( script, HydrusParsing.ParseRootFileLookup ):
+            if isinstance( script, ClientParsing.ParseRootFileLookup ):
                 
                 panel_class = EditParsingScriptFileLookupPanel
                 
@@ -1308,7 +1726,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 obj = HydrusSerialisable.CreateFromString( raw_text )
                 
-                if isinstance( obj, HydrusParsing.ParseRootFileLookup ):
+                if isinstance( obj, ClientParsing.ParseRootFileLookup ):
                     
                     script = obj
                     
@@ -1319,7 +1737,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     self._scripts.Append( display_tuple, data_tuple )
                     
                 
-            except:
+            except Exception as e:
                 
                 wx.MessageBox( 'I could not understand what was in the clipboard' )
                 
