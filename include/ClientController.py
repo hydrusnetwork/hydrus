@@ -650,7 +650,7 @@ class Controller( HydrusController.HydrusController ):
             
             if not self.CurrentlyVeryIdle():
                 
-                stop_time = HydrusData.GetNow() + 30
+                stop_time = HydrusData.GetNow() + 10
                 
             
         

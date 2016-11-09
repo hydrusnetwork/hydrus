@@ -1818,6 +1818,8 @@ class DialogInputLocalFiles( Dialog ):
             
             if size == 0:
                 
+                HydrusData.Print( 'Empty file: ' + path )
+                
                 num_empty_files += 1
                 
                 continue
@@ -1832,6 +1834,8 @@ class DialogInputLocalFiles( Dialog ):
                 wx.CallAfter( self.AddParsedPath, path, mime, size )
                 
             else:
+                
+                HydrusData.Print( 'Unparsable file: ' + path )
                 
                 num_uninteresting_mime_files += 1
                 
@@ -1885,6 +1889,7 @@ class DialogInputLocalFiles( Dialog ):
         
         message += '.'
         
+        HydrusData.Print( message )
         
         wx.CallAfter( self.SetGaugeInfo, num_file_paths, num_file_paths, message )
         

@@ -2383,11 +2383,22 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._apply_all_parents_to_all_services = wx.CheckBox( general_panel )
             
+            #
+            
             suggested_tags_panel = ClientGUICommon.StaticBox( self, 'suggested tags' )
             
-            self._suggested_tags_width = ClientGUICommon.NoneableSpinCtrl( suggested_tags_panel, 'width of suggested tags control', min = 20, none_phrase = 'width of longest tag', unit = 'pixels' )
+            self._suggested_tags_width = wx.SpinCtrl( suggested_tags_panel, min = 20, max = 65535 )
             
-            suggested_tags_favourites_panel = ClientGUICommon.StaticBox( suggested_tags_panel, 'favourites' )
+            self._suggested_tags_layout = ClientGUICommon.BetterChoice( suggested_tags_panel )
+            
+            self._suggested_tags_layout.Append( 'notebook', 'notebook' )
+            self._suggested_tags_layout.Append( 'side-by-side', 'columns' )
+            
+            suggest_tags_panel_notebook = wx.Notebook( suggested_tags_panel )
+            
+            #
+            
+            suggested_tags_favourites_panel = wx.Panel( suggest_tags_panel_notebook )
             
             suggested_tags_favourites_panel.SetMinSize( ( 400, -1 ) )
             
@@ -2412,17 +2423,34 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
             
-            suggested_tags_related_panel = ClientGUICommon.StaticBox( suggested_tags_panel, 'related' )
+            #
+            
+            suggested_tags_related_panel = wx.Panel( suggest_tags_panel_notebook )
             
             self._show_related_tags = wx.CheckBox( suggested_tags_related_panel )
-            
-            self._related_tags_width = wx.SpinCtrl( suggested_tags_related_panel, min = 60, max = 400 )
             
             self._related_tags_search_1_duration_ms = wx.SpinCtrl( suggested_tags_related_panel, min = 50, max = 60000 )
             self._related_tags_search_2_duration_ms = wx.SpinCtrl( suggested_tags_related_panel, min = 50, max = 60000 )
             self._related_tags_search_3_duration_ms = wx.SpinCtrl( suggested_tags_related_panel, min = 50, max = 60000 )
             
-            suggested_tags_recent_panel = ClientGUICommon.StaticBox( suggested_tags_panel, 'recent' )
+            #
+            
+            suggested_tags_file_lookup_script_panel = wx.Panel( suggest_tags_panel_notebook )
+            
+            self._show_file_lookup_script_tags = wx.CheckBox( suggested_tags_file_lookup_script_panel )
+            
+            self._favourite_file_lookup_script = ClientGUICommon.BetterChoice( suggested_tags_file_lookup_script_panel )
+            
+            script_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
+            
+            for name in script_names:
+                
+                self._favourite_file_lookup_script.Append( name, name )
+                
+            
+            #
+            
+            suggested_tags_recent_panel = wx.Panel( suggest_tags_panel_notebook )
             
             self._num_recent_tags = ClientGUICommon.NoneableSpinCtrl( suggested_tags_recent_panel, 'number of recent tags to show', min = 1, none_phrase = 'do not show' )
             
@@ -2458,17 +2486,21 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._apply_all_parents_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
             
-            self._suggested_tags_width.SetValue( self._new_options.GetNoneableInteger( 'suggested_tags_width' ) )
+            self._suggested_tags_width.SetValue( self._new_options.GetInteger( 'suggested_tags_width' ) )
+            
+            self._suggested_tags_layout.SelectClientData( self._new_options.GetNoneableString( 'suggested_tags_layout' ) )
             
             self._suggested_favourites_services.SelectClientData( CC.LOCAL_TAG_SERVICE_KEY )
             
             self._show_related_tags.SetValue( self._new_options.GetBoolean( 'show_related_tags' ) )
             
-            self._related_tags_width.SetValue( self._new_options.GetInteger( 'related_tags_width' ) )
-            
             self._related_tags_search_1_duration_ms.SetValue( self._new_options.GetInteger( 'related_tags_search_1_duration_ms' ) )
             self._related_tags_search_2_duration_ms.SetValue( self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) )
             self._related_tags_search_3_duration_ms.SetValue( self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) )
+            
+            self._show_file_lookup_script_tags.SetValue( self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) )
+            
+            self._favourite_file_lookup_script.SelectClientData( self._new_options.GetNoneableString( 'favourite_file_lookup_script' ) )
             
             self._num_recent_tags.SetValue( self._new_options.GetNoneableInteger( 'num_recent_tags' ) )
             
@@ -2492,28 +2524,72 @@ class ManageOptionsPanel( ManagePanel ):
             
             #
             
-            suggested_tags_favourites_panel.AddF( self._suggested_favourites_services, CC.FLAGS_EXPAND_PERPENDICULAR )
-            suggested_tags_favourites_panel.AddF( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
-            suggested_tags_favourites_panel.AddF( self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            panel_vbox.AddF( self._suggested_favourites_services, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.AddF( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
+            panel_vbox.AddF( self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            suggested_tags_favourites_panel.SetSizer( panel_vbox )
+            
+            #
+            
+            panel_vbox = wx.BoxSizer( wx.VERTICAL )
             
             rows = []
             
             rows.append( ( 'Show related tags on single-file manage tags windows: ', self._show_related_tags ) )
-            rows.append( ( 'Width of related tags list: ', self._related_tags_width ) )
             rows.append( ( 'Initial search duration (ms): ', self._related_tags_search_1_duration_ms ) )
             rows.append( ( 'Medium search duration (ms): ', self._related_tags_search_2_duration_ms ) )
             rows.append( ( 'Thorough search duration (ms): ', self._related_tags_search_3_duration_ms ) )
             
-            related_gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
             
-            suggested_tags_related_panel.AddF( related_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            suggested_tags_recent_panel.AddF( self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            suggested_tags_related_panel.SetSizer( panel_vbox )
             
-            suggested_tags_panel.AddF( self._suggested_tags_width, CC.FLAGS_EXPAND_PERPENDICULAR )
-            suggested_tags_panel.AddF( suggested_tags_favourites_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            suggested_tags_panel.AddF( suggested_tags_related_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            suggested_tags_panel.AddF( suggested_tags_recent_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            #
+            
+            panel_vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            rows = []
+            
+            rows.append( ( 'Show file lookup scripts on single-file manage tags windows: ', self._show_file_lookup_script_tags ) )
+            rows.append( ( 'Favourite file lookup script: ', self._favourite_file_lookup_script ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( suggested_tags_file_lookup_script_panel, rows )
+            
+            panel_vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            suggested_tags_file_lookup_script_panel.SetSizer( panel_vbox )
+            
+            #
+            
+            panel_vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            panel_vbox.AddF( self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            suggested_tags_recent_panel.SetSizer( panel_vbox )
+            
+            #
+            
+            suggest_tags_panel_notebook.AddPage( suggested_tags_favourites_panel, 'favourites' )
+            suggest_tags_panel_notebook.AddPage( suggested_tags_related_panel, 'related' )
+            suggest_tags_panel_notebook.AddPage( suggested_tags_file_lookup_script_panel, 'file lookup scripts' )
+            suggest_tags_panel_notebook.AddPage( suggested_tags_recent_panel, 'recent' )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Width of suggested tags columns: ', self._suggested_tags_width ) )
+            rows.append( ( 'Column layout: ', self._suggested_tags_layout ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( suggested_tags_panel, rows )
+            
+            suggested_tags_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            suggested_tags_panel.AddF( suggest_tags_panel_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox.AddF( suggested_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
@@ -2564,7 +2640,8 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetChoice() )
             
-            self._new_options.SetNoneableInteger( 'suggested_tags_width', self._suggested_tags_width.GetValue() )
+            self._new_options.SetInteger( 'suggested_tags_width', self._suggested_tags_width.GetValue() )
+            self._new_options.SetNoneableString( 'suggested_tags_layout', self._suggested_tags_layout.GetChoice() )
             
             self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.GetValue() )
             
@@ -2577,11 +2654,12 @@ class ManageOptionsPanel( ManagePanel ):
             
             self._new_options.SetBoolean( 'show_related_tags', self._show_related_tags.GetValue() )
             
-            self._new_options.SetInteger( 'related_tags_width', self._related_tags_width.GetValue() )
-            
             self._new_options.SetInteger( 'related_tags_search_1_duration_ms', self._related_tags_search_1_duration_ms.GetValue() )
             self._new_options.SetInteger( 'related_tags_search_2_duration_ms', self._related_tags_search_2_duration_ms.GetValue() )
             self._new_options.SetInteger( 'related_tags_search_3_duration_ms', self._related_tags_search_3_duration_ms.GetValue() )
+            
+            self._new_options.SetBoolean( 'show_file_lookup_script_tags', self._show_file_lookup_script_tags.GetValue() )
+            self._new_options.SetNoneableString( 'favourite_file_lookup_script', self._favourite_file_lookup_script.GetChoice() )
             
             self._new_options.SetNoneableInteger( 'num_recent_tags', self._num_recent_tags.GetValue() )
             

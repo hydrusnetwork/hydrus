@@ -2,6 +2,8 @@ import bs4
 import ClientNetworking
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
+import HydrusGlobals
 import HydrusSerialisable
 import HydrusTags
 import os
@@ -86,6 +88,22 @@ def GetChildrenContent( children, data, referral_url, desired_content ):
         
     
     return content
+    
+def GetTagsFromContentResults( results ):
+    
+    tag_results = []
+    
+    for ( ( name, content_type, additional_info ), parsed_text ) in results:
+        
+        if content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            tag_results.append( HydrusTags.CombineTag( additional_info, parsed_text ) )
+            
+        
+    
+    tag_results = HydrusTags.CleanTags( tag_results )
+    
+    return tag_results
     
 def GetVetoes( parsed_texts, additional_info ):
     
@@ -460,7 +478,9 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
             
             response = ClientNetworking.RequestsGet( search_url, headers = headers )
             
-            children_content = GetChildrenContent( self._children, data, search_url, desired_content )
+            linked_data = response.content
+            
+            children_content = GetChildrenContent( self._children, linked_data, search_url, desired_content )
             
             content.extend( children_content )
             
@@ -542,6 +562,64 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         self._children = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_child ) for serialisable_child in serialisable_children ]
         
     
+    def ConvertMediaToFileIdentifier( self, media ):
+        
+        if self._file_identifier_type == FILE_IDENTIFIER_TYPE_USER_INPUT:
+            
+            raise Exception( 'Cannot convert media to file identifier--this script takes user input!' )
+            
+        elif self._file_identifier_type == FILE_IDENTIFIER_TYPE_SHA256:
+            
+            return media.GetHash()
+            
+        elif self._file_identifier_type in ( FILE_IDENTIFIER_TYPE_MD5, FILE_IDENTIFIER_TYPE_SHA1, FILE_IDENTIFIER_TYPE_SHA512 ):
+            
+            sha256_hash = media.GetHash()
+            
+            if self._file_identifier_type == FILE_IDENTIFIER_TYPE_MD5:
+                
+                hash_type = 'md5'
+                
+            elif self._file_identifier_type == FILE_IDENTIFIER_TYPE_SHA1:
+                
+                hash_type = 'sha1'
+                
+            elif self._file_identifier_type == FILE_IDENTIFIER_TYPE_SHA512:
+                
+                hash_type = 'sha512'
+                
+            
+            try:
+                
+                ( other_hash, ) = HydrusGlobals.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
+                
+                return other_hash
+                
+            except:
+                
+                raise Exception( 'I do not know that file\'s ' + hash_type + ' hash, so I cannot look it up!' )
+                
+            
+        elif self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+            
+            hash = media.GetHash()
+            mime = media.GetMime()
+            
+            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+            
+            try:
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                return path
+                
+            except HydrusExceptions.FileMissingException as e:
+                
+                raise Exception( 'That file is not in the database\'s local files, so I cannot look it up!' )
+                
+            
+        
+    
     def FetchData( self, file_identifier ):
         
         request_args = dict( self._static_args )
@@ -602,9 +680,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return self.Parse( data, desired_content )
         
     
-    def GetFileIdentifier( self ):
+    def UsesUserInput( self ):
         
-        return ( self._file_identifier_type, self._file_identifier_encoding )
+        return self._file_identifier_type == FILE_IDENTIFIER_TYPE_USER_INPUT
         
     
     def Parse( self, data, desired_content ):

@@ -5,7 +5,6 @@ import ClientFiles
 import ClientNetworking
 import ClientThreading
 import collections
-import datetime
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
@@ -536,6 +535,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
         
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
+        self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_OSX
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_deactive' ] = False
         
@@ -547,10 +547,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'video_buffer_size_mb' ] = 96
         
-        self._dictionary[ 'integers' ][ 'related_tags_width' ] = 150
         self._dictionary[ 'integers' ][ 'related_tags_search_1_duration_ms' ] = 250
         self._dictionary[ 'integers' ][ 'related_tags_search_2_duration_ms' ] = 2000
         self._dictionary[ 'integers' ][ 'related_tags_search_3_duration_ms' ] = 6000
+        
+        self._dictionary[ 'integers' ][ 'suggested_tags_width' ] = 300
         
         #
         
@@ -567,11 +568,16 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
         self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
         
-        self._dictionary[ 'noneable_integers' ][ 'suggested_tags_width' ] = None
-        
         self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = None
         
         self._dictionary[ 'noneable_integers' ][ 'maintenance_vacuum_period_days' ] = 30
+        
+        #
+        
+        self._dictionary[ 'noneable_strings' ] = {}
+        
+        self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
+        self._dictionary[ 'noneable_strings' ][ 'suggested_tags_layout' ] = 'notebook'
         
         #
         
@@ -752,20 +758,29 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info )
             
-            updated_cfliw = []
-            
-            for ( old_portable_path, weight ) in loaded_dictionary[ 'client_files_locations_ideal_weights' ]:
+            if 'client_files_locations_ideal_weights' in loaded_dictionary:
                 
-                new_portable_path = update_portable_path( old_portable_path )
+                updated_cfliw = []
                 
-                updated_cfliw.append( ( new_portable_path, weight ) )
+                for ( old_portable_path, weight ) in loaded_dictionary[ 'client_files_locations_ideal_weights' ]:
+                    
+                    new_portable_path = update_portable_path( old_portable_path )
+                    
+                    updated_cfliw.append( ( new_portable_path, weight ) )
+                    
+                
+                loaded_dictionary[ 'client_files_locations_ideal_weights' ] = updated_cfliw
                 
             
-            loaded_dictionary[ 'client_files_locations_ideal_weights' ] = updated_cfliw
+            if 'client_files_locations_resized_thumbnail_override' in loaded_dictionary:
+                
+                loaded_dictionary[ 'client_files_locations_resized_thumbnail_override' ] = update_portable_path( loaded_dictionary[ 'client_files_locations_resized_thumbnail_override' ] )
+                
             
-            loaded_dictionary[ 'client_files_locations_resized_thumbnail_override' ] = update_portable_path( loaded_dictionary[ 'client_files_locations_resized_thumbnail_override' ] )
-            
-            loaded_dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = update_portable_path( loaded_dictionary[ 'client_files_locations_full_size_thumbnail_override' ] )
+            if 'client_files_locations_full_size_thumbnail_override' in loaded_dictionary:
+                
+                loaded_dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = update_portable_path( loaded_dictionary[ 'client_files_locations_full_size_thumbnail_override' ] )
+                
             
             new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
             
@@ -983,6 +998,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetNoneableString( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'noneable_strings' ][ name ]
+            
+        
+    
     def GetPreviewShowAction( self, mime ):
         
         with self._lock:
@@ -1091,6 +1114,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'noneable_integers' ][ name ] = value
+            
+        
+    
+    def SetNoneableString( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'noneable_strings' ][ name ] = value
             
         
     

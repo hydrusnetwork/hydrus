@@ -1976,11 +1976,6 @@ class CanvasPanel( Canvas ):
     
     def FocusChanged( self, page_key, media ):
         
-        if HydrusGlobals.no_focus_changed:
-            
-            return
-            
-        
         if HC.options[ 'hide_preview' ]:
             
             return

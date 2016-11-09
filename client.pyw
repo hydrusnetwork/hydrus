@@ -66,9 +66,7 @@ try:
     
     #
     
-    log_path = os.path.join( db_dir, 'client.log' )
-    
-    with HydrusLogger.HydrusLogger( log_path ) as logger:
+    with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
         
         try:
             

@@ -71,9 +71,7 @@ try:
     
     action = ServerController.ProcessStartingAction( db_dir, action )
     
-    log_path = os.path.join( db_dir, 'server.log' )
-    
-    with HydrusLogger.HydrusLogger( log_path ) as logger:
+    with HydrusLogger.HydrusLogger( db_dir, 'server' ) as logger:
         
         try:
             

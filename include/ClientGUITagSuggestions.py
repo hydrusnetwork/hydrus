@@ -1,10 +1,13 @@
 import ClientConstants as CC
 import ClientData
 import ClientGUICommon
+import ClientGUIDialogs
+import ClientParsing
 import ClientSearch
 import collections
 import HydrusConstants as HC
 import HydrusGlobals
+import HydrusSerialisable
 import wx
 
 class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
@@ -14,6 +17,13 @@ class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
         ClientGUICommon.ListBoxTagsStrings.__init__( self, parent, sort_tags = sort_tags )
         
         self._activate_callable = activate_callable
+        
+        width = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
+        
+        if width is not None:
+            
+            self.SetMinSize( ( width, -1 ) )
+            
         
     
     def _Activate( self ):
@@ -25,12 +35,13 @@ class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
             self._activate_callable( tags )
             
         
-    
+    '''
+    # Maybe reinclude this if per-column autoresizing is desired and not completely buggy
     def SetTags( self, tags ):
         
         ClientGUICommon.ListBoxTagsStrings.SetTags( self, tags )
         
-        width = HydrusGlobals.client_controller.GetNewOptions().GetNoneableInteger( 'suggested_tags_width' )
+        width = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
         
         if width is None:
             
@@ -52,7 +63,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
         
         wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
         
-    
+    '''
 class ListBoxTagsSuggestionsRelated( ClientGUICommon.ListBoxTags ):
     
     def __init__( self, parent, activate_callable ):
@@ -61,9 +72,9 @@ class ListBoxTagsSuggestionsRelated( ClientGUICommon.ListBoxTags ):
         
         self._activate_callable = activate_callable
         
-        width = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'related_tags_width' )
+        width = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
         
-        self.SetMinSize( ( 200, -1 ) )
+        self.SetMinSize( ( width, -1 ) )
         
     
     def _Activate( self ):
@@ -242,6 +253,75 @@ class RelatedTagsPanel( wx.Panel ):
         self._FetchRelatedTags( max_time_to_take )
         
     
+class FileLookupScriptTagsPanel( wx.Panel ):
+    
+    def __init__( self, parent, service_key, media, activate_callable ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._service_key = service_key
+        self._media = media
+        
+        scripts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
+        
+        self._script_choice = ClientGUICommon.BetterChoice( self )
+        
+        for script in scripts:
+            
+            self._script_choice.Append( script.GetName(), script )
+            
+        
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
+        
+        self._script_choice.SelectClientData( favourite_file_lookup_script )
+        
+        fetch_button = ClientGUICommon.BetterButton( self, 'fetch tags', self.FetchTags )
+        
+        self._tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = True )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._script_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fetch_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def FetchTags( self ):
+        
+        script = self._script_choice.GetChoice()
+        
+        if script.UsesUserInput():
+            
+            message = 'Enter the custom input for the file lookup script.'
+            
+            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_OK:
+                    
+                    return
+                    
+                
+                file_identifier = dlg.GetValue()
+                
+            
+        else:
+            
+            ( m, ) = self._media
+            
+            file_identifier = script.ConvertMediaToFileIdentifier( m )
+            
+        
+        content_results = script.DoQuery( file_identifier, 'all' )
+        
+        tags = ClientParsing.GetTagsFromContentResults( content_results )
+        
+        self._tags.SetTags( tags )
+        
+    
 class SuggestedTagsPanel( wx.Panel ):
     
     def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
@@ -254,44 +334,79 @@ class SuggestedTagsPanel( wx.Panel ):
         
         self._new_options = HydrusGlobals.client_controller.GetNewOptions()
         
-        something_to_show = False
+        layout_mode = self._new_options.GetNoneableString( 'suggested_tags_layout' )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        if layout_mode == 'notebook':
+            
+            notebook = wx.Notebook( self )
+            
+            panel_parent = notebook
+            
+        else:
+            
+            panel_parent = self
+            
+        
+        panels = []
         
         favourites = self._new_options.GetSuggestedTagsFavourites( service_key )
         
         if len( favourites ) > 0:
             
-            favourite_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable )
+            favourite_tags = ListBoxTagsSuggestionsFavourites( panel_parent, activate_callable )
             
             favourite_tags.SetTags( favourites )
             
-            hbox.AddF( favourite_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            something_to_show = True
+            panels.append( ( 'favourites', favourite_tags ) )
             
         
         if self._new_options.GetBoolean( 'show_related_tags' ) and len( media ) == 1:
             
-            related_tags = RelatedTagsPanel( self, service_key, media, activate_callable, canvas_key = self._canvas_key )
+            related_tags = RelatedTagsPanel( panel_parent, service_key, media, activate_callable, canvas_key = self._canvas_key )
             
-            hbox.AddF( related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            panels.append( ( 'related', related_tags ) )
             
-            something_to_show = True
+        
+        if self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) and len( media ) == 1:
+            
+            file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, media, activate_callable )
+            
+            panels.append( ( 'file lookup scripts', file_lookup_script_tags ) )
             
         
         if self._new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
             
-            recent_tags = RecentTagsPanel( self, service_key, activate_callable, canvas_key = self._canvas_key )
+            recent_tags = RecentTagsPanel( panel_parent, service_key, activate_callable, canvas_key = self._canvas_key )
             
-            hbox.AddF( recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            something_to_show = True
+            panels.append( ( 'recent', recent_tags ) )
             
         
-        self.SetSizer( hbox )
+        if layout_mode == 'notebook':
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            for ( name, panel ) in panels:
+                
+                notebook.AddPage( panel, name )
+                
+            
+            hbox.AddF( notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.SetSizer( hbox )
+            
+        elif layout_mode == 'columns':
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            for ( name, panel ) in panels:
+                
+                hbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            self.SetSizer( hbox )
+            
         
-        if not something_to_show:
+        if len( panels ) == 0:
             
             self.Hide()
             

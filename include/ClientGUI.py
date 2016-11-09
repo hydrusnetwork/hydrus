@@ -721,26 +721,29 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def file():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'import files', 'Add new files to the database.', self, self._ImportFiles )
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'manage import folders', 'Manage folders from which the client can automatically import.', self, self._ManageImportFolders )
+            ClientGUIMenus.AppendMenuItem( menu, 'manage export folders', 'Manage folders to which the client can automatically export.', self, self._ManageExportFolders )
             
             menu.AppendSeparator()
             
             open = wx.Menu()
             
-            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'open_install_folder' ), p( 'Installation Directory' ), p( 'Open the installation directory for this client.' ) )
-            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'open_db_folder' ), p( 'Database Directory' ), p( 'Open the database directory for this instance of the client.' ) )
-            open.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'open_export_folder' ), p( 'Quick Export Directory' ), p( 'Open the export directory so you can easily access the files you have exported.' ) )
+            ClientGUIMenus.AppendMenuItem( open, 'installation directory', 'Open the installation directory for this client.', self, self._OpenInstallFolder )
+            ClientGUIMenus.AppendMenuItem( open, 'database directory', 'Open the database directory for this instance of the client.', self, self._OpenDBFolder )
+            ClientGUIMenus.AppendMenuItem( open, 'quick export directory', 'Open the export directory so you can easily access the files you have exported.', self, self._OpenExportFolder )
             
-            menu.AppendMenu( CC.ID_NULL, p( 'Open' ), open )
+            ClientGUIMenus.AppendMenu( menu, open, 'open' )
             
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'options' ), p( '&Options' ) )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'options', 'Change how the client operates.', self, self._ManageOptions )
+            
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'restart' ), p( '&Restart' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'exit' ), p( '&Exit' ) )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self, self.Exit, restart = True )
+            ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self, self.Exit )
             
             return ( menu, p( '&File' ), True )
             
@@ -1188,8 +1191,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             pubsub_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pubsub_profile_mode' )
             force_idle_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle_mode' )
             
-            no_focus_changed_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'no_focus_changed' )
-            
             debug = wx.Menu()
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_make_popups' ), p( 'Make Some Popups' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_make_a_delayed_popup' ), p( 'Make a Popup in Five Seconds' ) )
@@ -1199,8 +1200,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             debug.Check( pubsub_profile_mode_id, HydrusGlobals.pubsub_profile_mode )
             debug.AppendCheckItem( force_idle_mode_id, p( '&Force Idle Mode' ) )
             debug.Check( force_idle_mode_id, HydrusGlobals.force_idle_mode )
-            debug.AppendCheckItem( no_focus_changed_id, p( '&No Focus Changed Mode' ) )
-            debug.Check( no_focus_changed_id, HydrusGlobals.no_focus_changed )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
             debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
@@ -2439,10 +2438,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 self._controller.pub( 'notify_new_sessions' )
                 
             elif command == 'delete_service_info': self._DeleteServiceInfo()
-            elif command == 'exit':
-                
-                self.Exit()
-                
             elif command == 'fetch_ip': self._FetchIP( data )
             elif command == 'force_idle_mode':
                 
@@ -2452,7 +2447,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'help': webbrowser.open( 'file://' + HC.HELP_DIR + '/index.html' )
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
-            elif command == 'import_files': self._ImportFiles()
             elif command == 'load_gui_session': self._LoadGUISession( data )
             elif command == 'load_into_disk_cache':
                 
@@ -2460,8 +2454,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
             elif command == 'manage_boorus': self._ManageBoorus()
-            elif command == 'manage_export_folders': self._ManageExportFolders()
-            elif command == 'manage_import_folders': self._ManageImportFolders()
             elif command == 'manage_parsing_scripts': self._ManageParsingScripts()
             elif command == 'manage_pixiv_account': self._ManagePixivAccount()
             elif command == 'manage_server_services': self._ManageServer( data )
@@ -2491,14 +2483,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
-            elif command == 'no_focus_changed':
-                
-                HydrusGlobals.no_focus_changed = not HydrusGlobals.no_focus_changed
-                
-            elif command == 'open_db_folder': self._OpenDBFolder()
-            elif command == 'open_export_folder': self._OpenExportFolder()
-            elif command == 'open_install_folder': self._OpenInstallFolder()
-            elif command == 'options': self._ManageOptions()
             elif command == 'patreon': webbrowser.open( 'https://www.patreon.com/hydrus_dev' )
             elif command == 'pause_export_folders_sync': self._PauseSync( 'export_folders' )
             elif command == 'pause_import_folders_sync': self._PauseSync( 'import_folders' )
@@ -2516,10 +2500,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 page = self._notebook.GetCurrentPage()
                 
                 if page is not None: page.RefreshQuery()
-                
-            elif command == 'restart':
-                
-                self.Exit( restart = True )
                 
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()

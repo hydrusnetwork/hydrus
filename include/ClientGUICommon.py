@@ -207,7 +207,8 @@ class BetterChoice( wx.Choice ):
         selection = self.GetSelection()
         
         if selection != wx.NOT_FOUND: return self.GetClientData( selection )
-        else: return self.GetClientData( 0 )
+        elif self.GetCount() > 0: return self.GetClientData( 0 )
+        else: return None
         
     
     def SelectClientData( self, client_data ):
@@ -222,7 +223,10 @@ class BetterChoice( wx.Choice ):
                 
             
         
-        self.Select( 0 )
+        if self.GetCount() > 0:
+            
+            self.Select( 0 )
+            
         
     
 class BufferedWindow( wx.Window ):

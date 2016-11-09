@@ -227,7 +227,7 @@ def FilterFreePaths( paths ):
             
         except OSError as e: # 'already in use by another process'
             
-            HydrusData.Print( path + ' ' + str( e ) )
+            HydrusData.Print( 'Already in use: ' + path )
             
         
     

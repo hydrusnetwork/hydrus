@@ -1,7 +1,10 @@
 import collections
+import cv2
 import HydrusConstants as HC
 import HydrusExceptions
 import os
+import PIL
+import ssl
 import sys
 import threading
 import traceback
@@ -40,7 +43,22 @@ Shift-LeftClick-Drag - Drag (in Filter)
 Ctrl + MouseWheel - Zoom
 Z - Zoom Full/Fit'''
 
-CLIENT_DESCRIPTION = '''This client is the media management application of the hydrus software suite.'''
+library_versions = []
+
+library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
+library_versions.append( ( 'PIL', PIL.VERSION ) )
+
+if hasattr( PIL, 'PILLOW_VERSION' ):
+    
+    library_versions.append( ( 'Pillow', PIL.PILLOW_VERSION ) )
+    
+
+library_versions.append( ( 'OpenCV', cv2.__version__ ) )
+library_versions.append( ( 'wx', wx.version() ) )
+
+CLIENT_DESCRIPTION = 'This client is the media management application of the hydrus software suite.'
+
+CLIENT_DESCRIPTION += os.linesep * 2 + os.linesep.join( ( lib + ': ' + version for ( lib, version ) in library_versions ) )
 
 COLLECT_BY_S = 0
 COLLECT_BY_SV = 1

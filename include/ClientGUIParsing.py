@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientNetworking
@@ -78,20 +79,15 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         self._tag_rules = wx.ListBox( edit_panel, style = wx.LB_SINGLE )
         self._tag_rules.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
         
-        self._add_rule = wx.Button( edit_panel, label = 'add' )
-        self._add_rule.Bind( wx.EVT_BUTTON, self.EventAdd )
+        self._add_rule = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
         
-        self._edit_rule = wx.Button( edit_panel, label = 'edit' )
-        self._edit_rule.Bind( wx.EVT_BUTTON, self.EventEdit )
+        self._edit_rule = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
         
-        self._move_rule_up = wx.Button( edit_panel, label = u'\u2191' )
-        self._move_rule_up.Bind( wx.EVT_BUTTON, self.EventMoveUp )
+        self._move_rule_up = ClientGUICommon.BetterButton( edit_panel, u'\u2191', self.MoveUp )
         
-        self._delete_rule = wx.Button( edit_panel, label = 'X' )
-        self._delete_rule.Bind( wx.EVT_BUTTON, self.EventDelete )
+        self._delete_rule = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
         
-        self._move_rule_down = wx.Button( edit_panel, label = u'\u2193' )
-        self._move_rule_down.Bind( wx.EVT_BUTTON, self.EventMoveDown )
+        self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, u'\u2193', self.MoveDown )
         
         self._content_rule = wx.TextCtrl( edit_panel )
         
@@ -107,8 +103,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_data.SetValue( example_data )
         
-        self._run_test = wx.Button( test_panel, label = 'test parse' )
-        self._run_test.Bind( wx.EVT_BUTTON, self.EventTestParse )
+        self._run_test = ClientGUICommon.BetterButton( test_panel, 'test parse', self.TestParse )
         
         self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
@@ -217,7 +212,7 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
         self.SetSizer( vbox )
         
     
-    def EventAdd( self, event ):
+    def Add( self ):
         
         dlg_title = 'edit tag rule'
         
@@ -240,7 +235,7 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
             
         
     
-    def EventDelete( self, event ):
+    def Delete( self ):
         
         selection = self._tag_rules.GetSelection()
         
@@ -257,7 +252,7 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
             
         
     
-    def EventEdit( self, event ):
+    def Edit( self ):
         
         selection = self._tag_rules.GetSelection()
         
@@ -286,7 +281,27 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
             
         
     
-    def EventMoveDown( self, event ):
+    def EventEdit( self, event ):
+        
+        self.Edit()
+        
+    
+    def GetValue( self ):
+        
+        tags_rules = [ self._tag_rules.GetClientData( i ) for i in range( self._tag_rules.GetCount() ) ]
+        content_rule = self._content_rule.GetValue()
+        
+        if content_rule == '':
+            
+            content_rule = None
+            
+        
+        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule )
+        
+        return formula
+        
+    
+    def MoveDown( self ):
         
         selection = self._tag_rules.GetSelection()
         
@@ -301,7 +316,7 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
             
         
     
-    def EventMoveUp( self, event ):
+    def MoveUp( self ):
         
         selection = self._tag_rules.GetSelection()
         
@@ -316,7 +331,7 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
             
         
     
-    def EventTestParse( self, event ):
+    def TestParse( self ):
         
         formula = self.GetValue()
         
@@ -342,21 +357,6 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
             
         
     
-    def GetValue( self ):
-        
-        tags_rules = [ self._tag_rules.GetClientData( i ) for i in range( self._tag_rules.GetCount() ) ]
-        content_rule = self._content_rule.GetValue()
-        
-        if content_rule == '':
-            
-            content_rule = None
-            
-        
-        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule )
-        
-        return formula
-        
-    
 class EditNodes( wx.Panel ):
     
     def __init__( self, parent, nodes, referral_url_callable, example_data_callable ):
@@ -368,23 +368,17 @@ class EditNodes( wx.Panel ):
         
         self._nodes = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'name', 120 ), ( 'node type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
         
-        self._add_button = wx.Button( self, label = 'add' )
-        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        self._add_button = ClientGUICommon.BetterButton( self, 'add', self.Add )
         
-        self._copy_button = wx.Button( self, label = 'copy' )
-        self._copy_button.Bind( wx.EVT_BUTTON, self.EventCopy )
+        self._copy_button = ClientGUICommon.BetterButton( self, 'copy', self.Copy )
         
-        self._paste_button = wx.Button( self, label = 'paste' )
-        self._paste_button.Bind( wx.EVT_BUTTON, self.EventPaste )
+        self._paste_button = ClientGUICommon.BetterButton( self, 'paste', self.Paste )
         
-        self._duplicate_button = wx.Button( self, label = 'duplicate' )
-        self._duplicate_button.Bind( wx.EVT_BUTTON, self.EventDuplicate )
+        self._duplicate_button = ClientGUICommon.BetterButton( self, 'duplicate', self.Duplicate )
         
-        self._edit_button = wx.Button( self, label = 'edit' )
-        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self.Edit )
         
-        self._delete_button = wx.Button( self, label = 'delete' )
-        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self.Delete )
         
         #
         
@@ -423,47 +417,54 @@ class EditNodes( wx.Panel ):
     
     def Add( self ):
         
-        with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select the node type', [ 'content', 'link' ] ) as dlg_type:
+        menu = wx.Menu()
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'content node', 'A node that parses the given data for content.', self, self.AddContentNode )
+        ClientGUIMenus.AppendMenuItem( menu, 'link node', 'A node that parses the given data for a link, which it then pursues.', self, self.AddLinkNode )
+        
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
+        
+    
+    def AddContentNode( self ):
+        
+        dlg_title = 'edit content node'
+        
+        empty_node = ClientParsing.ParseNodeContent()
+        
+        panel_class = EditParseNodeContentPanel
+        
+        self.AddNode( dlg_title, empty_node, panel_class )
+        
+    
+    def AddLinkNode( self ):
+        
+        dlg_title = 'edit link node'
+        
+        empty_node = ClientParsing.ParseNodeContentLink()
+        
+        panel_class = EditParseNodeContentLinkPanel
+        
+        self.AddNode( dlg_title, empty_node, panel_class )
+        
+    
+    def AddNode( self, dlg_title, empty_node, panel_class ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg_edit:
             
-            if dlg_type.ShowModal() == wx.ID_OK:
+            referral_url = self._referral_url_callable()
+            example_data = self._example_data_callable()
+            
+            panel = panel_class( dlg_edit, empty_node, referral_url, example_data )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.ShowModal() == wx.ID_OK:
                 
-                node_type_string = dlg_type.GetString()
+                new_node = panel.GetValue()
                 
-                if node_type_string == 'content':
-                    
-                    dlg_title = 'edit content node'
-                    
-                    empty_node = ClientParsing.ParseNodeContent()
-                    
-                    panel_class = EditParseNodeContentPanel
-                    
-                elif node_type_string == 'link':
-                    
-                    dlg_title = 'edit link node'
-                    
-                    empty_node = ClientParsing.ParseNodeContentLink()
-                    
-                    panel_class = EditParseNodeContentLinkPanel
-                    
+                ( display_tuple, data_tuple ) = self._ConvertNodeToTuples( new_node )
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg_edit:
-                    
-                    referral_url = self._referral_url_callable()
-                    example_data = self._example_data_callable()
-                    
-                    panel = panel_class( dlg_edit, empty_node, referral_url, example_data )
-                    
-                    dlg_edit.SetPanel( panel )
-                    
-                    if dlg_edit.ShowModal() == wx.ID_OK:
-                        
-                        new_node = panel.GetValue()
-                        
-                        ( display_tuple, data_tuple ) = self._ConvertNodeToTuples( new_node )
-                        
-                        self._nodes.Append( display_tuple, data_tuple )
-                        
-                    
+                self._nodes.Append( display_tuple, data_tuple )
                 
             
         
@@ -586,36 +587,6 @@ class EditNodes( wx.Panel ):
             
         
     
-    def EventAdd( self, event ):
-        
-        self.Add()
-        
-    
-    def EventCopy( self, event ):
-        
-        self.Copy()
-        
-    
-    def EventDelete( self, event ):
-        
-        self.Delete()
-        
-    
-    def EventDuplicate( self, event ):
-        
-        self.Duplicate()
-        
-    
-    def EventEdit( self, event ):
-        
-        self.Edit()
-        
-    
-    def EventPaste( self, event ):
-        
-        self.Paste()
-        
-    
 class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, node, referral_url = None, example_data = None ):
@@ -675,8 +646,7 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._formula_description.Disable()
         
-        self._edit_formula = wx.Button( formula_panel, label = 'edit formula' )
-        self._edit_formula.Bind( wx.EVT_BUTTON, self.EventEditFormula )
+        self._edit_formula = ClientGUICommon.BetterButton( formula_panel, 'edit formula', self.EditFormula )
         
         #
         
@@ -688,8 +658,7 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_data.SetMinSize( ( -1, 200 ) )
         
-        self._test_parse = wx.Button( test_panel, label = 'test parse' )
-        self._test_parse.Bind( wx.EVT_BUTTON, self.EventTestParse )
+        self._test_parse = ClientGUICommon.BetterButton( test_panel, 'test parse', self.TestParse )
         
         self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
@@ -844,7 +813,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         self._edit_panel.Layout()
         
     
-    def EventEditFormula( self, event ):
+    def EditFormula( self ):
         
         dlg_title = 'edit html formula'
         
@@ -862,38 +831,6 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
                 
                 self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
                 
-            
-        
-    
-    def EventTestParse( self, event ):
-        
-        node = self.GetValue()
-        
-        try:
-            
-            data = self._example_data.GetValue()
-            referral_url = self._referral_url
-            desired_content = 'all'
-            
-            results = node.Parse( data, referral_url, desired_content )
-            
-            result_lines = [ '*** RESULTS BEGIN ***' ]
-            
-            result_lines.extend( ( ClientParsing.ConvertContentResultToPrettyString( result ) for result in results ) )
-            
-            result_lines.append( '*** RESULTS END ***' )
-            
-            results_text = os.linesep.join( result_lines )
-            
-            self._results.SetValue( results_text )
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            message = 'Could not parse!'
-            
-            wx.MessageBox( message )
             
         
     
@@ -923,6 +860,38 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         node = ClientParsing.ParseNodeContent( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
         
         return node
+        
+    
+    def TestParse( self ):
+        
+        node = self.GetValue()
+        
+        try:
+            
+            data = self._example_data.GetValue()
+            referral_url = self._referral_url
+            desired_content = 'all'
+            
+            results = node.Parse( data, referral_url, desired_content )
+            
+            result_lines = [ '*** RESULTS BEGIN ***' ]
+            
+            result_lines.extend( ( ClientParsing.ConvertContentResultToPrettyString( result ) for result in results ) )
+            
+            result_lines.append( '*** RESULTS END ***' )
+            
+            results_text = os.linesep.join( result_lines )
+            
+            self._results.SetValue( results_text )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            message = 'Could not parse!'
+            
+            wx.MessageBox( message )
+            
         
     
 class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1554,47 +1523,50 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def Add( self ):
         
-        with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select the script type', [ 'file metadata lookup' ] ) as dlg_type:
+        menu = wx.Menu()
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'file lookup script', 'A script that fetches content for a known file.', self, self.AddFileLookupScript )
+        
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
+        
+    
+    def AddFileLookupScript( self ):
+        
+        name = 'new script'
+        url = ''
+        query_type = HC.GET
+        file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
+        file_identifier_encoding = HC.ENCODING_BASE64
+        file_identifier_arg_name = 'md5'
+        static_args = {}
+        children = []
+        
+        dlg_title = 'edit file metadata lookup script'
+        
+        empty_script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
+        
+        panel_class = EditParsingScriptFileLookupPanel
+        
+        self.AddScript( dlg_title, empty_script, panel_class )
+        
+    
+    def AddScript( self, dlg_title, empty_script, panel_class ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg_edit:
             
-            if dlg_type.ShowModal() == wx.ID_OK:
+            panel = panel_class( dlg_edit, empty_script )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.ShowModal() == wx.ID_OK:
                 
-                script_type_string = dlg_type.GetString()
+                new_script = panel.GetValue()
                 
-                if script_type_string == 'file metadata lookup':
-                    
-                    name = 'new script'
-                    url = ''
-                    query_type = HC.GET
-                    file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
-                    file_identifier_encoding = HC.ENCODING_BASE64
-                    file_identifier_arg_name = 'md5'
-                    static_args = {}
-                    children = []
-                    
-                    empty_script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
-                    
-                    dlg_title = 'edit file metadata lookup script'
-                    
-                    panel_class = EditParsingScriptFileLookupPanel
-                    
+                self._SetNonDupeName( new_script )
                 
-                with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg_edit:
-                    
-                    panel = panel_class( dlg_edit, empty_script )
-                    
-                    dlg_edit.SetPanel( panel )
-                    
-                    if dlg_edit.ShowModal() == wx.ID_OK:
-                        
-                        new_script = panel.GetValue()
-                        
-                        self._SetNonDupeName( new_script )
-                        
-                        ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( new_script )
-                        
-                        self._scripts.Append( display_tuple, data_tuple )
-                        
-                    
+                ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( new_script )
+                
+                self._scripts.Append( display_tuple, data_tuple )
                 
             
         
