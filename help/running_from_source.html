@@ -11,17 +11,13 @@
 			<h3>what you will need</h3>
 			<p>You will need to install python 2.7 and a number of python modules. Most of it you can get through pip. I think this will do for most systems:</p>
 			<ul>
-				<li>(sudo) pip install beautifulsoup4 hsaudiotag lxml lz4 mp3play nose numpy pafy Pillow psutil pycrypto PyPDF2 PySocks python-potr PyYAML requests Send2Trash twisted</li>
+				<li>pip install beautifulsoup4 hsaudiotag lxml lz4 nose numpy pafy Pillow psutil pycrypto PyPDF2 PySocks python-potr PyYAML requests Send2Trash twisted</li>
 			</ul>
 			<p>Although you may want to do them one at a time, or in a different order. Your specific system may also need some of them from different sources and will need some complicated things installed separately. The best way to figure it out is just to keep running client.pyw and see what it complains about missing.</p>
-			<p>I use Ubuntu 14.04, which also requires something like:</p>
+			<p>I use Ubuntu 16.10, which also requires something like:</p>
 			<p><ul>
-				<li>sudo apt-get install python2.7-dev</li>
-				<li>sudo apt-get install python-numpy</li>
 				<li>sudo apt-get install python-opencv</li>
-				<li>sudo apt-get install python-wxversion</li>
-				<li>and installing a recent version of wxPython, which is difficult and best done <a href="http://wiki.wxpython.org/CheckInstall">like so</a></li>
-				<li>If you install wxPython as above and you get missing .so errors, try running 'sudo ldconfig'.</li>
+				<li>sudo apt-get install python-wxgtk3.0</li>
 			</ul></p>
 			<p>YMMV. Feel free to email me if you run into trouble or discover any neat tricks.</p>
 			<p>OS X 10.9 is similar, though wx is simpler. I use the cocoa package <a href="http://wxpython.org/download.php#osx">straight from wxPython's site</a>. This should do the rest:</p>
