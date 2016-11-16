@@ -37,6 +37,7 @@ class JobKey( object ):
         self._longer_pause_period = 1000
         self._next_longer_pause = HydrusData.GetNow() + self._longer_pause_period
         
+        self._urls = []
         self._variable_lock = threading.Lock()
         self._variables = dict()
         
@@ -91,6 +92,14 @@ class JobKey( object ):
             
         
     
+    def AddURL( self, url ):
+        
+        with self._variable_lock:
+            
+            self._urls.append( url )
+            
+        
+    
     def Begin( self ): self._begun.set()
     
     def CanBegin( self ):
@@ -110,11 +119,18 @@ class JobKey( object ):
         return True
         
     
-    def Cancel( self ):
+    def Cancel( self, seconds = None ):
         
-        self._cancelled.set()
-        
-        self.Finish()
+        if seconds is None:
+            
+            self._cancelled.set()
+            
+            self.Finish()
+            
+        else:
+            
+            wx.CallAfter( wx.CallLater, seconds * 1000, self.Cancel )
+            
         
     
     def Delete( self, seconds = None ):
@@ -139,7 +155,17 @@ class JobKey( object ):
         time.sleep( 0.00001 )
         
     
-    def Finish( self ): self._done.set()
+    def Finish( self, seconds = None ):
+        
+        if seconds is None:
+            
+            self._done.set()
+            
+        else:
+            
+            wx.CallAfter( wx.CallLater, seconds * 1000, self.Finish )
+            
+        
     
     def GetIfHasVariable( self, name ):
         
@@ -156,7 +182,18 @@ class JobKey( object ):
             
         
     
-    def GetKey( self ): return self._key
+    def GetKey( self ):
+        
+        return self._key
+        
+    
+    def GetURLs( self ):
+        
+        with self._variable_lock:
+            
+            return list( self._urls )
+            
+        
     
     def HasVariable( self, name ):
         

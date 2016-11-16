@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 232</h3></li>
+				<ul>
+					<li>finished png object sharing system, created some gui for it</li>
+					<li>switched the top half of the new png export to wx code, which can render with prettier system fonts</li>
+					<li>you can now 'export' parsing scripts to png from manage parsing scripts for easy sharing</li>
+					<li>you can also 'import' parsing script pngs in the same dialog!</li>
+					<li>the file lookup tag suggestions panel now listens for media update events (so if you browse the media viewer with manage tags open, it'll keep up with the current file)</li>
+					<li>added a 'add all' button to quickly add all tags from file lookup suggested tags panel</li>
+					<li>created a 'script management' control for file lookup suggested tags panel and added some script text status updates for it (progress gauge doesn't do anything yet)</li>
+					<li>added basic 'cancel' support to script management control--mid-http cancel support will come with the gauges</li>
+					<li>added url support to thread notification objects, and hooked script code into it</li>
+					<li>added a url menu button to script management control, so you can launch any parsed urls the script found in your browser</li>
+					<li>html parsing formulas now support positive and negative front and end character culling</li>
+					<li>html parsing formulas now support prepending and appending arbitrary text</li>
+					<li>added some more pretty text to the html formula summary to explain when they do the new culling or adding</li>
+					<li>script 404s and other network errors are now caught neatly and reported</li>
+					<li>link node 404s and other network errors are now reported and recovered from</li>
+					<li>fixed favourite file lookup script selection on initialisation</li>
+					<li>fixed parsing veto test to include membership of search string in result, not just exact match</li>
+					<li>fixed html formula tag attribute fetching</li>
+					<li>updated os x release to python 2.7.10</li>
+					<li>fixed os x about window</li>
+					<li>fixed v231 linux release image rendering crash</li>
+					<li>updated linux release to wx 3.0.2.0</li>
+					<li>updated linux release to opencv 3.1.0</li>
+					<li>fixed rendering for 16-bit-per-channel images</li>
+					<li>fixed a potential out-of-order settagboxfocus event issue on panel initialisation</li>
+					<li>created a 'menubutton' control and switched existing code over</li>
+					<li>created some 'nullipotent panel' dialog code to handle some new stuff</li>
+					<li>misc fixes</li>
+					<li>bunch of misc refactoring</li>
+				</ul>
 				<li><h3>version 231</h3></li>
 				<ul>
 					<li>added file lookup scripts suggested tags control and appropriate options panel</li>

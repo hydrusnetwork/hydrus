@@ -56,6 +56,13 @@ def GenerateNumpyImage( path ):
         
         numpy_image = cv2.imread( path, flags = IMREAD_UNCHANGED )
         
+        if numpy_image.dtype == 'uint16':
+            
+            numpy_image /= 256
+            
+            numpy_image = numpy.array( numpy_image, dtype = 'uint8' )
+            
+        
         if numpy_image is None: # doesn't support static gifs and some random other stuff
             
             pil_image = HydrusImageHandling.GeneratePILImage( path )
@@ -104,6 +111,7 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     
 def GeneratePerceptualHash( path ):
     
+    
     numpy_image = GenerateNumpyImage( path )
     
     ( y, x, depth ) = numpy_image.shape
@@ -118,7 +126,7 @@ def GeneratePerceptualHash( path ):
         
         numpy_image_bgr = numpy_image[ :, :, :3 ]
         
-        numpy_image_gray_bare = cv2.cvtColor( numpy_image_bgr, cv2.COLOR_BGR2GRAY )
+        numpy_image_gray_bare = cv2.cvtColor( numpy_image_bgr, cv2.COLOR_RGB2GRAY )
         
         # create a white greyscale canvas
         
@@ -130,7 +138,7 @@ def GeneratePerceptualHash( path ):
         
     else:
         
-        numpy_image_gray = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2GRAY )
+        numpy_image_gray = cv2.cvtColor( numpy_image, cv2.COLOR_RGB2GRAY )
         
     
     numpy_image_tiny = cv2.resize( numpy_image_gray, ( 32, 32 ), interpolation = cv2.INTER_AREA )

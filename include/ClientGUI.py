@@ -13,7 +13,8 @@ import ClientGUIManagement
 import ClientGUIMenus
 import ClientGUIPages
 import ClientGUIParsing
-import ClientGUIScrolledPanels
+import ClientGUIScrolledPanelsManagement
+import ClientGUIScrolledPanelsReview
 import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
@@ -372,6 +373,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                 
             
+            time.sleep( 5 )
+            
             HydrusData.ShowText( u'Creating admin service\u2026' )
             
             admin_service_key = HydrusData.GenerateKey()
@@ -397,8 +400,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             self._controller.WriteSynchronous( 'update_services', edit_log )
             
-            time.sleep( 2 )
-            
             HydrusData.ShowText( 'Admin service initialised.' )
             
             wx.CallAfter( ClientGUIFrames.ShowKeys, 'access', ( access_key, ) )
@@ -406,6 +407,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             admin_service = self._controller.GetServicesManager().GetService( admin_service_key )
             
             #
+            
+            time.sleep( 5 )
             
             HydrusData.ShowText( u'Creating tag and file services\u2026' )
             
@@ -1372,7 +1375,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
             
-            panel = ClientGUIScrolledPanels.ManageOptionsPanel( dlg )
+            panel = ClientGUIScrolledPanelsManagement.ManageOptionsPanel( dlg )
             
             dlg.SetPanel( panel )
             
@@ -1782,7 +1785,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
         
-        panel = ClientGUIScrolledPanels.ReviewServices( frame, self._controller )
+        panel = ClientGUIScrolledPanelsReview.ReviewServicesPanel( frame, self._controller )
         
         frame.SetPanel( panel )
         

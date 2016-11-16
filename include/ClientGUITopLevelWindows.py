@@ -240,15 +240,20 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         DialogThatResizes.__init__( self, parent, title, frame_key )
         
-        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-        self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
-        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._InitialiseButtons()
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
+        
+    
+    def _GetButtonBox( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _InitialiseButtons( self ):
+        
+        raise NotImplementedError()
         
     
     def EventChildSizeChanged( self, event ):
@@ -299,10 +304,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         self._panel = panel
         
-        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        buttonbox.AddF( self._apply, CC.FLAGS_VCENTER )
-        buttonbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttonbox = self._GetButtonBox()
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -316,11 +318,31 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         self._panel.SetupScrolling()
         
     
-class DialogEdit( DialogThatTakesScrollablePanel ):
+class DialogThatTakesScrollablePanelClose( DialogThatTakesScrollablePanel ):
+    
+    def _GetButtonBox( self ):
+        
+        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttonbox.AddF( self._close, CC.FLAGS_VCENTER )
+        
+        return buttonbox
+        
+    
+    def _InitialiseButtons( self ):
+        
+        self._close = wx.Button( self, id = wx.ID_OK, label = 'close' )
+        self._close.Bind( wx.EVT_BUTTON, self.EventOk )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL )
+        self._cancel.Hide()
+        
+    
+class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
     
     def __init__( self, parent, title ):
         
-        DialogThatTakesScrollablePanel.__init__( self, parent, title, 'regular_dialog' )
+        DialogThatTakesScrollablePanelClose.__init__( self, parent, title, 'regular_dialog' )
         
     
     def EventOk( self, event ):
@@ -330,7 +352,43 @@ class DialogEdit( DialogThatTakesScrollablePanel ):
         self.EndModal( wx.ID_OK )
         
     
-class DialogManage( DialogThatTakesScrollablePanel ):
+class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel ):
+    
+    def _GetButtonBox( self ):
+        
+        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttonbox.AddF( self._apply, CC.FLAGS_VCENTER )
+        buttonbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+        
+        return buttonbox
+        
+    
+    def _InitialiseButtons( self ):
+        
+        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
+        self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
+        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        
+    
+class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
+    
+    def __init__( self, parent, title ):
+        
+        DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title, 'regular_dialog' )
+        
+    
+    def EventOk( self, event ):
+        
+        SaveTLWSizeAndPosition( self, self._frame_key )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
     
     def EventOk( self, event ):
         

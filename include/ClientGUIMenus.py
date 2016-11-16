@@ -7,11 +7,15 @@ menus_to_menu_item_data = collections.defaultdict( set )
 
 def AppendMenu( menu, submenu, label ):
     
+    label.replace( '&', '&&' )
+    
     menu.AppendMenu( CC.ID_NULL, label, submenu )
     
     menus_to_submenus[ menu ].add( submenu )
     
 def AppendMenuItem( menu, label, description, event_handler, callable, *args, **kwargs ):
+    
+    label.replace( '&', '&&' )
     
     menu_item = menu.Append( wx.ID_ANY, label, description )
     

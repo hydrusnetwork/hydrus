@@ -1,5 +1,6 @@
 import os
 
+class CancelledException( Exception ): pass
 class CantRenderWithCVException( Exception ): pass
 class DataMissing( Exception ): pass
 

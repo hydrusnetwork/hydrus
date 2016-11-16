@@ -2,10 +2,13 @@ import ClientConstants as CC
 import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIParsing
 import ClientParsing
 import ClientSearch
+import ClientThreading
 import collections
 import HydrusConstants as HC
+import HydrusData
 import HydrusGlobals
 import HydrusSerialisable
 import wx
@@ -34,6 +37,11 @@ class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
             
             self._activate_callable( tags )
             
+        
+    
+    def ActivateAll( self ):
+        
+        self._activate_callable( self.GetTags() )
         
     '''
     # Maybe reinclude this if per-column autoresizing is desired and not completely buggy
@@ -255,18 +263,21 @@ class RelatedTagsPanel( wx.Panel ):
     
 class FileLookupScriptTagsPanel( wx.Panel ):
     
-    def __init__( self, parent, service_key, media, activate_callable ):
+    def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
         
         wx.Panel.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
+        self._canvas_key = canvas_key
         
         scripts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
         
+        script_names_to_scripts = { script.GetName() : script for script in scripts }
+        
         self._script_choice = ClientGUICommon.BetterChoice( self )
         
-        for script in scripts:
+        for ( name, script ) in script_names_to_scripts.items():
             
             self._script_choice.Append( script.GetName(), script )
             
@@ -275,19 +286,63 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
         
-        self._script_choice.SelectClientData( favourite_file_lookup_script )
+        if favourite_file_lookup_script in script_names_to_scripts:
+            
+            self._script_choice.SelectClientData( script_names_to_scripts[ favourite_file_lookup_script ] )
+            
+        else:
+            
+            self._script_choice.Select( 0 )
+            
         
         fetch_button = ClientGUICommon.BetterButton( self, 'fetch tags', self.FetchTags )
         
+        self._script_management = ClientGUIParsing.ScriptManagementControl( self )
+        
         self._tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = True )
+        
+        self._add_all = ClientGUICommon.BetterButton( self, 'add all', self._tags.ActivateAll )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( self._script_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( fetch_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._add_all, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        self._SetTags( [] )
+        
         self.SetSizer( vbox )
+        
+        if self._canvas_key is not None:
+            
+            HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            
+        
+    
+    def _SetTags( self, tags ):
+        
+        self._tags.SetTags( tags )
+        
+        if len( tags ) == 0:
+            
+            self._add_all.Disable()
+            
+        else:
+            
+            self._add_all.Enable()
+            
+        
+    
+    def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._media = ( new_media_singleton.Duplicate(), )
+            
+            self._SetTags( [] )
+            
         
     
     def FetchTags( self ):
@@ -315,11 +370,24 @@ class FileLookupScriptTagsPanel( wx.Panel ):
             file_identifier = script.ConvertMediaToFileIdentifier( m )
             
         
-        content_results = script.DoQuery( file_identifier, 'all' )
+        stop_time = HydrusData.GetNow() + 30
+        
+        job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+        
+        self._script_management.SetJobKey( job_key )
+        
+        desired_content = 'all'
+        
+        HydrusGlobals.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier, desired_content )
+        
+    
+    def THREADFetchTags( self, script, job_key, file_identifier, desired_content ):
+        
+        content_results = script.DoQuery( job_key, file_identifier, desired_content )
         
         tags = ClientParsing.GetTagsFromContentResults( content_results )
         
-        self._tags.SetTags( tags )
+        wx.CallAfter( self._SetTags, tags )
         
     
 class SuggestedTagsPanel( wx.Panel ):
@@ -369,7 +437,7 @@ class SuggestedTagsPanel( wx.Panel ):
         
         if self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) and len( media ) == 1:
             
-            file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, media, activate_callable )
+            file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, media, activate_callable, canvas_key = self._canvas_key )
             
             panels.append( ( 'file lookup scripts', file_lookup_script_tags ) )
             

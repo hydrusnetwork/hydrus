@@ -7,7 +7,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIHoverFrames
-import ClientGUIScrolledPanels
+import ClientGUIScrolledPanelsManagement
 import ClientGUITopLevelWindows
 import ClientMedia
 import ClientRatings
@@ -26,7 +26,6 @@ import time
 import traceback
 import urllib
 import wx
-import wx.media
 import ClientRendering
 import HydrusData
 import HydrusGlobals
@@ -1189,7 +1188,7 @@ class Canvas( wx.Window ):
             
             manage_tags = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
             
-            panel = ClientGUIScrolledPanels.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_display_media, ), immediate_commit = True, canvas_key = self._canvas_key )
+            panel = ClientGUIScrolledPanelsManagement.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_display_media, ), immediate_commit = True, canvas_key = self._canvas_key )
             
             manage_tags.SetPanel( panel )
             

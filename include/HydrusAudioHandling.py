@@ -9,7 +9,7 @@ import threading
 import time
 import traceback
 
-if HC.PLATFORM_WINDOWS: import mp3play
+#if HC.PLATFORM_WINDOWS: import mp3play
 
 parsed_noises = {}
 
@@ -60,7 +60,8 @@ def GetWMADuration( path ):
     length_in_ms = int( length_in_seconds * 1000 )
     
     return length_in_ms
-    
+
+'''
 def PlayNoise( name ):
     
     if HC.PLATFORM_OSX: return
@@ -80,4 +81,4 @@ def PlayNoise( name ):
     noise = parsed_noises[ name ]
     
     noise.play()
-    
+    '''

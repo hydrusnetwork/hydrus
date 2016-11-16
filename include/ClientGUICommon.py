@@ -3,6 +3,7 @@ import HydrusConstants as HC
 import ClientCaches
 import ClientData
 import ClientConstants as CC
+import ClientGUIMenus
 import ClientRatings
 import itertools
 import os
@@ -3177,6 +3178,27 @@ class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         indices.reverse() # so we don't screw with the indices of deletees below
         
         for index in indices: self.DeleteItem( index )
+        
+    
+class MenuButton( BetterButton ):
+    
+    def __init__( self, parent, label, menu_items ):
+        
+        BetterButton.__init__( self, parent, label, self.DoMenu )
+        
+        self._menu_items = menu_items
+        
+    
+    def DoMenu( self ):
+        
+        menu = wx.Menu()
+        
+        for ( title, description, callable ) in self._menu_items:
+            
+            ClientGUIMenus.AppendMenuItem( menu, title, description, self, callable )
+            
+        
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
 class NoneableSpinCtrl( wx.Panel ):

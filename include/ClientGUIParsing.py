@@ -3,16 +3,23 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMenus
 import ClientGUIScrolledPanels
+import ClientGUISerialisable
 import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientParsing
+import ClientSerialisable
+import ClientThreading
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals
 import HydrusSerialisable
 import HydrusTags
 import os
+import threading
+import webbrowser
 import wx
+
+ID_TIMER_SCRIPT_UPDATE = wx.NewId()
 
 class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -91,6 +98,12 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_rule = wx.TextCtrl( edit_panel )
         
+        self._cull_front = wx.SpinCtrl( edit_panel, min = -65535, max = 65535 )
+        self._cull_back = wx.SpinCtrl( edit_panel, min = -65535, max = 65535 )
+        
+        self._prepend = wx.TextCtrl( edit_panel )
+        self._append = wx.TextCtrl( edit_panel )
+        
         #
         
         test_panel = wx.Panel( notebook )
@@ -123,7 +136,13 @@ So, to find the 'src' of the first <img> tag beneath all <span> tags with the cl
 1st img tag'
 attribute: src'
 
-Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p>).'''
+Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p>).
+
+Note that you can set _negative_ numbers for the 'remove characters' parts, which will remove all but that many of the opposite end's characters. For instance:
+
+remove 2 from the beginning of 'abcdef' gives 'cdef'
+
+remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         info_st = wx.StaticText( info_panel, label = message )
         
@@ -131,7 +150,7 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
         
         #
         
-        ( tag_rules, content_rule ) = formula.ToTuple()
+        ( tag_rules, content_rule, culling_and_adding ) = formula.ToTuple()
         
         for rule in tag_rules:
             
@@ -169,13 +188,21 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
         ae_button_hbox.AddF( self._add_rule, CC.FLAGS_VCENTER )
         ae_button_hbox.AddF( self._edit_rule, CC.FLAGS_VCENTER )
         
+        rows = []
         
+        rows.append( ( 'attribute to fetch: ', self._content_rule ) )
+        rows.append( ( 'remove this number of characters from the beginning: ', self._cull_front ) )
+        rows.append( ( 'remove this number of characters from the end: ', self._cull_back ) )
+        rows.append( ( 'prepend this: ', self._prepend ) )
+        rows.append( ( 'append this: ', self._append ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( ClientGUICommon.WrapInText( self._content_rule, edit_panel, 'attribute to fetch: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         edit_panel.SetSizer( vbox )
         
@@ -296,7 +323,9 @@ Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p
             content_rule = None
             
         
-        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule )
+        culling_and_adding = ( self._cull_front.GetValue(), self._cull_back.GetValue(), self._prepend.GetValue(), self._append.GetValue() )
+        
+        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule, culling_and_adding )
         
         return formula
         
@@ -368,7 +397,12 @@ class EditNodes( wx.Panel ):
         
         self._nodes = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'name', 120 ), ( 'node type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
         
-        self._add_button = ClientGUICommon.BetterButton( self, 'add', self.Add )
+        menu_items = []
+        
+        menu_items.append( ( 'content node', 'A node that parses the given data for content.', self.AddContentNode ) )
+        menu_items.append( ( 'link node', 'A node that parses the given data for a link, which it then pursues.', self.AddLinkNode ) )
+        
+        self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items )
         
         self._copy_button = ClientGUICommon.BetterButton( self, 'copy', self.Copy )
         
@@ -413,16 +447,6 @@ class EditNodes( wx.Panel ):
         ( name, node_type, produces ) = node.ToPrettyStrings()
         
         return ( ( name, node_type, produces ), ( node, node_type, produces ) )
-        
-    
-    def Add( self ):
-        
-        menu = wx.Menu()
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'content node', 'A node that parses the given data for content.', self, self.AddContentNode )
-        ClientGUIMenus.AppendMenuItem( menu, 'link node', 'A node that parses the given data for a link, which it then pursues.', self, self.AddLinkNode )
-        
-        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
     def AddContentNode( self ):
@@ -868,11 +892,15 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         try:
             
+            stop_time = HydrusData.GetNow() + 30
+            
+            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+            
             data = self._example_data.GetValue()
             referral_url = self._referral_url
             desired_content = 'all'
             
-            results = node.Parse( data, referral_url, desired_content )
+            results = node.Parse( job_key, data, referral_url, desired_content )
             
             result_lines = [ '*** RESULTS BEGIN ***' ]
             
@@ -934,8 +962,7 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._formula_description.Disable()
         
-        self._edit_formula = wx.Button( formula_panel, label = 'edit formula' )
-        self._edit_formula.Bind( wx.EVT_BUTTON, self.EventEditFormula )
+        self._edit_formula = ClientGUICommon.BetterButton( formula_panel, 'edit formula', self.EditFormula )
         
         children_panel = ClientGUICommon.StaticBox( edit_panel, 'content parsing children' )
         
@@ -1043,7 +1070,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         
     
-    def EventEditFormula( self, event ):
+    def EditFormula( self ):
         
         dlg_title = 'edit html formula'
         
@@ -1088,11 +1115,15 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         try:
             
+            stop_time = HydrusData.GetNow() + 30
+            
+            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+            
             data = self._example_data.GetValue()
             referral_url = self._referral_url
             desired_content = 'all'
             
-            parsed_urls = node.ParseURLs( data, referral_url )
+            parsed_urls = node.ParseURLs( job_key, data, referral_url )
             
             if len( parsed_urls ) > 0:
                 
@@ -1362,7 +1393,11 @@ And pass that html to a number of 'parsing children' that will each look through
         
         try:
             
-            example_data = script.FetchData( file_identifier )
+            stop_time = HydrusData.GetNow() + 30
+            
+            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+            
+            example_data = script.FetchData( job_key, file_identifier )
             
             self._example_data.SetValue( example_data )
             
@@ -1384,10 +1419,14 @@ And pass that html to a number of 'parsing children' that will each look through
         
         try:
             
+            stop_time = HydrusData.GetNow() + 30
+            
+            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+            
             data = self._example_data.GetValue()
             desired_content = 'all'
             
-            results = script.Parse( data, desired_content )
+            results = script.Parse( job_key, data, desired_content )
             
             result_lines = [ '*** RESULTS BEGIN ***' ]
             
@@ -1443,23 +1482,31 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._scripts = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'name', 140 ), ( 'query type', 80 ), ( 'script type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
         
-        self._add_button = wx.Button( self, label = 'add' )
-        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        menu_items = []
         
-        self._copy_button = wx.Button( self, label = 'copy' )
-        self._copy_button.Bind( wx.EVT_BUTTON, self.EventCopy )
+        menu_items.append( ( 'file lookup script', 'A script that fetches content for a known file.', self.AddFileLookupScript ) )
         
-        self._paste_button = wx.Button( self, label = 'paste' )
-        self._paste_button.Bind( wx.EVT_BUTTON, self.EventPaste )
+        self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items )
         
-        self._duplicate_button = wx.Button( self, label = 'duplicate' )
-        self._duplicate_button.Bind( wx.EVT_BUTTON, self.EventDuplicate )
+        menu_items = []
         
-        self._edit_button = wx.Button( self, label = 'edit' )
-        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        menu_items.append( ( 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
+        menu_items.append( ( 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
         
-        self._delete_button = wx.Button( self, label = 'delete' )
-        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        self._export_button = ClientGUICommon.MenuButton( self, 'export', menu_items )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
+        menu_items.append( ( 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
+        
+        self._paste_button = ClientGUICommon.MenuButton( self, 'import', menu_items )
+        
+        self._duplicate_button = ClientGUICommon.BetterButton( self, 'duplicate', self.Duplicate )
+        
+        self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self.Edit )
+        
+        self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self.Delete )
         
         #
         
@@ -1479,7 +1526,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         button_hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._copy_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._export_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._paste_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._duplicate_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
@@ -1519,15 +1566,6 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             script.SetName( name )
             
-        
-    
-    def Add( self ):
-        
-        menu = wx.Menu()
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'file lookup script', 'A script that fetches content for a known file.', self, self.AddFileLookupScript )
-        
-        HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
     def AddFileLookupScript( self ):
@@ -1601,18 +1639,6 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def Copy( self ):
-        
-        for i in self._scripts.GetAllSelected():
-            
-            ( script, query_type, script_type, produces ) = self._scripts.GetClientData( i )
-            
-            script_json = script.DumpToString()
-            
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', script_json )
-            
-        
-    
     def Delete( self ):
         
         self._scripts.RemoveAllSelected()
@@ -1682,7 +1708,36 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def Paste( self ):
+    def ExportToClipboard( self ):
+        
+        for i in self._scripts.GetAllSelected():
+            
+            ( script, query_type, script_type, produces ) = self._scripts.GetClientData( i )
+            
+            script_json = script.DumpToString()
+            
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', script_json )
+            
+        
+    
+    def ExportToPng( self ):
+        
+        for i in self._scripts.GetAllSelected():
+            
+            ( script, query_type, script_type, produces ) = self._scripts.GetClientData( i )
+            
+            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export script to png' ) as dlg:
+                
+                panel = ClientGUISerialisable.PngExportPanel( dlg, script )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
+            
+        
+    
+    def ImportFromClipboard( self ):
         
         if wx.TheClipboard.Open():
             
@@ -1708,6 +1763,10 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     self._scripts.Append( display_tuple, data_tuple )
                     
+                else:
+                    
+                    wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
+                    
                 
             except Exception as e:
                 
@@ -1720,33 +1779,244 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def EventAdd( self, event ):
+    def ImportFromPng( self ):
         
-        self.Add()
+        with wx.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                try:
+                    
+                    payload = ClientSerialisable.LoadFromPng( path )
+                    
+                except Exception as e:
+                    
+                    wx.MessageBox( str( e ) )
+                    
+                    return
+                    
+                
+                try:
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                    
+                    if isinstance( obj, ClientParsing.ParseRootFileLookup ):
+                        
+                        script = obj
+                        
+                        self._SetNonDupeName( script )
+                        
+                        ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( script )
+                        
+                        self._scripts.Append( display_tuple, data_tuple )
+                        
+                    else:
+                        
+                        wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
+                        
+                    
+                except:
+                    
+                    wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                    
+                
+            
         
     
-    def EventCopy( self, event ):
+    
+class ScriptManagementControl( wx.Panel ):
+    
+    def __init__( self, parent ):
         
-        self.Copy()
+        wx.Panel.__init__( self, parent )
+        
+        self._job_key = None
+        
+        self._lock = threading.Lock()
+        
+        self._recent_urls = []
+        
+        main_panel = ClientGUICommon.StaticBox( self, 'script control' )
+        
+        self._status = wx.StaticText( main_panel )
+        self._gauge = ClientGUICommon.Gauge( main_panel )
+        
+        self._link_button = wx.BitmapButton( main_panel, bitmap = CC.GlobalBMPs.link )
+        self._link_button.Bind( wx.EVT_BUTTON, self.EventLinkButton )
+        self._link_button.SetToolTipString( 'urls found by the script' )
+        
+        self._cancel_button = wx.BitmapButton( main_panel, bitmap = CC.GlobalBMPs.stop )
+        self._cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelButton )
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_SCRIPT_UPDATE )
+        
+        self._update_timer = wx.Timer( self, id = ID_TIMER_SCRIPT_UPDATE )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._link_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
+        
+        main_panel.AddF( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        main_panel.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( main_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._Reset()
         
     
-    def EventDelete( self, event ):
+    def _Reset( self ):
         
-        self.Delete()
+        self._status.SetLabelText( '' )
+        self._gauge.SetRange( 1 )
+        self._gauge.SetValue( 0 )
         
-    
-    def EventDuplicate( self, event ):
-        
-        self.Duplicate()
-        
-    
-    def EventEdit( self, event ):
-        
-        self.Edit()
+        self._link_button.Disable()
+        self._cancel_button.Disable()
         
     
-    def EventPaste( self, event ):
+    def _Update( self ):
         
-        self.Paste()
+        if self._job_key is None:
+            
+            self._Reset()
+            
+        else:
+            
+            if self._job_key.HasVariable( 'script_status' ):
+                
+                status = self._job_key.GetIfHasVariable( 'script_status' )
+                
+            else:
+                
+                status = ''
+                
+            
+            if status != self._status.GetLabelText():
+                
+                self._status.SetLabelText( status )
+                
+            
+            if self._job_key.HasVariable( 'script_gauge' ):
+                
+                ( value, range ) = self._job_key.GetIfHasVariable( 'script_gauge' )
+                
+            else:
+                
+                ( value, range ) = ( 0, 1 )
+                
+            
+            if value is None or range is None:
+                
+                self._gauge.Pulse()
+                
+            else:
+                
+                self._gauge.SetRange( range )
+                self._gauge.SetValue( value )
+                
+            
+            urls = self._job_key.GetURLs()
+            
+            if len( urls ) == 0:
+                
+                if self._link_button.IsEnabled():
+                    
+                    self._link_button.Disable()
+                    
+                
+            else:
+                
+                if not self._link_button.IsEnabled():
+                    
+                    self._link_button.Enable()
+                    
+                
+            
+            if self._job_key.IsDone():
+                
+                if self._cancel_button.IsEnabled():
+                    
+                    self._cancel_button.Disable()
+                    
+                
+            else:
+                
+                if not self._cancel_button.IsEnabled():
+                    
+                    self._cancel_button.Enable()
+                    
+                
+            
+        
+    
+    def TIMEREventUpdate( self, event ):
+        
+        with self._lock:
+            
+            self._Update()
+            
+            if self._job_key is not None:
+                
+                self._update_timer.Start( 100, wx.TIMER_ONE_SHOT )
+                
+            
+        
+    
+    def EventCancelButton( self, event ):
+        
+        with self._lock:
+            
+            if self._job_key is not None:
+                
+                self._job_key.Cancel()
+                
+            
+        
+    
+    def EventLinkButton( self, event ):
+        
+        with self._lock:
+            
+            if self._job_key is None:
+                
+                return
+                
+            
+            urls = self._job_key.GetURLs()
+            
+        
+        menu = wx.Menu()
+        
+        for url in urls:
+            
+            ClientGUIMenus.AppendMenuItem( menu, url, 'launch this url in your browser', self, webbrowser.open, url )
+            
+        
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
+        
+        
+    
+    def SetJobKey( self, job_key ):
+        
+        with self._lock:
+            
+            self._job_key = job_key
+            
+        
+        self._update_timer.Start( 100, wx.TIMER_ONE_SHOT )
         
     

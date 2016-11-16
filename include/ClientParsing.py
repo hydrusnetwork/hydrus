@@ -7,6 +7,7 @@ import HydrusGlobals
 import HydrusSerialisable
 import HydrusTags
 import os
+import time
 import urlparse
 
 def ChildHasDesiredContent( child, desired_content ):
@@ -65,7 +66,7 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
         return ', '.join( pretty_strings )
         
     
-def GetChildrenContent( children, data, referral_url, desired_content ):
+def GetChildrenContent( job_key, children, data, referral_url, desired_content ):
     
     for child in children:
         
@@ -81,7 +82,7 @@ def GetChildrenContent( children, data, referral_url, desired_content ):
         
         if ChildHasDesiredContent( child, desired_content ):
             
-            child_content = child.Parse( data, referral_url, desired_content )
+            child_content = child.Parse( job_key, data, referral_url, desired_content )
             
             content.extend( child_content )
             
@@ -155,30 +156,73 @@ def RenderTagRule( ( name, attrs, index ) ):
 class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, tag_rules = None, content_rule = None ):
+    def __init__( self, tag_rules = None, content_rule = None, culling_and_adding = None ):
         
         if tag_rules is None:
             
             tag_rules = [ ( 'a', {}, None ) ]
             
         
+        if culling_and_adding is None:
+            
+            culling_and_adding = ( 0, 0, '', '' )
+            
+        
         self._tag_rules = tag_rules
         
         self._content_rule = content_rule
         
-        # I need extra rules here for chopping stuff off the beginning or end and appending or prepending strings
+        self._culling_and_adding = culling_and_adding
+        
+    
+    def _CullAndAdd( self, text ):
+        
+        ( cull_front, cull_back, prepend, append ) = self._culling_and_adding
+        
+        if cull_front != 0:
+            
+            text = text[ cull_front : ]
+            
+        
+        if cull_back != 0:
+            
+            text = text[ : - cull_back ]
+            
+        
+        if text == '':
+            
+            return None
+            
+        
+        text = prepend + text + append
+        
+        return text
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._tag_rules, self._content_rule )
+        return ( self._tag_rules, self._content_rule, self._culling_and_adding )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._tag_rules, self._content_rule ) = serialisable_info
+        ( self._tag_rules, self._content_rule, self._culling_and_adding ) = serialisable_info
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( tag_rules, content_rule ) = old_serialisable_info
+            
+            culling_and_adding = ( 0, 0, '', '' )
+            
+            new_serialisable_info = ( tag_rules, content_rule, culling_and_adding )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def _ParseContent( self, root ):
@@ -191,7 +235,7 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             
             if root.has_attr( self._content_rule ):
                 
-                result = root[ self._content_rule ]
+                result = root[ self._content_rule ][0]
                 
             else:
                 
@@ -199,13 +243,13 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        if result == '':
+        if result == '' or result is None:
             
             return None
             
         else:
             
-            return result
+            return self._CullAndAdd( result )
             
         
     
@@ -291,6 +335,50 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             pretty_strings.append( 'get the ' + self._content_rule + ' attribute of those tags' )
             
         
+        cull_munge_strings = []
+        
+        ( cull_front, cull_back, prepend, append ) = self._culling_and_adding
+        
+        if cull_front > 0:
+            
+            cull_munge_strings.append( 'the first ' + HydrusData.ConvertIntToPrettyString( cull_front ) + ' characters' )
+            
+        elif cull_front < 0:
+            
+            cull_munge_strings.append( 'all but the last ' + HydrusData.ConvertIntToPrettyString( abs( cull_front ) ) + ' characters' )
+            
+        
+        if cull_back > 0:
+            
+            cull_munge_strings.append( 'the last ' + HydrusData.ConvertIntToPrettyString( cull_back ) + ' characters' )
+            
+        elif cull_back < 0:
+            
+            cull_munge_strings.append( 'all but the first ' + HydrusData.ConvertIntToPrettyString( abs( cull_back ) ) + ' characters' )
+            
+        
+        if len( cull_munge_strings ) > 0:
+            
+            pretty_strings.append( 'remove ' + ' and '.join( cull_munge_strings ) )
+            
+        
+        add_munge_strings = []
+        
+        if prepend != '':
+            
+            add_munge_strings.append( 'prepend "' + prepend + '"' )
+            
+        
+        if append != '':
+            
+            add_munge_strings.append( 'append "' + append + '"' )
+            
+        
+        if len( add_munge_strings ) > 0:
+            
+            pretty_strings.append( ' and '.join( add_munge_strings ) )
+            
+        
         separator = os.linesep + 'and then '
         
         pretty_multiline_string = separator.join( pretty_strings )
@@ -300,7 +388,7 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._tag_rules, self._content_rule )
+        return ( self._tag_rules, self._content_rule, self._culling_and_adding )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML ] = ParseFormulaHTML
@@ -365,7 +453,7 @@ class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
         return { ( self._name, self._content_type, self._additional_info ) }
         
     
-    def Parse( self, data, referral_url, desired_content ):
+    def Parse( self, job_key, data, referral_url, desired_content ):
         
         content_description = ( self._name, self._content_type, self._additional_info )
         
@@ -466,33 +554,66 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         return children_parsable_content
         
     
-    def Parse( self, data, referral_url, desired_content ):
+    def Parse( self, job_key, data, referral_url, desired_content ):
         
-        search_urls = self.ParseURLs( data, referral_url )
+        search_urls = self.ParseURLs( job_key, data, referral_url )
         
         content = []
         
         for search_url in search_urls:
             
-            headers = { 'Referer' : referral_url }
-            
-            response = ClientNetworking.RequestsGet( search_url, headers = headers )
+            try:
+                
+                job_key.SetVariable( 'script_status', 'fetching ' + search_url )
+                
+                headers = { 'Referer' : referral_url }
+                
+                response = ClientNetworking.RequestsGet( search_url, headers = headers )
+                
+            except HydrusExceptions.NotFoundException:
+                
+                job_key.SetVariable( 'script_status', '404 - nothing found' )
+                
+                time.sleep( 2 )
+                
+                continue
+                
+            except HydrusExceptions.NetworkException as e:
+                
+                job_key.SetVariable( 'script_status', 'Network error! Details written to log.' )
+                
+                HydrusData.PrintException( e )
+                
+                time.sleep( 2 )
+                
+                continue
+                
             
             linked_data = response.content
             
-            children_content = GetChildrenContent( self._children, linked_data, search_url, desired_content )
+            children_content = GetChildrenContent( job_key, self._children, linked_data, search_url, desired_content )
             
             content.extend( children_content )
+            
+            if job_key.IsCancelled():
+                
+                raise HydrusExceptions.CancelledException()
+                
             
         
         return content
         
     
-    def ParseURLs( self, data, referral_url ):
+    def ParseURLs( self, job_key, data, referral_url ):
         
         basic_urls = self._formula.Parse( data )
         
         absolute_urls = [ urlparse.urljoin( referral_url, basic_url ) for basic_url in basic_urls ]
+        
+        for url in absolute_urls:
+            
+            job_key.AddURL( url )
+            
         
         return absolute_urls
         
@@ -620,7 +741,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def FetchData( self, file_identifier ):
+    def FetchData( self, job_key, file_identifier ):
+        
+        # add gauge report hook and cancel support here
         
         request_args = dict( self._static_args )
         
@@ -636,11 +759,19 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 raise Exception( 'Cannot have a file as an argument on a GET query!' )
                 
             
+            rendered_url = self._url + '?' + '&'.join( ( HydrusData.ToByteString( key ) + '=' + HydrusData.ToByteString( value ) for ( key, value ) in request_args.items() ) )
+            
+            job_key.SetVariable( 'script_status', 'fetching ' + rendered_url )
+            
+            job_key.AddURL( rendered_url )
+            
             response = ClientNetworking.RequestsGet( self._url, params = request_args )
             
         elif self._query_type == HC.POST:
             
             if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+                
+                job_key.SetVariable( 'script_status', 'uploading file' )
                 
                 path  = file_identifier
                 
@@ -648,10 +779,17 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 
             else:
                 
+                job_key.SetVariable( 'script_status', 'uploading identifier' )
+                
                 files = None
                 
             
             response = ClientNetworking.RequestsPost( self._url, data = request_args, files = files )
+            
+        
+        if job_key.IsCancelled():
+            
+            raise HydrusExceptions.CancelledException()
             
         
         data = response.content
@@ -671,13 +809,52 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return children_parsable_content
         
     
-    def DoQuery( self, file_identifier, desired_content ):
+    def DoQuery( self, job_key, file_identifier, desired_content ):
         
-        # this should eventually take a job_key that will be propagated down and will have obeyed cancel and so on
-        
-        data = self.FetchData( file_identifier )
-        
-        return self.Parse( data, desired_content )
+        try:
+            
+            try:
+                
+                data = self.FetchData( job_key, file_identifier )
+                
+            except HydrusExceptions.NotFoundException:
+                
+                job_key.SetVariable( 'script_status', '404 - nothing found' )
+                
+                return []
+                
+            except HydrusExceptions.NetworkException as e:
+                
+                job_key.SetVariable( 'script_status', 'Network error!' )
+                
+                HydrusData.ShowException( e )
+                
+                return []
+                
+            
+            content_results = self.Parse( job_key, data, desired_content )
+            
+            if len( content_results ) == 0:
+                
+                job_key.SetVariable( 'script_status', 'Did not find anything.' )
+                
+            else:
+                
+                job_key.SetVariable( 'script_status', 'Found ' + HydrusData.ConvertIntToPrettyString( len( content_results ) ) + ' rows.' )
+                
+            
+            return content_results
+            
+        except HydrusExceptions.CancelledException:
+            
+            job_key.SetVariable( 'script_status', 'Cancelled!' )
+            
+            return []
+            
+        finally:
+            
+            job_key.Finish()
+            
         
     
     def UsesUserInput( self ):
@@ -685,9 +862,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return self._file_identifier_type == FILE_IDENTIFIER_TYPE_USER_INPUT
         
     
-    def Parse( self, data, desired_content ):
+    def Parse( self, job_key, data, desired_content ):
         
-        content = GetChildrenContent( self._children, data, self._url, desired_content )
+        content = GetChildrenContent( job_key, self._children, data, self._url, desired_content )
         
         return content
         

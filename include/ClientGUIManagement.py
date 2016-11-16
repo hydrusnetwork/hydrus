@@ -15,7 +15,7 @@ import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMedia
-import ClientGUIScrolledPanels
+import ClientGUIScrolledPanelsEdit
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
@@ -1844,7 +1844,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
@@ -1992,7 +1992,7 @@ class ManagementPanelHDDImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
@@ -2369,7 +2369,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
@@ -3170,7 +3170,7 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
@@ -3448,7 +3448,7 @@ class ManagementPanelURLsImport( ManagementPanel ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIScrolledPanels.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
         
         frame.SetPanel( panel )
         
