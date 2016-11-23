@@ -570,9 +570,15 @@ class Controller( HydrusController.HydrusController ):
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            if hashlib.sha256( dlg.GetValue() ).digest() == self._options[ 'password' ]: break
+                            # this can produce unicode with cyrillic or w/e keyboards, which hashlib can't handle
+                            password = HydrusData.ToByteString( dlg.GetValue() )
                             
-                        else: raise HydrusExceptions.PermissionException( 'Bad password check' )
+                            if hashlib.sha256( password ).digest() == self._options[ 'password' ]: break
+                            
+                        else:
+                            
+                            raise HydrusExceptions.PermissionException( 'Bad password check' )
+                            
                         
                     
                 
@@ -646,19 +652,22 @@ class Controller( HydrusController.HydrusController ):
     
     def MaintainDB( self, stop_time = None ):
         
-        if stop_time is None:
-            
-            if not self.CurrentlyVeryIdle():
-                
-                stop_time = HydrusData.GetNow() + 10
-                
-            
-        
         disk_cache_maintenance_mb = self._new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
         
         if disk_cache_maintenance_mb is not None:
             
-            loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
+            self.pub( 'splash_set_status_text', 'preparing disk cache for maintenance' )
+            
+            if self.CurrentlyVeryIdle():
+                
+                disk_cache_stop_time = HydrusData.GetNow() + 20
+                
+            else:
+                
+                disk_cache_stop_time = HydrusData.GetNow() + 6
+                
+            
+            loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
             
         
         self.WriteInterruptable( 'vacuum', stop_time = stop_time )

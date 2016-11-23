@@ -1516,6 +1516,161 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'DELETE FROM ' + ac_cache_table_name + ' WHERE namespace_id = ? AND tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( namespace_id, tag_id, 0, 0 ) for ( namespace_id, tag_id, current_delta, pending_delta ) in count_ids ) )
         
     
+    def _CacheSimilarFilesDropPHashes( self ):
+        
+        # drop the two tables
+        
+        pass
+        
+    
+    def _CacheSimilarFilesDropVPTree( self ):
+        
+        # drop the three tables
+        
+        pass
+        
+    
+    def _CacheSimilarFilesGeneratePHashes( self ):
+        
+        # one phash can go to many files
+        # when I add animations, one file can go to many phashes
+        
+        # so I need two tables:
+        
+        # phash_id idx | phash
+        # phash_id | hash_id (joint index, with hash_id non-unique lookup as well)
+        
+        # generating all the phashes is too big a job here, so I probably need a progress table that will generate them during maintenance time
+        # should be a nice way to say how far along it is getting on this
+        
+        # fudge this all on db update, but do it clean on init of a fresh db
+        
+        pass
+        
+    
+    def _CacheSimilarFilesGenerateVPTree( self ):
+        
+        # the main table
+        # a way to hold the root node, prob just a tiny table
+        # a table with nodes that need rebalancing
+        
+        # then fill the main table, but don't do it one by one
+        # check ClientVPTree for info on selecting median node for sample of nodes to pick good radii
+        
+        # then select all phash_id | phash pairs
+        # construct a clientvptree or a simpler object here
+        # write that to the db straight with branch counts
+        
+        pass
+        
+    
+    def _CacheSimilarFilesInsert( self, hash_id, phash ):
+        
+        # walk down the tree and insert it
+        # update all the left and right counts as you go back up
+        # if a left/right count is out of whack in either direction, say more than two thirds on one side, schedule that node for rebalancing
+        # check the left and right counts and rebalance things
+        
+        pass
+        
+    
+    def _CacheSimilarFilesMaintain( self, job_key ):
+        
+        # rebalance the vptree based on the rebalance table
+        
+        # populate the phash table
+        
+        # broadcast to job_key on how you are doing, for the maintenance popup
+        
+        pass
+        
+    
+    def _CacheSimilarFilesNeedsMaintenance( self ):
+        
+        # if branches need rebalancing or phashes need generating, say yes
+        
+        pass
+        
+    
+    def _CacheSimilarFilesSearch( self, hash_id, max_hamming_distance ):
+        
+        search_radius = max_hamming_distance
+        
+        result = 'blah' # self._c.execute( select root node ).fetchone()
+        
+        if result is None:
+            
+            return []
+            
+        
+        search_phashes = 'blah' # fetch search phashes for hash_id
+        
+        if len( search_phashes ) == 0:
+            
+            return []
+            
+        
+        ( root_node_phash_id, ) = result
+        
+        potentials = [ ( root_node_phash_id, tuple( search_phashes ) ) ]
+        similar = set()
+        
+        while len( potentials ) > 0:
+            
+            ( node_phash_id, search_phashes ) = potentials.pop()
+            
+            ( node_phash, node_radius, inner_phash_id, outer_phash_id ) = ( 'blah', 5, 1, 2 ) # sql here
+            
+            inner_search_phashes = []
+            outer_search_phashes = []
+            
+            for search_phash in search_phashes:
+                
+                node_hamming_distance = HydrusData.GetHammingDistance( search_phash, node_phash )
+                
+                if node_hamming_distance <= search_radius:
+                    
+                    similar.add( node_phash_id )
+                    
+                
+                # we now have two spheres, separated by node_hamming_distance
+                # we want to search inside and/or outside the node_sphere if the search_sphere intersects with those spaces
+                # there are four possibles:
+                # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
+                # (----N---(-)-S--)      intersects with both
+                # (----N-(--S-)-)        intersects with both
+                # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
+                
+                spheres_disjoint = node_hamming_distance > node_radius + search_radius
+                search_sphere_subset_of_node_sphere = node_hamming_distance + search_radius <= node_radius
+                
+                if not spheres_disjoint: # i.e. they intersect at some point
+                    
+                    inner_search_phashes.append( search_phash )
+                    
+                
+                if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
+                    
+                    outer_search_phashes.append( search_phash )
+                    
+                
+            
+            if len( inner_search_phashes ) > 0:
+                
+                potentials.append( ( inner_phash_id, tuple( inner_search_phashes ) ) )
+                
+            
+            if len( outer_search_phashes ) > 0:
+                
+                potentials.append( ( outer_phash_id, tuple( outer_search_phashes ) ) )
+                
+            
+        
+        similar_hash_ids = 'blah' # fetch from the phash_id->hash_id table
+        
+        return similar
+        
+    
     def _CacheSpecificMappingsAddFiles( self, file_service_id, tag_service_id, hash_ids ):
         
         ( files_table_name, current_mappings_table_name, pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
@@ -5362,11 +5517,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _LoadIntoDiskCache( self, stop_time = None, caller_limit = None ):
         
-        if stop_time is None:
-            
-            stop_time = HydrusData.GetNow() + 5
-            
-        
         self._CloseDBCursor()
         
         try:
@@ -5377,7 +5527,7 @@ class DB( HydrusDB.HydrusDB ):
             
         except psutil.Error:
             
-            disk_cache_limit = 1024 * 1024 * 1024
+            disk_cache_limit = 512 * 1024 * 1024
             
         
         so_far_read = 0
@@ -6574,7 +6724,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SetPassword( self, password ):
         
-        if password is not None: password = hashlib.sha256( password ).digest()
+        if password is not None:
+            
+            # to convert from unusual unicode types
+            password_bytes = HydrusData.ToByteString( password )
+            
+            password = hashlib.sha256( password_bytes ).digest()
+            
         
         options = self._controller.GetOptions()
         

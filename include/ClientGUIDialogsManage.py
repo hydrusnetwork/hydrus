@@ -3492,16 +3492,16 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 rating_state = control.GetRatingState()
                 
-                if rating_state != original_rating_state:
+                if rating_state == ClientRatings.NULL:
                     
-                    if rating_state == ClientRatings.NULL:
-                        
-                        rating = None
-                        
-                    else:
-                        
-                        rating = control.GetRating()
-                        
+                    rating = None
+                    
+                else:
+                    
+                    rating = control.GetRating()
+                    
+                
+                if rating != original_rating:
                     
                     content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
                     
@@ -3511,7 +3511,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             return service_keys_to_content_updates
             
-        #
+        
     
 class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
     

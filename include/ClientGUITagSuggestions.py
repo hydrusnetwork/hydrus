@@ -41,7 +41,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
     
     def ActivateAll( self ):
         
-        self._activate_callable( self.GetTags() )
+        self._activate_callable( self.GetTags(), only_add = True )
         
     '''
     # Maybe reinclude this if per-column autoresizing is desired and not completely buggy

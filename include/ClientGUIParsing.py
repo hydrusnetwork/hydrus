@@ -166,6 +166,13 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         self._content_rule.SetValue( content_rule )
         
+        ( cull_front, cull_back, prepend, append ) = culling_and_adding
+        
+        self._cull_front.SetValue( cull_front )
+        self._cull_back.SetValue( cull_back )
+        self._prepend.SetValue( prepend )
+        self._append.SetValue( append )
+        
         self._results.SetValue( 'Successfully parsed results will be printed here.' )
         
         #

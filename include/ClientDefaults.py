@@ -76,7 +76,9 @@ def GetClientDefaultOptions():
     default_namespace_colours = {}
     
     default_namespace_colours[ 'system' ] = ( 153, 101, 21 )
+    default_namespace_colours[ 'meta' ] = ( 0, 0, 0 )
     default_namespace_colours[ 'creator' ] = ( 170, 0, 0 )
+    default_namespace_colours[ 'studio' ] = ( 128, 0, 0 )
     default_namespace_colours[ 'character' ] = ( 0, 170, 0 )
     default_namespace_colours[ 'person' ] = ( 0, 128, 0 )
     default_namespace_colours[ 'series' ] = ( 170, 0, 170 )

@@ -2104,7 +2104,7 @@ class ServiceRepository( ServiceRestricted ):
                         break
                         
                     
-                    stop_time = HydrusData.GetNow() + 15
+                    stop_time = HydrusData.GetNow() + 30
                     
                     loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = stop_time )
                     

@@ -2902,11 +2902,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
         
-        def AddTags( self, tags ):
+        def AddTags( self, tags, only_add = False ):
             
             if len( tags ) > 0:
                 
-                self._AddTags( tags )
+                self._AddTags( tags, only_add = only_add )
                 
             
         

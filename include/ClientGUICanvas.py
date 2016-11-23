@@ -1517,7 +1517,10 @@ class Canvas( wx.Window ):
         
         ( mouse_x, mouse_y ) = wx.GetMousePosition()
         
-        if mouse_x >= x and mouse_x <= x + width and mouse_y >= y and mouse_y <= y + height: return True
+        if mouse_x >= x and mouse_x <= x + width and mouse_y >= y and mouse_y <= y + height:
+            
+            return True
+            
         
         return False
         
@@ -1810,6 +1813,8 @@ class CanvasWithDetails( Canvas ):
             ( x, y ) = dc.GetTextExtent( info_string )
             
             dc.DrawText( info_string, ( client_width - x ) / 2, current_y )
+            
+            # bottom-right index
             
             index_string = self._GetIndexString()
             
@@ -2881,8 +2886,14 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    try: interval = int( float( dlg.GetValue() ) * 1000 )
-                    except: return
+                    try:
+                        
+                        interval = int( float( dlg.GetValue() ) * 1000 )
+                        
+                    except:
+                        
+                        return
+                        
                     
                 
             
@@ -3692,7 +3703,10 @@ class MediaContainer( wx.Window ):
                     
                     self._animation_bar = AnimationBar( self, self._media, self._media_window )
                     
-                    if self._media.GetMime() != HC.APPLICATION_FLASH: self._media_window.SetAnimationBar( self._animation_bar )
+                    if self._media.GetMime() != HC.APPLICATION_FLASH:
+                        
+                        self._media_window.SetAnimationBar( self._animation_bar )
+                        
                     
                 
             else:

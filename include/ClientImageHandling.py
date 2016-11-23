@@ -56,13 +56,6 @@ def GenerateNumpyImage( path ):
         
         numpy_image = cv2.imread( path, flags = IMREAD_UNCHANGED )
         
-        if numpy_image.dtype == 'uint16':
-            
-            numpy_image /= 256
-            
-            numpy_image = numpy.array( numpy_image, dtype = 'uint8' )
-            
-        
         if numpy_image is None: # doesn't support static gifs and some random other stuff
             
             pil_image = HydrusImageHandling.GeneratePILImage( path )
@@ -70,6 +63,13 @@ def GenerateNumpyImage( path ):
             numpy_image = GenerateNumPyImageFromPILImage( pil_image )
             
         else:
+            
+            if numpy_image.dtype == 'uint16':
+                
+                numpy_image /= 256
+                
+                numpy_image = numpy.array( numpy_image, dtype = 'uint8' )
+                
             
             shape = numpy_image.shape
             
@@ -110,7 +110,6 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
     
 def GeneratePerceptualHash( path ):
-    
     
     numpy_image = GenerateNumpyImage( path )
     

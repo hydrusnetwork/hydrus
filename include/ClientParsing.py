@@ -235,7 +235,24 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             
             if root.has_attr( self._content_rule ):
                 
-                result = root[ self._content_rule ][0]
+                unknown_attr_result = root[ self._content_rule ]
+                
+                # 'class' attr returns a list because it has multiple values under html spec, wew
+                if isinstance( unknown_attr_result, list ):
+                    
+                    if len( unknown_attr_result ) == 0:
+                        
+                        result = None
+                        
+                    else:
+                        
+                        result = ' '.join( unknown_attr_result )
+                        
+                    
+                else:
+                    
+                    result = unknown_attr_result
+                    
                 
             else:
                 

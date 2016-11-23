@@ -8,10 +8,10 @@
 
 try:
     
-    import locale
+    #import locale
     
-    try: locale.setlocale( locale.LC_ALL, '' )
-    except: pass
+    #try: locale.setlocale( locale.LC_ALL, '' )
+    #except: pass
     
     from include import HydrusExceptions
     from include import HydrusConstants as HC

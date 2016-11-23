@@ -44,7 +44,10 @@ class VPTreeNode( object ):
                 
                 my_hammings.sort()
                 
-            else: my_hammings = all_nodes_comparisons[ self._phash ]
+            else:
+                
+                my_hammings = all_nodes_comparisons[ self._phash ]
+                
             
             median_index = len( my_hammings ) / 2
             
