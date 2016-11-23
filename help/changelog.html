@@ -8,6 +8,23 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 233</h3></li>
+				<ul>
+					<li>made a plan for faster dupe search</li>
+					<li>created skeleton of db tables for faster dupe search</li>
+					<li>wrote out search algorithm for faster dupe search when the rest is ready</li>
+					<li>updated search algorithm and skeleton to support a future multiframe (i.e. gif/video) similar files comparison</li>
+					<li>the os x release now has 'client' as the main client executable</li>
+					<li>the os x release now includes the server, under the 'server' executable</li>
+					<li>added studio (128,0,0) and meta (0,0,0) default namespace colours</li>
+					<li>the 'add all' button on the file lookup tag suggestions panel now will only ever add--it won't remove/rescind pend</li>
+					<li>the password system now supports non-ascii input (be careful though, as even a subtle change in keyboard encoding that nonetheless may have the same visual characters will likely be considered a different password)</li>
+					<li>fixed the 'nonetype has no dtype' rendering problem introduced by last week's 16-bit channel fix (this mostly affected static gifs)</li>
+					<li>fixed non-null ratings changes in the numerical ratings dialog</li>
+					<li>fixed culling and adding variables not initialising on the edit html formula panel</li>
+					<li>fixed the htmlparser attribute fetcher to deal with both single value attrs ('id') and multiple value attrs ('class'). in the latter case, the many values will be joined up, as how they appear in html</li>
+					<li>tweaked disk cache timings a little more to account for more scenarios--it now also reports itself to the shutdown splash screen</li>
+				</ul>
 				<li><h3>version 232</h3></li>
 				<ul>
 					<li>finished png object sharing system, created some gui for it</li>
