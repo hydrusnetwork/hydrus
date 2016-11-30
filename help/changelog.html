@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 234</h3></li>
+				<ul>
+					<li>the action choice workflow in the manage tags dialog now merges decisions for multiple tag entry events</li>
+					<li>the button dialog that pops up on the new merge manage tags workflow has button tooltips to better describe the proposed action's tag and file combinations</li>
+					<li>the manage tags dialog only requests one petition reason for an above merged multitag petition event</li>
+					<li>perceptual hashes are now stored in the cache db (moved from the preferably leaner main db)</li>
+					<li>the database now supports multiple perceptual hashes per file</li>
+					<li>fleshed out the perceptual hash vptree generation and maintenance code</li>
+					<li>added option for main gui title to options->gui--it even updates live</li>
+					<li>added unicode path support when importing serialised pngs</li>
+					<li>added unicode path support when exporting serialised pngs</li>
+					<li>exporting a serialised png now reports success via the export button, which will temporarily relabel itself</li>
+					<li>when a GET network connection fails during the read phase due to an unexpected timeout, the request will be reattempted a couple of times, like failed connection initialisations currently are</li>
+					<li>escape key now closes scrolledpanelframes (review services or import status frames)</li>
+					<li>manage tags dialog and frame now closes due to escape key correctly</li>
+					<li>fixed a size calculation bug that was not initially drawing scrollbars on manage options and any other listbook-containing scrolling panel when the screen is too small to show the whole dialog</li>
+					<li>undo menu now works on the new menu system</li>
+					<li>cleaned up some bad gui-thread interaction in the file import dialog</li>
+					<li>fixed file->restart in the built release, including when the install path includes a space</li>
+					<li>the trash service no longer records which files it has physically deleted, as this information is not used and is redundant compared to the existing local files' deleted record (existing records will be deleted on update)</li>
+					<li>the subscription daemon will wait 90 seconds after boot before triggering--quitting the client before then will result in subs not being checked</li>
+				</ul>
 				<li><h3>version 233</h3></li>
 				<ul>
 					<li>made a plan for faster dupe search</li>
