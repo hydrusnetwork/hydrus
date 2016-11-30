@@ -579,6 +579,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
         self._dictionary[ 'noneable_strings' ][ 'suggested_tags_layout' ] = 'notebook'
         
+        self._dictionary[ 'strings' ] = {}
+        
+        self._dictionary[ 'strings' ][ 'main_gui_title' ] = 'hydrus client'
+        
         #
         
         client_files_default = os.path.join( db_dir, 'client_files' )
@@ -1016,6 +1020,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetString( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'strings' ][ name ]
+            
+        
+    
     def GetSuggestedTagsFavourites( self, service_key ):
         
         with self._lock:
@@ -1122,6 +1134,17 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'noneable_strings' ][ name ] = value
+            
+        
+    
+    def SetString( self, name, value ):
+        
+        with self._lock:
+            
+            if value is not None and value != '':
+                
+                self._dictionary[ 'strings' ][ name ] = value
+                
             
         
     

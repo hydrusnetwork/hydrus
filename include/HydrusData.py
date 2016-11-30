@@ -10,6 +10,7 @@ import locale
 import os
 import pstats
 import psutil
+import random
 import shutil
 import sqlite3
 import subprocess
@@ -954,6 +955,14 @@ def Profile( code, g, l ):
     
     DebugPrint( output.read() )
     
+def RandomPop( population ):
+    
+    random_index = random.randint( 0, len( population ) - 1 )
+    
+    row = population.pop( random_index )
+    
+    return row
+    
 def RecordRunningStart( db_path, instance ):
     
     path = os.path.join( db_path, instance + '_running' )
@@ -982,7 +991,24 @@ def RestartProcess():
     
     time.sleep( 1 ) # time for ports to unmap
     
-    os.execl( sys.executable, sys.executable, *sys.argv )
+    exe = sys.executable
+    me = sys.argv[0]
+    
+    if me.endswith( '.py' ) or me.endswith( '.pyw' ):
+        
+        # we are running from source--exe is python's exe, me is the script
+        
+        args = [ sys.executable ] + sys.argv
+        
+    else:
+        
+        # we are running a frozen release--both exe and me are the built exe
+        # wrap it in quotes because pyinstaller passes it on as raw text, breaking any path with spaces :/
+        
+        args = [ '"' + me + '"' ] + sys.argv[1:]
+        
+    
+    os.execv( exe, args )
     
 def SplayListForDB( xs ): return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
 

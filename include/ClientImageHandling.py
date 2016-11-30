@@ -109,7 +109,7 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     
     return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
     
-def GeneratePerceptualHash( path ):
+def GenerateShapePerceptualHashes( path ):
     
     numpy_image = GenerateNumpyImage( path )
     
@@ -180,11 +180,13 @@ def GeneratePerceptualHash( path ):
         bytes.append( byte )
         
     
-    answer = str( bytearray( bytes ) )
+    phash = str( bytearray( bytes ) )
+    
+    phashes = [ phash ]
     
     # we good
     
-    return answer
+    return phashes
     
 def ResizeNumpyImage( mime, numpy_image, ( target_x, target_y ) ):
     

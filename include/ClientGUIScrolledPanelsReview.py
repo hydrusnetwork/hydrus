@@ -36,6 +36,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventPageChanged )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
+        
         vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( self._edit, CC.FLAGS_SMALL_INDENT )
         
@@ -95,6 +96,8 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
     def DoGetBestSize( self ):
+        
+        # this overrides the py stub in ScrolledPanel, which allows for unusual scroll behaviour driven by whatever this returns
         
         # wx.Notebook isn't expanding on page change and hence increasing min/virtual size and so on to the scrollable panel above, nullifying the neat expand-on-change-page event
         # so, until I write my own or figure out a clever solution, let's just force it
@@ -167,7 +170,10 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                    self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    if self._service_key != CC.TRASH_SERVICE_KEY:
+                        
+                        self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
                     
                 elif service_type in HC.TAG_SERVICES:
                     
@@ -316,7 +322,10 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     self._info_panel.AddF( self._files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
-                    self._info_panel.AddF( self._deleted_files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    if self._service_key != CC.TRASH_SERVICE_KEY:
+                        
+                        self._info_panel.AddF( self._deleted_files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+                        
                     
                 elif service_type in HC.TAG_SERVICES:
                     
@@ -593,9 +602,12 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     self._files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
                     
-                    num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
-                    
-                    self._deleted_files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
+                    if self._service_key != CC.TRASH_SERVICE_KEY:
+                        
+                        num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
+                        
+                        self._deleted_files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
+                        
                     
                 elif service_type in HC.TAG_SERVICES:
                     

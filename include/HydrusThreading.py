@@ -129,7 +129,7 @@ class DAEMONQueue( DAEMON ):
     
 class DAEMONWorker( DAEMON ):
     
-    def __init__( self, controller, name, callable, topics = None, period = 3600 ):
+    def __init__( self, controller, name, callable, topics = None, period = 3600, init_wait = 3 ):
         
         if topics is None: topics = []
         
@@ -138,6 +138,7 @@ class DAEMONWorker( DAEMON ):
         self._callable = callable
         self._topics = topics
         self._period = period
+        self._init_wait = init_wait
         
         for topic in topics: self._controller.sub( self, 'set', topic )
         
@@ -146,7 +147,7 @@ class DAEMONWorker( DAEMON ):
     
     def run( self ):
         
-        time.sleep( 3 )
+        self._event.wait( self._init_wait )
         
         while True:
             

@@ -4,9 +4,11 @@ import ClientParsing
 import cv2
 import HydrusConstants as HC
 import HydrusData
+import HydrusPaths
 import HydrusSerialisable
 import numpy
 import os
+import shutil
 import struct
 import wx
 
@@ -164,7 +166,25 @@ def DumpToPng( payload, title, payload_type, text, path ):
     
     finished_image = numpy.concatenate( ( top_image, payload_image ) )
     
-    cv2.imwrite( path, finished_image, [ cv2.IMWRITE_PNG_COMPRESSION, 9 ] )
+    # this is to deal with unicode paths, which cv2 can't handle
+    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath( suffix = '.png' )
+    
+    try:
+        
+        cv2.imwrite( temp_path, finished_image, [ cv2.IMWRITE_PNG_COMPRESSION, 9 ] )
+        
+        shutil.copy2( temp_path, path )
+        
+    except Exception as e:
+        
+        HydrusData.ShowException( e )
+        
+        raise Exception( 'Could not save the png!' )
+        
+    finally:
+        
+        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+        
     
 def GetPayloadTypeAndString( payload_obj ):
     
@@ -181,15 +201,24 @@ def GetPayloadTypeAndString( payload_obj ):
     
 def LoadFromPng( path ):
     
+    # this is to deal with unicode paths, which cv2 can't handle
+    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+    
     try:
         
-        numpy_image = cv2.imread( path, flags = IMREAD_UNCHANGED )
+        shutil.copy2( path, temp_path )
+        
+        numpy_image = cv2.imread( temp_path, flags = IMREAD_UNCHANGED )
         
     except Exception as e:
         
         HydrusData.ShowException( e )
         
         raise Exception( 'That did not appear to be a valid image!' )
+        
+    finally:
+        
+        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
         
     
     try:

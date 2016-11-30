@@ -2175,7 +2175,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if len( potential_clean_indices_to_steal ) > 0:
                         
-                        index_to_steal = potential_clean_indices_to_steal.pop()
+                        index_to_steal = potential_clean_indices_to_steal.pop( 0 )
                         
                         self._DirtyPage( index_to_steal )
                         

@@ -604,9 +604,13 @@ class DialogButtonChoice( Dialog ):
         
         i = 0
         
-        for ( text, data ) in choices:
+        for ( text, data, tooltip ) in choices:
             
-            self._buttons.append( wx.Button( self, label = text, id = i ) )
+            button = wx.Button( self, label = text, id = i )
+            
+            button.SetToolTipString( tooltip )
+            
+            self._buttons.append( button )
             
             self._ids_to_data[ i ] = data
             
@@ -1512,14 +1516,11 @@ class DialogInputLocalFiles( Dialog ):
         self._gauge_cancel.Bind( wx.EVT_BUTTON, self.EventGaugeCancel )
         self._gauge_cancel.Disable()
         
-        self._add_files_button = wx.Button( self, label = 'add files' )
-        self._add_files_button.Bind( wx.EVT_BUTTON, self.EventAddPaths )
+        self._add_files_button = ClientGUICommon.BetterButton( self, 'add files', self.AddPaths )
         
-        self._add_folder_button = wx.Button( self, label = 'add folder' )
-        self._add_folder_button.Bind( wx.EVT_BUTTON, self.EventAddFolder )
+        self._add_folder_button = ClientGUICommon.BetterButton( self, 'add folder', self.AddFolder )
         
-        self._remove_files_button = wx.Button( self, label = 'remove files' )
-        self._remove_files_button.Bind( wx.EVT_BUTTON, self.EventRemovePaths )
+        self._remove_files_button = ClientGUICommon.BetterButton( self, 'remove files', self.RemovePaths )
         
         self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
         
@@ -1583,6 +1584,12 @@ class DialogInputLocalFiles( Dialog ):
         
         self._job_key = ClientThreading.JobKey()
         
+        self._dialog_key = HydrusData.GenerateKey()
+        
+        HydrusGlobals.client_controller.sub( self, 'AddParsedPath', 'DialogInputLocalFiles_AddParsedPath' )
+        HydrusGlobals.client_controller.sub( self, 'DoneParsing', 'DialogInputLocalFiles_DoneParsing' )
+        HydrusGlobals.client_controller.sub( self, 'SetGaugeInfo', 'DialogInputLocalFiles_SetGaugeInfo' )
+        
         if len( paths ) > 0: self._AddPathsToList( paths )
         
         wx.CallAfter( self._add_button.SetFocus )
@@ -1615,8 +1622,6 @@ class DialogInputLocalFiles( Dialog ):
                 
                 paths = self._processing_queue.pop( 0 )
                 
-                self.SetGaugeInfo( None, None, '' )
-                
                 self._gauge_pause.Enable()
                 self._gauge_cancel.Enable()
                 
@@ -1635,28 +1640,37 @@ class DialogInputLocalFiles( Dialog ):
         self._job_key.Cancel()
         
     
-    def AddParsedPath( self, path, mime, size ):
+    def AddFolder( self, event ):
         
-        pretty_mime = HC.mime_string_lookup[ mime ]
-        pretty_size = HydrusData.ConvertIntToBytes( size )
-        
-        if path not in self._current_paths_set:
+        with wx.DirDialog( self, 'Select a folder to add.', style = wx.DD_DIR_MUST_EXIST ) as dlg:
             
-            self._current_paths_set.add( path )
-            self._current_paths.append( path )
-            
-            self._paths_list.Append( ( path, pretty_mime, pretty_size ), ( path, mime, size ) )
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                self._AddPathsToList( ( path, ) )
+                
             
         
     
-    def DoneParsing( self ):
+    def AddParsedPath( self, dialog_key, path, mime, size ):
         
-        self._currently_parsing = False
-        
-        self._ProcessQueue()
+        if dialog_key == self._dialog_key:
+            
+            pretty_mime = HC.mime_string_lookup[ mime ]
+            pretty_size = HydrusData.ConvertIntToBytes( size )
+            
+            if path not in self._current_paths_set:
+                
+                self._current_paths_set.add( path )
+                self._current_paths.append( path )
+                
+                self._paths_list.Append( ( path, pretty_mime, pretty_size ), ( path, mime, size ) )
+                
+            
         
     
-    def EventAddPaths( self, event ):
+    def AddPaths( self, event ):
         
         with wx.FileDialog( self, 'Select the files to add.', style = wx.FD_MULTIPLE ) as dlg:
             
@@ -1669,16 +1683,13 @@ class DialogInputLocalFiles( Dialog ):
             
         
     
-    def EventAddFolder( self, event ):
+    def DoneParsing( self, dialog_key ):
         
-        with wx.DirDialog( self, 'Select a folder to add.', style = wx.DD_DIR_MUST_EXIST ) as dlg:
+        if dialog_key == self._dialog_key:
             
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                path = HydrusData.ToUnicode( dlg.GetPath() )
-                
-                self._AddPathsToList( ( path, ) )
-                
+            self._currently_parsing = False
+            
+            self._ProcessQueue()
             
         
     
@@ -1738,8 +1749,6 @@ class DialogInputLocalFiles( Dialog ):
         self.EndModal( wx.ID_OK )
         
     
-    def EventRemovePaths( self, event ): self.RemovePaths()
-    
     def EventTags( self, event ):
         
         if len( self._current_paths ) > 0:
@@ -1770,21 +1779,24 @@ class DialogInputLocalFiles( Dialog ):
         self._current_paths_set = set( self._current_paths )
         
     
-    def SetGaugeInfo( self, gauge_range, gauge_value, text ):
+    def SetGaugeInfo( self, dialog_key, gauge_range, gauge_value, text ):
         
-        if gauge_range is None: self._gauge.Pulse()
-        else:
+        if dialog_key == self._dialog_key:
             
-            self._gauge.SetRange( gauge_range )
-            self._gauge.SetValue( gauge_value )
+            if gauge_range is None: self._gauge.Pulse()
+            else:
+                
+                self._gauge.SetRange( gauge_range )
+                self._gauge.SetValue( gauge_value )
+                
             
-        
-        self._gauge_text.SetLabelText( text )
+            self._gauge_text.SetLabelText( text )
+            
         
     
     def THREADParseImportablePaths( self, raw_paths, job_key ):
         
-        wx.CallAfter( self.SetGaugeInfo, None, None, u'Parsing files and folders.' )
+        HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_SetGaugeInfo', self._dialog_key, None, None, u'Parsing files and folders.' )
         
         file_paths = ClientFiles.GetAllPaths( raw_paths )
         
@@ -1805,7 +1817,7 @@ class DialogInputLocalFiles( Dialog ):
             
             if i % 500 == 0: gc.collect()
             
-            wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Done ' + HydrusData.ConvertValueRangeToPrettyString( i, num_file_paths ) )
+            HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_SetGaugeInfo', self._dialog_key, num_file_paths, i, u'Done ' + HydrusData.ConvertValueRangeToPrettyString( i, num_file_paths ) )
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
@@ -1831,7 +1843,7 @@ class DialogInputLocalFiles( Dialog ):
                 
                 num_good_files += 1
                 
-                wx.CallAfter( self.AddParsedPath, path, mime, size )
+                HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_AddParsedPath', self._dialog_key, path, mime, size )
                 
             else:
                 
@@ -1891,9 +1903,8 @@ class DialogInputLocalFiles( Dialog ):
         
         HydrusData.Print( message )
         
-        wx.CallAfter( self.SetGaugeInfo, num_file_paths, num_file_paths, message )
-        
-        wx.CallAfter( self.DoneParsing )
+        HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_SetGaugeInfo', self._dialog_key, num_file_paths, num_file_paths, message )
+        HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_DoneParsing', self._dialog_key )
         
     
 class DialogInputNamespaceRegex( Dialog ):

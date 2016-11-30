@@ -855,12 +855,12 @@ class ListBook( wx.Panel ):
         
         self.Refresh()
         
-        # this tells any parent scrolled panel to recalc its scrollbars
-        event = wx.NotifyEvent( wx.wxEVT_SIZE, -1 )
+        # this tells any parent scrolled panel to update its virtualsize and recalc its scrollbars
+        event = wx.NotifyEvent( wx.wxEVT_SIZE, self.GetId() )
         
         wx.CallAfter( self.ProcessEvent, event )
         
-        # this tells parent resizing frame/dialog that is interested in resizing that now is the time
+        # now the virtualsize is updated, we now tell any parent resizing frame/dialog that is interested in resizing that now is the time
         event = CC.SizeChangedEvent( -1 )
         
         wx.CallAfter( self.ProcessEvent, event )

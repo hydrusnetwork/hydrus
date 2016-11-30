@@ -616,7 +616,7 @@ class Controller( HydrusController.HydrusController ):
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckMouseIdle', ClientDaemons.DAEMONCheckMouseIdle, period = 10 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ) ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), init_wait = 90 ) )
             
             self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 ) )
             self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )

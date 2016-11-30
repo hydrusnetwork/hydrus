@@ -55,7 +55,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller = controller
         
-        title = self._controller.PrepStringForDisplay( 'Hydrus Client' )
+        title = self._controller.GetNewOptions().GetString( 'main_gui_title' )
+        
+        if title is None or title == '':
+            
+            title = 'hydrus client'
+            
         
         ClientGUITopLevelWindows.FrameThatResizes.__init__( self, None, title, 'main_gui', float_on_parent = False )
         
@@ -111,6 +116,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'RefreshStatusBar', 'refresh_status' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
+        self._controller.sub( self, 'SetTitle', 'main_gui_title' )
         self._controller.sub( self, 'SyncToTagArchive', 'sync_to_tag_archive' )
         
         self._menus = {}
@@ -774,23 +780,26 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     did_undo_stuff = True
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'undo' ), undo_string )
+                    ClientGUIMenus.AppendMenuItem( menu, undo_string, 'Undo last operation.', self, self._controller.pub, 'undo' )
                     
                 
                 if redo_string is not None:
                     
                     did_undo_stuff = True
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'redo' ), redo_string )
+                    ClientGUIMenus.AppendMenuItem( menu, redo_string, 'Redo last operation.', self, self._controller.pub, 'redo' )
                     
                 
                 if have_closed_pages:
                     
-                    if did_undo_stuff: menu.AppendSeparator()
+                    if did_undo_stuff:
+                        
+                        menu.AppendSeparator()
+                        
                     
                     undo_pages = wx.Menu()
                     
-                    undo_pages.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_all_closed_pages' ), 'clear all' )
+                    ClientGUIMenus.AppendMenuItem( undo_pages, 'clear all', 'Remove all closed pages from memory.', self, self._DeleteAllClosedPages )
                     
                     undo_pages.AppendSeparator()
                     
@@ -800,18 +809,24 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                         for ( i, ( time_closed, index, name, page ) ) in enumerate( self._closed_pages ):
                             
-                            args.append( ( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
+                            args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
                             
                         
                     
                     args.reverse() # so that recently closed are at the top
                     
-                    for a in args: undo_pages.Append( *a )
+                    for ( index, name ) in args:
+                        
+                        ClientGUIMenus.AppendMenuItem( undo_pages, name, 'Restore this page.', self, self._UnclosePage, index )
+                        
                     
-                    menu.AppendMenu( CC.ID_NULL, p( 'Closed Pages' ), undo_pages )
+                    ClientGUIMenus.AppendMenu( menu, undo_pages, 'closed pages' )
                     
                 
-            else: show = False
+            else:
+                
+                show = False
+                
             
             return ( menu, p( '&Undo' ), show )
             
@@ -1181,12 +1196,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             twitter.SetBitmap( CC.GlobalBMPs.twitter )
             tumblr = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'tumblr' ), p( 'Tumblr' ) )
             tumblr.SetBitmap( CC.GlobalBMPs.tumblr )
+            discord = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'discord' ), p( 'Discord' ) )
+            discord.SetBitmap( CC.GlobalBMPs.discord )
             patreon = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'patreon' ), p( 'Patreon' ) )
             patreon.SetBitmap( CC.GlobalBMPs.patreon )
             links.AppendItem( site )
             links.AppendItem( board )
             links.AppendItem( twitter )
             links.AppendItem( tumblr )
+            links.AppendItem( discord )
             links.AppendItem( patreon )
             menu.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
             
@@ -2316,6 +2334,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._DestroyPages( deletee_pages )
         
     
+    def CurrentlyBusy( self ):
+        
+        return self._loading_session
+        
+    
     def EventClose( self, event ):
         
         if not event.CanVeto():
@@ -2433,7 +2456,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     wx.CallLater( 500 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
                     
                 
-            elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
             elif command == 'delete_gui_session':
                 
                 self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, data )
@@ -2441,6 +2463,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 self._controller.pub( 'notify_new_sessions' )
                 
             elif command == 'delete_service_info': self._DeleteServiceInfo()
+            elif command == 'discord': webbrowser.open( 'https://discord.gg/vy8CUB4' )
             elif command == 'fetch_ip': self._FetchIP( data )
             elif command == 'force_idle_mode':
                 
@@ -2523,7 +2546,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'tab_menu_rename_page': self._RenamePage( self._tab_right_click_index )
             elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
             elif command == 'twitter': webbrowser.open( 'https://twitter.com/#!/hydrusnetwork' )
-            elif command == 'unclose_page': self._UnclosePage( data )
             elif command == 'undo': self._controller.pub( 'undo' )
             else: event.Skip()
             

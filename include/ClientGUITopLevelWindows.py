@@ -456,6 +456,16 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
         
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        
+    
+    def EventCharHook( self, event ):
+        
+        if event.KeyCode == wx.WXK_ESCAPE:
+            
+            self.Close()
+            
+        
     
     def EventMenu( self, event ):
         

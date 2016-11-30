@@ -258,8 +258,10 @@ def GetDevice( path ):
     
 def GetTempFile(): return tempfile.TemporaryFile()
 def GetTempFileQuick(): return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
-def GetTempPath(): return tempfile.mkstemp( prefix = 'hydrus' )
-
+def GetTempPath( suffix = '' ):
+    
+    return tempfile.mkstemp( suffix = suffix, prefix = 'hydrus' )
+    
 def LaunchDirectory( path ):
     
     def do_it():

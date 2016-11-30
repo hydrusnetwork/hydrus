@@ -30,3 +30,4 @@ class RedirectionException( NetworkException ): pass
 class ServerBusyException( NetworkException ): pass
 class SessionException( NetworkException ): pass
 class WrongServiceTypeException( NetworkException ): pass
+class ShouldReattemptNetworkException( NetworkException ): pass

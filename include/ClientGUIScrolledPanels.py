@@ -13,7 +13,7 @@ class ResizingScrolledPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def EventSizeChanged( self, event ):
         
-        self.SetVirtualSize( self.DoGetBestSize() )
+        self.SetVirtualSize( self.GetBestVirtualSize() )
         
         event.Skip()
         

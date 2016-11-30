@@ -1516,71 +1516,168 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'DELETE FROM ' + ac_cache_table_name + ' WHERE namespace_id = ? AND tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( namespace_id, tag_id, 0, 0 ) for ( namespace_id, tag_id, current_delta, pending_delta ) in count_ids ) )
         
     
-    def _CacheSimilarFilesDropPHashes( self ):
+    def _CacheSimilarFilesDelete( self, hash_id, phash_ids ):
         
-        # drop the two tables
+        phash_ids = set( phash_ids )
+        
+        self._c.executemany( 'DELETE FROM external_caches.shape_perceptual_hash_map WHERE phash_id = ? AND hash_id = ?;', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
+        
+        useful_phash_ids = { phash for ( phash, ) in self._c.execute( 'SELECT phash_id FROM external_caches.shape_perceptual_hash_map WHERE phash_id IN ' + HydrusData.SplayListForDB( phash_ids ) + ';' ) }
+        
+        deletee_phash_ids = phash_ids.difference( useful_phash_ids )
+        
+        # for every deletee_phash_id:
+            # add to the rebalance maintenance table so they can be cleared out during maintenance
+        
+        # it'd be nice to call this on physical file deletion, but w/e
+        
+    
+    def _CacheSimilarFilesGeneratePHashes( self, hash_ids = None ):
+        
+        if hash_ids is None:
+            
+            # do all phashable hash_ids, selected from file_map X all local files, or something
+            
+            pass
+            
+        
+        # insert or ignore all hash_ids into a 'regen these phashes on maintenance' table
+        
+    
+    def _CacheSimilarFilesGenerateBranch( self, job_key, parent_id, phash_id, phash, children ):
+        
+        # report to job_key and splash screen
+        
+        ghd = HydrusData.GetHammingDistance
+        
+        process_queue = [ ( parent_id, phash_id, phash, children ) ]
+        
+        while len( process_queue ) > 0:
+            
+            ( parent_id, phash_id, phash, children ) = process_queue.pop( 0 )
+            
+            if len( children ) == 0:
+                
+                left_id = None
+                right_id = None
+                
+                radius = None
+                
+            else:
+                
+                children = [ ( ghd( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ]
+                
+                children.sort()
+                
+                median_index = len( children ) / 2
+                
+                radius = children[ median_index ][0]
+                
+                left_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance <= radius ]
+                right_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance > radius ]
+                
+                ( left_id, left_phash ) = HydrusData.RandomPop( left_children )
+                
+                if len( right_children ) == 0:
+                    
+                    right_id = None
+                    
+                else:
+                    
+                    ( right_id, right_phash ) = HydrusData.RandomPop( right_children )
+                    
+                
+            
+            # insert phash_id, phash, radius, left_id, left_count, right_id, right_count, parent_id
+            
+            if left_id is not None:
+                
+                process_queue.append( ( phash_id, left_id, left_phash, left_children ) )
+                
+            
+            if right_id is not None:
+                
+                process_queue.append( ( phash_id, right_id, right_phash, right_children ) )
+                
+                
+            
         
         pass
         
     
-    def _CacheSimilarFilesDropVPTree( self ):
+    def _CacheSimilarFilesGetPHashId( self, phash ):
         
-        # drop the three tables
+        result = self._c.execute( 'SELECT phash_id FROM external_caches.shape_perceptual_hashes WHERE phash = ?;', ( sqlite3.Binary( phash ), ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO external_caches.shape_perceptual_hashes ( phash ) VALUES ( ? );', ( sqlite3.Binary( phash ), ) )
+            
+            phash_id = self._c.lastrowid
+            
+            # walk down to bottom of tree and insert it
+                # if there is no tree yet, create root node
+            # if bottom is empty on both sides, update left and set radius
+            # else update right
+            # update all the left and right counts as you go back up
+            # if a left/right count is out of whack in either direction, say more than two thirds on one side, schedule that node for rebalancing
+                # but in this case, only schedule the largest node
+            # check the left and right counts and rebalance things
+            
+        else:
+            
+            ( phash_id, ) = result
+            
+        
+        return phash_id
+        
+    
+    def _CacheSimilarFilesGetMaintenanceStatus( self ):
+        
+        # count up number of phashes
+        # count up number of files that still need to be calced
+        # count up number of nodes to be rebalanced
+        
+        # gui will present this as a general 'still 100,000 still to go!' and 'completely ready to go!'
+        
+        # I could stick this on local files review services, I guess, although it better belongs on a new 'all local files' service page.
+        
+        # can add the arbitrary dupe search cache to this as well
         
         pass
         
     
-    def _CacheSimilarFilesGeneratePHashes( self ):
+    def _CacheSimilarFilesInsert( self, hash_id, phashes ):
         
-        # one phash can go to many files
-        # when I add animations, one file can go to many phashes
-        
-        # so I need two tables:
-        
-        # phash_id idx | phash
-        # phash_id | hash_id (joint index, with hash_id non-unique lookup as well)
-        
-        # generating all the phashes is too big a job here, so I probably need a progress table that will generate them during maintenance time
-        # should be a nice way to say how far along it is getting on this
-        
-        # fudge this all on db update, but do it clean on init of a fresh db
-        
-        pass
+        for phash in phashes:
+            
+            phash_id = self._CacheSimilarFilesGetPHashId( phash )
+            
+            self._c.execute( 'INSERT OR IGNORE INTO external_caches.shape_perceptual_hash_map ( phash_id, hash_id ) VALUES ( ?, ? );', ( phash_id, hash_id ) )
+            
         
     
-    def _CacheSimilarFilesGenerateVPTree( self ):
-        
-        # the main table
-        # a way to hold the root node, prob just a tiny table
-        # a table with nodes that need rebalancing
-        
-        # then fill the main table, but don't do it one by one
-        # check ClientVPTree for info on selecting median node for sample of nodes to pick good radii
-        
-        # then select all phash_id | phash pairs
-        # construct a clientvptree or a simpler object here
-        # write that to the db straight with branch counts
-        
-        pass
-        
-    
-    def _CacheSimilarFilesInsert( self, hash_id, phash ):
-        
-        # walk down the tree and insert it
-        # update all the left and right counts as you go back up
-        # if a left/right count is out of whack in either direction, say more than two thirds on one side, schedule that node for rebalancing
-        # check the left and right counts and rebalance things
-        
-        pass
-        
-    
-    def _CacheSimilarFilesMaintain( self, job_key ):
-        
-        # rebalance the vptree based on the rebalance table
-        
-        # populate the phash table
+    def _CacheSimilarFilesMaintain( self, job_key, stop_time ):
         
         # broadcast to job_key on how you are doing, for the maintenance popup
+        
+        # while hash_ids still in in 'phash recalc during maintenance' table:
+            # check stop_time
+            # fetch one
+            # get lockless file path or whatever
+            # gen its phashes
+                # this needs a hydrusfilehandling.getphashes that will deal with it cleverly
+                # if file doesn't exist or otherwise doesn't work, phashes = []
+            # get phash_id, hash_id pairs
+            # get pairs already in db for hash_id
+            # delete any no longer needed through the normal call
+            # insert new ones through the normal call
+            # remove the hash_id from the maintenance table
+        
+        # while there are phashes in the rebalance maintenance table:
+            # check stop time
+            # select the one with the largest sum( left, right )
+            # rebalance branch
         
         pass
         
@@ -1590,6 +1687,67 @@ class DB( HydrusDB.HydrusDB ):
         # if branches need rebalancing or phashes need generating, say yes
         
         pass
+        
+    
+    def _CacheSimilarFilesRebalanceBranch( self, job_key, phash_id ):
+        
+        # prep, removal of old branch
+        
+        # fetch parent_id
+        parent_id = 'blah'
+        
+        # fetch ( phash_id, phash ) pairs of all descendants (can do easy with a recursive call)
+        rebalance_nodes = 'blah'
+        
+        rebalance_phash_ids = { p_id for ( p_id, p_h ) in rebalance_nodes }
+        
+        # delete everything from the maintenance rebalance table
+        # delete row and descendants from vptree
+        
+        useful_phash_ids = { p_id for ( p_id, ) in self._c.execute( 'SELECT phash_id FROM external_caches.shape_perceptual_hash_map WHERE phash_id IN ' + HydrusData.SplayListForDB( rebalance_phash_ids ) + ';' ) }
+        
+        deletee_phash_ids = rebalance_phash_ids.difference( useful_phash_ids )
+        
+        self._c.executemany( 'DELETE FROM external_caches.shape_perceptual_hashes WHERE phash_id = ?;', ( ( p_id, ) for p_id in deletee_phash_ids ) )
+        
+        # now create the new branch
+        
+        ( new_phash_id, new_phash ) = HydrusData.RandomPop( rebalance_nodes )
+        
+        if parent_id is not None:
+            
+            ( parent_left_id, ) = ( 'blah', ) # fetch the parent's current left_id
+            
+            if parent_left_id == phash_id:
+                
+                column_name = 'left_id'
+                
+            else:
+                
+                column_name = 'right_id'
+                
+            
+            # update parent row, set column_name = phash_id
+            
+        
+        self._CacheSimilarFilesGenerateBranch( job_key, parent_id, new_phash_id, new_phash, rebalance_nodes )
+        
+    
+    def _CacheSimilarFilesRegenerateVPTree( self, job_key ):
+        
+        # clear the table
+        
+        # the main table -- shape_vptree
+        # something like:
+            # phash_id (p idx), phash, radius, left_id, left_count, right_id, right_count, creation_ratio, parent_id (idx)
+        
+        # report to job_key and splash screen
+        
+        all_nodes = self._c.execute( 'SELECT phash_id, phash FROM external_caches.shape_perceptual_hashes;' ).fetchall()
+        
+        ( root_id, root_phash ) = HydrusData.RandomPop( all_nodes )
+        
+        self._CacheSimilarFilesGenerateBranch( job_key, None, root_id, root_phash, all_nodes )
         
     
     def _CacheSimilarFilesSearch( self, hash_id, max_hamming_distance ):
@@ -1617,7 +1775,7 @@ class DB( HydrusDB.HydrusDB ):
         
         while len( potentials ) > 0:
             
-            ( node_phash_id, search_phashes ) = potentials.pop()
+            ( node_phash_id, search_phashes ) = potentials.pop( 0 )
             
             ( node_phash, node_radius, inner_phash_id, outer_phash_id ) = ( 'blah', 5, 1, 2 ) # sql here
             
@@ -2227,8 +2385,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE options ( options TEXT_YAML );', )
         
-        self._c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
-        
         self._c.execute( 'CREATE TABLE recent_tags ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, namespace_id, tag_id ) );' )
         
         self._c.execute( 'CREATE TABLE remote_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, count INTEGER, rating REAL, score REAL, PRIMARY KEY( service_id, hash_id ) );' )
@@ -2269,6 +2425,13 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
         
         self._c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
+        
+        # cache
+        
+        self._c.execute( 'CREATE TABLE external_caches.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
+        
+        self._c.execute( 'CREATE TABLE external_caches.shape_perceptual_hash_map ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );' )
+        self._c.execute( 'CREATE INDEX external_caches.shape_perceptual_hash_map_hash_id_index ON shape_perceptual_hash_map ( hash_id );' )
         
         # master
         
@@ -2352,9 +2515,9 @@ class DB( HydrusDB.HydrusDB ):
             service_info_updates.append( ( -num_files, service_id, HC.SERVICE_INFO_NUM_FILES ) )
             service_info_updates.append( ( -num_inbox, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
             
-            if not files_being_undeleted:
+            if service_id != self._trash_service_id:
                 
-                # an undelete moves from trash to local, which shouldn't be remembered as a delete from the trash service
+                # trash service doesn't keep track of what is deleted, as this is redundant
                 
                 service_info_updates.append( ( num_files, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
                 
@@ -3444,20 +3607,18 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_id = self._GetHashId( similar_to_hash )
             
-            result = self._c.execute( 'SELECT phash FROM perceptual_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            phashes = [ phash for ( phash, ) in self._c.execute( 'SELECT phash FROM shape_perceptual_hashes, shape_perceptual_hash_map USING ( phash_id ) WHERE hash_id = ?;', ( hash_id, ) ) ]
             
-            if result is None:
+            similar_hash_ids = set()
+            
+            for phash in phashes:
                 
-                query_hash_ids = set()
+                some_similar_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_perceptual_hashes, shape_perceptual_hash_map USING ( phash_id ) WHERE hydrus_hamming( phash, ? ) <= ?;', ( sqlite3.Binary( phash ), max_hamming ) ) ]
                 
-            else:
+                similar_hash_ids.update( some_similar_hash_ids )
                 
-                ( phash, ) = result
-                
-                similar_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM perceptual_hashes WHERE hydrus_hamming( phash, ? ) <= ?;', ( sqlite3.Binary( phash ), max_hamming ) ) ]
-                
-                query_hash_ids.intersection_update( similar_hash_ids )
-                
+            
+            query_hash_ids.intersection_update( similar_hash_ids )
             
         
         #
@@ -5361,9 +5522,9 @@ class DB( HydrusDB.HydrusDB ):
             
             if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
                 
-                phash = ClientImageHandling.GeneratePerceptualHash( temp_path )
+                phashes = ClientImageHandling.GenerateShapePerceptualHashes( temp_path )
                 
-                self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                self._CacheSimilarFilesInsert( hash_id, phashes )
                 
             
             # lockless because this db call is made by the locked client files manager
@@ -8041,6 +8202,82 @@ class DB( HydrusDB.HydrusDB ):
         if version == 230:
             
             self._c.executemany( 'INSERT OR IGNORE INTO json_dumps_named VALUES ( ?, ?, ?, ? );', [ ( 32, 'iqdb danbooru', 1, '''["http://danbooru.iqdb.org/", 1, 0, 0, "file", {}, [[29, 1, ["link to danbooru", [27, 1, [[["td", {"class": "image"}, 1], ["a", {}, 0]], "href"]], [[30, 1, ["", 0, [27, 1, [[["section", {"id": "tag-list"}, 0], ["li", {"class": "category-1"}, null], ["a", {"class": "search-tag"}, 0]], null]], "creator"]], [30, 1, ["", 0, [27, 1, [[["section", {"id": "tag-list"}, 0], ["li", {"class": "category-3"}, null], ["a", {"class": "search-tag"}, 0]], null]], "series"]], [30, 1, ["", 0, [27, 1, [[["section", {"id": "tag-list"}, 0], ["li", {"class": "category-4"}, null], ["a", {"class": "search-tag"}, 0]], null]], "character"]], [30, 1, ["", 0, [27, 1, [[["section", {"id": "tag-list"}, 0], ["li", {"class": "category-0"}, null], ["a", {"class": "search-tag"}, 0]], null]], ""]]]]], [30, 1, ["no iqdb match found", 8, [27, 1, [[["th", {}, null]], null]], [false, true, "Best match"]]]]]''' ) ] )
+            
+        
+        if version == 233:
+            
+            self._controller.pub( 'splash_set_status_text', 'moving phashes from main to cache' )
+        
+            self._c.execute( 'CREATE TABLE external_caches.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
+            
+            self._c.execute( 'CREATE TABLE external_caches.shape_perceptual_hash_map ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );' )
+            self._c.execute( 'CREATE INDEX external_caches.shape_perceptual_hash_map_hash_id_index ON shape_perceptual_hash_map ( hash_id );' )
+            
+            try:
+                
+                def GetPHashId( phash ):
+                    
+                    result = self._c.execute( 'SELECT phash_id FROM external_caches.shape_perceptual_hashes WHERE phash = ?;', ( sqlite3.Binary( phash ), ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        self._c.execute( 'INSERT INTO external_caches.shape_perceptual_hashes ( phash ) VALUES ( ? );', ( sqlite3.Binary( phash ), ) )
+                        
+                        phash_id = self._c.lastrowid
+                        
+                    else:
+                        
+                        ( phash_id, ) = result
+                        
+                    
+                    return phash_id
+                    
+                
+                current_phash_info = self._c.execute( 'SELECT hash_id, phash FROM main.perceptual_hashes;' ).fetchall()
+                
+                num_to_do = len( current_phash_info )
+                
+                for ( i, ( hash_id, phash ) ) in enumerate( current_phash_info ):
+                    
+                    if i % 500 == 0:
+                        
+                        self._controller.pub( 'splash_set_status_text', 'moving phashes: ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
+                        
+                    
+                    phash_id = GetPHashId( phash )
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO external_caches.shape_perceptual_hash_map ( phash_id, hash_id ) VALUES ( ?, ? );', ( phash_id, hash_id ) )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                self._controller.pub( 'splash_set_status_text', 'moving phashes failed, error written to log' )
+                
+                time.sleep( 3 )
+                
+            
+            self._c.execute( 'DROP TABLE main.perceptual_hashes;' )
+            
+            #
+            
+            self._controller.pub( 'splash_set_status_text', 'removing redundant trash deletion record' )
+            
+            try:
+                
+                trash_service_id = self._GetServiceId( CC.TRASH_SERVICE_KEY )
+                
+                self._c.execute( 'DELETE FROM deleted_files WHERE service_id = ?;', ( trash_service_id, ) )
+                
+                self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( trash_service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                self._controller.pub( 'splash_set_status_text', 'removing trash deletion record failed, error written to log' )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

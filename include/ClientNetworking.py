@@ -410,13 +410,151 @@ class HTTPConnection( object ):
         self._RefreshConnection()
         
     
-    def _GetResponse( self, method_string, path_and_query, request_headers, body, attempt_number = 1 ):
+    def _DealWithResponse( self, method, response, parsed_response, size_of_response ):
+        
+        response_headers = { k : v for ( k, v ) in response.getheaders() if k != 'set-cookie' }
+        
+        cookies = self._ParseCookies( response.getheader( 'set-cookie' ) )
+        
+        self._last_request_time = HydrusData.GetNow()
+        
+        if response.status == 200:
+            
+            return ( parsed_response, None, size_of_response, response_headers, cookies )
+            
+        elif response.status in ( 301, 302, 303, 307 ):
+            
+            location = response.getheader( 'Location' )
+            
+            if location is None:
+                
+                raise Exception( 'Received an invalid redirection response.' )
+                
+            else:
+                
+                url = location
+                
+                if ', ' in url:
+                    
+                    url = url.split( ', ' )[0]
+                    
+                elif ' ' in url:
+                    
+                    # some booru is giving daft redirect responses
+                    HydrusData.Print( url )
+                    url = urllib.quote( HydrusData.ToByteString( url ), safe = '/?=&' )
+                    HydrusData.Print( url )
+                    
+                
+                if not url.startswith( self._scheme ):
+                    
+                    # assume it is like 'index.php' or '/index.php', rather than 'http://blah.com/index.php'
+                    
+                    if url.startswith( '/' ): slash_sep = ''
+                    else: slash_sep = '/'
+                    
+                    url = self._scheme + '://' + self._host + slash_sep + url
+                    
+                
+                if response.status in ( 301, 307 ):
+                    
+                    # 301: moved permanently, repeat request
+                    # 307: moved temporarily, repeat request
+                    
+                    redirect_info = ( method, url )
+                    
+                elif response.status in ( 302, 303 ):
+                    
+                    # 302: moved temporarily, repeat request (except everyone treats it like 303 for no good fucking reason)
+                    # 303: thanks, now go here with GET
+                    
+                    redirect_info = ( HC.GET, url )
+                    
+                
+                return ( parsed_response, redirect_info, size_of_response, response_headers, cookies )
+                
+            
+        elif response.status == 304: raise HydrusExceptions.NotModifiedException()
+        else:
+            
+            if response.status == 401: raise HydrusExceptions.PermissionException( parsed_response )
+            elif response.status == 403: raise HydrusExceptions.ForbiddenException( parsed_response )
+            elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
+            elif response.status == 419: raise HydrusExceptions.SessionException( parsed_response )
+            elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
+            elif response.status in ( 500, 501, 502, 503 ):
+                
+                server_header = response.getheader( 'Server' )
+                
+                if server_header is not None and 'hydrus' in server_header:
+                    
+                    hydrus_service = True
+                    
+                else:
+                    
+                    hydrus_service = False
+                    
+                
+                if response.status == 503 and hydrus_service:
+                    
+                    raise HydrusExceptions.ServerBusyException( 'Server is busy, please try again later.' )
+                    
+                else:
+                    
+                    raise Exception( parsed_response )
+                    
+                
+            else: raise Exception( parsed_response )
+            
+        
+    
+    def _SendRequestGetResponse( self, method, path_and_query, request_headers, body, report_hooks = None, temp_path = None, attempt_number = 1 ):
+        
+        if report_hooks is None:
+            
+            report_hooks = []
+            
+        
+        if 'User-Agent' not in request_headers:
+            
+            request_headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
+            
+        
+        path_and_query = HydrusData.ToByteString( path_and_query )
+        
+        request_headers = { str( k ) : str( v ) for ( k, v ) in request_headers.items() }
+        
+        ( response, attempt_number ) = self._GetInitialResponse( method, path_and_query, request_headers, body, attempt_number = attempt_number )
+        
+        try:
+            
+            ( parsed_response, size_of_response ) = self._ReadResponse( method, response, report_hooks, temp_path )
+            
+            return ( response, parsed_response, size_of_response )
+            
+        except HydrusExceptions.ShouldReattemptNetworkException:
+            
+            if method == HC.GET:
+                
+                return self._SendRequestGetResponse( method, path_and_query, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, attempt_number = attempt_number + 1 )
+                
+            else:
+                
+                raise
+                
+            
+        
+    
+    def _GetInitialResponse( self, method, path_and_query, request_headers, body, attempt_number = 1 ):
+        
+        if method == HC.GET: method_string = 'GET'
+        elif method == HC.POST: method_string = 'POST'
         
         try:
             
             self._connection.request( method_string, path_and_query, headers = request_headers, body = body )
             
-            return self._connection.getresponse()
+            return ( self._connection.getresponse(), attempt_number )
             
         except ( httplib.CannotSendRequest, httplib.BadStatusLine ):
             
@@ -428,7 +566,7 @@ class HTTPConnection( object ):
                 
                 self._RefreshConnection()
                 
-                return self._GetResponse( method_string, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
+                return self._GetInitialResponse( method, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
                 
             else:
                 
@@ -458,7 +596,7 @@ class HTTPConnection( object ):
                     
                     self._RefreshConnection()
                     
-                    return self._GetResponse( method_string, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
+                    return self._GetInitialResponse( method, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
                     
                 else:
                     
@@ -480,7 +618,7 @@ class HTTPConnection( object ):
                 
                 self._RefreshConnection()
                 
-                return self._GetResponse( method_string, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
+                return self._GetInitialResponse( method_string, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
                 
             else:
                 
@@ -491,7 +629,17 @@ class HTTPConnection( object ):
             
         
     
-    def _ReadResponse( self, response, report_hooks, temp_path = None ):
+    def _ReadResponse( self, method, response, report_hooks, temp_path = None ):
+        
+        # in general, don't want to resend POSTs
+        if method == HC.GET:
+            
+            recoverable_exc = HydrusExceptions.ShouldReattemptNetworkException
+            
+        else:
+            
+            recoverable_exc = HydrusExceptions.NetworkException
+            
         
         try:
             
@@ -508,18 +656,22 @@ class HTTPConnection( object ):
             
         except socket.timeout as e:
             
-            raise HydrusExceptions.NetworkException( 'Connection timed out during response read.' )
+            raise recoverable_exc( 'Connection timed out during response read.' )
             
         except socket.error as e:
             
             if e.errno == errno.WSAECONNRESET:
                 
-                raise HydrusExceptions.NetworkException( 'Connection reset by remote host.' )
+                raise recoverable_exc( 'Connection reset by remote host.' )
+                
+            else:
+                
+                raise
                 
             
         except ssl.SSLEOFError:
             
-            raise HydrusExceptions.NetworkException( 'Secure connection terminated abruptly.' )
+            raise recoverable_exc( 'Secure connection terminated abruptly.' )
             
         
         return ( parsed_response, size_of_response )
@@ -718,118 +870,9 @@ class HTTPConnection( object ):
     
     def Request( self, method, path_and_query, request_headers, body, report_hooks = None, temp_path = None ):
         
-        if report_hooks is None: report_hooks = []
+        ( response, parsed_response, size_of_response ) = self._SendRequestGetResponse( method, path_and_query, request_headers, body, report_hooks = report_hooks, temp_path = temp_path )
         
-        if method == HC.GET: method_string = 'GET'
-        elif method == HC.POST: method_string = 'POST'
-        
-        if 'User-Agent' not in request_headers:
-            
-            request_headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
-            
-        
-        path_and_query = HydrusData.ToByteString( path_and_query )
-        
-        request_headers = { str( k ) : str( v ) for ( k, v ) in request_headers.items() }
-        
-        response = self._GetResponse( method_string, path_and_query, request_headers, body )
-        
-        ( parsed_response, size_of_response ) = self._ReadResponse( response, report_hooks, temp_path )
-        
-        response_headers = { k : v for ( k, v ) in response.getheaders() if k != 'set-cookie' }
-        
-        cookies = self._ParseCookies( response.getheader( 'set-cookie' ) )
-        
-        self._last_request_time = HydrusData.GetNow()
-        
-        if response.status == 200:
-            
-            return ( parsed_response, None, size_of_response, response_headers, cookies )
-            
-        elif response.status in ( 301, 302, 303, 307 ):
-            
-            location = response.getheader( 'Location' )
-            
-            if location is None:
-                
-                raise Exception( 'Received an invalid redirection response.' )
-                
-            else:
-                
-                url = location
-                
-                if ', ' in url:
-                    
-                    url = url.split( ', ' )[0]
-                    
-                elif ' ' in url:
-                    
-                    # some booru is giving daft redirect responses
-                    HydrusData.Print( url )
-                    url = urllib.quote( HydrusData.ToByteString( url ), safe = '/?=&' )
-                    HydrusData.Print( url )
-                    
-                
-                if not url.startswith( self._scheme ):
-                    
-                    # assume it is like 'index.php' or '/index.php', rather than 'http://blah.com/index.php'
-                    
-                    if url.startswith( '/' ): slash_sep = ''
-                    else: slash_sep = '/'
-                    
-                    url = self._scheme + '://' + self._host + slash_sep + url
-                    
-                
-                if response.status in ( 301, 307 ):
-                    
-                    # 301: moved permanently, repeat request
-                    # 307: moved temporarily, repeat request
-                    
-                    redirect_info = ( method, url )
-                    
-                elif response.status in ( 302, 303 ):
-                    
-                    # 302: moved temporarily, repeat request (except everyone treats it like 303 for no good fucking reason)
-                    # 303: thanks, now go here with GET
-                    
-                    redirect_info = ( HC.GET, url )
-                    
-                
-                return ( parsed_response, redirect_info, size_of_response, response_headers, cookies )
-                
-            
-        elif response.status == 304: raise HydrusExceptions.NotModifiedException()
-        else:
-            
-            if response.status == 401: raise HydrusExceptions.PermissionException( parsed_response )
-            elif response.status == 403: raise HydrusExceptions.ForbiddenException( parsed_response )
-            elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
-            elif response.status == 419: raise HydrusExceptions.SessionException( parsed_response )
-            elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
-            elif response.status in ( 500, 501, 502, 503 ):
-                
-                server_header = response.getheader( 'Server' )
-                
-                if server_header is not None and 'hydrus' in server_header:
-                    
-                    hydrus_service = True
-                    
-                else:
-                    
-                    hydrus_service = False
-                    
-                
-                if response.status == 503 and hydrus_service:
-                    
-                    raise HydrusExceptions.ServerBusyException( 'Server is busy, please try again later.' )
-                    
-                else:
-                    
-                    raise Exception( parsed_response )
-                    
-                
-            else: raise Exception( parsed_response )
-            
+        return self._DealWithResponse( method, response, parsed_response, size_of_response )
         
     
     

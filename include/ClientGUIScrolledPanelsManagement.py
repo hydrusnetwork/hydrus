@@ -11,6 +11,7 @@ import ClientGUIScrolledPanelsEdit
 import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
 import ClientMedia
+import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals
@@ -1068,6 +1069,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
+            self._main_gui_title = wx.TextCtrl( self )
+            
             self._default_gui_session = wx.Choice( self )
             
             self._confirm_client_exit = wx.CheckBox( self )
@@ -1099,6 +1102,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            
+            self._main_gui_title.SetValue( self._new_options.GetString( 'main_gui_title' ) )
             
             gui_session_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
             
@@ -1147,6 +1152,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'Main gui title: ', self._main_gui_title ) )
             rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
@@ -1229,6 +1235,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
             
             HC.options[ 'hide_preview' ] = self._hide_preview.GetValue()
+            
+            title = self._main_gui_title.GetValue()
+            
+            self._new_options.SetString( 'main_gui_title', title )
+            
+            HydrusGlobals.client_controller.pub( 'main_gui_title', title )
             
             self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
             self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
@@ -2439,7 +2451,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             # If I let this go uncaught, it propagates to the media viewer above, so an Enter or a '+' closes the window or zooms in!
             # The DoAllowNextEvent tells wx to gen regular key_down/char events so our text box gets them like normal, despite catching the event here
             
-            event.DoAllowNextEvent()
+            if event.KeyCode == wx.WXK_ESCAPE:
+                
+                event.Skip()
+                
+            else:
+                
+                event.DoAllowNextEvent()
+                
             
         else:
             
@@ -2650,15 +2669,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             num_files = len( self._media )
             
-            sets_of_choices = []
+            # let's figure out what these tags can mean for the media--add, remove, or what?
             
-            potential_num_reasons_needed = 0
+            choices = collections.defaultdict( list )
             
             for tag in tags:
                 
                 num_current = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
-                
-                choices = []
                 
                 if self._i_am_local_tag_service:
                     
@@ -2666,7 +2683,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if num_current < num_files:
                             
-                            choices.append( ( 'add ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - num_current ) + ' files', ( HC.CONTENT_UPDATE_ADD, tag ) ) )
+                            num_non_current = num_files - num_current
+                            
+                            choices[ HC.CONTENT_UPDATE_ADD ].append( ( tag, num_non_current ) )
                             
                         
                     
@@ -2674,7 +2693,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if num_current > 0:
                             
-                            choices.append( ( 'delete ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current ) + ' files', ( HC.CONTENT_UPDATE_DELETE, tag ) ) )
+                            choices[ HC.CONTENT_UPDATE_DELETE ].append( ( tag, num_current ) )
                             
                         
                     
@@ -2685,21 +2704,26 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if not only_remove:
                         
-                        if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HydrusData.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', ( HC.CONTENT_UPDATE_PEND, tag ) ) )
+                        if num_current + num_pending < num_files:
+                            
+                            num_pendable = num_files - ( num_current + num_pending )
+                            
+                            choices[ HC.CONTENT_UPDATE_PEND ].append( ( tag, num_pendable ) )
+                            
                         
                     
                     if not only_add:
                         
                         if num_current > num_petitioned and not only_add:
                             
-                            choices.append( ( 'petition ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_PETITION, tag ) ) )
+                            num_petitionable = num_current - num_petitioned
                             
-                            potential_num_reasons_needed += 1
+                            choices[ HC.CONTENT_UPDATE_PETITION ].append( ( tag, num_petitionable ) )
                             
                         
                         if num_pending > 0 and not only_add:
                             
-                            choices.append( ( 'rescind pending ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_pending ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PEND, tag ) ) )
+                            choices[ HC.CONTENT_UPDATE_RESCIND_PEND ].append( ( tag, num_pending ) )
                             
                         
                     
@@ -2707,196 +2731,172 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if num_petitioned > 0:
                             
-                            choices.append( ( 'rescind petitioned ' + tag + ' from ' + HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' files', ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) ) )
-                            
-                        
-                    
-                
-                if len( choices ) == 0:
-                    
-                    continue
-                    
-                
-                sets_of_choices.append( choices )
-                
-            
-            if forced_reason is None and potential_num_reasons_needed > 1:
-                
-                no_user_choices = True not in ( len( choices ) > 1 for choices in sets_of_choices )
-                
-                if no_user_choices:
-                    
-                    message = 'You are about to petition more than one tag.'
-                    
-                else:
-                    
-                    message = 'You might be about to petition more than one tag.'
-                    
-                
-                message += os.linesep * 2
-                message += 'To save you time, would you like to use the same reason for all the petitions?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Many petitions found' ) as yn_dlg:
-                    
-                    if yn_dlg.ShowModal() == wx.ID_YES:
-                        
-                        message = 'Please enter your common petition reason here:'
-                        
-                        with ClientGUIDialogs.DialogTextEntry( self, message ) as text_dlg:
-                            
-                            if text_dlg.ShowModal() == wx.ID_OK:
-                                
-                                forced_reason = text_dlg.GetValue()
-                                
+                            choices[ HC.CONTENT_UPDATE_RESCIND_PETITION ].append( ( tag, num_petitioned ) )
                             
                         
                     
                 
             
-            forced_choice_actions = []
+            # now we have options, let's ask the user what they want to do
             
-            immediate_content_updates = []
-            
-            for choices in sets_of_choices:
+            if len( choices ) == 1:
                 
-                always_do = False
+                [ ( choice_action, tag_counts ) ] = choices.items()
                 
-                if len( choices ) == 1:
-                    
-                    [ ( text_gumpf, choice ) ] = choices
-                    
-                else:
-                    
-                    choice = None
-                    
-                    for forced_choice_action in forced_choice_actions:
-                        
-                        for possible_choice in choices:
-                            
-                            ( text_gumpf, ( choice_action, choice_tag ) ) = possible_choice
-                            
-                            if choice_action == forced_choice_action:
-                                
-                                choice = ( choice_action, choice_tag )
-                                
-                                break
-                                
-                            
-                        
-                        if choice is not None:
-                            
-                            break
-                            
-                        
-                    
-                    if choice is None:
-                        
-                        intro = 'What would you like to do?'
-                        
-                        show_always_checkbox = len( sets_of_choices ) > 1
-                        
-                        with ClientGUIDialogs.DialogButtonChoice( self, intro, choices, show_always_checkbox = show_always_checkbox ) as dlg:
-                            
-                            result = dlg.ShowModal()
-                            
-                            if result == wx.ID_OK:
-                                
-                                ( always_do, choice ) = dlg.GetData()
-                                
-                            else:
-                                
-                                break
-                                
-                            
-                        
-                    
+                tags = { tag for ( tag, count ) in tag_counts }
                 
-                if choice is None:
+            else:
+                
+                bdc_choices = []
+                
+                preferred_order = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_RESCIND_PETITION ]
+                
+                choice_text_lookup = {}
+                
+                choice_text_lookup[ HC.CONTENT_UPDATE_ADD ] = 'add'
+                choice_text_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'delete'
+                choice_text_lookup[ HC.CONTENT_UPDATE_PEND ] = 'pend'
+                choice_text_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'petition'
+                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'rescind pend'
+                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PETITION ] = 'rescind petition'
+                
+                for choice_action in preferred_order:
                     
-                    continue
-                    
-                
-                ( choice_action, choice_tag ) = choice
-                
-                if always_do:
-                    
-                    forced_choice_actions.append( choice_action )
-                    
-                
-                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = ( m for m in self._media if choice_tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and choice_tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if choice_tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
-                
-                hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
-                
-                content_updates = []
-                
-                if choice_action == HC.CONTENT_UPDATE_PETITION:
-                    
-                    if forced_reason is None:
+                    if choice_action not in choices:
                         
-                        message = 'Enter a reason for ' + choice_tag + ' to be removed. A janitor will review your petition.'
+                        continue
                         
-                        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
-                            
-                            if dlg.ShowModal() == wx.ID_OK:
-                                
-                                reason = dlg.GetValue()
-                                
-                            else:
-                                
-                                continue
-                                
-                            
+                    
+                    choice_text_prefix = choice_text_lookup[ choice_action ]
+                    
+                    tag_counts = choices[ choice_action ]
+                    
+                    tags = { tag for ( tag, count ) in tag_counts }
+                    
+                    if len( tags ) == 1:
                         
+                        [ ( tag, count ) ] = tag_counts
+                        
+                        text = choice_text_prefix + ' "' + tag + '" for ' + HydrusData.ConvertIntToPrettyString( count ) + ' files'
                         
                     else:
                         
-                        reason = forced_reason
+                        text = choice_text_prefix + ' ' + HydrusData.ConvertIntToPrettyString( len( tags ) ) + ' tags'
                         
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes, reason ) ) )
+                    data = ( choice_action, tags )
+                    
+                    tooltip = os.linesep.join( ( tag + ' - ' + HydrusData.ConvertIntToPrettyString( count ) + ' files' for ( tag, count ) in tag_counts ) )
+                    
+                    bdc_choices.append( ( text, data, tooltip ) )
+                    
+                
+                intro = 'What would you like to do?'
+                
+                with ClientGUIDialogs.DialogButtonChoice( self, intro, bdc_choices ) as dlg:
+                    
+                    result = dlg.ShowModal()
+                    
+                    if result == wx.ID_OK:
+                        
+                        ( always_do, ( choice_action, tags ) ) = dlg.GetData()
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+                
+            
+            if choice_action == HC.CONTENT_UPDATE_PETITION:
+                
+                if forced_reason is None:
+                    
+                    # add the easy reason buttons here
+                    
+                    if len( tags ) == 1:
+                        
+                        ( tag, ) = tags
+                        
+                        tag_text = '"' + tag + '"'
+                        
+                    else:
+                        
+                        tag_text = 'the ' + HydrusData.ConvertIntToPrettyString( len( tags ) ) + ' tags'
+                        
+                    
+                    message = 'Enter a reason for ' + tag_text + ' to be removed. A janitor will review your petition.'
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            reason = dlg.GetValue()
+                            
+                        else:
+                            
+                            return
+                            
+                        
                     
                 else:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( choice_tag, hashes ) ) )
+                    reason = forced_reason
+                    
+                
+            
+            # we have an action and tags, so let's effect the content updates
+            
+            content_updates = []
+            
+            for tag in tags:
+                
+                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
+                
+                hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
+                
+                if choice_action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes, reason ) ) )
+                    
+                else:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ) ) )
                     
                 
                 if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ) and self._add_parents_checkbox.GetValue():
                     
                     tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
                     
-                    parents = tag_parents_manager.GetParents( self._tag_service_key, choice_tag )
+                    parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
                     
                     content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( parent, hashes ) ) for parent in parents ) )
                     
                 
-                for m in self._media:
-                    
-                    for content_update in content_updates:
-                        
-                        m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
-                        
-                    
+            
+            for m in self._media:
                 
-                if self._immediate_commit:
+                for content_update in content_updates:
                     
-                    immediate_content_updates.extend( content_updates )
-                    
-                else:
-                    
-                    self._content_updates.extend( content_updates )
+                    m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
                     
                 
             
-            if len( immediate_content_updates ) > 0:
+            if self._immediate_commit:
                 
-                service_keys_to_content_updates = { self._tag_service_key : immediate_content_updates }
+                service_keys_to_content_updates = { self._tag_service_key : content_updates }
                 
                 HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                
+            else:
+                
+                self._content_updates.extend( content_updates )
                 
             
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )

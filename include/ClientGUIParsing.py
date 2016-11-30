@@ -1792,7 +1792,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = dlg.GetPath()
+                path = HydrusData.ToUnicode( dlg.GetPath() )
                 
                 try:
                     
