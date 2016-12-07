@@ -35,6 +35,8 @@ if sys.platform == 'win32': PLATFORM_WINDOWS = True
 elif sys.platform == 'darwin': PLATFORM_OSX = True
 elif sys.platform == 'linux2': PLATFORM_LINUX = True
 
+RUNNING_FROM_SOURCE = sys.argv[0].endswith( '.py' ) or sys.argv[0].endswith( '.pyw' )
+
 import sqlite3
 import traceback
 import yaml
@@ -44,7 +46,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 234
+SOFTWARE_VERSION = 235
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -312,6 +314,8 @@ NOISY_MIMES = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) + list( VIDEO ) )
 ARCHIVES = ( APPLICATION_ZIP, APPLICATION_HYDRUS_ENCRYPTED_ZIP )
 
 MIMES_WITH_THUMBNAILS = ( APPLICATION_FLASH, IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG )
+
+MIMES_WE_CAN_PHASH = ( IMAGE_JPEG, IMAGE_PNG )
 
 # mp3 header is complicated
 

@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 235</h3></li>
+				<ul>
+					<li>finished first version of new faster dupe search--'system:similar to' now uses it</li>
+					<li>finished faster dupe search tree creation</li>
+					<li>finished faster dupe search tree search</li>
+					<li>added faster dupe search tree leaf insertion</li>
+					<li>added faster dupe search tree rebalancing maintenance</li>
+					<li>added faster dupe search tree orphan deletion maintenance</li>
+					<li>added faster dupe search leaf-regeneration-as-scheduled maintenance</li>
+					<li>misc faster dupe search tree work</li>
+					<li>new search tree will be created on db update</li>
+					<li>fixed the 'add' buttons on the import files dialog</li>
+					<li>fixed linux manage tags text input</li>
+					<li>reduced incidence of linux media viewer post-manage tags key event swallowing</li>
+					<li>fixed an issue where if the manage tags dialog was launched from the media viewer while a hover window was displaying, the main gui would often be raised when the manage tags frame was closed, annoyingly obscuring and de-focusing the underlying media viewer</li>
+					<li>fixed manage tags action workflow when no valid tag choices exist</li>
+					<li>entering a tag petition reason now has several common 'suggestions' for quick entry</li>
+					<li>removed ffmpeg binary from default linux release (as basically every linux has a decent ffmpeg by default)</li>
+					<li>fixed the incorrect ffmpeg version for os x</li>
+					<li>added an option to options->media to prefer to use the system ffmpeg over any in the hydrus bin directory</li>
+					<li>fixed linux arrow key navigation of the page picker dialog</li>
+					<li>cleaned up the page picker dialog's gross old code</li>
+					<li>the edit file lookup script panel now has a script management control on its test page to better report on and control tests</li>
+					<li>scripts will new correctly attempt to decode unicode and other encoded text in responses</li>
+					<li>if non-text data is accidentally fetched in the file lookup script panel's test page, it is now caught and a small summary of that event is printed to the text box instead</li>
+					<li>added the same non-text catch to the edit link node panel</li>
+					<li>improved how some script errors and status updates are handled so the new test window script management controls will see and report more useful information</li>
+					<li>removed 'restart' option from linux for now--looks like a bug in pyinstaller</li>
+					<li>improved how the new GET request read reattempt works</li>
+					<li>cleaned up some spammy error code</li>
+					<li>cleaned up spammy test code</li>
+					<li>misc error handling improvements</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 234</h3></li>
 				<ul>
 					<li>the action choice workflow in the manage tags dialog now merges decisions for multiple tag entry events</li>
@@ -20,6 +54,7 @@
 					<li>added unicode path support when importing serialised pngs</li>
 					<li>added unicode path support when exporting serialised pngs</li>
 					<li>exporting a serialised png now reports success via the export button, which will temporarily relabel itself</li>
+					<li>added discord links to help files and help->links menu</li>
 					<li>when a GET network connection fails during the read phase due to an unexpected timeout, the request will be reattempted a couple of times, like failed connection initialisations currently are</li>
 					<li>escape key now closes scrolledpanelframes (review services or import status frames)</li>
 					<li>manage tags dialog and frame now closes due to escape key correctly</li>

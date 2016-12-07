@@ -26,6 +26,14 @@ from twisted.internet.defer import deferredGenerator, waitForDeferred
 import HydrusData
 import HydrusGlobals
 
+with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
+    
+    EXAMPLE_FILE = f.read()
+    
+with open( os.path.join( HC.STATIC_DIR, 'hydrus_small.png' ), 'rb' ) as f:
+    
+    EXAMPLE_THUMBNAIL = f.read()
+    
 class TestServer( unittest.TestCase ):
     
     @classmethod
@@ -125,7 +133,7 @@ class TestServer( unittest.TestCase ):
         
         path =  os.path.join( client_files_default, 'f' + prefix, hash_encoded + '.jpg' )
         
-        with open( path, 'wb' ) as f: f.write( 'file' )
+        with open( path, 'wb' ) as f: f.write( EXAMPLE_FILE )
         
         connection.request( 'GET', '/file?hash=' + self._file_hash.encode( 'hex' ) )
         
@@ -133,7 +141,7 @@ class TestServer( unittest.TestCase ):
         
         data = response.read()
         
-        self.assertEqual( data, 'file' )
+        self.assertEqual( data, EXAMPLE_FILE )
         
         try: os.remove( path )
         except: pass
@@ -142,7 +150,7 @@ class TestServer( unittest.TestCase ):
         
         path = os.path.join( client_files_default, 't' + prefix, hash_encoded + '.thumbnail' )
         
-        with open( path, 'wb' ) as f: f.write( 'thumb' )
+        with open( path, 'wb' ) as f: f.write( EXAMPLE_THUMBNAIL )
         
         connection.request( 'GET', '/thumbnail?hash=' + self._file_hash.encode( 'hex' ) )
         
@@ -150,7 +158,7 @@ class TestServer( unittest.TestCase ):
         
         data = response.read()
         
-        self.assertEqual( data, 'thumb' )
+        self.assertEqual( data, EXAMPLE_THUMBNAIL )
         
         try: os.remove( path )
         except: pass
@@ -166,11 +174,11 @@ class TestServer( unittest.TestCase ):
         
         path = ServerFiles.GetExpectedFilePath( self._file_hash )
         
-        with open( path, 'wb' ) as f: f.write( 'file' )
+        with open( path, 'wb' ) as f: f.write( EXAMPLE_FILE )
         
         response = service.Request( HC.GET, 'file', { 'hash' : self._file_hash.encode( 'hex' ) } )
         
-        self.assertEqual( response, 'file' )
+        self.assertEqual( response, EXAMPLE_FILE )
         
         try: os.remove( path )
         except: pass
@@ -209,11 +217,11 @@ class TestServer( unittest.TestCase ):
         
         path = ServerFiles.GetExpectedThumbnailPath( self._file_hash )
         
-        with open( path, 'wb' ) as f: f.write( 'thumb' )
+        with open( path, 'wb' ) as f: f.write( EXAMPLE_THUMBNAIL )
         
         response = service.Request( HC.GET, 'thumbnail', { 'hash' : self._file_hash.encode( 'hex' ) } )
         
-        self.assertEqual( response, 'thumb' )
+        self.assertEqual( response, EXAMPLE_THUMBNAIL )
         
         try: os.remove( path )
         except: pass
@@ -254,8 +262,8 @@ class TestServer( unittest.TestCase ):
         file_path =  os.path.join( client_files_default, 'f' + prefix, hash_encoded + '.jpg' )
         thumbnail_path = os.path.join( client_files_default, 't' + prefix, hash_encoded + '.thumbnail' )
         
-        with open( file_path, 'wb' ) as f: f.write( 'file' )
-        with open( thumbnail_path, 'wb' ) as f: f.write( 'thumbnail' )
+        with open( file_path, 'wb' ) as f: f.write( EXAMPLE_FILE )
+        with open( thumbnail_path, 'wb' ) as f: f.write( EXAMPLE_THUMBNAIL )
         
         local_booru_manager = HydrusGlobals.test_controller.GetManager( 'local_booru' )
         

@@ -1273,6 +1273,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._load_images_with_pil = wx.CheckBox( self )
             self._load_images_with_pil.SetToolTipString( 'OpenCV is much faster than PIL, but the current release crashes on certain images. You can try turning this off, but switch it back on if you have any problems.' )
             
+            self._use_system_ffmpeg = wx.CheckBox( self )
+            self._use_system_ffmpeg.SetToolTipString( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
+            
             self._media_zooms = wx.TextCtrl( self )
             self._media_zooms.Bind( wx.EVT_TEXT, self.EventZoomsChanged )
             
@@ -1288,6 +1291,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
             self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.SetValue( self._new_options.GetBoolean( 'load_images_with_pil' ) )
+            self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
             
@@ -1316,6 +1320,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
             rows.append( ( 'Disable OpenCV for gifs: ', self._disable_cv_for_gifs ) )
             rows.append( ( 'Load images with PIL: ', self._load_images_with_pil ) )
+            rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -1406,6 +1411,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.GetValue() )
+            self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.GetValue() )
             
             try:
                 
@@ -2446,6 +2452,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventCharHook( self, event ):
         
+        # the char hook event goes up. if it isn't skipped all the way, the subsequent text event will never occur
+        # however we don't want the char hook going all the way up sometimes!
+        
         if not HC.PLATFORM_LINUX:
             
             # If I let this go uncaught, it propagates to the media viewer above, so an Enter or a '+' closes the window or zooms in!
@@ -2464,7 +2473,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             # Top jej, the events weren't being generated after all in Linux, so here's a possibly borked patch for that:
             
-            HydrusGlobals.do_not_catch_char_hook = True
+            if event.KeyCode != wx.WXK_ESCAPE:
+                
+                HydrusGlobals.do_not_catch_char_hook = True
+                
             
             event.Skip()
             
@@ -2737,6 +2749,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
+            if len( choices ) == 0:
+                
+                return
+                
+            
             # now we have options, let's ask the user what they want to do
             
             if len( choices ) == 1:
@@ -2828,7 +2845,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     message = 'Enter a reason for ' + tag_text + ' to be removed. A janitor will review your petition.'
                     
-                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                    suggestions = []
+                    
+                    suggestions.append( 'mangled parse/typo' )
+                    suggestions.append( 'tag not applicable' )
+                    suggestions.append( 'should be namespaced' )
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             

@@ -465,6 +465,10 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
             
             self.Close()
             
+        else:
+            
+            event.Skip()
+            
         
     
     def EventMenu( self, event ):

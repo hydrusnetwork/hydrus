@@ -1183,6 +1183,9 @@ class Canvas( wx.Window ):
         
         if self._current_display_media is not None:
             
+            # take any focus away from hover window, which will mess up window order when it hides due to the new frame
+            self.SetFocus()
+            
             title = 'manage tags'
             frame_key = 'manage_tags_frame'
             
@@ -2610,7 +2613,10 @@ class CanvasMediaListFilter( CanvasMediaList ):
                     
                     self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action ) ) )
                     
-                else: event.Skip()
+                else:
+                    
+                    event.Skip()
+                    
                 
             
         
@@ -2908,7 +2914,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def EventCharHook( self, event ):
         
-        if self._HydrusShouldNotProcessInput(): event.Skip()
+        if self._HydrusShouldNotProcessInput():
+            
+            event.Skip()
+            
         else:
             
             ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
@@ -2931,7 +2940,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                     self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( action ) ) )
                     
-                else: event.Skip()
+                else:
+                    
+                    event.Skip()
+                    
                 
             
         
@@ -3689,6 +3701,11 @@ class MediaContainer( wx.Window ):
                 if self._media.GetMime() == HC.APPLICATION_FLASH:
                     
                     self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
+                    
+                    if self._media_window is None:
+                        
+                        raise Exception( 'Failed to initialise the flash window' )
+                        
                     
                     client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
                     

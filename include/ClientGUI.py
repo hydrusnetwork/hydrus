@@ -215,7 +215,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _AnalyzeDatabase( self ):
         
-        message = 'This will gather statistical information on the database\'s indices, helping the query planner design efficient queries. It typically happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes, during which your gui may hang. A popup message will show its status.'
+        message = 'This will gather statistical information on the database\'s indices, helping the query planner perform efficiently. It typically happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes, during which your gui may hang. A popup message will show its status.'
         message += os.linesep * 2
         message += 'A \'soft\' analyze will only reanalyze those indices that are due for a check in the normal db maintenance cycle. If nothing is due, it will return immediately.'
         message += os.linesep * 2
@@ -751,7 +751,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             menu.AppendSeparator()
             
-            ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self, self.Exit, restart = True )
+            we_borked_linux_pyinstaller = HC.PLATFORM_LINUX and not HC.RUNNING_FROM_SOURCE
+            
+            if not we_borked_linux_pyinstaller:
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self, self.Exit, restart = True )
+                
+            
             ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self, self.Exit )
             
             return ( menu, p( '&File' ), True )
@@ -980,6 +986,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self, self._AnalyzeDatabase )
             ClientGUIMenus.AppendMenuItem( submenu, 'rebalance file storage', 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.', self, self._RebalanceClientFiles )
             ClientGUIMenus.AppendMenuItem( submenu, 'regenerate autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self, self._RegenerateACCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'regenerate similar files search data', 'Delete and recreate the similar files search tree.', self, self._RegenerateSimilarFilesData )
             ClientGUIMenus.AppendMenuItem( submenu, 'regenerate thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self, self._RegenerateThumbnails )
             ClientGUIMenus.AppendMenuItem( submenu, 'check database integrity', 'Have the database examine all its records for internal consistency.', self, self._CheckDBIntegrity )
             ClientGUIMenus.AppendMenuItem( submenu, 'check file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self, self._CheckFileIntegrity )
@@ -1750,6 +1757,25 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             if result == wx.ID_YES:
                 
                 self._controller.Write( 'regenerate_ac_cache' )
+                
+            
+        
+    
+    def _RegenerateSimilarFilesData( self ):
+        
+        message = 'This will delete and then recreate the similar files search tree. This is useful if it has somehow become unbalanced and similar files searches are running slow.'
+        message += os.linesep * 2
+        message += 'If you have a lot of files, it can take a little while, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
+                
+                self._controller.Write( 'regenerate_similar_files' )
                 
             
         
@@ -2795,7 +2821,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for ( time_closed, index, name, page ) in self._closed_pages:
                 
-                if page.GetPageKey() == page_key:
+                try:
+                    
+                    if page.GetPageKey() == page_key:
+                        
+                        return True
+                    
+                except wx.PyDeadObjectError:
+                    
+                    # page is dead, being cleaned up--it probably just called itself during exit, asking if it should be playing video or w/e
                     
                     return True
                     

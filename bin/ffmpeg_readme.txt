@@ -1,3 +1,3 @@
-If you are running from source and don't have 'ffmpeg' in your path, stick ffmpeg.exe (for windows) or ffmpeg executable file (for linux/osx) in this folder.
+FFMPEG is used by hydrus for many video purposes. Some releases of hydrus include an FFMPEG static executable ('ffmpeg' or 'ffmpeg.exe') in this directory. If hydrus does not find the executable here, it will attempt to run it from your normal path.
 
-You can get a static build at http://ffmpeg.org/download.html
+If you do not have FFMPEG installed, or would prefer to run it from this location, you can get a static build at http://ffmpeg.org/download.html

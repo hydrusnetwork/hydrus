@@ -187,18 +187,19 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
     
 class BetterButton( wx.Button ):
     
-    def __init__( self, parent, label, callable ):
+    def __init__( self, parent, label, callable, *args, **kwargs ):
         
         wx.Button.__init__( self, parent, label = label )
         
         self._callable = callable
-        
+        self._args = args
+        self._kwargs = kwargs
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         
     
     def EventButton( self, event ):
         
-        self._callable()
+        self._callable( *self._args,  **self._kwargs )
         
     
 class BetterChoice( wx.Choice ):
@@ -3057,6 +3058,11 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
         
     
     def _Activate( self ):
+        
+        # if the hover window has focus when the manage tags spawns, then when it disappears, the main gui gets put as the next heir
+        # so when manage tags closes, main gui pops to the front!
+        
+        #self.GetParent().GiveParentFocus()
         
         HydrusGlobals.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
         

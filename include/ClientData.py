@@ -541,6 +541,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = True
         
+        self._dictionary[ 'booleans' ][ 'use_system_ffmpeg' ] = False
+        
         #
         
         self._dictionary[ 'integers' ] = {}

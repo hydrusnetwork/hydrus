@@ -17,6 +17,7 @@ import HydrusSerialisable
 import HydrusSessions
 import HydrusTags
 import HydrusThreading
+import HydrusVideoHandling
 import ClientConstants as CC
 import ClientDB
 import ClientGUI
@@ -520,6 +521,14 @@ class Controller( HydrusController.HydrusController ):
         self._new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
         
         HC.options = self._options
+        
+        if self._new_options.GetBoolean( 'use_system_ffmpeg' ):
+            
+            if HydrusVideoHandling.FFMPEG_PATH.startswith( HC.BIN_DIR ):
+                
+                HydrusVideoHandling.FFMPEG_PATH = os.path.basename( HydrusVideoHandling.FFMPEG_PATH )
+                
+            
         
         self._services_manager = ClientCaches.ServicesManager( self )
         

@@ -254,9 +254,14 @@ def GetMime( path ):
         
         return mime
         
-    except:
+    except HydrusExceptions.MimeException:
         
-        pass
+        HydrusData.Print( 'FFMPEG couldn\'t figure out the mime for: ' + path )
+        
+    except Exception as e:
+        
+        HydrusData.Print( 'FFMPEG couldn\'t figure out the mime for: ' + path )
+        HydrusData.PrintException( e )
         
     
     hsaudio_object = hsaudiotag.auto.File( path )

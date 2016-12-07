@@ -1106,7 +1106,16 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             
             response = ClientNetworking.RequestsGet( self._my_example_url, headers = headers )
             
-            self._my_example_data.SetValue( response.content )
+            example_data = response.text
+            
+            try:
+                
+                self._example_data.SetValue( example_data )
+                
+            except UnicodeDecodeError:
+                
+                self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ConvertIntToBytes( len( example_data ) ) + ', did not appear to be displayable text.' )
+                
             
         except Exception as e:
             
@@ -1251,6 +1260,8 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_data = ''
         
+        self._test_script_management = ScriptManagementControl( test_panel )
+        
         self._test_arg = wx.TextCtrl( test_panel )
         
         self._test_arg.SetValue( 'enter example file path, hex hash, or raw user input here' )
@@ -1341,6 +1352,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        vbox.AddF( self._test_script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._test_arg, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._fetch_data, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1404,9 +1416,18 @@ And pass that html to a number of 'parsing children' that will each look through
             
             job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
             
+            self._test_script_management.SetJobKey( job_key )
+            
             example_data = script.FetchData( job_key, file_identifier )
             
-            self._example_data.SetValue( example_data )
+            try:
+                
+                self._example_data.SetValue( example_data )
+                
+            except UnicodeDecodeError:
+                
+                self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ConvertIntToBytes( len( example_data ) ) + ', did not appear to be displayable text.' )
+                
             
         except Exception as e:
             
@@ -1417,6 +1438,10 @@ And pass that html to a number of 'parsing children' that will each look through
             message += HydrusData.ToUnicode( e )
             
             wx.MessageBox( message )
+            
+        finally:
+            
+            job_key.Finish()
             
         
     
@@ -1429,6 +1454,8 @@ And pass that html to a number of 'parsing children' that will each look through
             stop_time = HydrusData.GetNow() + 30
             
             job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+            
+            self._test_script_management.SetJobKey( job_key )
             
             data = self._example_data.GetValue()
             desired_content = 'all'
@@ -1452,6 +1479,10 @@ And pass that html to a number of 'parsing children' that will each look through
             message = 'Could not parse!'
             
             wx.MessageBox( message )
+            
+        finally:
+            
+            job_key.Finish()
             
         
     

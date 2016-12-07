@@ -865,6 +865,16 @@ def LastShutdownWasBad( db_path, instance ):
         return False
         
     
+def MedianPop( population ):
+    
+    # assume it has at least one and comes sorted
+    
+    median_index = len( population ) / 2
+    
+    row = population.pop( median_index )
+    
+    return row
+    
 def MergeKeyToListDicts( key_to_list_dicts ):
     
     result = collections.defaultdict( list )
@@ -994,9 +1004,9 @@ def RestartProcess():
     exe = sys.executable
     me = sys.argv[0]
     
-    if me.endswith( '.py' ) or me.endswith( '.pyw' ):
+    if HC.RUNNING_FROM_SOURCE:
         
-        # we are running from source--exe is python's exe, me is the script
+        # exe is python's exe, me is the script
         
         args = [ sys.executable ] + sys.argv
         

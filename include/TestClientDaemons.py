@@ -13,6 +13,10 @@ import ClientConstants as CC
 import HydrusGlobals
 import HydrusPaths
 
+with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
+    
+    EXAMPLE_FILE = f.read()
+    
 class TestDaemons( unittest.TestCase ):
     
     def test_import_folders_daemon( self ):
@@ -36,10 +40,6 @@ class TestDaemons( unittest.TestCase ):
             HydrusGlobals.test_controller.SetRead( 'serialisable_named', [ import_folder ] )
             
             ClientDaemons.DAEMONCheckImportFolders( HydrusGlobals.test_controller )
-            
-            #(('C:\\code\\Hydrus\\temp\\7baa9a818a14b7a9cbefb04c16bdc45ac651eb7400c1996e66e2efeef9e3ee5d',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
-            #(('C:\\code\\Hydrus\\temp\\e0dbdcb1a13c0565ffb73f2f497528adbe1703ca1dfc69680202487187b9fcfa',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
-            #(('C:\\code\\Hydrus\\temp\\182c4eecf2a5b4dfc8b74813bcff5d967ed53d92a982d8ae18520e1504fa5902',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
             
             import_file = HydrusGlobals.test_controller.GetWrite( 'import_file' )
             

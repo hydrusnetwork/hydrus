@@ -643,7 +643,10 @@ class DialogButtonChoice( Dialog ):
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         
-        wx.CallAfter( self._buttons[0].SetFocus )
+        if len( self._buttons ) > 0:
+            
+            wx.CallAfter( self._buttons[0].SetFocus )
+            
         
     
     def EventButton( self, event ):
@@ -1640,7 +1643,7 @@ class DialogInputLocalFiles( Dialog ):
         self._job_key.Cancel()
         
     
-    def AddFolder( self, event ):
+    def AddFolder( self ):
         
         with wx.DirDialog( self, 'Select a folder to add.', style = wx.DD_DIR_MUST_EXIST ) as dlg:
             
@@ -1670,7 +1673,7 @@ class DialogInputLocalFiles( Dialog ):
             
         
     
-    def AddPaths( self, event ):
+    def AddPaths( self ):
         
         with wx.FileDialog( self, 'Select the files to add.', style = wx.FD_MULTIPLE ) as dlg:
             
@@ -2751,20 +2754,17 @@ class DialogPageChooser( Dialog ):
         
         Dialog.__init__( self, parent, 'new page', position = 'center' )
         
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+        # spawn in this order, so focus precipitates from the graphical top
         
-        self._button_hidden = wx.Button( self )
-        self._button_hidden.Hide()
-        
-        self._button_1 = wx.Button( self, label = '', id = 1 )
-        self._button_2 = wx.Button( self, label = '', id = 2 )
-        self._button_3 = wx.Button( self, label = '', id = 3 )
-        self._button_4 = wx.Button( self, label = '', id = 4 )
-        self._button_5 = wx.Button( self, label = '', id = 5 )
-        self._button_6 = wx.Button( self, label = '', id = 6 )
         self._button_7 = wx.Button( self, label = '', id = 7 )
         self._button_8 = wx.Button( self, label = '', id = 8 )
         self._button_9 = wx.Button( self, label = '', id = 9 )
+        self._button_4 = wx.Button( self, label = '', id = 4 )
+        self._button_5 = wx.Button( self, label = '', id = 5 )
+        self._button_6 = wx.Button( self, label = '', id = 6 )
+        self._button_1 = wx.Button( self, label = '', id = 1 )
+        self._button_2 = wx.Button( self, label = '', id = 2 )
+        self._button_3 = wx.Button( self, label = '', id = 3 )
         
         gridbox = wx.GridSizer( 0, 3 )
         
@@ -2788,31 +2788,8 @@ class DialogPageChooser( Dialog ):
         
         self._InitButtons( 'home' )
         
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         self.Bind( wx.EVT_BUTTON, self.EventButton )
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        self._button_hidden.SetFocus()
-        
-        #
-        
-        entries = []
-        
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 8 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_LEFT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 4 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 6 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 2 ) ) )
-        
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 1 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD2, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 2 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD3, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 3 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD4, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 4 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD5, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 5 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD6, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 6 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD7, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 7 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD8, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 8 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD9, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'button', 9 ) ) )
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
         #
         
@@ -2851,6 +2828,54 @@ class DialogPageChooser( Dialog ):
         elif entry_type == 'page_import_urls': button.SetLabelText( 'raw urls' )
         
         button.Show()
+        
+    
+    def _HitButton( self, id ):
+        
+        if id in self._command_dict:
+            
+            ( entry_type, obj ) = self._command_dict[ id ]
+            
+            if entry_type == 'menu':
+                
+                self._InitButtons( obj )
+                
+            else:
+                
+                if entry_type == 'page_query': 
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_query', obj )
+                    
+                elif entry_type == 'page_import_booru':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_import_booru' )
+                    
+                elif entry_type == 'page_import_gallery':
+                    
+                    site_type = obj
+                    
+                    HydrusGlobals.client_controller.pub( 'new_import_gallery', site_type )
+                    
+                elif entry_type == 'page_import_page_of_images':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_import_page_of_images' )
+                    
+                elif entry_type == 'page_import_thread_watcher':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_import_thread_watcher' )
+                    
+                elif entry_type == 'page_import_urls':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_import_urls' )
+                    
+                elif entry_type == 'page_petitions':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_page_petitions', obj )
+                    
+                
+                self.EndModal( wx.ID_OK )
+                
+            
         
     
     def _InitButtons( self, menu_keyword ):
@@ -2932,10 +2957,13 @@ class DialogPageChooser( Dialog ):
             
             potential_buttons = [ self._button_8, self._button_4, self._button_6, self._button_2 ]
             
-        elif len( entries ) <= 9: potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
+        elif len( entries ) <= 9:
+            
+            potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
+            
         else:
             
-            pass # sort out a multi-page solution? maybe only if this becomes a big thing; the person can always select from the menus, yeah?
+            # sort out a multi-page solution? maybe only if this becomes a big thing; the person can always select from the menus, yeah?
             
             potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
             entries = entries[:9]
@@ -2952,69 +2980,49 @@ class DialogPageChooser( Dialog ):
         
         id = event.GetId()
         
-        if id == wx.ID_CANCEL: self.EndModal( wx.ID_CANCEL )
-        elif id in self._command_dict:
+        if id == wx.ID_CANCEL:
             
-            ( entry_type, obj ) = self._command_dict[ id ]
+            self.EndModal( wx.ID_CANCEL )
             
-            if entry_type == 'menu':
-                
-                self._InitButtons( obj )
-                
-            else:
-                
-                if entry_type == 'page_query': 
-                    
-                    HydrusGlobals.client_controller.pub( 'new_page_query', obj )
-                    
-                elif entry_type == 'page_import_booru':
-                    
-                    HydrusGlobals.client_controller.pub( 'new_import_booru' )
-                    
-                elif entry_type == 'page_import_gallery':
-                    
-                    site_type = obj
-                    
-                    HydrusGlobals.client_controller.pub( 'new_import_gallery', site_type )
-                    
-                elif entry_type == 'page_import_page_of_images':
-                    
-                    HydrusGlobals.client_controller.pub( 'new_page_import_page_of_images' )
-                    
-                elif entry_type == 'page_import_thread_watcher':
-                    
-                    HydrusGlobals.client_controller.pub( 'new_page_import_thread_watcher' )
-                    
-                elif entry_type == 'page_import_urls':
-                    
-                    HydrusGlobals.client_controller.pub( 'new_page_import_urls' )
-                    
-                elif entry_type == 'page_petitions':
-                    
-                    HydrusGlobals.client_controller.pub( 'new_page_petitions', obj )
-                    
-                
-                self.EndModal( wx.ID_OK )
-                
+        else:
             
-        
-        self._button_hidden.SetFocus()
+            self._HitButton( id )
+            
         
     
-    def EventMenu( self, event ):
+    def EventCharHook( self, event ):
         
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        id = None
         
-        if action is not None:
+        kc = event.KeyCode
+        
+        if kc == wx.WXK_UP: id = 8
+        elif kc == wx.WXK_LEFT: id = 4
+        elif kc == wx.WXK_RIGHT: id = 6
+        elif kc == wx.WXK_DOWN: id = 2
+        elif kc == wx.WXK_NUMPAD1: id = 1
+        elif kc == wx.WXK_NUMPAD2: id = 2
+        elif kc == wx.WXK_NUMPAD3: id = 3
+        elif kc == wx.WXK_NUMPAD4: id = 4
+        elif kc == wx.WXK_NUMPAD5: id = 5
+        elif kc == wx.WXK_NUMPAD6: id = 6
+        elif kc == wx.WXK_NUMPAD7: id = 7
+        elif kc == wx.WXK_NUMPAD8: id = 8
+        elif kc == wx.WXK_NUMPAD9: id = 9
+        elif kc == wx.WXK_ESCAPE:
             
-            ( command, data ) = action
+            self.EndModal( wx.ID_CANCEL )
             
-            if command == 'button':
-                
-                new_event = wx.CommandEvent( wx.wxEVT_COMMAND_BUTTON_CLICKED, winid = data )
-                
-                self.ProcessEvent( new_event )
-                
+            return
+            
+        else:
+            
+            event.Skip()
+            
+        
+        if id is not None:
+            
+            self._HitButton( id )
             
         
     
@@ -4929,11 +4937,24 @@ class DialogShortcuts( Dialog ):
     
 class DialogTextEntry( Dialog ):
     
-    def __init__( self, parent, message, default = '', allow_blank = False ):
+    def __init__( self, parent, message, default = '', allow_blank = False, suggestions = None ):
+        
+        if suggestions is None:
+            
+            suggestions = []
+            
         
         Dialog.__init__( self, parent, 'enter text', position = 'center' )
         
+        self._chosen_suggestion = None
         self._allow_blank = allow_blank
+        
+        button_choices =  []
+        
+        for text in suggestions:
+            
+            button_choices.append( ClientGUICommon.BetterButton( self, text, self.ButtonChoice, text ) )
+            
         
         self._text = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
         self._text.Bind( wx.EVT_TEXT, self.EventText )
@@ -4965,6 +4986,12 @@ class DialogTextEntry( Dialog ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( st_message, CC.FLAGS_BIG_INDENT )
+        
+        for button in button_choices:
+            
+            vbox.AddF( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
         vbox.AddF( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
         
@@ -4986,6 +5013,13 @@ class DialogTextEntry( Dialog ):
             
         
     
+    def ButtonChoice( self, text ):
+        
+        self._chosen_suggestion =  text
+        
+        self.EndModal( wx.ID_OK )
+        
+    
     def EventText( self, event ):
         
         wx.CallAfter( self._CheckText )
@@ -4995,10 +5029,23 @@ class DialogTextEntry( Dialog ):
     
     def EventEnter( self, event ):
         
-        if self._text.GetValue() != '': self.EndModal( wx.ID_OK )
+        if self._text.GetValue() != '':
+            
+            self.EndModal( wx.ID_OK )
+            
         
     
-    def GetValue( self ): return self._text.GetValue()
+    def GetValue( self ):
+        
+        if self._chosen_suggestion is None:
+            
+            return self._text.GetValue()
+            
+        else:
+            
+            return self._chosen_suggestion
+            
+        
     
 class DialogYesNo( Dialog ):
     

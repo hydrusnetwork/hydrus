@@ -599,6 +599,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
                 
                 job_key.SetVariable( 'script_status', 'Network error! Details written to log.' )
                 
+                HydrusData.Print( 'Problem fetching ' + search_url + ':' )
                 HydrusData.PrintException( e )
                 
                 time.sleep( 2 )
@@ -606,7 +607,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            linked_data = response.content
+            linked_data = response.text
             
             children_content = GetChildrenContent( job_key, self._children, linked_data, search_url, desired_content )
             
@@ -760,58 +761,75 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     def FetchData( self, job_key, file_identifier ):
         
-        # add gauge report hook and cancel support here
-        
-        request_args = dict( self._static_args )
-        
-        if self._file_identifier_type != FILE_IDENTIFIER_TYPE_FILE:
+        try:
             
-            request_args[ self._file_identifier_arg_name ] = HydrusData.EncodeBytes( self._file_identifier_encoding, file_identifier )
+            # add gauge report hook and in-stream cancel support to the get/post calls
             
-        
-        if self._query_type == HC.GET:
+            request_args = dict( self._static_args )
             
-            if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+            if self._file_identifier_type != FILE_IDENTIFIER_TYPE_FILE:
                 
-                raise Exception( 'Cannot have a file as an argument on a GET query!' )
+                request_args[ self._file_identifier_arg_name ] = HydrusData.EncodeBytes( self._file_identifier_encoding, file_identifier )
                 
             
-            rendered_url = self._url + '?' + '&'.join( ( HydrusData.ToByteString( key ) + '=' + HydrusData.ToByteString( value ) for ( key, value ) in request_args.items() ) )
-            
-            job_key.SetVariable( 'script_status', 'fetching ' + rendered_url )
-            
-            job_key.AddURL( rendered_url )
-            
-            response = ClientNetworking.RequestsGet( self._url, params = request_args )
-            
-        elif self._query_type == HC.POST:
-            
-            if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+            if self._query_type == HC.GET:
                 
-                job_key.SetVariable( 'script_status', 'uploading file' )
+                if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+                    
+                    raise Exception( 'Cannot have a file as an argument on a GET query!' )
+                    
                 
-                path  = file_identifier
+                rendered_url = self._url + '?' + '&'.join( ( HydrusData.ToByteString( key ) + '=' + HydrusData.ToByteString( value ) for ( key, value ) in request_args.items() ) )
                 
-                files = { self._file_identifier_arg_name : open( path, 'rb' ) }
+                job_key.SetVariable( 'script_status', 'fetching ' + rendered_url )
                 
-            else:
+                job_key.AddURL( rendered_url )
                 
-                job_key.SetVariable( 'script_status', 'uploading identifier' )
+                response = ClientNetworking.RequestsGet( self._url, params = request_args )
                 
-                files = None
+            elif self._query_type == HC.POST:
+                
+                if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+                    
+                    job_key.SetVariable( 'script_status', 'uploading file' )
+                    
+                    path  = file_identifier
+                    
+                    files = { self._file_identifier_arg_name : open( path, 'rb' ) }
+                    
+                else:
+                    
+                    job_key.SetVariable( 'script_status', 'uploading identifier' )
+                    
+                    files = None
+                    
+                
+                response = ClientNetworking.RequestsPost( self._url, data = request_args, files = files )
                 
             
-            response = ClientNetworking.RequestsPost( self._url, data = request_args, files = files )
+            if job_key.IsCancelled():
+                
+                raise HydrusExceptions.CancelledException()
+                
             
-        
-        if job_key.IsCancelled():
+            data = response.text
             
-            raise HydrusExceptions.CancelledException()
+            return data
             
-        
-        data = response.content
-        
-        return data
+        except HydrusExceptions.NotFoundException:
+            
+            job_key.SetVariable( 'script_status', '404 - nothing found' )
+            
+            raise
+            
+        except HydrusExceptions.NetworkException as e:
+            
+            job_key.SetVariable( 'script_status', 'Network error!' )
+            
+            HydrusData.ShowException( e )
+            
+            raise
+            
         
     
     def GetParsableContent( self ):
@@ -834,31 +852,12 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 data = self.FetchData( job_key, file_identifier )
                 
-            except HydrusExceptions.NotFoundException:
-                
-                job_key.SetVariable( 'script_status', '404 - nothing found' )
-                
-                return []
-                
             except HydrusExceptions.NetworkException as e:
-                
-                job_key.SetVariable( 'script_status', 'Network error!' )
-                
-                HydrusData.ShowException( e )
                 
                 return []
                 
             
             content_results = self.Parse( job_key, data, desired_content )
-            
-            if len( content_results ) == 0:
-                
-                job_key.SetVariable( 'script_status', 'Did not find anything.' )
-                
-            else:
-                
-                job_key.SetVariable( 'script_status', 'Found ' + HydrusData.ConvertIntToPrettyString( len( content_results ) ) + ' rows.' )
-                
             
             return content_results
             
@@ -881,9 +880,18 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     def Parse( self, job_key, data, desired_content ):
         
-        content = GetChildrenContent( job_key, self._children, data, self._url, desired_content )
+        content_results = GetChildrenContent( job_key, self._children, data, self._url, desired_content )
         
-        return content
+        if len( content_results ) == 0:
+            
+            job_key.SetVariable( 'script_status', 'Did not find anything.' )
+            
+        else:
+            
+            job_key.SetVariable( 'script_status', 'Found ' + HydrusData.ConvertIntToPrettyString( len( content_results ) ) + ' rows.' )
+            
+        
+        return content_results
         
     
     def SetChildren( self, children ):

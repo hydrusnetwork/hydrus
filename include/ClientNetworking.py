@@ -536,6 +536,8 @@ class HTTPConnection( object ):
             
             if method == HC.GET:
                 
+                self._RefreshConnection()
+                
                 return self._SendRequestGetResponse( method, path_and_query, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, attempt_number = attempt_number + 1 )
                 
             else:

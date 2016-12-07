@@ -37,6 +37,8 @@ class FullscreenHoverFrame( wx.Frame ):
         
         self._timer_check_show.Start( 100, wx.TIMER_CONTINUOUS )
         
+        self._hide_until =  None
+        
         HydrusGlobals.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
@@ -60,6 +62,11 @@ class FullscreenHoverFrame( wx.Frame ):
         
         
     
+    def GiveParentFocus( self ):
+        
+        self.GetParent().SetFocus()
+        
+    
     def SetDisplayMedia( self, canvas_key, media ):
         
         if canvas_key == self._canvas_key:
@@ -71,6 +78,18 @@ class FullscreenHoverFrame( wx.Frame ):
     def TIMEREventCheckIfShouldShow( self, event ):
         
         try:
+            
+            if self._hide_until is not None:
+                
+                if HydrusData.TimeHasPassed( self._hide_until ):
+                    
+                    self._hide_until =  None
+                    
+                else:
+                    
+                    return
+                    
+                
             
             if self._current_media is None:
                 
