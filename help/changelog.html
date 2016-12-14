@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 236</h3></li>
+				<ul>
+					<li>in prep for a network https upgrade, the client can now detect and escalate to https when making connections to hydrus services</li>
+					<li>import/export to png and clipboard now supports multiple objects at once!</li>
+					<li>rewrote the manage subscriptions dialog to work on the new panel system</li>
+					<li>the new manage subscriptions dialog has a listctrl and a sub edit dialog</li>
+					<li>the new manage subscriptions dialog has the same add/export/import/dupe/edit/delete buttons as the manage scripts dialog</li>
+					<li>subscriptions are now importable/exportable, including en masse with the new multiple object import/export support!</li>
+					<li>the new manage subscriptions dialog has retry failed/pause-resume/check now/reset buttons for easy mass subs management</li>
+					<li>the edit subscription panel has a bit of a layout makeover</li>
+					<li>the edit subscription panel now updates itself as its buttons are hit</li>
+					<li>the edit subscription panel disables buttons that are not applicable</li>
+					<li>subscriptions can now be renamed!</li>
+					<li>cleaned some misc subscription code</li>
+					<li>relabelled initial and periodic file limit in the subscription edit panel</li>
+					<li>middle-clicking on the main gui's greyspace (e.g. to the right of the notebook tabs) will spawn the new page chooser!</li>
+					<li>created a simple HydrusRatingArchive class--will do more with it in future</li>
+					<li>added ffmpeg, python, and sqlite versions to the help->about window</li>
+					<li>harmonised daemon code</li>
+					<li>added a new class of daemon that will not fire while a session load is occuring</li>
+					<li>subscriptions, import and export folders, and file repo downloads now use this new daemon</li>
+					<li>cleaned the way background daemons check for idle</li>
+					<li>expand/collapse panels now notify the new kind of toplevelwindow that a resize may be needed when they switch state</li>
+					<li>time deltas (like on subs edit panel or a thread watcher) now render more concisely ('7 days' instead of '7 days 0 hours')</li>
+					<li>serialisable object png export panel now has a width parameter</li>
+					<li>fixed a bug where tags that begin with unicode digits were accidentally identifying as numbers for the purposes of sorting and throwing errors on convert fail</li>
+					<li>the media viewer can handle some more unusual content update combinations--for instance, if it cannot figure out which media to show next, it will revert back to the first image rather than displaying an undefined null mess</li>
+					<li>updated and cleaned a bunch of my old misc encryption code</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 235</h3></li>
 				<ul>
 					<li>finished first version of new faster dupe search--'system:similar to' now uses it</li>
