@@ -101,7 +101,10 @@ class DAEMONQueue( DAEMON ):
             
             while self._queue.empty():
                 
-                if IsThreadShuttingDown(): return
+                if IsThreadShuttingDown():
+                    
+                    return
+                    
                 
                 self._event.wait( self._period )
                 
@@ -129,7 +132,7 @@ class DAEMONQueue( DAEMON ):
     
 class DAEMONWorker( DAEMON ):
     
-    def __init__( self, controller, name, callable, topics = None, period = 3600, init_wait = 3 ):
+    def __init__( self, controller, name, callable, topics = None, period = 3600, init_wait = 3, pre_call_wait = 0 ):
         
         if topics is None: topics = []
         
@@ -139,10 +142,29 @@ class DAEMONWorker( DAEMON ):
         self._topics = topics
         self._period = period
         self._init_wait = init_wait
+        self._pre_call_wait = pre_call_wait
         
         for topic in topics: self._controller.sub( self, 'set', topic )
         
         self.start()
+        
+    
+    def _CanStart( self, time_started_waiting ):
+        
+        return self._PreCallWaitIsDone( time_started_waiting ) and self._ControllerIsOKWithIt()
+        
+    
+    def _ControllerIsOKWithIt( self ):
+        
+        return True
+        
+    
+    def _PreCallWaitIsDone( self, time_started_waiting ):
+        
+        # just shave a bit off so things that don't have any wait won't somehow have to wait a single accidentaly cycle
+        time_to_start = ( float( time_started_waiting ) - 0.1 ) + self._pre_call_wait
+        
+        return HydrusData.TimeHasPassed( time_to_start )
         
     
     def run( self ):
@@ -151,67 +173,21 @@ class DAEMONWorker( DAEMON ):
         
         while True:
             
-            if IsThreadShuttingDown(): return
-            
-            try:
-                
-                self._callable( self._controller )
-                
-            except HydrusExceptions.ShutdownException:
+            if IsThreadShuttingDown():
                 
                 return
                 
-            except Exception as e:
-                
-                HydrusData.ShowText( 'Daemon ' + self._name + ' encountered an exception:' )
-                
-                HydrusData.ShowException( e )
-                
             
-            if IsThreadShuttingDown(): return
+            time_started_waiting = HydrusData.GetNow()
             
-            self._event.wait( self._period )
-            
-            self._event.clear()
-            
-        
-    
-    def set( self, *args, **kwargs ): self._event.set()
-    
-class DAEMONBigJobWorker( DAEMON ):
-    
-    def __init__( self, controller, name, callable, topics = None, period = 3600, init_wait = 3, pre_callable_wait = 3 ):
-        
-        if topics is None: topics = []
-        
-        DAEMON.__init__( self, controller, name )
-        
-        self._callable = callable
-        self._topics = topics
-        self._period = period
-        self._init_wait = init_wait
-        self._pre_callable_wait = pre_callable_wait
-        
-        for topic in topics: self._controller.sub( self, 'set', topic )
-        
-        self.start()
-        
-    
-    def run( self ):
-        
-        self._event.wait( self._init_wait )
-        
-        while True:
-            
-            if IsThreadShuttingDown(): return
-            
-            time_to_go = ( HydrusData.GetNow() - 1 ) + self._pre_callable_wait
-            
-            while not ( HydrusData.TimeHasPassed( time_to_go ) and self._controller.GoodTimeToDoBackgroundWork() ):
+            while not self._CanStart( time_started_waiting ):
                 
                 time.sleep( 1 )
                 
-                if IsThreadShuttingDown(): return
+                if IsThreadShuttingDown():
+                    
+                    return
+                    
                 
             
             try:
@@ -238,6 +214,22 @@ class DAEMONBigJobWorker( DAEMON ):
         
     
     def set( self, *args, **kwargs ): self._event.set()
+    
+# Big stuff like DB maintenance that we don't want to run while other important stuff is going on, like user interaction or vidya on another process
+class DAEMONBackgroundWorker( DAEMONWorker ):
+    
+    def _ControllerIsOKWithIt( self ):
+        
+        return self._controller.GoodTimeToDoBackgroundWork()
+        
+    
+# Big stuff that we want to run when the user sees, but not at the expense of something else, like laggy session load
+class DAEMONForegroundWorker( DAEMONWorker ):
+    
+    def _ControllerIsOKWithIt( self ):
+        
+        return self._controller.GoodTimeToDoForegroundWork()
+        
     
 class THREADCallToThread( DAEMON ):
     

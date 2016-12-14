@@ -71,8 +71,8 @@ def CensorshipMatch( tag, censorships ):
     return False
     
 def ConvertTagToSortable( t ):
-
-    if t[0].isdigit():
+    
+    if t[0].isdecimal():
         
         # We want to maintain that:
         # 0 < 0a < 0b < 1 ( lexicographic comparison )
@@ -86,7 +86,7 @@ def ConvertTagToSortable( t ):
         
         for character in t:
             
-            if character.isdigit(): int_component += character
+            if character.isdecimal(): int_component += character
             else: break
             
             i += 1
@@ -94,9 +94,15 @@ def ConvertTagToSortable( t ):
         
         str_component = t[i:]
         
-        return ( int( int_component ), str_component )
+        number = int( int_component )
         
-    else: return t
+        
+        return ( number, str_component )
+        
+    else:
+        
+        return t
+        
 
 def FilterNamespaces( tags, namespaces ):
     

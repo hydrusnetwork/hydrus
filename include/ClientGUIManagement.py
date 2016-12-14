@@ -1480,7 +1480,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._get_tags_if_redundant.Bind( wx.EVT_CHECKBOX, self.EventGetTagsIfRedundant )
         self._get_tags_if_redundant.SetToolTipString( 'only fetch tags from the gallery if the file is new' )
         
-        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'file limit', min = 1 )
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop searching once this many files are found', min = 1, none_phrase = 'no limit' )
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
         self._file_limit.SetToolTipString( 'per query, stop searching the gallery once this many files has been reached' )
         

@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import ClientImageHandling
+import ClientImporting
 import ClientParsing
 import cv2
 import HydrusConstants as HC
@@ -25,10 +26,10 @@ png_font = cv2.FONT_HERSHEY_TRIPLEX
 greyscale_text_color = 0
 
 title_size = 0.7
-payload_type_size = 0.5
+payload_description_size = 0.5
 text_size = 0.4
 
-def CreateTopImage( width, title, payload_type, text ):
+def CreateTopImage( width, title, payload_description, text ):
     
     text_extent_bmp = wx.EmptyBitmap( 20, 20, 24 )
     
@@ -38,9 +39,9 @@ def CreateTopImage( width, title, payload_type, text ):
     
     basic_font_size = text_font.GetPointSize()
     
-    payload_type_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
+    payload_description_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
     
-    payload_type_font.SetPointSize( int( basic_font_size * 1.4 ) )
+    payload_description_font.SetPointSize( int( basic_font_size * 1.4 ) )
     
     title_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
     
@@ -49,8 +50,8 @@ def CreateTopImage( width, title, payload_type, text ):
     dc.SetFont( text_font )
     ( gumpf, text_line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
     
-    dc.SetFont( payload_type_font )
-    ( gumpf, payload_type_line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
+    dc.SetFont( payload_description_font )
+    ( gumpf, payload_description_line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
     
     dc.SetFont( title_font )
     ( gumpf, title_line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
@@ -71,7 +72,7 @@ def CreateTopImage( width, title, payload_type, text ):
         text_total_height += 6 # to bring the last 4 padding up to 10 padding
         
     
-    top_height = 10 + title_line_height + 10 + payload_type_line_height + 10 + text_total_height
+    top_height = 10 + title_line_height + 10 + payload_description_line_height + 10 + text_total_height
     
     #
     
@@ -99,11 +100,11 @@ def CreateTopImage( width, title, payload_type, text ):
     
     current_y += t_height + 10
     
-    dc.SetFont( payload_type_font )
+    dc.SetFont( payload_description_font )
     
-    ( t_width, t_height ) = dc.GetTextExtent( payload_type )
+    ( t_width, t_height ) = dc.GetTextExtent( payload_description )
     
-    dc.DrawText( payload_type, ( width - t_width ) / 2, current_y )
+    dc.DrawText( payload_description, ( width - t_width ) / 2, current_y )
     
     current_y += t_height + 10
     
@@ -137,15 +138,11 @@ def CreateTopImage( width, title, payload_type, text ):
     
     return top_image
     
-def DumpToPng( payload, title, payload_type, text, path ):
+def DumpToPng( width, payload, title, payload_description, text, path ):
     
     payload_length = len( payload )
     
     payload_string_length = payload_length + 4
-    
-    square_width = int( float( payload_string_length ) ** 0.5 )
-    
-    width = max( 512, square_width )
     
     payload_height = int( float( payload_string_length ) / width )
     
@@ -154,7 +151,7 @@ def DumpToPng( payload, title, payload_type, text, path ):
         payload_height += 1
         
     
-    top_image = CreateTopImage( width, title, payload_type, text )
+    top_image = CreateTopImage( width, title, payload_description, text )
     
     payload_length_header = struct.pack( '!I', payload_length )
     
@@ -186,18 +183,31 @@ def DumpToPng( payload, title, payload_type, text, path ):
         HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
         
     
-def GetPayloadTypeAndString( payload_obj ):
+def GetPayloadTypeString( payload_obj ):
+    
+    if isinstance( payload_obj, HydrusSerialisable.SerialisableList ):
+        
+        return 'A list of ' + HydrusData.ConvertIntToPrettyString( len( payload_obj ) ) + ' ' + GetPayloadTypeString( payload_obj[0] ) + 's'
+        
+    else:
+        
+        if isinstance( payload_obj, ClientParsing.ParseRootFileLookup ):
+            
+            return 'File Lookup Script'
+            
+        elif isinstance( payload_obj, ClientImporting.Subscription ):
+            
+            return 'Subscription'
+            
+        
+    
+def GetPayloadDescriptionAndString( payload_obj ):
     
     payload_string = payload_obj.DumpToNetworkString()
     
-    if isinstance( payload_obj, ClientParsing.ParseRootFileLookup ):
-        
-        payload_obj_type_string = 'File Lookup Script'
-        
+    payload_description = GetPayloadTypeString( payload_obj ) + ' - ' + HydrusData.ConvertIntToBytes( len( payload_string ) )
     
-    payload_type = payload_obj_type_string + ' - ' + HydrusData.ConvertIntToBytes( len( payload_string ) )
-    
-    return ( payload_type, payload_string )
+    return ( payload_description, payload_string )
     
 def LoadFromPng( path ):
     

@@ -1,7 +1,15 @@
 import ClientConstants as CC
+import ClientDefaults
+import ClientDownloading
+import ClientImporting
+import ClientGUICollapsible
 import ClientGUICommon
+import ClientGUIDialogs
 import ClientGUIScrolledPanels
+import ClientGUITopLevelWindows
 import HydrusConstants as HC
+import HydrusData
+import HydrusGlobals
 import wx
 
 class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -323,5 +331,467 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     def NotifySeedUpdated( self, seed ):
         
         self._UpdateText()
+        
+    
+class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, subscription ):
+        
+        subscription = subscription.Duplicate()
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._original_subscription = subscription
+        
+        #
+        
+        self._name = wx.TextCtrl( self )
+        
+        #
+        
+        self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
+        
+        self._last_checked_st = wx.StaticText( self._info_panel )
+        self._next_check_st = wx.StaticText( self._info_panel )
+        self._seed_info_st = wx.StaticText( self._info_panel )
+        
+        #
+        
+        self._query_panel = ClientGUICommon.StaticBox( self, 'site and query' )
+        
+        self._site_type = ClientGUICommon.BetterChoice( self._query_panel )
+        
+        site_types = []
+        site_types.append( HC.SITE_TYPE_BOORU )
+        site_types.append( HC.SITE_TYPE_DEVIANT_ART )
+        site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
+        site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS )
+        site_types.append( HC.SITE_TYPE_NEWGROUNDS )
+        site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
+        site_types.append( HC.SITE_TYPE_PIXIV_TAG )
+        site_types.append( HC.SITE_TYPE_TUMBLR )
+        
+        for site_type in site_types:
+            
+            self._site_type.Append( HC.site_type_string_lookup[ site_type ], site_type )
+            
+        
+        self._site_type.Bind( wx.EVT_CHOICE, self.EventSiteChanged )
+        
+        self._query = wx.TextCtrl( self._query_panel )
+        
+        self._booru_selector = wx.ListBox( self._query_panel )
+        self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
+        
+        self._period = ClientGUICommon.TimeDeltaButton( self._query_panel, min = 3600 * 4, days = True, hours = True )
+        self._period.Bind( ClientGUICommon.EVT_TIME_DELTA, self.EventPeriodChanged )
+        
+        #
+        
+        self._options_panel = ClientGUICommon.StaticBox( self, 'options' )
+        
+        self._get_tags_if_redundant = wx.CheckBox( self._options_panel )
+        
+        self._initial_file_limit = ClientGUICommon.NoneableSpinCtrl( self._options_panel, '', none_phrase = 'get everything', min = 1, max = 1000000 )
+        self._initial_file_limit.SetToolTipString( 'If set, the first sync will add no more than this many files. Otherwise, it will get everything the gallery has.' )
+        
+        self._periodic_file_limit = ClientGUICommon.NoneableSpinCtrl( self._options_panel, '', none_phrase = 'get everything', min = 1, max = 1000000 )
+        self._periodic_file_limit.SetToolTipString( 'If set, normal syncs will add no more than this many files. Otherwise, they will get everything up until they find a file they have seen before.' )
+        
+        #
+        
+        self._control_panel = ClientGUICommon.StaticBox( self, 'control' )
+        
+        self._paused = wx.CheckBox( self._control_panel )
+        
+        self._seed_cache_button = wx.BitmapButton( self._control_panel, bitmap = CC.GlobalBMPs.seed_cache )
+        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button.SetToolTipString( 'open detailed url cache status' )
+        
+        self._retry_failed = ClientGUICommon.BetterButton( self._control_panel, 'retry failed', self.RetryFailed )
+        
+        self._check_now_button = ClientGUICommon.BetterButton( self._control_panel, 'force check on dialog ok', self.CheckNow )
+        
+        self._reset_cache_button = ClientGUICommon.BetterButton( self._control_panel, 'reset url cache', self.ResetCache )
+        
+        #
+        
+        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
+        
+        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
+        
+        #
+        
+        name = subscription.GetName()
+        
+        self._name.SetValue( name )
+        
+        ( gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache ) = subscription.ToTuple()
+        
+        site_type = gallery_identifier.GetSiteType()
+        
+        self._site_type.SelectClientData( site_type )
+        
+        self._PresentForSiteType()
+        
+        if site_type == HC.SITE_TYPE_BOORU:
+            
+            booru_name = gallery_identifier.GetAdditionalInfo()
+            
+            index = self._booru_selector.FindString( booru_name )
+            
+            if index != wx.NOT_FOUND:
+                
+                self._booru_selector.Select( index )
+                
+            
+        
+        # set gallery_stream_identifiers selection here--some kind of list of checkboxes or whatever
+        
+        self._query.SetValue( query )
+        
+        self._period.SetValue( period )
+        
+        self._get_tags_if_redundant.SetValue( get_tags_if_redundant )
+        self._initial_file_limit.SetValue( initial_file_limit )
+        self._periodic_file_limit.SetValue( periodic_file_limit )
+        
+        self._paused.SetValue( paused )
+        
+        self._import_file_options.SetOptions( import_file_options )
+        
+        self._import_tag_options.SetOptions( import_tag_options )
+        
+        if self._last_checked == 0:
+            
+            self._reset_cache_button.Disable()
+            
+        
+        if self._check_now:
+            
+            self._check_now_button.Disable()
+            
+        
+        self._UpdateCommandButtons()
+        self._UpdateLastNextCheck()
+        self._UpdateSeedInfo()
+        
+        #
+        
+        self._info_panel.AddF( self._last_checked_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._info_panel.AddF( self._next_check_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._info_panel.AddF( self._seed_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'search text: ', self._query ) )
+        rows.append( ( 'check for new files every: ', self._period ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._query_panel, rows )
+        
+        self._query_panel.AddF( self._site_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._query_panel.AddF( self._booru_selector, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._query_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'get tags even if new file is already in db: ', self._get_tags_if_redundant ) )
+        rows.append( ( 'on first check, get at most this many files: ', self._initial_file_limit ) )
+        rows.append( ( 'on normal checks, get at most this many newer files: ', self._periodic_file_limit ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
+        
+        self._options_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        self._control_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
+        
+        rows = []
+        
+        rows.append( ( 'currently paused: ', self._paused ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
+        
+        self._control_panel.AddF( gridbox, CC.FLAGS_LONE_BUTTON )
+        self._control_panel.AddF( self._retry_failed, CC.FLAGS_LONE_BUTTON )
+        self._control_panel.AddF( self._check_now_button, CC.FLAGS_LONE_BUTTON )
+        self._control_panel.AddF( self._reset_cache_button, CC.FLAGS_LONE_BUTTON )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._query_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConfigureImportTagOptions( self ):
+        
+        gallery_identifier = self._GetGalleryIdentifier()
+        
+        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+        
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        import_tag_options = new_options.GetDefaultImportTagOptions( gallery_identifier )
+        
+        if gallery_identifier == self._original_subscription.GetGalleryIdentifier():
+            
+            search_value = self._original_subscription.GetQuery()
+            import_tag_options = self._original_subscription.GetImportTagOptions()
+            
+        
+        self._query.SetValue( search_value )
+        self._import_tag_options.SetNamespaces( namespaces )
+        self._import_tag_options.SetOptions( import_tag_options )
+        
+    
+    def _GetGalleryIdentifier( self ):
+        
+        site_type = self._site_type.GetChoice()
+        
+        if site_type == HC.SITE_TYPE_BOORU:
+            
+            booru_name = self._booru_selector.GetStringSelection()
+            
+            gallery_identifier = ClientDownloading.GalleryIdentifier( site_type, additional_info = booru_name )
+            
+        else:
+            
+            gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
+            
+        
+        return gallery_identifier
+        
+    
+    def _UpdateCommandButtons( self ):
+        
+        on_initial_sync = self._last_checked == 0
+        no_failures = self._seed_cache.GetSeedCount( CC.STATUS_FAILED ) == 0
+        
+        can_check = not ( self._check_now or on_initial_sync )
+        
+        if no_failures:
+            
+            self._retry_failed.Disable()
+            
+        else:
+            
+            self._retry_failed.Enable()
+            
+        
+        if can_check:
+            
+            self._check_now_button.Enable()
+            
+        else:
+            
+            self._check_now_button.Disable()
+            
+        
+        if on_initial_sync:
+            
+            self._reset_cache_button.Disable()
+            
+        else:
+            
+            self._reset_cache_button.Enable()
+            
+        
+    
+    def _UpdateLastNextCheck( self ):
+        
+        if self._last_checked == 0:
+            
+            last_checked_text = 'initial check has not yet occured'
+            
+        else:
+            
+            last_checked_text = 'last checked ' + HydrusData.ConvertTimestampToPrettySync( self._last_checked )
+            
+        
+        self._last_checked_st.SetLabelText( last_checked_text )
+        
+        periodic_next_check_time = self._last_checked + self._period.GetValue()
+        error_next_check_time = self._last_error + HC.UPDATE_DURATION
+        
+        if self._check_now:
+            
+            next_check_text = 'next check as soon as manage subscriptions dialog is closed'
+            
+        elif error_next_check_time > periodic_next_check_time:
+            
+            next_check_text = 'due to an error, next check ' + HydrusData.ConvertTimestampToPrettyPending( error_next_check_time )
+            
+        else:
+            
+            next_check_text = 'next check ' + HydrusData.ConvertTimestampToPrettyPending( periodic_next_check_time )
+            
+        
+        self._next_check_st.SetLabelText( next_check_text )
+        
+    
+    def _UpdateSeedInfo( self ):
+        
+        seed_cache_text = HydrusData.ConvertIntToPrettyString( self._seed_cache.GetSeedCount() ) + ' urls in cache'
+        
+        num_failed = self._seed_cache.GetSeedCount( CC.STATUS_FAILED )
+        
+        if num_failed > 0:
+            
+            seed_cache_text += ', ' + HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed'
+            
+        
+        self._seed_info_st.SetLabelText( seed_cache_text )
+        
+    
+    def _PresentForSiteType( self ):
+        
+        site_type = self._site_type.GetChoice()
+        
+        if site_type == HC.SITE_TYPE_BOORU:
+            
+            if self._booru_selector.GetCount() == 0:
+                
+                boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
+                
+                for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
+                
+                self._booru_selector.Select( 0 )
+                
+            
+            self._booru_selector.Show()
+            
+        else:
+            
+            self._booru_selector.Hide()
+            
+        
+        wx.CallAfter( self._ConfigureImportTagOptions )
+        
+        event = CC.SizeChangedEvent( -1 )
+        
+        wx.CallAfter( self.ProcessEvent, event )
+        
+    
+    def CheckNow( self, event ):
+        
+        self._check_now = True
+        
+        self._UpdateCommandButtons()
+        self._UpdateLastNextCheck()
+        
+    
+    def EventBooruSelected( self, event ):
+        
+        self._ConfigureImportTagOptions()
+        
+    
+    def EventPeriodChanged( self, event ):
+        
+        self._UpdateLastNextCheck()
+        
+    
+    def EventSeedCache( self, event ):
+        
+        dupe_seed_cache = self._seed_cache.Duplicate()
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
+            
+            panel = EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._seed_cache = panel.GetValue()
+                
+                self._UpdateCommandButtons()
+                self._UpdateSeedInfo()
+                
+            
+        
+        
+    
+    def EventSiteChanged( self, event ):
+        
+        self._PresentForSiteType()
+        
+    
+    def GetValue( self ):
+        
+        name = self._name.GetValue()
+        
+        subscription = ClientImporting.Subscription( name )
+        
+        gallery_identifier = self._GetGalleryIdentifier()
+        
+        # in future, this can be harvested from some checkboxes or whatever for stream selection
+        gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
+        
+        query = self._query.GetValue()
+        
+        period = self._period.GetValue()
+        
+        get_tags_if_redundant = self._get_tags_if_redundant.GetValue()
+        initial_file_limit = self._initial_file_limit.GetValue()
+        periodic_file_limit = self._periodic_file_limit.GetValue()
+        
+        paused = self._paused.GetValue()
+        
+        import_file_options = self._import_file_options.GetOptions()
+        
+        import_tag_options = self._import_tag_options.GetOptions()
+        
+        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
+        
+        return subscription
+        
+    
+    def ResetCache( self, event ):
+        
+        message = '''Resetting this subscription's cache will delete ''' + HydrusData.ConvertIntToPrettyString( self._original_subscription.GetSeedCache().GetSeedCount() ) + ''' remembered urls, meaning when the subscription next runs, it will try to download those all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._last_checked = 0
+                self._last_error = 0
+                self._seed_cache = ClientImporting.SeedCache()
+                
+                self._UpdateCommandButtons()
+                self._UpdateLastNextCheck()
+                self._UpdateSeedInfo()
+                
+            
+        
+    
+    def RetryFailed( self ):
+        
+        failed_seeds = self._seed_cache.GetSeeds( CC.STATUS_FAILED )
+        
+        for seed in failed_seeds:
+            
+            self._seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
+            
+        
+        self._last_error = 0
+        
+        self._UpdateCommandButtons()
+        self._UpdateLastNextCheck()
+        self._UpdateSeedInfo()
         
     

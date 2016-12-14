@@ -313,21 +313,36 @@ def ConvertTimeDeltaToPrettyString( seconds ):
             days = seconds / 86400
             hours = ( seconds % 86400 ) / 3600
             
-            result = '%d' % days + ' days ' + '%d' % hours + ' hours'
+            result = '%d' % days + ' days'
+            
+            if hours > 0:
+                
+                result += ' %d' % hours + ' hours'
+                
             
         elif seconds > 3600:
             
             hours = seconds / 3600
             minutes = ( seconds % 3600 ) / 60
             
-            result = '%d' % hours + ' hours ' + '%d' % minutes + ' minutes'
+            result = '%d' % hours + ' hours'
+            
+            if minutes > 0:
+                
+                result += ' %d' % minutes + ' minutes'
+                
             
         else:
             
             minutes = seconds / 60
             seconds = seconds % 60
             
-            result = '%d' % minutes + ' minutes ' + '%d' % seconds + ' seconds'
+            result = '%d' % minutes + ' minutes'
+            
+            if seconds > 0:
+                
+                result += ' %d' % seconds + ' seconds'
+                
             
         
     elif seconds > 1:

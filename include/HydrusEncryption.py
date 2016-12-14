@@ -1,78 +1,54 @@
 import Crypto.Cipher.AES
 import Crypto.Cipher.PKCS1_OAEP
-import Crypto.Hash.SHA256
-import Crypto.Signature.PKCS1_v1_5
 import Crypto.PublicKey.RSA
-import hashlib
 import HydrusConstants as HC
-import HydrusGlobals
 import os
-import potr
-import time
 import traceback
-import yaml
-import zlib
-import HydrusGlobals
 
-def AESKeyToText( aes_key, iv ): return ( aes_key + iv ).encode( 'hex' )
+AES_KEY_LENGTH = 32
+AES_BLOCK_SIZE = 16
 
-def AESTextToKey( text ):
+def DecryptAES( aes_key, encrypted_message ):
     
-    try: keys = text.decode( 'hex' )
-    except: raise Exception( 'Could not understand that key!' )
-    
-    aes_key = keys[:32]
-    
-    iv = keys[32:]
-    
-    return ( aes_key, iv )
-    
-def DecryptAES( aes_key, iv, encrypted_message ):
+    iv = encrypted_message[:AES_BLOCK_SIZE]
+    enciphered_message = encrypted_message[AES_BLOCK_SIZE:]
     
     aes_cipher = Crypto.Cipher.AES.new( aes_key, Crypto.Cipher.AES.MODE_CFB, iv )
     
-    padded_message = aes_cipher.decrypt( encrypted_message )
+    padded_message = aes_cipher.decrypt( enciphered_message )
     
     message = UnpadAES( padded_message )
     
     return message
     
-def DecryptAESFile( aes_key, iv, path ):
+def DecryptAESStream( aes_key, stream_in, stream_out ):
+    
+    iv = stream_in.read( AES_BLOCK_SIZE )
     
     aes_cipher = Crypto.Cipher.AES.new( aes_key, Crypto.Cipher.AES.MODE_CFB, iv )
     
-    if '.encrypted' in path: path_to = path.replace( '.encrypted', '' )
-    else: path_to = path + '.decrypted'
+    next_block = stream_in.read( HC.READ_BLOCK_SIZE )
     
-    with open( path, 'rb' ) as encrypted_f:
+    while True:
         
-        with open( path_to, 'wb' ) as decrypted_f:
+        block = next_block
+        
+        next_block = stream_in.read( HC.READ_BLOCK_SIZE )
+        
+        decrypted_block = aes_cipher.decrypt( block )
+        
+        if next_block == '':
             
-            next_block = encrypted_f.read( HC.READ_BLOCK_SIZE )
-            
-            if next_block.startswith( 'hydrus encrypted zip' ): next_block = next_block.replace( 'hydrus encrypted zip', '', 1 )
-            
-            while True:
-                
-                block = next_block
-                
-                next_block = encrypted_f.read( HC.READ_BLOCK_SIZE )
-                
-                decrypted_block = aes_cipher.decrypt( block )
-                
-                if len( next_block ) == 0:
-                    
-                    decrypted_block = UnpadAES( decrypted_block )
-                    
-                
-                decrypted_f.write( decrypted_block )
-                
-                if len( next_block ) == 0: break
-                
+            decrypted_block = UnpadAES( decrypted_block )
             
         
-    
-    return path_to
+        stream_out.write( decrypted_block )
+        
+        if next_block == '':
+            
+            break
+            
+        
     
 def DecryptPKCS( private_key, encrypted_message ):
     
@@ -81,58 +57,54 @@ def DecryptPKCS( private_key, encrypted_message ):
     message = rsa_cipher.decrypt( encrypted_message )
     
     return message
+
+def DeserialiseRSAKey( text ):
     
-def EncryptAES( aes_key, iv, message ):
+    return Crypto.PublicKey.RSA.importKey( text )
+    
+def EncryptAES( aes_key, message ):
+    
+    iv = GenerateIV()
     
     padded_message = PadAES( message )
     
     aes_cipher = Crypto.Cipher.AES.new( aes_key, Crypto.Cipher.AES.MODE_CFB, iv )
     
-    encrypted_message = aes_cipher.encrypt( padded_message )
+    enciphered_message = aes_cipher.encrypt( padded_message )
+    
+    encrypted_message = iv + enciphered_message
     
     return encrypted_message
     
-def EncryptAESFile( path, preface = '' ):
+def EncryptAESStream( aes_key, stream_in, stream_out ):
     
-    ( aes_key, iv ) = GenerateAESKeyAndIV()
+    iv = GenerateIV()
+    
+    stream_out.write( iv )
     
     aes_cipher = Crypto.Cipher.AES.new( aes_key, Crypto.Cipher.AES.MODE_CFB, iv )
     
-    with open( path, 'rb' ) as decrypted_f:
-        
-        with open( path + '.encrypted', 'wb' ) as encrypted_f:
-            
-            encrypted_f.write( preface )
-            
-            next_block = decrypted_f.read( HC.READ_BLOCK_SIZE )
-            
-            while True:
-                
-                block = next_block
-                
-                next_block = decrypted_f.read( HC.READ_BLOCK_SIZE )
-                
-                if len( next_block ) == 0:
-                    
-                    # block must be the last block
-                    
-                    block = PadAES( block )
-                    
-                
-                encrypted_block = aes_cipher.encrypt( block )
-                
-                encrypted_f.write( encrypted_block )
-                
-                if len( next_block ) == 0: break
-                
-            
-        
+    next_block = stream_in.read( HC.READ_BLOCK_SIZE )
     
-    aes_key_text = AESKeyToText( aes_key, iv )
-    
-    with open( path + '.key', 'wb' ) as f:
+    while True:
         
-        f.write( aes_key_text )
+        block = next_block
+        
+        next_block = stream_in.read( HC.READ_BLOCK_SIZE )
+        
+        if next_block == '':
+            
+            block = PadAES( block )
+            
+        
+        encrypted_block = aes_cipher.encrypt( block )
+        
+        stream_out.write( encrypted_block )
+        
+        if next_block == '':
+            
+            break
+            
         
     
 def EncryptPKCS( public_key, message ):
@@ -140,17 +112,17 @@ def EncryptPKCS( public_key, message ):
     rsa_cipher = Crypto.Cipher.PKCS1_OAEP.new( public_key )
     
     # my understanding is that I don't have to manually pad this, cause OAEP does it for me.
-    # if that is wrong, then lol
     encrypted_message = rsa_cipher.encrypt( message )
     
     return encrypted_message
     
-def GenerateAESKeyAndIV():
+def GenerateAESKey():
     
-    aes_key = os.urandom( 32 )
-    iv = os.urandom( 16 ) # initialisation vector, aes block_size is 16
+    return os.urandom( AES_KEY_LENGTH )
     
-    return ( aes_key, iv )
+def GenerateIV():
+    
+    return os.urandom( AES_BLOCK_SIZE )
     
 def GenerateFilteredRandomBytes( byte_to_exclude, num_bytes ):
     
@@ -165,21 +137,17 @@ def GenerateFilteredRandomBytes( byte_to_exclude, num_bytes ):
     
     return ''.join( bytes )
 
-def GenerateNewPrivateKey(): return Crypto.PublicKey.RSA.generate( 2048 ).exportKey()
-
-def GetPublicKey( private_key_text ):
+def GenerateRSAKeyPair():
     
-    private_key = TextToKey( private_key_text )
+    private_key = Crypto.PublicKey.RSA.generate( 2048 )
     
     public_key = private_key.publickey()
     
-    return public_key.exportKey()
+    return ( private_key, public_key )
     
-def TextToKey( text ): return Crypto.PublicKey.RSA.importKey( text )
-
 def PadAES( message ):
     
-    block_size = 16
+    block_size = AES_BLOCK_SIZE
     
     # get last byte
     # add random gumpf (except for last byte), then add last byte again
@@ -192,9 +160,13 @@ def PadAES( message ):
     
     return message + pad
     
+def SerialiseRSAKey( key ):
+    
+    return key.exportKey()
+    
 def UnpadAES( message ):
     
-    block_size = 16
+    block_size = AES_BLOCK_SIZE
     
     # check last byte, jump back to previous instance of that byte
     
@@ -213,48 +185,3 @@ def UnpadAES( message ):
     
     return message[:index_of_correct_end + 1]
     
-# I based this on the excellent article by Darrik L Mazey, here:
-# https://blog.darmasoft.net/2013/06/30/using-pure-python-otr.html
-
-DEFAULT_POLICY_FLAGS = {}
-
-DEFAULT_POLICY_FLAGS[ 'ALLOW_V1' ] = False
-DEFAULT_POLICY_FLAGS[ 'ALLOW_V2' ] = True
-DEFAULT_POLICY_FLAGS[ 'REQUIRE_ENCRYPTION' ] = True
-
-GenerateOTRKey = potr.compatcrypto.generateDefaultKey
-def LoadOTRKey( stream ): return potr.crypt.PK.parsePrivateKey( stream )[0]
-def DumpOTRKey( key ): return key.serializePrivateKey()
-
-class HydrusOTRContext( potr.context.Context ):
-    
-    def getPolicy( self, key ):
-        
-        if key in DEFAULT_POLICY_FLAGS: return DEFAULT_POLICY_FLAGS[ key ]
-        else: return False
-        
-    
-    def inject( self, msg, appdata = None ):
-        
-        inject_catcher = appdata
-        
-        inject_catcher.write( msg )
-        
-    
-class HydrusOTRAccount( potr.context.Account ):
-    
-    def __init__( self, name, privkey, trusts ):
-        
-        potr.context.Account.__init__( self, name, 'hydrus network otr', 1024, privkey )
-        
-        self.trusts = trusts
-        
-    
-    def saveTrusts( self ):
-        
-        HydrusGlobals.controller.Write( 'otr_trusts', self.name, self.trusts )
-        
-    
-    # I need an accounts manager so there is only ever one copy of an account
-    # it should fetch name, privkey and trusts from db on bootup
-    # savettrusts should just spam to the db because it ain't needed that much.

@@ -251,11 +251,11 @@ class HTTPConnectionManager( object ):
         threading.Thread( target = self.DAEMONMaintainConnections, name = 'Maintain Connections' ).start()
         
     
-    def _DoRequest( self, method, location, path, query, request_headers, body, follow_redirects = True, report_hooks = None, temp_path = None, num_redirects_permitted = 4 ):
+    def _DoRequest( self, method, location, path, query, request_headers, body, follow_redirects = True, report_hooks = None, temp_path = None, hydrus_network = False, num_redirects_permitted = 4 ):
         
         if report_hooks is None: report_hooks = []
         
-        connection = self._GetConnection( location )
+        connection = self._GetConnection( location, hydrus_network )
         
         try:
             
@@ -321,22 +321,22 @@ class HTTPConnectionManager( object ):
             
         
     
-    def _GetConnection( self, location ):
+    def _GetConnection( self, location, hydrus_network ):
         
         with self._lock:
             
-            if location not in self._connections:
+            if ( location, hydrus_network ) not in self._connections:
                 
-                connection = HTTPConnection( location )
+                connection = HTTPConnection( location, hydrus_network )
                 
-                self._connections[ location ] = connection
+                self._connections[ ( location, hydrus_network ) ] = connection
                 
             
-            return self._connections[ location ]
+            return self._connections[ ( location, hydrus_network ) ]
             
         
     
-    def Request( self, method, url, request_headers = None, body = '', return_everything = False, return_cookies = False, report_hooks = None, temp_path = None ):
+    def Request( self, method, url, request_headers = None, body = '', return_cookies = False, report_hooks = None, temp_path = None, hydrus_network = False ):
         
         if request_headers is None: request_headers = {}
         
@@ -344,9 +344,9 @@ class HTTPConnectionManager( object ):
         
         follow_redirects = not return_cookies
         
-        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( method, location, path, query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path )
+        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( method, location, path, query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, temp_path = temp_path, hydrus_network = hydrus_network )
         
-        if return_everything:
+        if hydrus_network:
             
             return ( response, size_of_response, response_headers, cookies )
             
@@ -377,13 +377,13 @@ class HTTPConnectionManager( object ):
                     
                     connections_copy = dict( self._connections )
                     
-                    for ( location, connection ) in connections_copy.items():
+                    for ( ( location, hydrus_network ), connection ) in connections_copy.items():
                         
                         with connection.lock:
                             
                             if connection.IsStale():
                                 
-                                del self._connections[ location ]
+                                del self._connections[ ( location, hydrus_network ) ]
                             
                         
                     
@@ -397,9 +397,11 @@ class HTTPConnectionManager( object ):
     
 class HTTPConnection( object ):
     
-    def __init__( self, location ):
+    def __init__( self, location, hydrus_network ):
         
         ( self._scheme, self._host, self._port ) = location
+        
+        self._hydrus_network = hydrus_network
         
         self._timeout = 30
         
@@ -565,6 +567,13 @@ class HTTPConnection( object ):
             time.sleep( 1 )
             
             if attempt_number <= 3:
+                
+                if self._hydrus_network:
+                    
+                    # we are talking to a new hydrus server, which uses https, and hence an http call gives badstatusline
+                    
+                    self._scheme = 'https'
+                    
                 
                 self._RefreshConnection()
                 
@@ -808,7 +817,23 @@ class HTTPConnection( object ):
     def _RefreshConnection( self ):
         
         if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = self._timeout )
-        elif self._scheme == 'https': self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout )
+        elif self._scheme == 'https':
+            
+            if self._hydrus_network:
+                
+                # this negotiates decent encryption but won't check hostname or the certificate
+                
+                context = ssl.SSLContext( ssl.PROTOCOL_SSLv23 )
+                context.options |= ssl.OP_NO_SSLv2
+                context.options |= ssl.OP_NO_SSLv3
+                
+                self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout, context = context )
+                
+            else:
+                
+                self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout )
+                
+            
         
         try:
             

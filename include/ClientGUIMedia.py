@@ -14,7 +14,6 @@ import collections
 import HydrusExceptions
 import HydrusPaths
 import HydrusSerialisable
-import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import itertools

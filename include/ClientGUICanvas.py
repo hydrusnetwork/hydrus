@@ -14,6 +14,7 @@ import ClientRatings
 import ClientRendering
 import collections
 import gc
+import HydrusExceptions
 import HydrusImageHandling
 import HydrusPaths
 import HydrusTags
@@ -2376,9 +2377,16 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
-        next_media = self._GetNext( self._current_media )
-        
-        if next_media == self._current_media: next_media = None
+        if self.HasMedia( self._current_media ):
+            
+            next_media = self._GetNext( self._current_media )
+            
+            if next_media == self._current_media: next_media = None
+            
+        else:
+            
+            next_media = None
+            
         
         ClientMedia.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
@@ -2392,9 +2400,13 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails ):
             
             self._SetDirty()
             
-        else:
+        elif self.HasMedia( next_media ):
             
             self.SetMedia( next_media )
+            
+        else:
+            
+            self.SetMedia( self._GetFirst() )
             
         
     

@@ -26,6 +26,57 @@ if not os.path.exists( FFMPEG_PATH ):
     
     FFMPEG_PATH = os.path.basename( FFMPEG_PATH )
     
+def GetFFMPEGVersion():
+    # open the file in a pipe, provoke an error, read output
+    
+    cmd = [ FFMPEG_PATH, '-version' ]
+    
+    try:
+        
+        proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+        
+    except Exception as e:
+        
+        if not os.path.exists( FFMPEG_PATH ):
+            
+            return 'no ffmpeg found'
+            
+        else:
+            
+            HydrusData.ShowException( e )
+            
+            return 'unable to execute ffmpeg'
+            
+        
+    
+    infos = proc.stdout.read().decode( 'utf8' )
+    
+    proc.terminate()
+    
+    del proc
+    
+    lines = infos.splitlines()
+    
+    if len( lines ) > 0:
+        
+        # typically 'ffmpeg version [VERSION] Copyright ...
+        top_line = lines[0]
+        
+        if top_line.startswith( 'ffmpeg version ' ):
+            
+            top_line = top_line.replace( 'ffmpeg version ', '' )
+            
+            if ' ' in top_line:
+                
+                version_string = top_line.split( ' ' )[0]
+                
+                return version_string
+                
+            
+        
+    
+    return 'unknown'
+    
 def GetFFMPEGVideoProperties( path ):
     
     info = Hydrusffmpeg_parse_infos( path )

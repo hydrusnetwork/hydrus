@@ -181,7 +181,12 @@ class HydrusController( object ):
     
     def GoodTimeToDoBackgroundWork( self ):
         
-        return not ( self.JustWokeFromSleep() or self.SystemBusy() )
+        return self.CurrentlyIdle() and not ( self.JustWokeFromSleep() or self.SystemBusy() )
+        
+    
+    def GoodTimeToDoForegroundWork( self ):
+        
+        return True
         
     
     def JustWokeFromSleep( self ):
@@ -203,7 +208,7 @@ class HydrusController( object ):
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SleepCheck', HydrusDaemons.DAEMONSleepCheck, period = 120 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemory', HydrusDaemons.DAEMONMaintainMemory, period = 300 ) )
             
-            self._daemons.append( HydrusThreading.DAEMONBigJobWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
+            self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
             
         
     

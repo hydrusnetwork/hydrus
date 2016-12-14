@@ -243,10 +243,7 @@ def DAEMONMaintainTrash( controller ):
     
 def DAEMONRebalanceClientFiles( controller ):
     
-    if controller.CurrentlyIdle():
-        
-        controller.GetClientFilesManager().Rebalance()
-        
+    controller.GetClientFilesManager().Rebalance()
     
 def DAEMONSynchroniseAccounts( controller ):
     
@@ -322,10 +319,7 @@ def DAEMONSynchroniseRepositories( controller ):
                 break
                 
             
-            if controller.CurrentlyIdle():
-                
-                service.Sync( only_when_idle = True )
-                
+            service.Sync( only_when_idle = True )
             
         
         time.sleep( 5 )

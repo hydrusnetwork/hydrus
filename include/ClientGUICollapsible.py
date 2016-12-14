@@ -140,6 +140,10 @@ class CollapsiblePanel( wx.Panel ):
             parent.Layout()
             
         
+        event = CC.SizeChangedEvent( -1 )
+        
+        wx.CallAfter( self.ProcessEvent, event )
+        
     
     def IsExpanded( self ):
         

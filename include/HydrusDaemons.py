@@ -9,10 +9,7 @@ import HydrusData
 
 def DAEMONMaintainDB( controller ):
     
-    if controller.CurrentlyIdle():
-        
-        controller.MaintainDB()
-        
+    controller.MaintainDB()
     
 def DAEMONMaintainMemory( controller ):
     

@@ -18,7 +18,7 @@ class FakeHTTPConnectionManager():
         self._fake_responses = {}
         
     
-    def Request( self, method, url, request_headers = None, body = '', return_everything = False, return_cookies = False, report_hooks = None, temp_path = None ):
+    def Request( self, method, url, request_headers = None, body = '', return_cookies = False, report_hooks = None, temp_path = None, hydrus_network = False ):
         
         if request_headers is None: request_headers = {}
         if report_hooks is None: report_hooks = []
@@ -32,9 +32,14 @@ class FakeHTTPConnectionManager():
             response = 'path written to temporary path'
             
         
-        if return_everything: return ( response, size_of_response, response_headers, cookies )
+        if hydrus_network: return ( response, size_of_response, response_headers, cookies )
         elif return_cookies: return ( response, cookies )
         else: return response
+        
+    
+    def RequestHydrus( self, method, url, request_headers = None, body = '', report_hooks = None, temp_path = None ):
+        
+        pass
         
     
     def SetResponse( self, method, url, response, size_of_response = 100, response_headers = None, cookies = None ):

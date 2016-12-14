@@ -14,6 +14,7 @@ import ServerServer
 import sys
 import time
 import traceback
+import twisted.internet.ssl
 from twisted.internet import reactor
 from twisted.internet import defer
 
@@ -196,6 +197,10 @@ class Controller( HydrusController.HydrusController ):
                         elif service_type == HC.FILE_REPOSITORY: service_object = ServerServer.HydrusServiceRepositoryFile( service_key, service_type, message )
                         elif service_type == HC.TAG_REPOSITORY: service_object = ServerServer.HydrusServiceRepositoryTag( service_key, service_type, message )
                         elif service_type == HC.MESSAGE_DEPOT: return
+                        
+                        #context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( 'muh_key.key', 'muh_crt.crt' )
+                        
+                        #self._services[ service_key ] = reactor.listenSSL( port, service_object, context_factory )
                         
                         self._services[ service_key ] = reactor.listenTCP( port, service_object )
                         

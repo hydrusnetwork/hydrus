@@ -21,19 +21,23 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._title = wx.TextCtrl( self )
         self._title.Bind( wx.EVT_TEXT, self.EventChanged )
         
-        self._payload_type = wx.TextCtrl( self )
+        self._payload_description = wx.TextCtrl( self )
         
         self._text = wx.TextCtrl( self )
+        
+        self._width = wx.SpinCtrl( self, min = 100, max = 4096 )
         
         self._export = ClientGUICommon.BetterButton( self, 'export', self.Export )
         
         #
         
-        ( payload_type, payload_string ) = ClientSerialisable.GetPayloadTypeAndString( self._payload_obj )
+        ( payload_description, payload_string ) = ClientSerialisable.GetPayloadDescriptionAndString( self._payload_obj )
         
-        self._payload_type.SetValue( payload_type )
+        self._payload_description.SetValue( payload_description )
         
-        self._payload_type.Disable()
+        self._payload_description.Disable()
+        
+        self._width.SetValue( 512 )
         
         self.EventChanged( None )
         
@@ -43,8 +47,9 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         rows.append( ( 'export path: ', self._filepicker ) )
         rows.append( ( 'title: ', self._title ) )
-        rows.append( ( 'payload type: ', self._payload_type ) )
-        rows.append( ( 'description (optional): ', self._text ) )
+        rows.append( ( 'payload description: ', self._payload_description ) )
+        rows.append( ( 'your description (optional): ', self._text ) )
+        rows.append( ( 'png width: ', self._width ) )
         rows.append( ( '', self._export ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -84,7 +89,9 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def Export( self ):
         
-        ( payload_type, payload_string ) = ClientSerialisable.GetPayloadTypeAndString( self._payload_obj )
+        width = self._width.GetValue()
+        
+        ( payload_description, payload_string ) = ClientSerialisable.GetPayloadDescriptionAndString( self._payload_obj )
         
         title = self._title.GetValue()
         text = self._text.GetValue()
@@ -95,7 +102,7 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             path += '.png'
             
         
-        ClientSerialisable.DumpToPng( payload_string, title, payload_type, text, path )
+        ClientSerialisable.DumpToPng( width, payload_string, title, payload_description, text, path )
         
         self._export.SetLabelText( 'done!' )
         

@@ -20,6 +20,7 @@ import ClientDownloading
 import ClientMedia
 import ClientSearch
 import ClientThreading
+import cv2
 import gc
 import HydrusData
 import HydrusExceptions
@@ -32,10 +33,13 @@ import HydrusNetworking
 import HydrusSerialisable
 import HydrusTagArchive
 import HydrusThreading
+import HydrusVideoHandling
 import itertools
 import os
+import PIL
 import random
 import sqlite3
+import ssl
 import subprocess
 import sys
 import threading
@@ -91,6 +95,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._message_manager = ClientGUICommon.PopupMessageManager( self )
         
+        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventFrameMiddleClick )
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
@@ -182,7 +187,37 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         aboutinfo.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
         aboutinfo.SetName( 'hydrus client' )
         aboutinfo.SetVersion( str( HC.SOFTWARE_VERSION ) + ', using network version ' + str( HC.NETWORK_VERSION ) )
-        aboutinfo.SetDescription( CC.CLIENT_DESCRIPTION )
+        
+        library_versions = []
+        
+        library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )
+        library_versions.append( ( 'OpenCV', cv2.__version__ ) )
+        library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
+        library_versions.append( ( 'PIL', PIL.VERSION ) )
+        
+        if hasattr( PIL, 'PILLOW_VERSION' ):
+            
+            library_versions.append( ( 'Pillow', PIL.PILLOW_VERSION ) )
+            
+        
+        # 2.7.12 (v2.7.12:d33e0cf91556, Jun 27 2016, 15:24:40) [MSC v.1500 64 bit (AMD64)]
+        v = sys.version
+        
+        if ' ' in v:
+            
+            v = v.split( ' ' )[0]
+            
+        
+        library_versions.append( ( 'python', v ) )
+        
+        library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
+        library_versions.append( ( 'wx', wx.version() ) )
+        
+        description = 'This client is the media management application of the hydrus software suite.'
+        
+        description += os.linesep * 2 + os.linesep.join( ( lib + ': ' + version for ( lib, version ) in library_versions ) )
+        
+        aboutinfo.SetDescription( description )
         
         with open( os.path.join( HC.BASE_DIR, 'license.txt' ), 'rb' ) as f: license = f.read()
         
@@ -550,6 +585,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                     
                 
+            
+        
+    
+    def _ChooseNewPage( self ):
+        
+        with ClientGUIDialogs.DialogPageChooser( self ) as dlg:
+            
+            dlg.ShowModal()
             
         
     
@@ -1457,7 +1500,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         try:
             
-            with ClientGUIDialogsManage.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
+            title = 'manage subscriptions'
+            frame_key = 'manage_subscriptions_dialog'
+            
+            with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsManagement.ManageSubscriptionsPanel( dlg )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
             
         finally:
             
@@ -2390,6 +2443,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def EventFrameMiddleClick( self, event ):
+        
+        self._ChooseNewPage()
+        
+    
     def EventMenu( self, event ):
         
         action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -2531,7 +2589,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'new_import_urls': self._NewPageImportURLs()
             elif command == 'new_page':
                 
-                with ClientGUIDialogs.DialogPageChooser( self ) as dlg: dlg.ShowModal()
+                self._ChooseNewPage()
                 
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
@@ -2598,7 +2656,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
         
-        if tab_index != -1:
+        if tab_index == wx.NOT_FOUND:
+            
+            self._ChooseNewPage()
+            
+        else:
             
             self._ClosePage( tab_index )
             

@@ -8,9 +8,12 @@ import ClientGUIDialogs
 import ClientGUIPredicates
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
+import ClientGUISerialisable
 import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
+import ClientImporting
 import ClientMedia
+import ClientSerialisable
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -519,7 +522,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gallery_downloader = ClientGUICommon.StaticBox( self, 'gallery downloader' )
             
-            self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, 'default file limit', none_phrase = 'no limit', min = 1, max = 1000000 )
+            self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, 'by default, stop searching once this many files are found', none_phrase = 'no limit', min = 1, max = 1000000 )
             
             #
             
@@ -1125,8 +1128,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
             
             self._gui_capitalisation.SetValue( HC.options[ 'gui_capitalisation' ] )
-            
-            remember_tuple = self._new_options.GetFrameLocation( 'manage_tags_dialog' )
             
             self._hide_preview.SetValue( HC.options[ 'hide_preview' ] )
             
@@ -2344,6 +2345,462 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             wx.MessageBox( traceback.format_exc() )
             
         
+
+class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        subscriptions = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+        
+        #
+        
+        columns = [ ( 'name', -1 ), ( 'site', 80 ), ( 'period', 80 ), ( 'last checked', 100 ), ( 'recent error?', 100 ), ( 'urls', 60 ), ( 'failures', 60 ), ( 'paused', 80 ), ( 'check now?', 100 ) ]
+        
+        self._subscriptions = ClientGUICommon.SaneListCtrl( self, 300, columns, delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
+        
+        self._add = ClientGUICommon.BetterButton( self, 'add', self.Add )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
+        menu_items.append( ( 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
+        
+        self._export = ClientGUICommon.MenuButton( self, 'export', menu_items )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
+        menu_items.append( ( 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
+        
+        self._import = ClientGUICommon.MenuButton( self, 'import', menu_items )
+        
+        self._duplicate = ClientGUICommon.BetterButton( self, 'duplicate', self.Duplicate )
+        self._edit = ClientGUICommon.BetterButton( self, 'edit', self.Edit )
+        self._delete = ClientGUICommon.BetterButton( self, 'delete', self.Delete )
+        
+        self._retry_failures = ClientGUICommon.BetterButton( self, 'retry failures', self.RetryFailures )
+        self._pause_resume = ClientGUICommon.BetterButton( self, 'pause/resume', self.PauseResume )
+        self._check_now = ClientGUICommon.BetterButton( self, 'check now', self.CheckNow )
+        self._reset = ClientGUICommon.BetterButton( self, 'reset', self.Reset )
+        
+        #
+        
+        for subscription in subscriptions:
+            
+            ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+            
+            self._subscriptions.Append( display_tuple, data_tuple )
+            
+        
+        #
+        
+        text_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        text_hbox.AddF( wx.StaticText( self, label = 'For more information about subscriptions, please check' ), CC.FLAGS_VCENTER )
+        text_hbox.AddF( wx.HyperlinkCtrl( self, id = -1, label = 'here', url = 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' ), CC.FLAGS_VCENTER )
+        
+        action_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        action_box.AddF( self._retry_failures, CC.FLAGS_VCENTER )
+        action_box.AddF( self._pause_resume, CC.FLAGS_VCENTER )
+        action_box.AddF( self._check_now, CC.FLAGS_VCENTER )
+        action_box.AddF( self._reset, CC.FLAGS_VCENTER )
+        
+        button_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_box.AddF( self._add, CC.FLAGS_VCENTER )
+        button_box.AddF( self._export, CC.FLAGS_VCENTER )
+        button_box.AddF( self._import, CC.FLAGS_VCENTER )
+        button_box.AddF( self._duplicate, CC.FLAGS_VCENTER )
+        button_box.AddF( self._edit, CC.FLAGS_VCENTER )
+        button_box.AddF( self._delete, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( text_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._subscriptions, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( action_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertSubscriptionToTuples( self, subscription ):
+        
+        ( name, site, period, last_checked, recent_error, urls, failures, paused, check_now ) = subscription.ToPrettyStrings()
+        
+        return ( ( name, site, period, last_checked, recent_error, urls, failures, paused, check_now ), ( subscription, site, period, last_checked, recent_error, urls, failures, paused, check_now ) )
+        
+    
+    def _GetExportObject( self ):
+        
+        to_export = HydrusSerialisable.SerialisableList()
+        
+        for subscription in self._GetSubscriptions( only_selected = True ):
+            
+            to_export.append( subscription )
+            
+        
+        if len( to_export ) == 0:
+            
+            return None
+            
+        elif len( to_export ) == 1:
+            
+            return to_export[0]
+            
+        else:
+            
+            return to_export
+            
+        
+    
+    def _GetSubscriptions( self, only_selected = False ):
+        
+        subscriptions = []
+        
+        if only_selected:
+            
+            for i in self._subscriptions.GetAllSelected():
+                
+                subscription = self._subscriptions.GetClientData( i )[0]
+                
+                subscriptions.append( subscription )
+                
+            
+        else:
+            
+            for row in self._subscriptions.GetClientData():
+                
+                subscription = row[0]
+                
+                subscriptions.append( subscription )
+                
+            
+        
+        return subscriptions
+        
+    
+    def _ImportObject( self, obj ):
+        
+        if isinstance( obj, HydrusSerialisable.SerialisableList ):
+            
+            for sub_obj in obj:
+                
+                self._ImportObject( sub_obj )
+                
+            
+        else:
+            
+            if isinstance( obj, ClientImporting.Subscription ):
+                
+                subscription = obj
+                
+                self._SetNonDupeName( subscription )
+                
+                ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+                
+                self._subscriptions.Append( display_tuple, data_tuple )
+                
+            else:
+                
+                wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
+                
+            
+        
+    
+    def _SetNonDupeName( self, subscription ):
+        
+        name = subscription.GetName()
+        
+        current_names = { s.GetName() for s in self._GetSubscriptions() }
+        
+        if name in current_names:
+            
+            i = 1
+            
+            original_name = name
+            
+            while name in current_names:
+                
+                name = original_name + ' (' + str( i ) + ')'
+                
+                i += 1
+                
+            
+            subscription.SetName( name )
+            
+        
+    
+    def Add( self ):
+        
+        empty_subscription = ClientImporting.Subscription( 'new subscription' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg_edit:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditSubscriptionPanel( dlg_edit, empty_subscription )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.ShowModal() == wx.ID_OK:
+                
+                new_subscription = panel.GetValue()
+                
+                self._SetNonDupeName( new_subscription )
+                
+                ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( new_subscription )
+                
+                self._subscriptions.Append( display_tuple, data_tuple )
+                
+            
+        
+    
+    def CheckNow( self ):
+        
+        for i in self._subscriptions.GetAllSelected():
+            
+            subscription = self._subscriptions.GetClientData( i )[0]
+            
+            subscription.CheckNow()
+            
+            ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+            
+            self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+            
+        
+    
+    def CommitChanges( self ):
+        
+        existing_db_names = set( HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ) )
+        
+        subscriptions = self._GetSubscriptions()
+        
+        save_names = { subscription.GetName() for subscription in subscriptions }
+        
+        deletee_names = existing_db_names.difference( save_names )
+        
+        for subscription in subscriptions:
+            
+            HydrusGlobals.client_controller.Write( 'serialisable', subscription )
+            
+        
+        for name in deletee_names:
+            
+            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
+            
+        
+        HydrusGlobals.client_controller.pub( 'notify_new_subscriptions' )
+        
+    
+    def Delete( self ):
+        
+        self._subscriptions.RemoveAllSelected()
+        
+    
+    def Duplicate( self ):
+        
+        subs_to_dupe = []
+        
+        for subscription in self._GetSubscriptions( only_selected = True ):
+            
+            subs_to_dupe.append( subscription )
+            
+        
+        for subscription in subs_to_dupe:
+            
+            dupe_subscription = subscription.Duplicate()
+            
+            self._SetNonDupeName( dupe_subscription )
+            
+            ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( dupe_subscription )
+            
+            self._subscriptions.Append( display_tuple, data_tuple )
+            
+        
+    
+    def Edit( self ):
+        
+        for i in self._subscriptions.GetAllSelected():
+            
+            subscription = self._subscriptions.GetClientData( i )[0]
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg:
+                
+                original_name = subscription.GetName()
+                
+                panel = ClientGUIScrolledPanelsEdit.EditSubscriptionPanel( dlg, subscription )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_subscription = panel.GetValue()
+                    
+                    name = edited_subscription.GetName()
+                    
+                    if name != original_name:
+                        
+                        self._SetNonDupeName( edited_subscription )
+                        
+                    
+                    ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( edited_subscription )
+                    
+                    self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+                    
+                
+                
+            
+        
+    
+    def ExportToClipboard( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            json = export_object.DumpToString()
+            
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', json )
+            
+        
+    
+    def ExportToPng( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+                
+                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
+            
+        
+    
+    def ImportFromClipboard( self ):
+        
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            raw_text = data.GetText()
+            
+            try:
+                
+                obj = HydrusSerialisable.CreateFromString( raw_text )
+                
+                self._ImportObject( obj )
+                
+            except Exception as e:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        else:
+            
+            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+    
+    def ImportFromPng( self ):
+        
+        with wx.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                try:
+                    
+                    payload = ClientSerialisable.LoadFromPng( path )
+                    
+                except Exception as e:
+                    
+                    wx.MessageBox( str( e ) )
+                    
+                    return
+                    
+                
+                try:
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                    
+                    self._ImportObject( obj )
+                    
+                except:
+                    
+                    wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                    
+                
+            
+        
+    
+    def PauseResume( self ):
+        
+        for i in self._subscriptions.GetAllSelected():
+            
+            subscription = self._subscriptions.GetClientData( i )[0]
+            
+            subscription.PauseResume()
+            
+            ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+            
+            self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+            
+        
+    
+    def Reset( self ):
+        
+        message = '''Resetting these subscriptions will delete all their remembered urls, meaning when they next run, they will try to download them all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                for i in self._subscriptions.GetAllSelected():
+                    
+                    subscription = self._subscriptions.GetClientData( i )[0]
+                    
+                    subscription.Reset()
+                    
+                    ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+                    
+                    self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+                    
+                
+            
+        
+    
+    def RetryFailures( self ):
+        
+        for i in self._subscriptions.GetAllSelected():
+            
+            subscription = self._subscriptions.GetClientData( i )[0]
+            
+            seed_cache = subscription.GetSeedCache()
+            
+            failed_seeds = seed_cache.GetSeeds( CC.STATUS_FAILED )
+            
+            for seed in failed_seeds:
+                
+                seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
+                
+                ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+                
+                self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+                
+            
+        
     
 class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
@@ -2848,7 +3305,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     suggestions = []
                     
                     suggestions.append( 'mangled parse/typo' )
-                    suggestions.append( 'tag not applicable' )
+                    suggestions.append( 'not applicable' )
                     suggestions.append( 'should be namespaced' )
                     
                     with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:

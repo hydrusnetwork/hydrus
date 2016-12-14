@@ -1538,7 +1538,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         menu_items.append( ( 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
         menu_items.append( ( 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
         
-        self._paste_button = ClientGUICommon.MenuButton( self, 'import', menu_items )
+        self._import_button = ClientGUICommon.MenuButton( self, 'import', menu_items )
         
         self._duplicate_button = ClientGUICommon.BetterButton( self, 'duplicate', self.Duplicate )
         
@@ -1565,7 +1565,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         button_hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._export_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._paste_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._import_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._duplicate_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
@@ -1581,6 +1581,59 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         ( name, query_type, script_type, produces ) = script.ToPrettyStrings()
         
         return ( ( name, query_type, script_type, produces ), ( script, query_type, script_type, produces ) )
+        
+    
+    def _GetExportObject( self ):
+        
+        to_export = HydrusSerialisable.SerialisableList()
+        
+        for i in self._scripts.GetAllSelected():
+            
+            single_object = self._scripts.GetClientData( i )[0]
+            
+            to_export.append( single_object )
+            
+        
+        if len( to_export ) == 0:
+            
+            return None
+            
+        elif len( to_export ) == 1:
+            
+            return to_export[0]
+            
+        else:
+            
+            return to_export
+            
+        
+    
+    def _ImportObject( self, obj ):
+        
+        if isinstance( obj, HydrusSerialisable.SerialisableList ):
+            
+            for sub_obj in obj:
+                
+                self._ImportObject( sub_obj )
+                
+            
+        else:
+            
+            if isinstance( obj, ClientParsing.ParseRootFileLookup ):
+                
+                script = obj
+                
+                self._SetNonDupeName( script )
+                
+                ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( script )
+                
+                self._scripts.Append( display_tuple, data_tuple )
+                
+            else:
+                
+                wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
+                
+            
         
     
     def _SetNonDupeName( self, script ):
@@ -1748,25 +1801,25 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def ExportToClipboard( self ):
         
-        for i in self._scripts.GetAllSelected():
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
             
-            ( script, query_type, script_type, produces ) = self._scripts.GetClientData( i )
+            json = export_object.DumpToString()
             
-            script_json = script.DumpToString()
-            
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', script_json )
+            HydrusGlobals.client_controller.pub( 'clipboard', 'text', json )
             
         
     
     def ExportToPng( self ):
         
-        for i in self._scripts.GetAllSelected():
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
             
-            ( script, query_type, script_type, produces ) = self._scripts.GetClientData( i )
-            
-            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export script to png' ) as dlg:
+            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
                 
-                panel = ClientGUISerialisable.PngExportPanel( dlg, script )
+                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
                 
                 dlg.SetPanel( panel )
                 
@@ -1791,20 +1844,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 obj = HydrusSerialisable.CreateFromString( raw_text )
                 
-                if isinstance( obj, ClientParsing.ParseRootFileLookup ):
-                    
-                    script = obj
-                    
-                    self._SetNonDupeName( script )
-                    
-                    ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( script )
-                    
-                    self._scripts.Append( display_tuple, data_tuple )
-                    
-                else:
-                    
-                    wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
-                    
+                self._ImportObject( obj )
                 
             except Exception as e:
                 
@@ -1840,20 +1880,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     obj = HydrusSerialisable.CreateFromNetworkString( payload )
                     
-                    if isinstance( obj, ClientParsing.ParseRootFileLookup ):
-                        
-                        script = obj
-                        
-                        self._SetNonDupeName( script )
-                        
-                        ( display_tuple, data_tuple ) = self._ConvertScriptToTuples( script )
-                        
-                        self._scripts.Append( display_tuple, data_tuple )
-                        
-                    else:
-                        
-                        wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
-                        
+                    self._ImportObject( obj )
                     
                 except:
                     
@@ -1862,7 +1889,6 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-    
     
 class ScriptManagementControl( wx.Panel ):
     
