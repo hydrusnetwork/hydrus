@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 237</h3></li>
+				<ul>
+					<li>added 'all local files' service that spans all local file domains</li>
+					<li>improved trash service code</li>
+					<li>trashed files now report their trashed timestamp in right-click menus</li>
+					<li>trash views will sort oldest/newest by the trash timestamp</li>
+					<li>renamed 'local files' to 'my files' to reduce initial confusion</li>
+					<li>if you don't like 'my files', you can now rename the local files service under manage services!</li>
+					<li>improved how some local file service metadata is stored</li>
+					<li>cleaned and possibly fixed up some delete code</li>
+					<li>cleaned up a bunch of misc service and file service code</li>
+					<li>the client is more intelligent about what local files are -- you can now 'open externally' trashed files, for instance</li>
+					<li>on multiple monitor systems, the new sizing system now bounds itself by the appropriate monitor's dimensions (previously, it was always consulting the primary, I think)</li>
+					<li>if an expansion event causes a frame to grow off screen, the new sizing system will now attempt to move it up and left so it is completely visible</li>
+					<li>fixed an important bug in the specific service autocomplete cache that was leading to several kinds of miscount--please regen your autocomplete cache at your convenience</li>
+					<li>the client can now post additional messages on boot (you'll see one!)</li>
+					<li>improved how errors with unusual characters are applied to failed import file status objects</li>
+					<li>left double-click on the main gui greyspace now opens the new page chooser as well</li>
+					<li>restored session pages now recover more gracefully from missing services</li>
+					<li>shortened the 'stop after this many files' phrase, which was mis-sizing downloader panels</li>
+					<li>changed several bits of old jank in the 'import options - files' collapsible. it is also now thinner</li>
+					<li>misc gui improvements</li>
+					<li>updated more of the menu system code</li>
+					<li>the selection tags box now sizes its height more reasonably</li>
+					<li>fixed 'check now' and 'reset cache' buttons on edit sub dialog</li>
+					<li>subscriptions report better file import status on their popup</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 236</h3></li>
 				<ul>
 					<li>in prep for a network https upgrade, the client can now detect and escalate to https when making connections to hydrus services</li>
