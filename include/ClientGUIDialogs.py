@@ -316,7 +316,7 @@ class Dialog( wx.Dialog ):
     
     def SetInitialSize( self, ( width, height ) ):
         
-        ( display_width, display_height ) = wx.GetDisplaySize()
+        ( display_width, display_height ) = ClientGUITopLevelWindows.GetDisplaySize( self )
         
         width = min( display_width, width )
         height = min( display_height, height )
@@ -2900,6 +2900,7 @@ class DialogPageChooser( Dialog ):
             
             entries.append( ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ) )
             entries.append( ( 'page_query', CC.TRASH_SERVICE_KEY ) )
+            entries.append( ( 'page_query', CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
             
             for service in self._services:
                 

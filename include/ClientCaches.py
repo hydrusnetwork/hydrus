@@ -1668,7 +1668,7 @@ class ThumbnailCache( object ):
         
         locations_manager = display_media.GetLocationsManager()
         
-        if locations_manager.HasLocal():
+        if locations_manager.IsLocal():
             
             try:
                 
@@ -2638,12 +2638,23 @@ class UndoManager( object ):
                 ( data_type, action, row ) = content_update.ToTuple()
                 
                 if data_type == HC.CONTENT_TYPE_FILES:
-                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ): continue
+                    
+                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ):
+                        
+                        continue
+                        
+                    
                 elif data_type == HC.CONTENT_TYPE_MAPPINGS:
                     
-                    if action in ( HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ): continue
+                    if action in ( HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_ADVANCED ):
+                        
+                        continue
+                        
                     
-                else: continue
+                else:
+                    
+                    continue
+                    
                 
                 filtered_content_update = HydrusData.ContentUpdate( data_type, action, row )
                 

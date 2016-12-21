@@ -424,7 +424,7 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_content_updates = {}
         
-        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ), )
+        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ), )
         service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
         
         self._write( 'content_updates', service_keys_to_content_updates )
@@ -957,7 +957,7 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_content_updates = {}
         
-        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, ( hash, ) ), )
+        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, ( hash, ) ), )
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -973,7 +973,7 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_content_updates = {}
         
-        service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, ( hash, ) ), )
+        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, ( hash, ) ), )
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -986,11 +986,11 @@ class TestClientDB( unittest.TestCase ):
     
     def test_services( self ):
         
-        result = self._read( 'services', ( HC.LOCAL_FILE, HC.LOCAL_TAG ) )
+        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.LOCAL_TAG ) )
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertItemsEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
+        self.assertItemsEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
         
         #
         

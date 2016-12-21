@@ -123,15 +123,30 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
             
             ( data_type, action, row ) = content_update.ToTuple()
             
-            if data_type == HC.CONTENT_TYPE_MAPPINGS: extra_words = ' tags for'
+            if data_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                extra_words = ' tags for'
+                
             
             actions.add( HC.content_update_string_lookup[ action ] )
+            
+            if action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_INBOX ):
+                
+                locations = set()
+                
             
             num_files += len( content_update.GetHashes() )
             
         
     
-    s = ', '.join( locations ) + '->' + ', '.join( actions ) + extra_words + ' ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
+    s = ''
+    
+    if len( locations ) > 0:
+        
+        s += ', '.join( locations ) + '->'
+        
+    
+    s += ', '.join( actions ) + extra_words + ' ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
     
     return s
     

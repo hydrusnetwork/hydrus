@@ -3115,7 +3115,10 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
     def ChangeTagServicePubsub( self, page_key, service_key ):
         
-        if page_key == self._page_key: self.ChangeTagService( service_key )
+        if page_key == self._page_key:
+            
+            self.ChangeTagService( service_key )
+            
         
     
     def IncrementTagsByMediaPubsub( self, page_key, media ):

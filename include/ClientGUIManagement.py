@@ -126,7 +126,7 @@ def CreateManagementControllerPetitions( petition_service_key ):
     
     petition_service_type = petition_service.GetServiceType()
     
-    if petition_service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): file_service_key = petition_service_key
+    if petition_service_type in HC.LOCAL_FILE_SERVICES or petition_service_type == HC.FILE_REPOSITORY: file_service_key = petition_service_key
     else: file_service_key = CC.COMBINED_FILE_SERVICE_KEY
     
     management_controller = CreateManagementController( MANAGEMENT_TYPE_PETITIONS, file_service_key = file_service_key )
@@ -533,6 +533,14 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         ( self._management_type, serialisable_keys, serialisable_simples, serialisables ) = serialisable_info
         
         self._keys = { name : key.decode( 'hex' ) for ( name, key ) in serialisable_keys.items() }
+        
+        if 'file_service' in self._keys:
+            
+            if not HydrusGlobals.client_controller.GetServicesManager().ServiceExists( self._keys[ 'file_service' ] ):
+                
+                self._keys[ 'file_service' ] = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+                
+            
         
         self._simples = dict( serialisable_simples )
         
@@ -1478,9 +1486,9 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._get_tags_if_redundant = wx.CheckBox( self._gallery_downloader_panel, label = 'get tags even if file is already in db' )
         self._get_tags_if_redundant.Bind( wx.EVT_CHECKBOX, self.EventGetTagsIfRedundant )
-        self._get_tags_if_redundant.SetToolTipString( 'only fetch tags from the gallery if the file is new' )
+        self._get_tags_if_redundant.SetToolTipString( 'if off, the downloader will only fetch tags from the gallery if the file is new' )
         
-        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop searching once this many files are found', min = 1, none_phrase = 'no limit' )
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
         self._file_limit.SetToolTipString( 'per query, stop searching the gallery once this many files has been reached' )
         
@@ -1546,7 +1554,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( self._gallery_downloader_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._gallery_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2125,7 +2133,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( self._page_of_images_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._page_of_images_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2461,7 +2469,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._MakeCollect( vbox )
         
         vbox.AddF( self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._petition_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._petition_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2524,7 +2532,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     def _ShowHashes( self, hashes ):
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
-    
+        
         with wx.BusyCursor(): media_results = self._controller.Read( 'media_results', hashes )
         
         panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
@@ -3276,7 +3284,7 @@ class ManagementPanelURLsImport( ManagementPanel ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( self._url_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         

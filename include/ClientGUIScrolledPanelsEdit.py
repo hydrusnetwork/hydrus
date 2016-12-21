@@ -686,7 +686,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         wx.CallAfter( self.ProcessEvent, event )
         
     
-    def CheckNow( self, event ):
+    def CheckNow( self ):
         
         self._check_now = True
         
@@ -760,7 +760,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         return subscription
         
     
-    def ResetCache( self, event ):
+    def ResetCache( self ):
         
         message = '''Resetting this subscription's cache will delete ''' + HydrusData.ConvertIntToPrettyString( self._original_subscription.GetSeedCache().GetSeedCount() ) + ''' remembered urls, meaning when the subscription next runs, it will try to download those all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
         

@@ -83,6 +83,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._lock = threading.Lock()
         
         self._notebook = wx.Notebook( self )
+        self._notebook.Bind( wx.EVT_LEFT_DCLICK, self.EventNotebookLeftDoubleClick )
         self._notebook.Bind( wx.EVT_MIDDLE_DOWN, self.EventNotebookMiddleClick )
         self._notebook.Bind( wx.EVT_RIGHT_DOWN, self.EventNotebookMenu )
         self.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventNotebookPageChanged )
@@ -95,7 +96,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._message_manager = ClientGUICommon.PopupMessageManager( self )
         
-        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventFrameMiddleClick )
+        self.Bind( wx.EVT_LEFT_DCLICK, self.EventFrameNewPage )
+        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventFrameNewPage )
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
@@ -703,6 +705,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.pub( 'notify_new_undo' )
         
     
+    def _DeleteGUISession( self, name ):
+        
+        self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
+        
+        self._controller.pub( 'notify_new_sessions' )
+        
+    
     def _DeletePending( self, service_key ):
         
         service = self._controller.GetServicesManager().GetService( service_key )
@@ -882,8 +891,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def pages():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'show_hide_splitters' ), p( 'Show/Hide Management and Preview Panels' ), p( 'Show or hide the panels on the left.' ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self, self._Refresh )
+            ClientGUIMenus.AppendMenuItem( menu, 'show/hide management and preview panels', 'Show or hide the panels on the left.', self, self._ShowHideSplitters )
             
             menu.AppendSeparator()
             
@@ -897,13 +906,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 for name in gui_session_names:
                     
-                    load.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'load_gui_session', name ), name )
+                    ClientGUIMenus.AppendMenuItem( load, name, 'Close all other pages and load this session.', self, self._LoadGUISession, name )
                     
                 
-                sessions.AppendMenu( CC.ID_NULL, p( 'Load' ), load )
+                ClientGUIMenus.AppendMenu( sessions, load, 'load' )
                 
             
-            sessions.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'save_gui_session' ), p( 'Save Current' ) )
+            ClientGUIMenus.AppendMenuItem( sessions, 'save current', 'Save the existing open pages as a session.', self, self._SaveGUISession )
             
             if len( gui_session_names ) > 0 and gui_session_names != [ 'last session' ]:
                 
@@ -913,16 +922,18 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if name != 'last session':
                         
-                        delete.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_gui_session', name ), name )
+                        ClientGUIMenus.AppendMenuItem( delete, name, 'Delete this session.', self, self._DeleteGUISession, name )
                         
                     
                 
-                sessions.AppendMenu( CC.ID_NULL, p( 'Delete' ), delete )
+                ClientGUIMenus.AppendMenu( sessions, delete, 'delete' )
                 
             
-            menu.AppendMenu( CC.ID_NULL, p( 'Sessions' ), sessions )
+            ClientGUIMenus.AppendMenu( menu, sessions, 'sessions' )
+            
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self, self._ChooseNewPage )
             
             #
             
@@ -938,11 +949,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             petition_resolve_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
-            search_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
-            search_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', CC.TRASH_SERVICE_KEY ), p( '&New Trash Search' ), p( 'Open a new search tab for your recently deleted files' ) )
-            for service in file_repositories: search_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
+            ClientGUIMenus.AppendMenuItem( search_menu, 'my files', 'Open a new search tab for your files.', self, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self, self._NewPageQuery, CC.TRASH_SERVICE_KEY )
             
-            menu.AppendMenu( CC.ID_NULL, p( 'New Search Page' ), search_menu )
+            for service in file_repositories:
+                
+                ClientGUIMenus.AppendMenuItem( search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self, self._NewPageQuery, service.GetServiceKey() )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
             
             #
             
@@ -952,63 +967,68 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 for service in petition_resolve_tag_services:
                     
-                    petition_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
+                    ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new tag petition tab for ' + service.GetName() + '.', self, self._NewPagePetitions, service.GetServiceKey() )
                     
                 
                 for service in petition_resolve_file_services:
                     
-                    petition_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'petitions', service.GetServiceKey() ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
+                    ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new file petition tab for ' + service.GetName() + '.', self, self._NewPagePetitions, service.GetServiceKey() )
                     
                 
-                menu.AppendMenu( CC.ID_NULL, p( 'New Petition Page' ), petition_menu )
+                ClientGUIMenus.AppendMenu( menu, petition_menu, 'new petition page' )
                 
             
             #
             
             download_menu = wx.Menu()
             
-            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_page_of_images' ), p( '&New Page of Images Download Page' ), p( 'Open a new tab to download files from generic galleries or threads.' ) )
-            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
-            download_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_urls' ), p( '&New URL Download Page' ), p( 'Open a new tab to download some raw urls.' ) )
+            ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some raw urls.', self, self._NewPageImportURLs )
+            ClientGUIMenus.AppendMenuItem( download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self, self._NewPageImportThreadWatcher )
+            ClientGUIMenus.AppendMenuItem( download_menu, 'webpage of images', 'Open a new tab to download files from generic galleries or threads.', self, self._NewPageImportPageOfImages )
             
-            submenu = wx.Menu()
+            gallery_menu = wx.Menu()
             
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_booru' ), p( 'Booru' ), p( 'Open a new tab to download files from a booru.' ) )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_DEVIANT_ART ), p( 'Deviant Art' ), p( 'Open a new tab to download files from Deviant Art.' ) )
+            ClientGUIMenus.AppendMenuItem( gallery_menu, 'booru', 'Open a new tab to download files from a booru.', self, self._NewPageImportBooru )
+            ClientGUIMenus.AppendMenuItem( gallery_menu, 'deviant art', 'Open a new tab to download files from Deviant Art.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEVIANT_ART ) )
+            
             hf_submenu = wx.Menu()
-            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ), p( 'By Artist' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
-            hf_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ), p( 'By Tags' ), p( 'Open a new tab to download files from Hentai Foundry.' ) )
-            submenu.AppendMenu( CC.ID_NULL, p( '&Hentai Foundry' ), hf_submenu )
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_NEWGROUNDS ), p( 'Newgrounds' ), p( 'Open a new tab to download files from Newgrounds.' ) )
+            
+            ClientGUIMenus.AppendMenuItem( hf_submenu, 'by artist', 'Open a new tab to download files from Hentai Foundry.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ) )
+            ClientGUIMenus.AppendMenuItem( hf_submenu, 'by tags', 'Open a new tab to download files from Hentai Foundry.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) )
+            
+            ClientGUIMenus.AppendMenu( gallery_menu, hf_submenu, 'hentai foundry' )
+            
+            ClientGUIMenus.AppendMenuItem( gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ) )
             
             result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
             
             if result is not None:
                 
                 pixiv_submenu = wx.Menu()
-                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_PIXIV_ARTIST_ID ), p( 'By Artist Id' ), p( 'Open a new tab to download files from Pixiv.' ) )
-                pixiv_submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_PIXIV_TAG ), p( 'By Tag' ), p( 'Open a new tab to download files from Hentai Pixiv.' ) )
-                submenu.AppendMenu( CC.ID_NULL, p( '&Pixiv' ), pixiv_submenu )
+                
+                ClientGUIMenus.AppendMenuItem( pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
+                ClientGUIMenus.AppendMenuItem( pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ) )
+                
+                ClientGUIMenus.AppendMenu( gallery_menu, pixiv_submenu, 'pixiv' )
                 
             
-            submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_import_gallery', HC.SITE_TYPE_TUMBLR ), p( 'Tumblr' ), p( 'Open a new tab to download files from Tumblr.' ) )
+            ClientGUIMenus.AppendMenuItem( gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ) )
             
-            download_menu.AppendMenu( CC.ID_NULL, p( '&New Gallery Download Page' ), submenu )
-            
-            menu.AppendMenu( CC.ID_NULL, p( 'New Download Page' ), download_menu )
+            ClientGUIMenus.AppendMenu( download_menu, gallery_menu, 'gallery' )
+            ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
             
             download_popup_menu = wx.Menu()
             
-            download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+            ClientGUIMenus.AppendMenuItem( download_popup_menu, 'a youtube video', 'Enter a YouTube URL and choose which formats you would like to download', self, self._StartYoutubeDownload )
             
             has_ipfs = len( [ service for service in services if service.GetServiceType() == HC.IPFS ] )
             
             if has_ipfs:
                 
-                download_popup_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'start_ipfs_download' ), p( '&An IPFS Multihash' ), p( 'Enter an IPFS multihash and attempt to import whatever is returned' ) )
+                ClientGUIMenus.AppendMenuItem( download_popup_menu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self, self._StartIPFSDownload )
                 
             
-            menu.AppendMenu( CC.ID_NULL, p( 'New Download Popup' ), download_popup_menu )
+            ClientGUIMenus.AppendMenu( menu, download_popup_menu, 'new download popup' )
             
             #
             
@@ -1742,6 +1762,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _Refresh( self ):
+        
+        page = self._notebook.GetCurrentPage()
+        
+        if page is not None:
+            
+            page.RefreshQuery()
+            
+        
+    
     def _RefreshStatusBar( self ):
         
         if self._media_status_override is not None:
@@ -2007,6 +2037,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         page = self._notebook.GetCurrentPage()
         
         if page is not None: page.SetSynchronisedWait()
+        
+    
+    def _ShowHideSplitters( self ):
+        
+        page = self._notebook.GetCurrentPage()
+        
+        if page is not None:
+            
+            page.ShowHideSplit()
+            
         
     
     def _StartIPFSDownload( self ):
@@ -2443,7 +2483,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def EventFrameMiddleClick( self, event ):
+    def EventFrameNewPage( self, event ):
         
         self._ChooseNewPage()
         
@@ -2607,9 +2647,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'redo': self._controller.pub( 'redo' )
             elif command == 'refresh':
                 
-                page = self._notebook.GetCurrentPage()
-                
-                if page is not None: page.RefreshQuery()
+                self._Refresh()
                 
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()
@@ -2617,9 +2655,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'show_hide_splitters':
                 
-                page = self._notebook.GetCurrentPage()
-                
-                if page is not None: page.ShowHideSplit()
+                self._ShowHideSplitters()
                 
             elif command == 'site': webbrowser.open( 'https://hydrusnetwork.github.io/hydrus/' )
             elif command == 'start_ipfs_download': self._StartIPFSDownload()
@@ -2632,6 +2668,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'twitter': webbrowser.open( 'https://twitter.com/#!/hydrusnetwork' )
             elif command == 'undo': self._controller.pub( 'undo' )
             else: event.Skip()
+            
+        
+    
+    def EventNotebookLeftDoubleClick( self, event ):
+        
+        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
+        
+        if tab_index == wx.NOT_FOUND:
+            
+            self._ChooseNewPage()
             
         
     

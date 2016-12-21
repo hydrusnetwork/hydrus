@@ -254,6 +254,18 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._file_service_key = file_service_key.decode( 'hex' )
         self._tag_service_key = tag_service_key.decode( 'hex' )
         
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        if not services_manager.ServiceExists( self._file_service_key ):
+            
+            self._file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+            
+        
+        if not services_manager.ServiceExists( self._tag_service_key ):
+            
+            self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
         self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
         
         self._InitialiseTemporaryVariables()

@@ -117,12 +117,12 @@ class TestManagers( unittest.TestCase ):
         hash_2 = HydrusData.GenerateKey()
         hash_3 = HydrusData.GenerateKey()
         
-        command_1 = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
-        command_2 = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }
-        command_3 = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) ] }
+        command_1 = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
+        command_2 = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }
+        command_3 = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) ] }
         
-        command_1_inverted = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
-        command_2_inverted = { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
+        command_1_inverted = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
+        command_2_inverted = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
         
         undo_manager = ClientCaches.UndoManager( HydrusGlobals.client_controller )
         
@@ -130,15 +130,15 @@ class TestManagers( unittest.TestCase ):
         
         undo_manager.AddCommand( 'content_updates', command_1 )
         
-        self.assertEqual( ( u'undo local files->archive 1 files', None ), undo_manager.GetUndoRedoStrings() )
+        self.assertEqual( ( u'undo archive 1 files', None ), undo_manager.GetUndoRedoStrings() )
         
         undo_manager.AddCommand( 'content_updates', command_2 )
         
-        self.assertEqual( ( u'undo local files->inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
+        self.assertEqual( ( u'undo inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
         
         undo_manager.Undo()
         
-        self.assertEqual( ( u'undo local files->archive 1 files', u'redo local files->inbox 1 files' ), undo_manager.GetUndoRedoStrings() )
+        self.assertEqual( ( u'undo archive 1 files', u'redo inbox 1 files' ), undo_manager.GetUndoRedoStrings() )
         
         self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
         
@@ -146,7 +146,7 @@ class TestManagers( unittest.TestCase ):
         
         self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
         
-        self.assertEqual( ( u'undo local files->inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
+        self.assertEqual( ( u'undo inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
         
         undo_manager.Undo()
         
@@ -156,10 +156,10 @@ class TestManagers( unittest.TestCase ):
         
         self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
         
-        self.assertEqual( ( None, u'redo local files->archive 1 files' ), undo_manager.GetUndoRedoStrings() )
+        self.assertEqual( ( None, u'redo archive 1 files' ), undo_manager.GetUndoRedoStrings() )
         
         undo_manager.AddCommand( 'content_updates', command_3 )
         
-        self.assertEqual( ( u'undo local files->archive 2 files', None ), undo_manager.GetUndoRedoStrings() )
+        self.assertEqual( ( u'undo archive 2 files', None ), undo_manager.GetUndoRedoStrings() )
         
     

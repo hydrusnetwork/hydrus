@@ -61,28 +61,28 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
             else: parent_listbook = self._remote_listbook
             
-            if service_type not in listbook_dict:
-                
-                if service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
-                elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
-                elif service_type == HC.MESSAGE_DEPOT: name = 'message depots'
-                elif service_type == HC.SERVER_ADMIN: name = 'administrative servers'
-                elif service_type == HC.LOCAL_FILE: name = 'files'
-                elif service_type == HC.LOCAL_TAG: name = 'tags'
-                elif service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
-                elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
-                elif service_type == HC.LOCAL_BOORU: name = 'booru'
-                elif service_type == HC.IPFS: name = 'ipfs'
-                else: continue
+            if service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
+            elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
+            elif service_type == HC.MESSAGE_DEPOT: name = 'message depots'
+            elif service_type == HC.SERVER_ADMIN: name = 'administrative servers'
+            elif service_type in HC.LOCAL_FILE_SERVICES: name = 'files'
+            elif service_type == HC.LOCAL_TAG: name = 'tags'
+            elif service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
+            elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
+            elif service_type == HC.LOCAL_BOORU: name = 'booru'
+            elif service_type == HC.IPFS: name = 'ipfs'
+            else: continue
+            
+            if name not in listbook_dict:
                 
                 listbook = ClientGUICommon.ListBook( parent_listbook )
                 
-                listbook_dict[ service_type ] = listbook
+                listbook_dict[ name ] = listbook
                 
                 parent_listbook.AddPage( name, name, listbook )
                 
             
-            listbook = listbook_dict[ service_type ]
+            listbook = listbook_dict[ name ]
             
             name = service.GetName()
             
@@ -166,11 +166,11 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._info_panel = ClientGUICommon.StaticBox( self, 'service information' )
                 
-                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
+                if service_type in HC.FILE_SERVICES: 
                     
                     self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                    if self._service_key != CC.TRASH_SERVICE_KEY:
+                    if service_type in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
                         
                         self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                         
@@ -195,10 +195,6 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     self._bytes = ClientGUICommon.Gauge( self._info_panel )
                     
                     self._bytes_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                elif service_type == HC.IPFS:
-                    
-                    self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
                 
             
@@ -280,7 +276,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
                 
             
-            if self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            if self._service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                 
                 self._delete_local_deleted = wx.Button( self, label = 'clear deleted file record' )
                 self._delete_local_deleted.SetToolTipString( 'Make the client forget which files it has deleted from local files, resetting all the \'exclude already deleted files\' checks.' )
@@ -318,11 +314,11 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES + [ HC.IPFS ]:
                 
-                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
+                if service_type in HC.FILE_SERVICES:
                     
                     self._info_panel.AddF( self._files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
-                    if self._service_key != CC.TRASH_SERVICE_KEY:
+                    if service_type in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
                         
                         self._info_panel.AddF( self._deleted_files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                         
@@ -345,10 +341,6 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     self._info_panel.AddF( self._num_shares, CC.FLAGS_EXPAND_PERPENDICULAR )
                     self._info_panel.AddF( self._bytes, CC.FLAGS_EXPAND_PERPENDICULAR )
                     self._info_panel.AddF( self._bytes_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                elif service_type == HC.IPFS:
-                    
-                    self._info_panel.AddF( self._files_text, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                 
                 vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -407,11 +399,11 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 vbox.AddF( self._ipfs_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
             
-            if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ] or self._service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+            if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ] or self._service_key in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
                 
                 repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                if self._service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                if self._service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                     
                     repo_buttons_hbox.AddF( self._delete_local_deleted, CC.FLAGS_VCENTER )
                     
@@ -595,14 +587,14 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 service_info = self._controller.Read( 'service_info', self._service_key )
                 
-                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
+                if service_type in HC.FILE_SERVICES:
                     
                     num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                     total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
                     
                     self._files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
                     
-                    if self._service_key != CC.TRASH_SERVICE_KEY:
+                    if service_type in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
                         
                         num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                         
@@ -635,13 +627,6 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     num_shares = service_info[ HC.SERVICE_INFO_NUM_SHARES ]
                     
                     self._num_shares.SetLabelText( HydrusData.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
-                    
-                elif service_type == HC.IPFS:
-                    
-                    num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-                    total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
-                    
-                    self._files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
                     
                 
             

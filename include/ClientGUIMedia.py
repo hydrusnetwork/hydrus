@@ -116,7 +116,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                 
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] } )
+            HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] } )
             
         
     
@@ -150,7 +150,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         else:
             
-            if display_media.GetLocationsManager().HasLocal():
+            if display_media.GetLocationsManager().IsLocal():
                 
                 ( other_hash, ) = HydrusGlobals.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
@@ -430,6 +430,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         self._PublishSelectionChange()
         
     
+    def _Download( self, hashes ):
+        
+        HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ] } )
+        
+    
     def _FullScreen( self, first_media = None ):
         
         if self._focussed_media is not None:
@@ -461,7 +466,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if first_media is None and self._focussed_media is not None: first_media = self._focussed_media
             
-            if first_media is not None and first_media.GetLocationsManager().HasLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
+            if first_media is not None and first_media.GetLocationsManager().IsLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
             else: first_hash = None
             
             canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
@@ -474,7 +479,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _Filter( self ):
         
-        media_results = self.GenerateMediaResults( has_location = CC.LOCAL_FILE_SERVICE_KEY, selected_media = set( self._selected_media ), for_media_viewer = True )
+        media_results = self.GenerateMediaResults( has_location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, selected_media = set( self._selected_media ), for_media_viewer = True )
         
         if len( media_results ) > 0:
             
@@ -734,8 +739,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
             else:
                 
-                if not media.IsSelected(): self._DeselectSelect( self._selected_media, ( media, ) )
-                else: self._PublishSelectionChange()
+                if not media.IsSelected():
+                    
+                    self._DeselectSelect( self._selected_media, ( media, ) )
+                    
+                else:
+                    
+                    self._PublishSelectionChange()
+                    
                 
                 self._SetFocussedMedia( media )
                 self._shift_focussed_media = media
@@ -762,7 +773,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                 
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] } )
+            HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] } )
             
         
     
@@ -840,7 +851,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if self._focussed_media is not None:
             
-            if CC.LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent():
+            if self._focussed_media.GetLocationsManager().IsLocal():
                 
                 hash = self._focussed_media.GetHash()
                 mime = self._focussed_media.GetMime()
@@ -904,8 +915,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _PublishSelectionChange( self, force_reload = False ):
         
-        if len( self._selected_media ) == 0: tags_media = self._sorted_media
-        else: tags_media = self._selected_media
+        if len( self._selected_media ) == 0:
+            
+            tags_media = self._sorted_media
+            
+        else:
+            
+            tags_media = self._selected_media
+            
         
         HydrusGlobals.client_controller.pub( 'new_tags_selection', self._page_key, tags_media, force_reload = force_reload )
         HydrusGlobals.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
@@ -1247,7 +1264,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self._PublishSelectionChange( force_reload = force_reload )
         
-        if self._focussed_media is not None: self._HitMedia( self._focussed_media, False, False )
+        if self._focussed_media is not None:
+            
+            self._HitMedia( self._focussed_media, False, False )
+            
         
     
     def ProcessServiceUpdates( self, service_keys_to_service_updates ):
@@ -2072,7 +2092,10 @@ class MediaPanelThumbnails( MediaPanel ):
                     self._Delete( data )
                     
                 
-            elif command == 'download': HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
+            elif command == 'download':
+                
+                self._Download( self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL ) )
+                
             elif command == 'export_files': self._ExportFiles()
             elif command == 'export_tags': self._ExportTags()
             elif command == 'filter': self._Filter()
@@ -2086,7 +2109,7 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'open_externally': self._OpenExternally()
             elif command == 'petition': self._PetitionFiles( data )
             elif command == 'remove': self._Remove()
-            elif command == 'rescind_download': HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_DOWNLOADING ) ) ] } )        
+            elif command == 'rescind_download': HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_DOWNLOADING ) ) ] } )        
             elif command == 'rescind_petition': self._RescindPetitionFiles( data )
             elif command == 'rescind_upload': self._RescindUploadFiles( data )
             elif command == 'scroll_end': self._ScrollEnd( False )
@@ -2119,12 +2142,12 @@ class MediaPanelThumbnails( MediaPanel ):
             
             locations_manager = t.GetLocationsManager()
             
-            if locations_manager.HasLocal(): self._FullScreen( t )
+            if locations_manager.IsLocal(): self._FullScreen( t )
             elif self._file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
                 
                 if len( locations_manager.GetCurrentRemote() ) > 0:
                     
-                    HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, t.GetHashes() ) ] } )
+                    self._Download( t.GetHashes() )
                     
                 
             
@@ -2236,12 +2259,13 @@ class MediaPanelThumbnails( MediaPanel ):
         all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
         selected_locations_managers = [ media.GetLocationsManager() for media in self._selected_media ]
         
-        selection_has_local_file_service = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
+        selection_has_local = True in ( locations_manager.IsLocal() for locations_manager in selected_locations_managers )
+        selection_has_local_file_domain = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
         selection_has_trash = True in ( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in selected_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
         selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
         
-        media_has_local_file_service = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
+        media_has_local_file_domain = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
         media_has_trash = True in ( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() for locations_manager in all_locations_managers )
         media_has_inbox = True in ( media.HasInbox() for media in self._sorted_media )
         media_has_archive = True in ( media.HasArchive() for media in self._sorted_media )
@@ -2274,9 +2298,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select', 'archive' ), 'archive' )
                     
                 
-                if media_has_local_file_service and media_has_trash:
+                if media_has_local_file_domain and media_has_trash:
                     
-                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select', 'local' ), 'local files' )
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select', 'local' ), 'my files' )
                     select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select', 'trash' ), 'trash' )
                     
                 
@@ -2411,7 +2435,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 disparate_petitioned_remote_service_keys = petitioned_remote_service_keys - common_petitioned_remote_service_keys
                 disparate_deleted_remote_service_keys = deleted_remote_service_keys - common_deleted_remote_service_keys
                 
-                some_downloading = True in ( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetPending() for locations_manager in selected_locations_managers )
+                some_downloading = True in ( locations_manager.IsDownloading() for locations_manager in selected_locations_managers )
                 
                 pending_file_service_keys = pending_remote_service_keys.intersection( file_service_keys )
                 petitioned_file_service_keys = petitioned_remote_service_keys.intersection( file_service_keys )
@@ -2459,14 +2483,14 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     # we can upload (set pending) to a repo_id when we have permission, a file is local, not current, not pending, and either ( not deleted or admin )
                     
-                    if locations_manager.HasLocal():
+                    if locations_manager.IsLocal():
                         
                         uploadable_file_service_keys.update( upload_permission_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - admin_permission_file_service_keys ) )
                         
                     
                     # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
                     
-                    if not CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() and not locations_manager.HasDownloading():
+                    if not locations_manager.IsLocal() and not locations_manager.IsDownloading():
                         
                         downloadable_file_service_keys.update( download_permission_file_service_keys & locations_manager.GetCurrentRemote() )
                         
@@ -2488,7 +2512,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     # we can pin if a file is local, not current, not pending
                     
-                    if locations_manager.HasLocal():
+                    if locations_manager.IsLocal():
                         
                         pinnable_ipfs_service_keys.update( ipfs_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() )
                         
@@ -2632,7 +2656,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                if selection_has_local_file_service and multiple_selected:
+                if selection_has_local and multiple_selected:
                     
                     filter_menu = wx.Menu()
                     
@@ -2670,7 +2694,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove' ), remove_phrase )
                 
-                if selection_has_local_file_service:
+                if selection_has_local_file_domain:
                     
                     menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), local_delete_phrase )
                     
@@ -2685,7 +2709,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 menu.AppendSeparator()
                 
-                if selection_has_local_file_service:
+                if selection_has_local:
                     
                     menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'open_externally' ), '&open externally' )
                     
@@ -2696,7 +2720,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 copy_menu = wx.Menu()
                 
-                if selection_has_local_file_service:
+                if selection_has_local:
                     
                     copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_files' ), copy_phrase )
                     
@@ -2810,9 +2834,9 @@ class MediaPanelThumbnails( MediaPanel ):
                         select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select', 'archive' ), 'archive' )
                         
                     
-                    if media_has_local_file_service and media_has_trash:
+                    if media_has_local_file_domain and media_has_trash:
                         
-                        select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select', 'local' ), 'local files' )
+                        select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select', 'local' ), 'my files' )
                         select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select', 'trash' ), 'trash' )
                         
                     
@@ -3087,7 +3111,7 @@ class Thumbnail( Selectable ):
         
         inbox = self.HasInbox()
         
-        local = self.GetLocationsManager().HasLocal()
+        local = self.GetLocationsManager().IsLocal()
         
         thumbnail_hydrus_bmp = HydrusGlobals.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
         
@@ -3278,7 +3302,7 @@ class Thumbnail( Selectable ):
         
         icons_to_draw = []
         
-        if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetPending():
+        if locations_manager.IsDownloading():
             
             icons_to_draw.append( CC.GlobalBMPs.downloading )
             

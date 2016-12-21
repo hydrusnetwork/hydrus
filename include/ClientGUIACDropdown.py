@@ -526,7 +526,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._current_matches = []
         
         file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
+        
+        
         tag_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._tag_service_key )
+        
         
         self._file_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, file_service.GetName(), self.FileButtonHit )
         self._file_repo_button.SetMinSize( ( 20, -1 ) )
@@ -628,14 +631,19 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         services_manager = HydrusGlobals.client_controller.GetServicesManager()
         
         services = []
-        services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
+        
         services.append( services_manager.GetService( CC.LOCAL_FILE_SERVICE_KEY ) )
         services.append( services_manager.GetService( CC.TRASH_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
         services.extend( services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) )
+        services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_service', service.GetServiceKey() ), service.GetName() )
+        for service in services:
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_service', service.GetServiceKey() ), service.GetName() )
+            
         
         HydrusGlobals.client_controller.PopupMenu( self._file_repo_button, menu )
         
@@ -655,13 +663,17 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         services_manager = HydrusGlobals.client_controller.GetServicesManager()
         
         services = []
-        services.append( services_manager.GetService( CC.COMBINED_TAG_SERVICE_KEY ) )
+        
         services.append( services_manager.GetService( CC.LOCAL_TAG_SERVICE_KEY ) )
         services.extend( services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
+        services.append( services_manager.GetService( CC.COMBINED_TAG_SERVICE_KEY ) )
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_tag_service', service.GetServiceKey() ), service.GetName() )
+        for service in services:
+            
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_tag_service', service.GetServiceKey() ), service.GetName() )
+            
         
         HydrusGlobals.client_controller.PopupMenu( self._tag_repo_button, menu )
         

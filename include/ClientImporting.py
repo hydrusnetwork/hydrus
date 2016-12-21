@@ -2006,7 +2006,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 note = first_line + u'\u2026 (Copy note to see full error)'
                 note += os.linesep
-                note += traceback.format_exc()
+                note += HydrusData.ToUnicode( traceback.format_exc() )
                 
                 HydrusData.Print( 'Error when processing ' + seed + '!' )
                 HydrusData.Print( traceback.format_exc() )
@@ -2215,7 +2215,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         if status == CC.STATUS_SUCCESSFUL:
                             
+                            job_key.SetVariable( 'popup_text_1', x_out_of_y + 'import successful' )
+                            
                             successful_hashes.add( hash )
+                            
+                        elif status == CC.STATUS_DELETED:
+                            
+                            job_key.SetVariable( 'popup_text_1', x_out_of_y + 'previously deleted' )
+                            
+                        elif status == CC.STATUS_REDUNDANT:
+                            
+                            job_key.SetVariable( 'popup_text_1', x_out_of_y + 'already in db' )
                             
                         
                     finally:
@@ -2251,6 +2261,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 error_count += 1
                 
                 status = CC.STATUS_FAILED
+                
+                job_key.SetVariable( 'popup_text_1', x_out_of_y + 'file failed' )
                 
                 self._seed_cache.UpdateSeedStatus( url, status, exception = e )
                 

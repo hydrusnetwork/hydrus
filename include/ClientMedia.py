@@ -80,7 +80,7 @@ def MergeTagsManagers( tags_managers ):
     
 class LocationsManager( object ):
     
-    LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY }
+    LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }
     
     def __init__( self, current, deleted, pending, petitioned, urls = None, service_keys_to_filenames = None, current_to_timestamps = None ):
         
@@ -217,9 +217,9 @@ class LocationsManager( object ):
         return self._urls
         
     
-    def HasDownloading( self ): return CC.LOCAL_FILE_SERVICE_KEY in self._pending
+    def IsDownloading( self ): return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._pending
     
-    def HasLocal( self ): return len( self._current.intersection( self.LOCAL_LOCATIONS ) ) > 0
+    def IsLocal( self ): return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._current
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
@@ -235,6 +235,14 @@ class LocationsManager( object ):
             if service_key == CC.LOCAL_FILE_SERVICE_KEY:
                 
                 self._current.discard( CC.TRASH_SERVICE_KEY )
+                self._pending.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                
+                if CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current:
+                    
+                    self._current.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    
+                    self._current_to_timestamps[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = HydrusData.GetNow()
+                    
                 
             
             self._current_to_timestamps[ service_key ] = HydrusData.GetNow()
@@ -250,16 +258,19 @@ class LocationsManager( object ):
                 
                 self._current.add( CC.TRASH_SERVICE_KEY )
                 
-                self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ] = self._current_to_timestamps[ CC.LOCAL_FILE_SERVICE_KEY ]
+                self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ] = HydrusData.GetNow()
+                
+            elif service_key == CC.TRASH_SERVICE_KEY:
+                
+                self._current.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                 
             
         elif action == HC.CONTENT_UPDATE_UNDELETE:
             
             self._current.discard( CC.TRASH_SERVICE_KEY )
             
+            self._deleted.discard( CC.LOCAL_FILE_SERVICE_KEY )
             self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
-            
-            self._current_to_timestamps[ CC.LOCAL_FILE_SERVICE_KEY ] = self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ]
             
         elif action == HC.CONTENT_UPDATE_PEND:
             
@@ -269,8 +280,14 @@ class LocationsManager( object ):
             
             if service_key not in self._deleted: self._petitioned.add( service_key )
             
-        elif action == HC.CONTENT_UPDATE_RESCIND_PEND: self._pending.discard( service_key )
-        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: self._petitioned.discard( service_key )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
+            
+            self._pending.discard( service_key )
+            
+        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+            
+            self._petitioned.discard( service_key )
+            
         
     
     def ResetService( self, service_key ):
@@ -411,8 +428,24 @@ class MediaList( object ):
             elif sort_by_data == CC.SORT_BY_LARGEST: sort_function = lambda x: -deal_with_none( x.GetSize() )
             elif sort_by_data == CC.SORT_BY_SHORTEST: sort_function = lambda x: deal_with_none( x.GetDuration() )
             elif sort_by_data == CC.SORT_BY_LONGEST: sort_function = lambda x: -deal_with_none( x.GetDuration() )
-            elif sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: deal_with_none( x.GetTimestamp( self._file_service_key ) )
-            elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -deal_with_none( x.GetTimestamp( self._file_service_key ) )
+            elif sort_by_data in ( CC.SORT_BY_OLDEST, CC.SORT_BY_NEWEST ):
+                
+                file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
+                
+                file_service_type = file_service.GetServiceType()
+                
+                if file_service_type == HC.LOCAL_FILE_DOMAIN:
+                    
+                    file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+                    
+                else:
+                    
+                    file_service_key = self._file_service_key
+                    
+                
+                if sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: deal_with_none( x.GetTimestamp( file_service_key ) )
+                elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -deal_with_none( x.GetTimestamp( file_service_key ) )
+                
             elif sort_by_data == CC.SORT_BY_MIME: sort_function = lambda x: x.GetMime()
             
         elif sort_by_type == 'namespaces':
@@ -647,11 +680,14 @@ class MediaList( object ):
                     locations_manager = media.GetLocationsManager()
                     
                     inbox_failed = discriminant == CC.DISCRIMINANT_INBOX and not media.HasInbox()
-                    local_failed = discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal()
-                    not_local_failed = discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal()
-                    downloading_failed = discriminant == CC.DISCRIMINANT_DOWNLOADING and CC.LOCAL_FILE_SERVICE_KEY not in locations_manager.GetPending()
+                    local_failed = discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.IsLocal()
+                    not_local_failed = discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.IsLocal()
+                    downloading_failed = discriminant == CC.DISCRIMINANT_DOWNLOADING and not locations_manager.IsDownloading()
                     
-                    if inbox_failed or local_failed or not_local_failed or downloading_failed: continue
+                    if inbox_failed or local_failed or not_local_failed or downloading_failed:
+                        
+                        continue
+                        
                     
                 
                 if unrated is not None:
@@ -725,7 +761,10 @@ class MediaList( object ):
         
         hashes = content_update.GetHashes()
         
-        for media in self._GetMedia( hashes, 'collections' ): media.ProcessContentUpdate( service_key, content_update )
+        for media in self._GetMedia( hashes, 'collections' ):
+            
+            media.ProcessContentUpdate( service_key, content_update )
+            
         
         if data_type == HC.CONTENT_TYPE_FILES:
             
@@ -754,7 +793,10 @@ class MediaList( object ):
         
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
-            for content_update in content_updates: self.ProcessContentUpdate( service_key, content_update )
+            for content_update in content_updates:
+                
+                self.ProcessContentUpdate( service_key, content_update )
+                
             
         
     
@@ -1071,7 +1113,7 @@ class MediaSingleton( Media ):
             
             locations_manager = self._media_result.GetLocationsManager()
             
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal() ):
+            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.IsLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.IsLocal() ):
                 
                 if ordered:
                     
@@ -1171,9 +1213,9 @@ class MediaSingleton( Media ):
         
         current_service_keys = locations_manager.GetCurrent()
         
-        if CC.LOCAL_FILE_SERVICE_KEY in current_service_keys:
+        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in current_service_keys:
             
-            timestamp = locations_manager.GetTimestamp( CC.LOCAL_FILE_SERVICE_KEY )
+            timestamp = locations_manager.GetTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
             lines.append( 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) )
             
@@ -1182,12 +1224,12 @@ class MediaSingleton( Media ):
             
             timestamp = locations_manager.GetTimestamp( CC.TRASH_SERVICE_KEY )
             
-            lines.append( 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ', now in the trash' )
+            lines.append( 'trashed ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) )
             
         
         for service_key in current_service_keys:
             
-            if service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+            if service_key in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
                 
                 continue
                 
@@ -1365,8 +1407,14 @@ class MediaResult( object ):
         
         service_type = service.GetServiceType()
         
-        if service_type == HC.TAG_REPOSITORY: tags_manager.DeletePending( service_key )
-        elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ): locations_manager.DeletePending( service_key )
+        if service_type in HC.TAG_SERVICES:
+            
+            tags_manager.DeletePending( service_key )
+            
+        elif service_type in HC.FILE_SERVICES:
+            
+            locations_manager.DeletePending( service_key )
+            
         
     
     def Duplicate( self ):
@@ -1418,9 +1466,11 @@ class MediaResult( object ):
             
             tags_manager.ProcessContentUpdate( service_key, content_update )
             
-        elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.IPFS ):
+        elif service_type in HC.FILE_SERVICES:
             
-            if service_type == HC.LOCAL_FILE:
+            previously_local = CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent()
+            
+            if service_type in HC.LOCAL_FILE_SERVICES:
                 
                 if action == HC.CONTENT_UPDATE_ARCHIVE:
                     
@@ -1431,25 +1481,33 @@ class MediaResult( object ):
                     inbox = True
                     
                 
-                if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                if service_type == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                     
-                    if action == HC.CONTENT_UPDATE_ADD and CC.TRASH_SERVICE_KEY not in locations_manager.GetCurrent():
+                    if action == HC.CONTENT_UPDATE_ADD:
                         
                         inbox = True
                         
-                    
-                elif service_key == CC.TRASH_SERVICE_KEY:
-                    
-                    if action == HC.CONTENT_UPDATE_DELETE:
+                    elif action == HC.CONTENT_UPDATE_DELETE:
                         
                         inbox = False
                         
                     
                 
-                self._tuple = ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager )
-                
             
             locations_manager.ProcessContentUpdate( service_key, content_update )
+            
+            subsequently_local = CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent()
+            
+            if not previously_local and subsequently_local:
+                
+                inbox = True
+                
+            if previously_local and not subsequently_local:
+                
+                inbox = False
+                
+            
+            self._tuple = ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager )
             
         elif service_type in HC.RATINGS_SERVICES:
             
@@ -1868,8 +1926,14 @@ class TagsManager( TagsManagerSimple ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        if action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = row
-        else: ( tag, hashes ) = row
+        if action == HC.CONTENT_UPDATE_PETITION:
+            
+            ( tag, hashes, reason ) = row
+            
+        else:
+            
+            ( tag, hashes ) = row
+            
         
         if action == HC.CONTENT_UPDATE_ADD:
             
@@ -1892,7 +1956,10 @@ class TagsManager( TagsManagerSimple ):
                 statuses_to_tags[ HC.PENDING ].add( tag )
                 
             
-        elif action == HC.CONTENT_UPDATE_RESCIND_PEND: statuses_to_tags[ HC.PENDING ].discard( tag )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
+            
+            statuses_to_tags[ HC.PENDING ].discard( tag )
+            
         elif action == HC.CONTENT_UPDATE_PETITION:
             
             if tag in statuses_to_tags[ HC.CURRENT ]:

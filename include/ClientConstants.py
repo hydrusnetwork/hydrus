@@ -458,7 +458,7 @@ LOCAL_BOORU_SERVICE_KEY = 'local booru'
 
 TRASH_SERVICE_KEY = 'trash'
 
-COMBINED_LOCAL_FILES_SERVICE_KEY = 'all local files'
+COMBINED_LOCAL_FILE_SERVICE_KEY = 'all local files'
 
 COMBINED_FILE_SERVICE_KEY = 'all known files'
 

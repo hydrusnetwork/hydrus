@@ -112,7 +112,7 @@ class HydrusResourceWelcome( Resource ):
         
         Resource.__init__( self )
         
-        if service_type == HC.LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
+        if service_type == HC.COMBINED_LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
         else: body = ROOT_MESSAGE_BEGIN + message + ROOT_MESSAGE_END
         
         self._body = HydrusData.ToByteString( body )

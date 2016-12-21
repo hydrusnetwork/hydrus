@@ -1965,7 +1965,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventFullscreensUpdate( self, event ):
             
-            ( width, height ) = wx.GetDisplaySize()
+            ( width, height ) = ClientGUITopLevelWindows.GetDisplaySize( self )
             
             estimated_bytes_per_fullscreen = 3 * width * height
             

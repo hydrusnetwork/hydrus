@@ -2906,7 +2906,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         ( x, y ) = self.GetEffectiveMinSize()
         
-        ( max_x, max_y ) = wx.GetDisplaySize()
+        ( max_x, max_y ) = ClientGUITopLevelWindows.GetDisplaySize( self )
         
         x = min( x + 25, max_x )
         y = min( y + 25, max_y )
@@ -4006,20 +4006,16 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         #
         
-        manageable_service_types = HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_BOORU, HC.IPFS ]
-        
-        for service_type in manageable_service_types:
+        for service_type in HC.ALL_SERVICES:
             
             if service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
             elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
             elif service_type == HC.LOCAL_BOORU: name = 'booru'
             elif service_type == HC.LOCAL_TAG: name = 'local tags'
+            elif service_type == HC.LOCAL_FILE_DOMAIN: name = 'local files'
             elif service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
             elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
-            #elif service_type == HC.MESSAGE_DEPOT: name = 'message repositories'
             elif service_type == HC.SERVER_ADMIN: name = 'administrative services'
-            #elif service_type == HC.RATING_LIKE_REPOSITORY: name = 'like/dislike rating repositories'
-            #elif service_type == HC.RATING_NUMERICAL_REPOSITORY: name = 'numerical rating repositories'
             elif service_type == HC.IPFS: name = 'ipfs daemons'
             else: continue
             
@@ -4094,7 +4090,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             service_type = self._listbooks_to_service_types[ services_listbook ]
             
-            if service_type in HC.NONEDITABLE_SERVICES:
+            if service_type in HC.NONADDREMOVEABLE_SERVICES:
                 
                 self._add.Disable()
                 self._remove.Disable()
@@ -4155,9 +4151,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         service_key = HydrusData.GenerateKey()
                         service_type = self._listbooks_to_service_types[ services_listbook ]
                         
-                        if service_type in HC.NONEDITABLE_SERVICES:
+                        if service_type in HC.NONADDREMOVEABLE_SERVICES:
                             
-                            wx.MessageBox( 'You cannot edit this type of service yet!' )
+                            wx.MessageBox( 'You cannot add or delete this type of service yet!' )
                             
                             return
                             
@@ -4421,7 +4417,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             #
             
-            if service_type not in HC.NONEDITABLE_SERVICES:
+            if service_type not in HC.NONRENAMEABLE_SERVICES:
                 
                 if service_type in HC.REMOTE_SERVICES: title = 'name and credentials'
                 else: title = 'name'
@@ -4551,7 +4547,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             #
             
-            if service_type not in HC.NONEDITABLE_SERVICES:
+            if service_type not in HC.NONRENAMEABLE_SERVICES:
                 
                 self._service_name.SetValue( name )
                 
@@ -4599,7 +4595,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            if service_type not in HC.NONEDITABLE_SERVICES:
+            if service_type not in HC.NONRENAMEABLE_SERVICES:
                 
                 rows = []
                 
@@ -4894,11 +4890,14 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             info = dict( info )
             
-            if service_type not in HC.NONEDITABLE_SERVICES:
+            if service_type not in HC.NONRENAMEABLE_SERVICES:
                 
                 name = self._service_name.GetValue()
                 
-                if name == '': raise Exception( 'Please enter a name' )
+                if name == '':
+                    
+                    raise Exception( 'Please enter a name' )
+                    
                 
             
             if service_type in HC.REMOTE_SERVICES:

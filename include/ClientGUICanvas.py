@@ -950,7 +950,10 @@ class Canvas( wx.Window ):
         HydrusGlobals.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         
     
-    def _Archive( self ): HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
+    def _Archive( self ):
+        
+        HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
+        
     
     def _CopyBMPToClipboard( self ):
         
@@ -967,7 +970,7 @@ class Canvas( wx.Window ):
             
         else:
             
-            if self._current_display_media.GetLocationsManager().HasLocal():
+            if self._current_display_media.GetLocationsManager().IsLocal():
                 
                 ( other_hash, ) = HydrusGlobals.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
@@ -1162,7 +1165,10 @@ class Canvas( wx.Window ):
         return False
         
     
-    def _Inbox( self ): HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
+    def _Inbox( self ):
+        
+        HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
+        
     
     def _IsZoomable( self ):
         
@@ -1543,7 +1549,7 @@ class Canvas( wx.Window ):
             
             locations_manager = media.GetLocationsManager()
             
-            if not locations_manager.HasLocal():
+            if not locations_manager.IsLocal():
                 
                 media = None
                 
@@ -1582,7 +1588,7 @@ class Canvas( wx.Window ):
                 
                 ( initial_width, initial_height ) = initial_size
                 
-                if self._current_display_media.GetLocationsManager().HasLocal() and initial_width > 0 and initial_height > 0:
+                if self._current_display_media.GetLocationsManager().IsLocal() and initial_width > 0 and initial_height > 0:
                     
                     show_action = self._GetShowAction( self._current_display_media )
                     
@@ -2501,12 +2507,12 @@ class CanvasMediaListFilter( CanvasMediaList ):
                             self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
                             self._kept_hashes = [ media.GetHash() for media in self._kept ]
                             
-                            content_updates = []
+                            service_keys_to_content_updates = {}
                             
-                            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
-                            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
+                            service_keys_to_content_updates[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) ]
+                            service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) ]
                             
-                            HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : content_updates } )
+                            HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                             
                             self._kept = set()
                             self._deleted = set()
@@ -3248,7 +3254,10 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', path )
         
     
-    def _Inbox( self ): HydrusGlobals.client_controller.Write( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
+    def _Inbox( self ):
+        
+        HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
+        
     
     def EventShortcuts( self, event ):
         
@@ -3894,7 +3903,7 @@ class EmbedButton( wx.Window ):
         
         self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
         
-        if self._media.GetLocationsManager().HasLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+        if self._media.GetLocationsManager().IsLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
             hash = self._media.GetHash()
             
@@ -4024,7 +4033,7 @@ class OpenExternallyPanel( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        if self._media.GetLocationsManager().HasLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+        if self._media.GetLocationsManager().IsLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
             hash = self._media.GetHash()
             

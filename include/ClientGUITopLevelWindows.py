@@ -9,6 +9,36 @@ import wx
 CHILD_POSITION_PADDING = 50
 FUZZY_PADDING = 30
 
+def GetDisplayPosition( window ):
+    
+    display_index = wx.Display.GetFromWindow( window )
+    
+    if display_index == wx.NOT_FOUND:
+        
+        display_index = 0 # default to primary
+        
+    
+    display = wx.Display( display_index )
+    
+    rect = display.GetClientArea()
+    
+    return rect.GetPosition()
+    
+def GetDisplaySize( window ):
+    
+    display_index = wx.Display.GetFromWindow( window )
+    
+    if display_index == wx.NOT_FOUND:
+        
+        display_index = 0 # default to primary
+        
+    
+    display = wx.Display( display_index )
+    
+    rect = display.GetClientArea()
+    
+    return rect.GetSize()
+    
 def GetSafePosition( position ):
     
     ( p_x, p_y ) = position
@@ -67,7 +97,7 @@ def GetSafeSize( tlw, min_size, gravity ):
             
         
     
-    ( display_width, display_height ) = wx.GetDisplaySize()
+    ( display_width, display_height ) = GetDisplaySize( tlw )
     
     width = min( display_width, width )
     height = min( display_height, height )
@@ -86,15 +116,16 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
         
         ( desired_delta_width, desired_delta_height ) = desired_size_delta
         
-        min_width = current_width + desired_delta_width + FUZZY_PADDING
-        min_height = current_height + desired_delta_height + FUZZY_PADDING
+        desired_width = current_width + desired_delta_width + FUZZY_PADDING
+        desired_height = current_height + desired_delta_height + FUZZY_PADDING
         
-        ( width, height ) = GetSafeSize( tlw, ( min_width, min_height ), default_gravity )
+        ( width, height ) = GetSafeSize( tlw, ( desired_width, desired_height ), default_gravity )
         
         if width > current_width or height > current_height:
             
             tlw.SetSize( ( width, height ) )
             
+            SlideOffScreenTLWUpAndLeft( tlw )
         
     
 def SaveTLWSizeAndPosition( tlw, frame_key ):
@@ -195,6 +226,31 @@ def SetTLWSizeAndPosition( tlw, frame_key ):
     if fullscreen:
         
         wx.CallAfter( tlw.ShowFullScreen, True, wx.FULLSCREEN_ALL )
+        
+    
+def SlideOffScreenTLWUpAndLeft( tlw ):
+    
+    ( tlw_width, tlw_height ) = tlw.GetSize()
+    ( tlw_x, tlw_y ) = tlw.GetPosition()
+    
+    tlw_right = tlw_x + tlw_width
+    tlw_bottom = tlw_y + tlw_height
+    
+    ( display_width, display_height ) = GetDisplaySize( tlw )
+    ( display_x, display_y ) = GetDisplayPosition( tlw )
+    
+    display_right = display_x + display_width
+    display_bottom = display_y + display_height
+    
+    move_x = tlw_right > display_right
+    move_y = tlw_bottom > display_bottom
+    
+    if move_x or move_y:
+        
+        delta_x = min( display_right - tlw_right, 0 )
+        delta_y = min( display_bottom - tlw_bottom, 0 )
+        
+        tlw.SetPosition( ( tlw_x + delta_x, tlw_y + delta_y ) )
         
     
 class NewDialog( wx.Dialog ):
