@@ -20,6 +20,7 @@ import ClientDownloading
 import ClientMedia
 import ClientSearch
 import ClientThreading
+import collections
 import cv2
 import gc
 import HydrusData
@@ -45,6 +46,7 @@ import sys
 import threading
 import time
 import traceback
+import types
 import webbrowser
 import wx
 import yaml
@@ -689,6 +691,75 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.pub( 'notify_new_undo' )
         
     
+    def _DebugMakeSomePopups( self ):
+        
+        for i in range( 1, 7 ):
+            
+            HydrusData.ShowText( 'This is a test popup message -- ' + str( i ) )
+            
+        
+        #
+        
+        job_key = ClientThreading.JobKey( pausable = True, cancellable = True)
+        
+        job_key.SetVariable( 'title', 'test job' )
+        
+        job_key.SetVariable( 'popup_text_1', 'Currently processing test job 5/8' )
+        job_key.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
+        
+        self._controller.pub( 'message', job_key )
+        
+        wx.CallLater( 2000, job_key.SetVariable, 'popup_text_2', 'Pulsing subjob' )
+        wx.CallLater( 2000, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
+        
+        #
+        
+        e = HydrusExceptions.DataMissing( 'This is a test exception' )
+        
+        HydrusData.ShowException( e )
+        
+        #
+        
+        for i in range( 1, 4 ):
+            
+            wx.CallLater( 500 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
+            
+        
+    
+    def _DebugPrintGarbage( self ):
+        
+        HydrusData.ShowText( 'Printing garbage to log' )
+        
+        gc.collect()
+        
+        count = collections.Counter()
+        
+        class_count = collections.Counter()
+        
+        for o in gc.get_objects():
+            
+            count[ type( o ) ] += 1
+            
+            if isinstance( o, types.InstanceType ): class_count[ o.__class__.__name__ ] += 1
+            elif isinstance( o, types.BuiltinFunctionType ): class_count[ o.__name__ ] += 1
+            elif isinstance( o, types.BuiltinMethodType ): class_count[ o.__name__ ] += 1
+            
+        
+        HydrusData.Print( 'gc:' )
+        
+        for ( k, v ) in count.items():
+            
+            if v > 100: print ( k, v )
+            
+        
+        for ( k, v ) in class_count.items():
+            
+            if v > 100: print ( k, v )
+            
+        
+        HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+        
+    
     def _DeleteAllClosedPages( self ):
         
         with self._lock:
@@ -1252,53 +1323,43 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def help():
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'help' ), p( '&Help' ) )
-            dont_know = wx.Menu()
-            dont_know.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'auto_repo_setup' ), p( 'Just set up some repositories for me, please' ) )
-            dont_know.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
-            menu.AppendMenu( wx.ID_NONE, p( 'I don\'t know what I am doing' ), dont_know )
-            links = wx.Menu()
-            site = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'site' ), p( 'Site' ) )
-            site.SetBitmap( CC.GlobalBMPs.file_repository )
-            board = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( '8chan_board' ), p( '8chan Board' ) )
-            board.SetBitmap( CC.GlobalBMPs.eight_chan )
-            twitter = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'twitter' ), p( 'Twitter' ) )
-            twitter.SetBitmap( CC.GlobalBMPs.twitter )
-            tumblr = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'tumblr' ), p( 'Tumblr' ) )
-            tumblr.SetBitmap( CC.GlobalBMPs.tumblr )
-            discord = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'discord' ), p( 'Discord' ) )
-            discord.SetBitmap( CC.GlobalBMPs.discord )
-            patreon = wx.MenuItem( links, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'patreon' ), p( 'Patreon' ) )
-            patreon.SetBitmap( CC.GlobalBMPs.patreon )
-            links.AppendItem( site )
-            links.AppendItem( board )
-            links.AppendItem( twitter )
-            links.AppendItem( tumblr )
-            links.AppendItem( discord )
-            links.AppendItem( patreon )
-            menu.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
+            ClientGUIMenus.AppendMenuItem( menu, 'help', 'Open hydrus\'s local help in your web browser.', self, webbrowser.open, 'file://' + HC.HELP_DIR + '/index.html' )
             
-            db_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'db_profile_mode' )
-            pubsub_profile_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pubsub_profile_mode' )
-            force_idle_mode_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'force_idle_mode' )
+            dont_know = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( dont_know, 'just set up some repositories for me, please', 'This will add the hydrus dev\'s two repositories to your client.', self, self._AutoRepoSetup )
+            
+            ClientGUIMenus.AppendMenu( menu, dont_know, 'I don\'t know what I am doing' )
+            
+            links = wx.Menu()
+            
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', self, CC.GlobalBMPs.file_repository, webbrowser.open, 'https://hydrusnetwork.github.io/hydrus/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', self, CC.GlobalBMPs.eight_chan, webbrowser.open, 'https://8ch.net/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', self, CC.GlobalBMPs.twitter, webbrowser.open, 'https://twitter.com/hydrusnetwork' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', self, CC.GlobalBMPs.tumblr, webbrowser.open, 'http://hydrus.tumblr.com/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', self, CC.GlobalBMPs.discord, webbrowser.open, 'https://discord.gg/vy8CUB4' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', self, CC.GlobalBMPs.patreon, webbrowser.open, 'https://www.patreon.com/hydrus_dev' )
+            
+            ClientGUIMenus.AppendMenu( menu, links, 'links' )
             
             debug = wx.Menu()
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_make_popups' ), p( 'Make Some Popups' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_make_a_delayed_popup' ), p( 'Make a Popup in Five Seconds' ) )
-            debug.AppendCheckItem( db_profile_mode_id, p( '&DB Profile Mode' ) )
-            debug.Check( db_profile_mode_id, HydrusGlobals.db_profile_mode )
-            debug.AppendCheckItem( pubsub_profile_mode_id, p( '&PubSub Profile Mode' ) )
-            debug.Check( pubsub_profile_mode_id, HydrusGlobals.pubsub_profile_mode )
-            debug.AppendCheckItem( force_idle_mode_id, p( '&Force Idle Mode' ) )
-            debug.Check( force_idle_mode_id, HydrusGlobals.force_idle_mode )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'debug_garbage' ), p( 'Garbage' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'clear_caches' ), p( '&Clear Preview/Fullscreen Caches' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_service_info' ), p( '&Clear DB Service Info Cache' ), p( 'Delete all cached service info, in case it has become desynchronised.' ) )
-            debug.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'load_into_disk_cache' ), p( 'Load whole db into disk cache' ) )
             
-            menu.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'help_shortcuts' ), p( '&Shortcuts' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'help_about' ), p( '&About' ) )
+            ClientGUIMenus.AppendMenuItem( debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self, self._DebugMakeSomePopups )
+            ClientGUIMenus.AppendMenuItem( debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self, wx.CallLater, 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
+            ClientGUIMenus.AppendMenuCheckItem( debug, 'db report mode', 'Have the db report query information, where supported.', self, HydrusGlobals.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', self, HydrusGlobals.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( debug, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', self, HydrusGlobals.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( debug, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', self, HydrusGlobals.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
+            ClientGUIMenus.AppendMenuItem( debug, 'print garbage', 'Print some information about the python garbage to the log.', self, self._DebugPrintGarbage )
+            ClientGUIMenus.AppendMenuItem( debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self, self._controller.ClearCaches )
+            ClientGUIMenus.AppendMenuItem( debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self, self._DeleteServiceInfo )
+            ClientGUIMenus.AppendMenuItem( debug, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self, self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
+            ClientGUIMenus.AppendMenuItem( debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self, self._AutoServerSetup )
+            
+            ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', self, wx.MessageBox, CC.SHORTCUT_HELP )
+            ClientGUIMenus.AppendMenuItem( menu, 'about', 'See this client\'s version and other information.', self, self._AboutWindow )
             
             return ( menu, p( '&Help' ), True )
             
@@ -2120,6 +2181,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         wx.MessageBox( HydrusData.ToUnicode( stats ) )
         
     
+    def _SwitchBoolean( self, name ):
+        
+        if name == 'db_report_mode':
+            
+            HydrusGlobals.db_report_mode = not HydrusGlobals.db_report_mode
+            
+        elif name == 'db_profile_mode':
+            
+            HydrusGlobals.db_profile_mode = not HydrusGlobals.db_profile_mode
+            
+        elif name == 'pubsub_profile_mode':
+            
+            HydrusGlobals.pubsub_profile_mode = not HydrusGlobals.pubsub_profile_mode
+            
+        elif name == 'force_idle_mode':
+            
+            HydrusGlobals.force_idle_mode = not HydrusGlobals.force_idle_mode
+            
+        
+    
     def _UnclosePage( self, closed_page_index ):
         
         with self._lock:
@@ -2500,108 +2581,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'auto_repo_setup': self._AutoRepoSetup()
             elif command == 'auto_server_setup': self._AutoServerSetup()
             elif command == 'backup_service': self._BackupService( data )
-            elif command == 'clear_caches': self._controller.ClearCaches()
             elif command == 'close_page': self._CloseCurrentPage()
-            elif command == 'db_profile_mode':
-                
-                HydrusGlobals.db_profile_mode = not HydrusGlobals.db_profile_mode
-                
-            elif command == 'debug_garbage':
-                
-                import collections
-                import types
-                
-                HydrusData.ShowText( 'Printing garbage to log' )
-                
-                gc.collect()
-                
-                count = collections.Counter()
-                
-                class_count = collections.Counter()
-                
-                for o in gc.get_objects():
-                    
-                    count[ type( o ) ] += 1
-                    
-                    if isinstance( o, types.InstanceType ): class_count[ o.__class__.__name__ ] += 1
-                    elif isinstance( o, types.BuiltinFunctionType ): class_count[ o.__name__ ] += 1
-                    elif isinstance( o, types.BuiltinMethodType ): class_count[ o.__name__ ] += 1
-                    
-                
-                HydrusData.Print( 'gc:' )
-                
-                for ( k, v ) in count.items():
-                    
-                    if v > 100: print ( k, v )
-                    
-                
-                for ( k, v ) in class_count.items():
-                    
-                    if v > 100: print ( k, v )
-                    
-                
-                HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
-                
-            elif command == 'debug_make_a_delayed_popup':
-                
-                wx.CallLater( 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
-                
-            elif command == 'debug_make_popups':
-                
-                for i in range( 1, 7 ):
-                    
-                    HydrusData.ShowText( 'This is a test popup message -- ' + str( i ) )
-                    
-                
-                #
-                
-                job_key = ClientThreading.JobKey( pausable = True, cancellable = True)
-                
-                job_key.SetVariable( 'title', 'test job' )
-                
-                job_key.SetVariable( 'popup_text_1', 'Currently processing test job 5/8' )
-                job_key.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
-                
-                self._controller.pub( 'message', job_key )
-                
-                wx.CallLater( 2000, job_key.SetVariable, 'popup_text_2', 'Pulsing subjob' )
-                wx.CallLater( 2000, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
-                
-                #
-                
-                e = HydrusExceptions.DataMissing( 'This is a test exception' )
-                
-                HydrusData.ShowException( e )
-                
-                #
-                
-                for i in range( 1, 4 ):
-                    
-                    wx.CallLater( 500 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
-                    
-                
             elif command == 'delete_gui_session':
                 
                 self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, data )
                 
                 self._controller.pub( 'notify_new_sessions' )
                 
-            elif command == 'delete_service_info': self._DeleteServiceInfo()
-            elif command == 'discord': webbrowser.open( 'https://discord.gg/vy8CUB4' )
             elif command == 'fetch_ip': self._FetchIP( data )
             elif command == 'force_idle_mode':
                 
                 self._controller.ForceIdle()
                 
-            elif command == '8chan_board': webbrowser.open( 'https://8ch.net/hydrus/index.html' )
-            elif command == 'help': webbrowser.open( 'file://' + HC.HELP_DIR + '/index.html' )
-            elif command == 'help_about': self._AboutWindow()
-            elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
             elif command == 'load_gui_session': self._LoadGUISession( data )
-            elif command == 'load_into_disk_cache':
-                
-                self._controller.CallToThread( self._controller.Read, 'load_into_disk_cache' )
-                
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
             elif command == 'manage_boorus': self._ManageBoorus()
             elif command == 'manage_parsing_scripts': self._ManageParsingScripts()
@@ -2633,7 +2625,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
-            elif command == 'patreon': webbrowser.open( 'https://www.patreon.com/hydrus_dev' )
             elif command == 'pause_export_folders_sync': self._PauseSync( 'export_folders' )
             elif command == 'pause_import_folders_sync': self._PauseSync( 'import_folders' )
             elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
@@ -2657,15 +2648,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._ShowHideSplitters()
                 
-            elif command == 'site': webbrowser.open( 'https://hydrusnetwork.github.io/hydrus/' )
             elif command == 'start_ipfs_download': self._StartIPFSDownload()
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
             elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
             elif command == 'tab_menu_close_page': self._ClosePage( self._tab_right_click_index )
             elif command == 'tab_menu_rename_page': self._RenamePage( self._tab_right_click_index )
-            elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
-            elif command == 'twitter': webbrowser.open( 'https://twitter.com/#!/hydrusnetwork' )
             elif command == 'undo': self._controller.pub( 'undo' )
             else: event.Skip()
             

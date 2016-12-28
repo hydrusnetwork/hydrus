@@ -5,6 +5,7 @@ test_controller = None
 view_shutdown = False
 model_shutdown = False
 
+db_report_mode = False
 db_profile_mode = False
 pubsub_profile_mode = False
 force_idle_mode = False

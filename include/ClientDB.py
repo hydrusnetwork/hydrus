@@ -1426,7 +1426,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ac_cache_table_name = GenerateCombinedFilesMappingsCacheTableName( service_id )
         
-        self._c.execute( 'DROP TABLE ' + ac_cache_table_name + ';' )
+        self._c.execute( 'DROP TABLE IF EXISTS ' + ac_cache_table_name + ';' )
         
     
     def _CacheCombinedFilesMappingsGenerate( self, service_id ):
@@ -1674,7 +1674,7 @@ class DB( HydrusDB.HydrusDB ):
                 inner_population =  len( inner_children )
                 outer_population =  len( outer_children )
                 
-                ( inner_id, inner_phash ) = HydrusData.MedianPop( inner_children )
+                ( inner_id, inner_phash ) = self._CacheSimilarFilesPopBestRootNode( inner_children ) #HydrusData.MedianPop( inner_children )
                 
                 if len( outer_children ) == 0:
                     
@@ -1682,7 +1682,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    ( outer_id, outer_phash ) = HydrusData.MedianPop( outer_children )
+                    ( outer_id, outer_phash ) = self._CacheSimilarFilesPopBestRootNode( outer_children ) #HydrusData.MedianPop( outer_children )
                     
                 
             
@@ -1888,6 +1888,86 @@ class DB( HydrusDB.HydrusDB ):
         return False
         
     
+    def _CacheSimilarFilesPopBestRootNode( self, node_rows ):
+        
+        if len( node_rows ) == 1:
+            
+            root_row = node_rows.pop(0)
+            
+            return root_row
+            
+        
+        MAX_VIEWPOINTS = 256
+        MAX_SAMPLE = 64
+        
+        if len( node_rows ) > MAX_VIEWPOINTS:
+            
+            viewpoints = random.sample( node_rows, MAX_VIEWPOINTS )
+            
+        else:
+            
+            viewpoints = node_rows
+            
+        
+        if len( node_rows ) > MAX_SAMPLE:
+            
+            sample = random.sample( node_rows, MAX_SAMPLE )
+            
+        else:
+            
+            sample = node_rows
+            
+        
+        final_scores = []
+        
+        for ( v_id, v_phash ) in viewpoints:
+            
+            views = [ HydrusData.GetHammingDistance( v_phash, s_phash ) for ( s_id, s_phash ) in sample if v_id != s_id ]
+            
+            views.sort()
+            
+            # let's figure out the ratio of left_children to right_children, preferring 1:1, and convert it to a discreet integer score
+            
+            median_index = len( views ) / 2
+            
+            radius = views[ median_index ]
+            
+            num_left = float( len( [ 1 for view in views if view <= radius ] ) )
+            num_right = float( len( [ 1 for view in views if view > radius ] ) )
+            
+            smaller = min( num_left, num_right )
+            larger = max( num_left, num_right )
+            
+            ratio = smaller / larger
+            
+            ratio_score = int( ratio * MAX_SAMPLE / 2 )
+            
+            # now let's calc the standard deviation--larger sd tends to mean less sphere overlap when searching
+            
+            mean_view = sum( views ) / float( len( views ) )
+            squared_diffs = [ ( view - mean_view  ) ** 2 for view in views ]
+            sd = ( sum( squared_diffs ) / len( squared_diffs ) ) ** 0.5
+            
+            final_scores.append( ( ratio_score, sd, v_id ) )
+            
+        
+        final_scores.sort()
+        
+        # we now have a list like [ ( 11, 4.0, [id] ), ( 15, 3.7, [id] ), ( 15, 4.3, [id] ) ]
+        
+        ( ratio_gumpf, sd_gumpf, root_id ) = final_scores.pop()
+        
+        for ( i, ( v_id, v_phash ) ) in enumerate( node_rows ):
+            
+            if v_id == root_id:
+                
+                root_row = node_rows.pop( i )
+                
+                return root_row
+                
+            
+        
+    
     def _CacheSimilarFilesRegenerateBranch( self, job_key, phash_id ):
         
         job_key.SetVariable( 'popup_text_2', 'reviewing existing branch' )
@@ -1927,7 +2007,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # now create the new branch, starting by choosing a new root and updating the parent's left/right reference to that
         
-        ( new_phash_id, new_phash ) = HydrusData.RandomPop( rebalance_nodes )
+        ( new_phash_id, new_phash ) = self._CacheSimilarFilesPopBestRootNode( rebalance_nodes ) #HydrusData.RandomPop( rebalance_nodes )
         
         if parent_id is not None:
             
@@ -1964,7 +2044,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', HydrusData.ConvertIntToPrettyString( len( all_nodes ) ) + ' leaves found, now regenerating' )
         
-        ( root_id, root_phash ) = HydrusData.RandomPop( all_nodes )
+        ( root_id, root_phash ) = self._CacheSimilarFilesPopBestRootNode( all_nodes ) #HydrusData.RandomPop( all_nodes )
         
         self._CacheSimilarFilesGenerateBranch( job_key, None, root_id, root_phash, all_nodes )
         
@@ -2005,7 +2085,11 @@ class DB( HydrusDB.HydrusDB ):
         potentials = [ ( root_node_phash_id, tuple( search_phashes ) ) ]
         similar_phash_ids = set()
         
+        num_cycles = 0
+        
         while len( potentials ) > 0:
+            
+            num_cycles += 1
             
             ( node_phash_id, search_phashes ) = potentials.pop( 0 )
             
@@ -2061,6 +2145,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 potentials.append( ( outer_phash_id, tuple( outer_search_phashes ) ) )
                 
+            
+        
+        if HydrusGlobals.db_report_mode:
+            
+            HydrusData.ShowText( 'Similar file search completed in ' + HydrusData.ConvertIntToPrettyString( num_cycles ) + ' cycles.' )
             
         
         with HydrusDB.TemporaryIntegerTable( self._c, similar_phash_ids, 'phash_id' ) as temp_table_name:
@@ -2169,13 +2258,13 @@ class DB( HydrusDB.HydrusDB ):
         
         ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        self._c.execute( 'DROP TABLE ' + cache_files_table_name + ';' )
+        self._c.execute( 'DROP TABLE IF EXISTS ' + cache_files_table_name + ';' )
         
-        self._c.execute( 'DROP TABLE ' + cache_current_mappings_table_name + ';' )
+        self._c.execute( 'DROP TABLE IF EXISTS ' + cache_current_mappings_table_name + ';' )
         
-        self._c.execute( 'DROP TABLE ' + cache_pending_mappings_table_name + ';' )
+        self._c.execute( 'DROP TABLE IF EXISTS ' + cache_pending_mappings_table_name + ';' )
         
-        self._c.execute( 'DROP TABLE ' + ac_cache_table_name + ';' )
+        self._c.execute( 'DROP TABLE IF EXISTS ' + ac_cache_table_name + ';' )
         
     
     def _CacheSpecificMappingsDeleteFiles( self, file_service_id, tag_service_id, hash_ids ):
@@ -7014,14 +7103,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.SetVariable( 'popup_text_1', 'generating specific ac_cache ' + str( file_service_id ) + '_' + str( tag_service_id ) )
             
-            try:
-                
-                self._CacheSpecificMappingsDrop( file_service_id, tag_service_id )
-                
-            except:
-                
-                pass
-                
+            self._CacheSpecificMappingsDrop( file_service_id, tag_service_id )
             
             self._CacheSpecificMappingsGenerate( file_service_id, tag_service_id )
             
@@ -7030,14 +7112,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.SetVariable( 'popup_text_1', 'generating combined files ac_cache ' + str( tag_service_id ) )
             
-            try:
-                
-                self._CacheCombinedFilesMappingsDrop( tag_service_id )
-                
-            except:
-                
-                pass
-                
+            self._CacheCombinedFilesMappingsDrop( tag_service_id )
             
             self._CacheCombinedFilesMappingsGenerate( tag_service_id )
             

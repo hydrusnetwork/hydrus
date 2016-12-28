@@ -2258,15 +2258,20 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except Exception as e:
                 
-                error_count += 1
-                
                 status = CC.STATUS_FAILED
                 
                 job_key.SetVariable( 'popup_text_1', x_out_of_y + 'file failed' )
                 
                 self._seed_cache.UpdateSeedStatus( url, status, exception = e )
                 
-                time.sleep( 10 )
+                # DataMissing is a quick thing to avoid subscription abandons when lots of deleted files in e621 (or any other booru)
+                # this should be richer in any case in the new system
+                if not isinstance( e, HydrusExceptions.DataMissing ):
+                    
+                    error_count += 1
+                    
+                    time.sleep( 10 )
+                    
                 
                 if error_count > 4:
                     

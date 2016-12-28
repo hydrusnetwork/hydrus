@@ -3124,11 +3124,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _AddTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
             
-            if HydrusGlobals.client_controller.GetNewOptions().GetNoneableInteger( 'num_recent_tags' ) is not None:
-                
-                HydrusGlobals.client_controller.Write( 'push_recent_tags', self._tag_service_key, tags )
-                
-            
             if not self._i_am_local_tag_service and self._account.HasPermission( HC.RESOLVE_PETITIONS ):
                 
                 forced_reason = 'admin'
@@ -3330,6 +3325,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             content_updates = []
             
+            recent_tags = set()
+            
             for tag in tags:
                 
                 if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
@@ -3341,24 +3338,38 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
                 
-                if choice_action == HC.CONTENT_UPDATE_PETITION:
+                if len( hashes ) > 0:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes, reason ) ) )
+                    if choice_action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes, reason ) ) )
+                        
+                    else:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ) ) )
+                        
                     
-                else:
-                    
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ) ) )
+                    if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ):
+                        
+                        recent_tags.add( tag )
+                        
+                        if self._add_parents_checkbox.GetValue():
+                            
+                            tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                            
+                            parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
+                            
+                            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( parent, hashes ) ) for parent in parents ) )
+                            
+                        
                     
                 
-                if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ) and self._add_parents_checkbox.GetValue():
-                    
-                    tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
-                    
-                    parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
-                    
-                    content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( parent, hashes ) ) for parent in parents ) )
-                    
+            
+            if len( recent_tags ) > 0 and HydrusGlobals.client_controller.GetNewOptions().GetNoneableInteger( 'num_recent_tags' ) is not None:
                 
+                HydrusGlobals.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
+                
+            
             
             for m in self._media:
                 

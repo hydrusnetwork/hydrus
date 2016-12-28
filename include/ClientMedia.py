@@ -217,9 +217,20 @@ class LocationsManager( object ):
         return self._urls
         
     
-    def IsDownloading( self ): return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._pending
+    def IsDownloading( self ):
+        
+        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._pending
+        
     
-    def IsLocal( self ): return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._current
+    def IsLocal( self ):
+        
+        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._current
+        
+    
+    def IsTrashed( self ):
+        
+        return CC.TRASH_SERVICE_KEY in self._current
+        
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
@@ -667,7 +678,10 @@ class MediaList( object ):
                     
                 
             
-            if selected_media is not None and media not in selected_media: continue
+            if selected_media is not None and media not in selected_media:
+                
+                continue
+                
             
             if media.IsCollection():
                 
@@ -679,12 +693,32 @@ class MediaList( object ):
                     
                     locations_manager = media.GetLocationsManager()
                     
-                    inbox_failed = discriminant == CC.DISCRIMINANT_INBOX and not media.HasInbox()
-                    local_failed = discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.IsLocal()
-                    not_local_failed = discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.IsLocal()
-                    downloading_failed = discriminant == CC.DISCRIMINANT_DOWNLOADING and not locations_manager.IsDownloading()
+                    if discriminant == CC.DISCRIMINANT_INBOX:
+                        
+                        p = media.HasInbox()
+                        
+                    elif discriminant == CC.DISCRIMINANT_ARCHIVE:
+                        
+                        p = not media.HasInbox()
+                        
+                    elif discriminant == CC.DISCRIMINANT_LOCAL:
+                        
+                        p = locations_manager.IsLocal()
+                        
+                    elif discriminant == CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH:
+                        
+                        p = locations_manager.IsLocal() and not locations_manager.IsTrashed()
+                        
+                    elif discriminant == CC.DISCRIMINANT_NOT_LOCAL:
+                        
+                        p = not locations_manager.IsLocal()
+                        
+                    elif discriminant == CC.DISCRIMINANT_DOWNLOADING:
+                        
+                        p = locations_manager.IsDownloading()
+                        
                     
-                    if inbox_failed or local_failed or not_local_failed or downloading_failed:
+                    if not p:
                         
                         continue
                         
@@ -1113,7 +1147,32 @@ class MediaSingleton( Media ):
             
             locations_manager = self._media_result.GetLocationsManager()
             
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.IsLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.IsLocal() ):
+            if discriminant == CC.DISCRIMINANT_INBOX:
+                
+                p = inbox
+                
+            elif discriminant == CC.DISCRIMINANT_ARCHIVE:
+                
+                p = not inbox
+                
+            elif discriminant == CC.DISCRIMINANT_LOCAL:
+                
+                p = locations_manager.IsLocal()
+                
+            elif discriminant == CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH:
+                
+                p = locations_manager.IsLocal() and not locations_manager.IsTrashed()
+                
+            elif discriminant == CC.DISCRIMINANT_NOT_LOCAL:
+                
+                p = not locations_manager.IsLocal()
+                
+            elif discriminant == CC.DISCRIMINANT_DOWNLOADING:
+                
+                p = locations_manager.IsDownloading()
+                
+            
+            if not p:
                 
                 if ordered:
                     

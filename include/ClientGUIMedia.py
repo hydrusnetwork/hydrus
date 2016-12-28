@@ -479,7 +479,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _Filter( self ):
         
-        media_results = self.GenerateMediaResults( has_location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, selected_media = set( self._selected_media ), for_media_viewer = True )
+        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH, selected_media = set( self._selected_media ), for_media_viewer = True )
         
         if len( media_results ) > 0:
             
@@ -2660,7 +2660,10 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     filter_menu = wx.Menu()
                     
-                    filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'filter' ), 'archive/delete' )
+                    if selection_has_local_file_domain:
+                        
+                        filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'filter' ), 'archive/delete' )
+                        
                     
                     shortcut_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
                     
