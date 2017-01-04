@@ -1276,7 +1276,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for db_name in db_names:
             
-            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master;' ) ) )
+            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
             
         
         all_names.discard( 'sqlite_stat1' )
@@ -1666,13 +1666,27 @@ class DB( HydrusDB.HydrusDB ):
                 
                 median_index = len( children ) / 2
                 
-                radius = children[ median_index ][0]
+                median_radius = children[ median_index ][0]
                 
-                inner_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance <= radius ]
-                outer_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance > radius ]
+                inner_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance < median_radius ]
+                radius_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance == median_radius ]
+                outer_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance > median_radius ]
                 
-                inner_population =  len( inner_children )
-                outer_population =  len( outer_children )
+                if len( inner_children ) <= len( outer_children ):
+                    
+                    radius = median_radius
+                    
+                    inner_children.extend( radius_children )
+                    
+                else:
+                    
+                    radius = median_radius - 1
+                    
+                    outer_children.extend( radius_children )
+                    
+                
+                inner_population = len( inner_children )
+                outer_population = len( outer_children )
                 
                 ( inner_id, inner_phash ) = self._CacheSimilarFilesPopBestRootNode( inner_children ) #HydrusData.MedianPop( inner_children )
                 
@@ -1763,15 +1777,22 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
         
-        self._controller.pub( 'message', job_key )
+        job_key_pubbed = False
         
-        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_maintenance_regen_phash;' ) ]
+        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) ]
         
         client_files_manager = self._controller.GetClientFilesManager()
         
         num_to_do = len( hash_ids )
         
         for ( i, hash_id ) in enumerate( hash_ids ):
+            
+            if not job_key_pubbed:
+                
+                self._controller.pub( 'message', job_key )
+                
+                job_key_pubbed = True
+                
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
@@ -1829,7 +1850,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._CacheSimilarFilesDelete( hash_id, deletee_phash_ids )
             
-            self._c.execute( 'DELETE FROM shape_maintenance_regen_phash WHERE hash_id = ?;', ( hash_id, ) )
+            self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
             
         
         rebalance_phash_ids = [ phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) ]
@@ -1837,6 +1858,13 @@ class DB( HydrusDB.HydrusDB ):
         num_to_do = len( rebalance_phash_ids )
         
         while len( rebalance_phash_ids ) > 0:
+            
+            if not job_key_pubbed:
+                
+                self._controller.pub( 'message', job_key )
+                
+                job_key_pubbed = True
+                
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
@@ -1855,7 +1883,7 @@ class DB( HydrusDB.HydrusDB ):
             
             with HydrusDB.TemporaryIntegerTable( self._c, rebalance_phash_ids, 'phash_id' ) as temp_table_name:
                 
-                ( biggest_phash_id, ) = self._c.execute( 'SELECT phash_id FROM shape_vptree, ' + temp_table_name + ' USING ( phash_id ) ORDER BY left_population + right_population DESC;' ).fetchone()
+                ( biggest_phash_id, ) = self._c.execute( 'SELECT phash_id FROM shape_vptree, ' + temp_table_name + ' USING ( phash_id ) ORDER BY inner_population + outer_population DESC;' ).fetchone()
                 
             
             self._CacheSimilarFilesRegenerateBranch( job_key, biggest_phash_id )
@@ -1863,6 +1891,8 @@ class DB( HydrusDB.HydrusDB ):
             rebalance_phash_ids = [ phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) ]
             
         
+        job_key.SetVariable( 'popup_text_1', 'done!' )
+        job_key.DeleteVariable( 'popup_gauge_1' )
         job_key.DeleteVariable( 'popup_text_2' )
         
         job_key.Finish()
@@ -1926,14 +1956,24 @@ class DB( HydrusDB.HydrusDB ):
             
             views.sort()
             
-            # let's figure out the ratio of left_children to right_children, preferring 1:1, and convert it to a discreet integer score
+            # let's figure out the ratio of left_children to right_children, preferring 1:1, and convert it to a discrete integer score
             
             median_index = len( views ) / 2
             
             radius = views[ median_index ]
             
-            num_left = float( len( [ 1 for view in views if view <= radius ] ) )
+            num_left = float( len( [ 1 for view in views if view < radius ] ) )
+            num_radius = float( len( [ 1 for view in views if view == radius ] ) )
             num_right = float( len( [ 1 for view in views if view > radius ] ) )
+            
+            if num_left <= num_right:
+                
+                num_left += num_radius
+                
+            else:
+                
+                num_right += num_radius
+                
             
             smaller = min( num_left, num_right )
             larger = max( num_left, num_right )
@@ -1974,7 +2014,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # grab everything in the branch
         
-        ( parent_id, ) = self._c.execute( 'SELECT parent_id FROM shape_vptree WHERE phash_id = ?;', ( phash_id ) ).fetchone()
+        ( parent_id, ) = self._c.execute( 'SELECT parent_id FROM shape_vptree WHERE phash_id = ?;', ( phash_id, ) ).fetchone()
         
         cte_table_name = 'branch ( branch_phash_id )'
         initial_select = 'SELECT ?'
@@ -1982,32 +2022,41 @@ class DB( HydrusDB.HydrusDB ):
         
         with_clause = 'WITH RECURSIVE ' + cte_table_name + ' AS ( ' + initial_select + ' UNION ALL ' +  recursive_select +  ')'
         
-        rebalance_nodes = self._c.execute( with_clause + ' SELECT branch_phash_id, phash FROM branch, shape_perceptual_hashes ON phash_id = branch_phash_id;', ( phash_id, ) ).fetchall()
+        unbalanced_nodes = self._c.execute( with_clause + ' SELECT branch_phash_id, phash FROM branch, shape_perceptual_hashes ON phash_id = branch_phash_id;', ( phash_id, ) ).fetchall()
         
         # removal of old branch, maintenance schedule, and orphan phashes
         
-        job_key.SetVariable( 'popup_text_2', HydrusData.ConvertIntToPrettyString( len( rebalance_nodes ) ) + ' leaves found--now clearing out old branch' )
+        job_key.SetVariable( 'popup_text_2', HydrusData.ConvertIntToPrettyString( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch' )
         
-        rebalance_phash_ids = { p_id for ( p_id, p_h ) in rebalance_nodes }
+        unbalanced_phash_ids = { p_id for ( p_id, p_h ) in unbalanced_nodes }
         
-        self._c.executemany( 'DELETE FROM shape_vptree WHERE phash_id = ?;', ( ( p_id, ) for p_id in rebalance_phash_ids ) )
+        self._c.executemany( 'DELETE FROM shape_vptree WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_phash_ids ) )
         
-        self._c.executemany( 'DELETE FROM shape_maintenance_branch_regen WHERE phash_id = ?;', ( ( p_id, ) for p_id in rebalance_phash_ids ) )
+        self._c.executemany( 'DELETE FROM shape_maintenance_branch_regen WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_phash_ids ) )
         
-        with HydrusDB.TemporaryIntegerTable( self._c, rebalance_phash_ids, 'phash_id' ) as temp_table_name:
+        with HydrusDB.TemporaryIntegerTable( self._c, unbalanced_phash_ids, 'phash_id' ) as temp_table_name:
             
             useful_phash_ids = { p_id for ( p_id, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map, ' + temp_table_name + ' USING ( phash_id );' ) }
             
         
-        orphan_phash_ids = rebalance_phash_ids.difference( useful_phash_ids )
+        orphan_phash_ids = unbalanced_phash_ids.difference( useful_phash_ids )
         
         self._c.executemany( 'DELETE FROM shape_perceptual_hashes WHERE phash_id = ?;', ( ( p_id, ) for p_id in orphan_phash_ids ) )
         
-        rebalance_nodes = [ row for row in rebalance_nodes if row[0] in rebalance_phash_ids ]
+        useful_nodes = [ row for row in unbalanced_nodes if row[0] in useful_phash_ids ]
+        
+        useful_population = len( useful_nodes )
         
         # now create the new branch, starting by choosing a new root and updating the parent's left/right reference to that
         
-        ( new_phash_id, new_phash ) = self._CacheSimilarFilesPopBestRootNode( rebalance_nodes ) #HydrusData.RandomPop( rebalance_nodes )
+        if useful_population > 0:
+            
+            ( new_phash_id, new_phash ) = self._CacheSimilarFilesPopBestRootNode( useful_nodes ) #HydrusData.RandomPop( useful_nodes )
+            
+        else:
+            
+            new_phash_id = None
+            
         
         if parent_id is not None:
             
@@ -2015,17 +2064,20 @@ class DB( HydrusDB.HydrusDB ):
             
             if parent_inner_id == phash_id:
                 
-                column_name = 'inner_id'
+                query = 'UPDATE shape_vptree SET inner_id = ?, inner_population = ? WHERE phash_id = ?;'
                 
             else:
                 
-                column_name = 'outer_id'
+                query = 'UPDATE shape_vptree SET outer_id = ?, outer_population = ? WHERE phash_id = ?;'
                 
             
-            self._c.execute( 'UPDATE shape_vptree SET ' + column_name + ' = ? WHERE phash_id = ?;', ( new_phash_id, parent_id ) )
+            self._c.execute( query, ( new_phash_id, useful_population, parent_id ) )
             
         
-        self._CacheSimilarFilesGenerateBranch( job_key, parent_id, new_phash_id, new_phash, rebalance_nodes )
+        if useful_population > 0:
+            
+            self._CacheSimilarFilesGenerateBranch( job_key, parent_id, new_phash_id, new_phash, useful_nodes )
+            
         
     
     def _CacheSimilarFilesRegenerateTree( self ):
@@ -2056,7 +2108,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if hash_ids is None:
             
-            hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info, current_files USING ( hash_id ) WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WE_CAN_PHASH ) + ';', ( self._combined_local_file_service_id, ) ) }
+            hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info, current_files USING ( hash_id ) WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WE_CAN_PHASH ) + ';', ( self._combined_local_file_service_id, ) ) ]
             
         
         self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_phash_regen ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
@@ -3799,6 +3851,40 @@ class DB( HydrusDB.HydrusDB ):
         
         simple_preds = system_predicates.GetSimpleInfo()
         
+        # This now overrides any other predicates, including file domain
+        
+        if 'hash' in simple_preds:
+            
+            query_hash_ids = set()
+            
+            ( search_hash, search_hash_type ) = simple_preds[ 'hash' ]
+            
+            if search_hash_type != 'sha256':
+                
+                result = self._GetFileHashes( [ search_hash ], search_hash_type, 'sha256' )
+                
+                if len( result ) > 0:
+                    
+                    ( search_hash, ) = result
+                    
+                    hash_id = self._GetHashId( search_hash )
+                    
+                    query_hash_ids = { hash_id }
+                    
+                
+            else:
+                
+                if self._HashExists( search_hash ):
+                    
+                    hash_id = self._GetHashId( search_hash )
+                    
+                    query_hash_ids = { hash_id }
+                    
+                
+            
+            return query_hash_ids
+            
+        
         if 'min_size' in simple_preds: files_info_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
         if 'size' in simple_preds: files_info_predicates.append( 'size = ' + str( simple_preds[ 'size' ] ) )
         if 'max_size' in simple_preds: files_info_predicates.append( 'size < ' + str( simple_preds[ 'max_size' ] ) )
@@ -3935,37 +4021,6 @@ class DB( HydrusDB.HydrusDB ):
                 files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                 
                 query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM current_files, files_info USING ( hash_id ) WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) }
-                
-            
-        
-        #
-        
-        if 'hash' in simple_preds:
-            
-            ( search_hash, search_hash_type ) = simple_preds[ 'hash' ]
-            
-            if search_hash_type != 'sha256':
-                
-                result = self._GetFileHashes( [ search_hash ], search_hash_type, 'sha256' )
-                
-                if len( result ) == 0:
-                    
-                    query_hash_ids = set()
-                    
-                else:
-                    
-                    ( search_hash, ) = result
-                    
-                    hash_id = self._GetHashId( search_hash )
-                    
-                    query_hash_ids.intersection_update( { hash_id } )
-                    
-                
-            else:
-                
-                hash_id = self._GetHashId( search_hash )
-                
-                query_hash_ids.intersection_update( { hash_id } )
                 
             
         
@@ -6166,7 +6221,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for db_name in db_names:
             
-            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master;' ) ) )
+            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
             
         
         names_to_analyze = { name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
@@ -6178,7 +6233,7 @@ class DB( HydrusDB.HydrusDB ):
             return True
             
         
-        return False
+        return self._CacheSimilarFilesMaintenanceDue()
         
     
     def _ManageDBError( self, job, e ):
@@ -6201,6 +6256,19 @@ class DB( HydrusDB.HydrusDB ):
         else:
             
             HydrusData.ShowException( e )
+            
+        
+    
+    def _OverwriteJSONDumps( self, dump_types, objs ):
+        
+        for dump_type in dump_types:
+            
+            self._DeleteJSONDumpNamed( dump_type )
+            
+        
+        for obj in objs:
+            
+            self._SetJSONDump( obj )
             
         
     
@@ -9451,6 +9519,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+        elif action == 'maintain_similar_files': result = self._CacheSimilarFilesMaintain( *args, **kwargs )
         elif action == 'push_recent_tags': result = self._PushRecentTags( *args, **kwargs )
         elif action == 'regenerate_ac_cache': result = self._RegenerateACCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': result = self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
@@ -9460,6 +9529,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
         elif action == 'serialisable_simple': result = self._SetJSONSimple( *args, **kwargs )
         elif action == 'serialisable': result = self._SetJSONDump( *args, **kwargs )
+        elif action == 'serialisables_overwrite': result = self._OverwriteJSONDumps( *args, **kwargs )
         elif action == 'service_updates': result = self._ProcessServiceUpdates( *args, **kwargs )
         elif action == 'set_password': result = self._SetPassword( *args, **kwargs )
         elif action == 'sync_hashes_to_tag_archive': result = self._SyncHashesToTagArchive( *args, **kwargs )

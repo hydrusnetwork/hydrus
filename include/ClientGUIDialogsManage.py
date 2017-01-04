@@ -3,6 +3,7 @@ import ClientConstants as CC
 import ClientData
 import ClientDefaults
 import ClientDragDrop
+import ClientExporting
 import ClientFiles
 import ClientGUIACDropdown
 import ClientGUICollapsible
@@ -1390,21 +1391,17 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage export folders' )
         
-        self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
+        self._export_folders = ClientGUICommon.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         export_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
-        
-        self._original_paths = []
         
         for export_folder in export_folders:
             
             path = export_folder.GetName()
             
-            self._original_paths.append( path )
+            ( display_tuple, sort_tuple ) = self._ConvertExportFolderToTuples( export_folder )
             
-            ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_folder )
-            
-            self._export_folders.Append( ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ), export_folder )
+            self._export_folders.Append( display_tuple, sort_tuple, export_folder )
             
         
         self._add_button = wx.Button( self, label = 'add' )
@@ -1455,51 +1452,16 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def _AddFolder( self, path ):
+    def _AddFolder( self ):
         
-        export_folders = self._export_folders.GetClientData()
-        
-        for export_folder in export_folders:
-            
-            existing_path = export_folder.GetName()
-            
-            test_path = os.path.join( path, '' )
-            test_existing_path = os.path.join( existing_path, '' )
-            
-            if test_path == test_existing_path:
-                
-                text = 'That directory already exists as an export folder--at current, there can only be one export folder per destination.'
-                
-                wx.MessageBox( text )
-                
-                return
-                
-            
-            if test_path.startswith( test_existing_path ):
-                
-                text = 'You have entered a subdirectory of an existing path--at current, this is not permitted.'
-                
-                wx.MessageBox( text )
-                
-                return
-                
-            
-            if test_existing_path.startswith( test_path ):
-                
-                text = 'You have entered a parent directory of an existing path--at current, this is not permitted.'
-                
-                wx.MessageBox( text )
-                
-                return
-                
-            
-        
+        name = 'export folder'
+        path = ''
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
         file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
         period = 15 * 60
         phrase = '{hash}'
         
-        export_folder = ClientFiles.ExportFolder( path, export_type = export_type, file_search_context = file_search_context, period = period, phrase = phrase )
+        export_folder = ClientExporting.ExportFolder( name, path, export_type = export_type, file_search_context = file_search_context, period = period, phrase = phrase )
         
         with DialogManageExportFoldersEdit( self, export_folder ) as dlg:
             
@@ -1507,16 +1469,18 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
                 
                 export_folder = dlg.GetInfo()
                 
-                ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_folder )
+                self._export_folders.SetNonDupeName( export_folder )
                 
-                self._export_folders.Append( ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ), export_folder )
+                ( display_tuple, sort_tuple ) = self._ConvertExportFolderToTuples( export_folder )
+                
+                self._export_folders.Append( display_tuple, sort_tuple, export_folder )
                 
             
         
     
-    def _GetPrettyVariables( self, export_folder ):
+    def _ConvertExportFolderToTuples( self, export_folder ):
         
-        ( path, export_type, file_search_context, period, phrase ) = export_folder.ToTuple()
+        ( name, path, export_type, file_search_context, period, phrase ) = export_folder.ToTuple()
         
         if export_type == HC.EXPORT_FOLDER_TYPE_REGULAR:
             
@@ -1533,7 +1497,11 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         pretty_phrase = phrase
         
-        return ( path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase )
+        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase )
+        
+        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, period, phrase )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def Delete( self ):
@@ -1549,15 +1517,22 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             export_folder = self._export_folders.GetClientData( index )
             
+            original_name = export_folder.GetName()
+            
             with DialogManageExportFoldersEdit( self, export_folder ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
                     export_folder = dlg.GetInfo()
                     
-                    ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ) = self._GetPrettyVariables( export_folder )
+                    if export_folder.GetName() != original_name:
+                        
+                        self._export_folders.SetNonDupeName( export_folder )
+                        
                     
-                    self._export_folders.UpdateRow( index, ( pretty_path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase ), export_folder )
+                    ( display_tuple, sort_tuple ) = self._ConvertExportFolderToTuples( export_folder )
+                    
+                    self._export_folders.UpdateRow( index, display_tuple, sort_tuple, export_folder )
                     
                 
             
@@ -1565,15 +1540,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        with wx.DirDialog( self, 'Select a folder to add.' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                path = HydrusData.ToUnicode( dlg.GetPath() )
-                
-                self._AddFolder( path )
-                
-            
+        self._AddFolder()
         
     
     def EventDelete( self, event ):
@@ -1588,26 +1555,24 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        client_data = self._export_folders.GetClientData()
+        existing_db_names = set( HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ) )
         
-        export_folders = []
+        export_folders = self._export_folders.GetClientData()
         
-        paths_set = set()
+        good_names = set()
         
-        for export_folder in client_data:
+        for export_folder in export_folders:
             
             HydrusGlobals.client_controller.Write( 'serialisable', export_folder )
             
-            path = export_folder.GetName()
-            
-            paths_set.add( path )
+            good_names.add( export_folder.GetName() )
             
         
-        deletees = set( self._original_paths ) - paths_set
+        names_to_delete = existing_db_names - good_names
         
-        for deletee in deletees:
+        for name in names_to_delete:
             
-            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, deletee )
+            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, name )
             
         
         HydrusGlobals.client_controller.pub( 'notify_new_export_folders' )
@@ -1623,23 +1588,21 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._export_folder = export_folder
         
-        ( path, export_type, file_search_context, period, phrase ) = self._export_folder.ToTuple()
+        ( name, path, export_type, file_search_context, period, phrase ) = self._export_folder.ToTuple()
         
-        self._path_box = ClientGUICommon.StaticBox( self, 'export path' )
+        self._path_box = ClientGUICommon.StaticBox( self, 'name and location' )
+        
+        self._name = wx.TextCtrl( self._path_box)
         
         self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
         
-        self._path.SetPath( path )
-        
         #
         
-        self._type_box = ClientGUICommon.StaticBox( self, 'type of export folder' )
+        self._type_box = ClientGUICommon.StaticBox( self, 'type of export' )
         
         self._type = ClientGUICommon.BetterChoice( self._type_box )
         self._type.Append( 'regular', HC.EXPORT_FOLDER_TYPE_REGULAR )
         self._type.Append( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
-        
-        self._type.SelectClientData( export_type )
         
         #
         
@@ -1659,15 +1622,11 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._period = ClientGUICommon.TimeDeltaButton( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
-        self._period.SetValue( period )
-        
         #
         
         self._phrase_box = ClientGUICommon.StaticBox( self, 'filenames' )
         
         self._pattern = wx.TextCtrl( self._phrase_box )
-        
-        self._pattern.SetValue( phrase )
         
         self._examples = ClientGUICommon.ExportPatternButton( self._phrase_box )
         
@@ -1682,7 +1641,28 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         #
         
-        self._path_box.AddF( self._path, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._name.SetValue( name )
+        
+        self._path.SetPath( path )
+        
+        self._type.SelectClientData( export_type )
+        
+        self._period.SetValue( period )
+        
+        self._pattern.SetValue( phrase )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'folder path: ', self._path ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._path_box, rows )
+        
+        self._path_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
         
         text = '''regular - try to export the files to the directory, overwriting if the filesize if different
 
@@ -1734,9 +1714,19 @@ If you select synchronise, be careful!'''
     
     def EventOK( self, event ):
         
+        if self._path.GetPath() in ( '', None ):
+            
+            wx.MessageBox( 'You must enter a folder path to export to!' )
+            
+            return
+            
+        
         phrase = self._pattern.GetValue()
         
-        try: ClientFiles.ParseExportPhrase( phrase )
+        try:
+            
+            ClientExporting.ParseExportPhrase( phrase )
+            
         except:
             
             wx.MessageBox( 'Could not parse that export phrase!' )
@@ -1748,6 +1738,8 @@ If you select synchronise, be careful!'''
         
     
     def GetInfo( self ):
+        
+        name = self._name.GetValue()
         
         path = HydrusData.ToUnicode( self._path.GetPath() )
         
@@ -1763,9 +1755,9 @@ If you select synchronise, be careful!'''
         
         phrase = self._pattern.GetValue()
         
-        self._export_folder.SetTuple( path, export_type, file_search_context, period, phrase )
+        export_folder = ClientExporting.ExportFolder( name, path, export_type, file_search_context, period, phrase )
         
-        return self._export_folder
+        return export_folder
         
 '''
 class DialogManageImageboards( ClientGUIDialogs.Dialog ):
@@ -2492,7 +2484,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage import folders' )
         
-        self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._import_folders = ClientGUICommon.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add_button = wx.Button( self, label = 'add' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -2512,19 +2504,13 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         #
         
-        self._names_to_import_folders = {}
-        
         import_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
         for import_folder in import_folders:
             
-            ( name, path, check_period ) = import_folder.ToListBoxTuple()
+            ( display_tuple, sort_tuple ) = self._ConvertImportFolderToTuples( import_folder )
             
-            pretty_check_period = self._GetPrettyVariables( check_period )
-            
-            self._import_folders.Append( ( name, path, pretty_check_period ), ( name, path, check_period ) )
-            
-            self._names_to_import_folders[ name ] = import_folder
+            self._import_folders.Append( display_tuple, sort_tuple, import_folder )
             
         
         #
@@ -2563,35 +2549,36 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def _AddImportFolder( self, name ):
+    def _AddImportFolder( self ):
         
-        if name not in self._names_to_import_folders:
+        import_folder = ClientImporting.ImportFolder( 'import folder' )
+        
+        with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
             
-            import_folder = ClientImporting.ImportFolder( name )
-            
-            with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
                 
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    import_folder = dlg.GetInfo()
-                    
-                    ( name, path, check_period ) = import_folder.ToListBoxTuple()
-                    
-                    pretty_check_period = self._GetPrettyVariables( check_period )
-                    
-                    self._import_folders.Append( ( name, path, pretty_check_period ), ( name, path, check_period ) )
-                    
-                    self._names_to_import_folders[ name ] = import_folder
-                    
+                import_folder = dlg.GetInfo()
+                
+                self._import_folders.SetNonDupeName( import_folder )
+                
+                ( display_tuple, sort_tuple ) = self._ConvertImportFolderToTuples( import_folder )
+                
+                self._import_folders.Append( display_tuple, sort_tuple, import_folder )
                 
             
         
     
-    def _GetPrettyVariables( self, check_period ):
+    def _ConvertImportFolderToTuples( self, import_folder ):
+        
+        sort_tuple = import_folder.ToListBoxTuple()
+        
+        ( name, path, check_period ) = sort_tuple
         
         pretty_check_period = HydrusData.ConvertTimeDeltaToPrettyString( check_period )
         
-        return pretty_check_period
+        display_tuple = ( name, path, pretty_check_period )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def Delete( self ):
@@ -2605,9 +2592,9 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         for index in indices:
             
-            ( name, path, check_period ) = self._import_folders.GetClientData( index )
+            import_folder = self._import_folders.GetClientData( index )
             
-            import_folder = self._names_to_import_folders[ name ]
+            original_name = import_folder.GetName()
             
             with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
                 
@@ -2615,13 +2602,14 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
                     
                     import_folder = dlg.GetInfo()
                     
-                    ( name, path, check_period ) = import_folder.ToListBoxTuple()
+                    if import_folder.GetName() != original_name:
+                        
+                        self._import_folders.SetNonDupeName( import_folder )
+                        
                     
-                    pretty_check_period = self._GetPrettyVariables( check_period )
+                    ( display_tuple, sort_tuple ) = self._ConvertImportFolderToTuples( import_folder )
                     
-                    self._import_folders.UpdateRow( index, ( name, path, pretty_check_period ), ( name, path, check_period ) )
-                    
-                    self._names_to_import_folders[ name ] = import_folder
+                    self._import_folders.UpdateRow( index, display_tuple, sort_tuple, import_folder )
                     
                 
             
@@ -2629,37 +2617,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        client_data = self._import_folders.GetClientData()
-        
-        existing_names = set()
-        
-        for ( name, path, check_period ) in client_data:
-            
-            existing_names.add( name )
-            
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the import folder.' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                try:
-                    
-                    name = dlg.GetValue()
-                    
-                    if name in existing_names: raise HydrusExceptions.NameException( 'That name is already in use!' )
-                    
-                    if name == '': raise HydrusExceptions.NameException( 'Please enter a nickname for the import folder.' )
-                    
-                    self._AddImportFolder( name )
-                    
-                except HydrusExceptions.NameException as e:
-                    
-                    wx.MessageBox( str( e ) )
-                    
-                    self.EventAdd( event )
-                    
-                
-            
+        self._AddImportFolder()
         
     
     def EventDelete( self, event ):
@@ -2674,27 +2632,24 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        client_data = self._import_folders.GetClientData()
+        existing_db_names = set( HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER ) )
         
-        names_to_save = set()
+        good_names = set()
         
-        for ( name, path, check_period ) in client_data:
+        import_folders = self._import_folders.GetClientData()
+        
+        for import_folder in import_folders:
             
-            names_to_save.add( name )
+            good_names.add( import_folder.GetName() )
+            
+            HydrusGlobals.client_controller.Write( 'serialisable', import_folder )
             
         
-        names_to_delete = { name for name in self._names_to_import_folders if name not in names_to_save }
+        names_to_delete = existing_db_names - good_names
         
         for name in names_to_delete:
             
             HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
-            
-        
-        for name in names_to_save:
-            
-            import_folder = self._names_to_import_folders[ name ]
-            
-            HydrusGlobals.client_controller.Write( 'serialisable', import_folder )
             
         
         HydrusGlobals.client_controller.pub( 'notify_new_import_folders' )

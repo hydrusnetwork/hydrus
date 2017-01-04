@@ -4,6 +4,7 @@ import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientDragDrop
+import ClientExporting
 import ClientCaches
 import ClientFiles
 import ClientGUIACDropdown
@@ -4364,13 +4365,13 @@ class DialogSetupExport( Dialog ):
             
             mime = media.GetMime()
             
-            pretty_tuple = ( str( i + 1 ), HC.mime_string_lookup[ mime ], '' )
-            data_tuple = ( ( i, media ), mime, '' )
+            display_tuple = ( str( i + 1 ), HC.mime_string_lookup[ mime ], '' )
+            sort_tuple = ( ( i, media ), mime, '' )
             
-            self._paths.Append( pretty_tuple, data_tuple )
+            self._paths.Append( display_tuple, sort_tuple )
             
         
-        export_path = ClientFiles.GetExportPath()
+        export_path = ClientExporting.GetExportPath()
         
         self._directory_picker.SetPath( export_path )
         
@@ -4426,7 +4427,7 @@ class DialogSetupExport( Dialog ):
         
         directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
         
-        filename = ClientFiles.GenerateExportFilename( media, terms )
+        filename = ClientExporting.GenerateExportFilename( media, terms )
         
         return os.path.join( directory, filename )
         
@@ -4435,7 +4436,7 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        terms = ClientFiles.ParseExportPhrase( pattern )
+        terms = ClientExporting.ParseExportPhrase( pattern )
         
         all_paths = set()
         
@@ -4482,7 +4483,7 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        terms = ClientFiles.ParseExportPhrase( pattern )
+        terms = ClientExporting.ParseExportPhrase( pattern )
         
         client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
         
@@ -4508,7 +4509,7 @@ class DialogSetupExport( Dialog ):
                         
                         tags = tags_manager.GetCurrent()
                         
-                        filename = ClientFiles.GenerateExportFilename( media, terms )
+                        filename = ClientExporting.GenerateExportFilename( media, terms )
                         
                         txt_path = os.path.join( directory, filename + '.txt' )
                         
@@ -4877,9 +4878,9 @@ class DialogShortcuts( Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        ( pretty_tuple, data_tuple ) = dlg.GetInfo()
+                        ( pretty_tuple, sort_tuple ) = dlg.GetInfo()
                         
-                        self._shortcuts.UpdateRow( index, pretty_tuple, data_tuple )
+                        self._shortcuts.UpdateRow( index, pretty_tuple, sort_tuple )
                         
                         self._SortListCtrl()
                         
@@ -4893,9 +4894,9 @@ class DialogShortcuts( Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( pretty_tuple, data_tuple ) = dlg.GetInfo()
+                    ( pretty_tuple, sort_tuple ) = dlg.GetInfo()
                     
-                    self._shortcuts.Append( pretty_tuple, data_tuple )
+                    self._shortcuts.Append( pretty_tuple, sort_tuple )
                     
                     self._SortListCtrl()
                     

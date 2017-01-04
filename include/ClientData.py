@@ -114,7 +114,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
         
         if len( content_updates ) > 0:
             
-            name = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key ).GetName()
+            name = HydrusGlobals.client_controller.GetServicesManager().GetName( service_key )
             
             locations.add( name )
             

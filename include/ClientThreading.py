@@ -287,8 +287,6 @@ class JobKey( object ):
             
             if 'popup_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_traceback' ] )
             
-            if 'popup_caller_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_caller_traceback' ] )
-            
         
         stuff_to_print = [ HydrusData.ToUnicode( s ) for s in stuff_to_print ]
         

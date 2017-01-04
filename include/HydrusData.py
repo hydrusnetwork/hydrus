@@ -879,6 +879,10 @@ def LastShutdownWasBad( db_path, instance ):
         
         return False
         
+
+def MassUnion( lists ):
+    
+    return { item for item in itertools.chain.from_iterable( lists ) }
     
 def MedianPop( population ):
     
@@ -907,7 +911,7 @@ def Print( text ):
     
 ShowText = Print
 
-def PrintException( e ):
+def PrintException( e, do_wait = True ):
     
     if isinstance( e, HydrusExceptions.ShutdownException ):
         
@@ -929,7 +933,10 @@ def PrintException( e ):
     
     DebugPrint( message )
     
-    time.sleep( 1 )
+    if do_wait:
+        
+        time.sleep( 1 )
+        
     
 ShowException = PrintException
 

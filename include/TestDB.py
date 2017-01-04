@@ -3,6 +3,7 @@ import ClientData
 import ClientDB
 import ClientDefaults
 import ClientDownloading
+import ClientExporting
 import ClientFiles
 import ClientGUIManagement
 import ClientGUIPages
@@ -51,7 +52,7 @@ class TestClientDB( unittest.TestCase ):
         
         c = db.cursor()
         
-        table_names = [ name for ( name, ) in c.execute( 'SELECT name FROM sqlite_master where type = "table";' ).fetchall() ]
+        table_names = [ name for ( name, ) in c.execute( 'SELECT name FROM sqlite_master WHERE type = ?;', ( 'table', ) ).fetchall() ]
         
         for name in table_names:
             
@@ -228,7 +229,7 @@ class TestClientDB( unittest.TestCase ):
         
         file_search_context = ClientSearch.FileSearchContext(file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test' ) ] )
         
-        export_folder = ClientFiles.ExportFolder( 'test path', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = file_search_context, period = 3600, phrase = '{hash}' )
+        export_folder = ClientExporting.ExportFolder( 'test path', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = file_search_context, period = 3600, phrase = '{hash}' )
         
         self._write( 'serialisable', export_folder )
         

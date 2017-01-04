@@ -5,6 +5,7 @@ import ClientCaches
 import ClientFiles
 import ClientData
 import ClientDragDrop
+import ClientExporting
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
@@ -1109,24 +1110,38 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         def database():
             
             ClientGUIMenus.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self, self._SetPassword )
+            
             menu.AppendSeparator()
+            
             ClientGUIMenus.AppendMenuItem( menu, 'create a database backup', 'Back the database up to an external location.', self, self._controller.BackupDatabase )
             ClientGUIMenus.AppendMenuItem( menu, 'restore a database backup', 'Restore the database from an external location.', self, self._controller.RestoreDatabase )
+            
             menu.AppendSeparator()
             
             submenu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self, self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self, self._AnalyzeDatabase )
+            ClientGUIMenus.AppendMenuItem( submenu, 'similar files search data', 'Rebalance and update the data the database uses to find similar files.', self, self._MaintainSimilarFilesData )
             ClientGUIMenus.AppendMenuItem( submenu, 'rebalance file storage', 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.', self, self._RebalanceClientFiles )
-            ClientGUIMenus.AppendMenuItem( submenu, 'regenerate autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self, self._RegenerateACCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'regenerate similar files search data', 'Delete and recreate the similar files search tree.', self, self._RegenerateSimilarFilesData )
-            ClientGUIMenus.AppendMenuItem( submenu, 'regenerate thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self, self._RegenerateThumbnails )
-            ClientGUIMenus.AppendMenuItem( submenu, 'check database integrity', 'Have the database examine all its records for internal consistency.', self, self._CheckDBIntegrity )
-            ClientGUIMenus.AppendMenuItem( submenu, 'check file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self, self._CheckFileIntegrity )
             ClientGUIMenus.AppendMenuItem( submenu, 'clear orphans', 'Clear out surplus files that have found their way into the file structure.', self, self._ClearOrphans )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'maintenance' )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
+            
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self, self._CheckDBIntegrity )
+            ClientGUIMenus.AppendMenuItem( submenu, 'file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self, self._CheckFileIntegrity )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'check' )
+            
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self, self._RegenerateACCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'similar files search data', 'Delete and recreate the similar files search tree.', self, self._RegenerateSimilarFilesData )
+            ClientGUIMenus.AppendMenuItem( submenu, 'all thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self, self._RegenerateThumbnails )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
             
             return ( menu, p( '&Database' ), True )
             
@@ -1497,6 +1512,27 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.CallToThread( do_it )
         
     
+    def _MaintainSimilarFilesData( self ):
+        
+        text = 'This will do up to ten minutes\' maintenance on the similar files search data.'
+        text += os.linesep * 2
+        text += 'It will rebalance the search tree and (re)generate any outstanding file search data.'
+        text += os.linesep * 2
+        text += 'If there is work to do, it will report its status through a popup message. The gui may hang until it is done.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
+                
+                stop_time = HydrusData.GetNow() + 60 * 10
+                
+                self._controller.Write( 'maintain_similar_files', stop_time )
+                
+            
+        
+    
     def _ManageAccountTypes( self, service_key ):
         
         with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_key ) as dlg: dlg.ShowModal()
@@ -1753,7 +1789,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _OpenExportFolder( self ):
         
-        export_path = ClientFiles.GetExportPath()
+        export_path = ClientExporting.GetExportPath()
         
         HydrusPaths.LaunchDirectory( export_path )
         
@@ -2869,9 +2905,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def NewSimilarTo( self, file_service_key, hash ):
-        
-        hamming_distance = HC.options[ 'file_system_predicates' ][ 'hamming_distance' ]
+    def NewSimilarTo( self, file_service_key, hash, hamming_distance ):
         
         initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, hamming_distance ) ) ]
         

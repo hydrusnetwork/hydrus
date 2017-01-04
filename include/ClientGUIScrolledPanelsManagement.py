@@ -1282,7 +1282,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
-            self._media_viewer_options = ClientGUICommon.SaneListCtrl( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom info', -1 ) ], activation_callback = self.EditMediaViewerOptions, use_display_tuple_for_sort = True )
+            self._media_viewer_options = ClientGUICommon.SaneListCtrlForSingleObject( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom info', -1 ) ], activation_callback = self.EditMediaViewerOptions )
             
             self._media_viewer_edit_button = wx.Button( self._media_viewer_panel, label = 'edit' )
             self._media_viewer_edit_button.Bind( wx.EVT_BUTTON, self.EventEditMediaViewerOptions )
@@ -1304,10 +1304,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 items = self._new_options.GetMediaViewOptions( mime )
                 
-                listctrl_list = [ mime ] + list( items )
-                pretty_listctrl_list = self._GetPrettyMediaViewOptions( listctrl_list )
+                data = [ mime ] + list( items )
                 
-                self._media_viewer_options.Append( pretty_listctrl_list, listctrl_list )
+                ( display_tuple, sort_tuple, data ) = self._GetListCtrlData( data )
+                
+                self._media_viewer_options.Append( display_tuple, sort_tuple, data )
                 
             
             self._media_viewer_options.SortListItems( col = 0 )
@@ -1336,9 +1337,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.SetSizer( vbox )
             
         
-        def _GetPrettyMediaViewOptions( self, listctrl_list ):
+        def _GetListCtrlData( self, data ):
             
-            ( mime, media_show_action, preview_show_action, zoom_info ) = listctrl_list
+            ( mime, media_show_action, preview_show_action, zoom_info ) = data
+            
+            # can't store a list in the listctrl obj space, as it is unhashable
+            data = ( mime, media_show_action, preview_show_action, tuple( zoom_info ) )
             
             pretty_mime = HC.mime_string_lookup[ mime ]
             pretty_media_show_action = CC.media_viewer_action_string_lookup[ media_show_action ]
@@ -1357,29 +1361,33 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 pretty_zoom_info = str( zoom_info )
                 
             
-            return ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_info )
+            display_tuple = ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_info )
+            sort_tuple = ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_info )
+            
+            return ( display_tuple, sort_tuple, data )
             
         
         def EditMediaViewerOptions( self ):
             
             for i in self._media_viewer_options.GetAllSelected():
                 
-                listctrl_list = self._media_viewer_options.GetClientData( i )
+                data = self._media_viewer_options.GetClientData( i )
                 
                 title = 'set media view options information'
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
                     
-                    panel = ClientGUIScrolledPanelsEdit.EditMediaViewOptionsPanel( dlg, listctrl_list )
+                    panel = ClientGUIScrolledPanelsEdit.EditMediaViewOptionsPanel( dlg, data )
                     
                     dlg.SetPanel( panel )
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        new_listctrl_list = panel.GetValue()
-                        pretty_new_listctrl_list = self._GetPrettyMediaViewOptions( new_listctrl_list )
+                        new_data = panel.GetValue()
                         
-                        self._media_viewer_options.UpdateRow( i, pretty_new_listctrl_list, new_listctrl_list )
+                        ( display_tuple, sort_tuple, new_data ) = self._GetListCtrlData( new_data )
+                        
+                        self._media_viewer_options.UpdateRow( i, display_tuple, sort_tuple, new_data )
                         
                     
                 
@@ -1428,13 +1436,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 HydrusData.ShowText( 'Could not parse those zooms, so they were not saved!' )
                 
             
-            for listctrl_list in self._media_viewer_options.GetClientData():
+            for data in self._media_viewer_options.GetClientData():
                 
-                listctrl_list = list( listctrl_list )
+                data = list( data )
                 
-                mime = listctrl_list[0]
+                mime = data[0]
                 
-                value = listctrl_list[1:]
+                value = data[1:]
                 
                 self._new_options.SetMediaViewOptions( mime, value )
                 
@@ -2358,7 +2366,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         columns = [ ( 'name', -1 ), ( 'site', 80 ), ( 'period', 80 ), ( 'last checked', 100 ), ( 'recent error?', 100 ), ( 'urls', 60 ), ( 'failures', 60 ), ( 'paused', 80 ), ( 'check now?', 100 ) ]
         
-        self._subscriptions = ClientGUICommon.SaneListCtrl( self, 300, columns, delete_key_callback = self.Delete, activation_callback = self.Edit, use_display_tuple_for_sort = True )
+        self._subscriptions = ClientGUICommon.SaneListCtrlForSingleObject( self, 300, columns, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add = ClientGUICommon.BetterButton( self, 'add', self.Add )
         
@@ -2389,9 +2397,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for subscription in subscriptions:
             
-            ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
             
-            self._subscriptions.Append( display_tuple, data_tuple )
+            self._subscriptions.Append( display_tuple, sort_tuple, subscription )
             
         
         #
@@ -2429,16 +2437,59 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _ConvertSubscriptionToTuples( self, subscription ):
         
-        ( name, site, period, last_checked, recent_error, urls, failures, paused, check_now ) = subscription.ToPrettyStrings()
+        ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, last_checked, last_error, check_now, seed_cache ) = subscription.ToTuple()
         
-        return ( ( name, site, period, last_checked, recent_error, urls, failures, paused, check_now ), ( subscription, site, period, last_checked, recent_error, urls, failures, paused, check_now ) )
+        pretty_site = HC.site_type_string_lookup[ gallery_identifier.GetSiteType() ]
+        pretty_last_checked = HydrusData.ConvertTimestampToPrettySync( last_checked )
+        
+        pretty_period = HydrusData.ConvertTimeDeltaToPrettyString( period )
+        
+        error_next_check_time = last_error + HC.UPDATE_DURATION
+        
+        if HydrusData.TimeHasPassed( error_next_check_time ):
+            
+            pretty_error = ''
+            
+        else:
+            
+            pretty_error = 'yes'
+            
+        
+        num_urls = seed_cache.GetSeedCount()
+        pretty_urls = HydrusData.ConvertIntToPrettyString( num_urls )
+        
+        num_failures = seed_cache.GetSeedCount( CC.STATUS_FAILED )
+        pretty_failures = HydrusData.ConvertIntToPrettyString( num_failures )
+        
+        if paused:
+            
+            pretty_paused = 'yes'
+            
+        else:
+            
+            pretty_paused = ''
+            
+        
+        if check_now:
+            
+            pretty_check_now = 'yes'
+            
+        else:
+            
+            pretty_check_now = ''
+            
+        
+        display_tuple = ( name, pretty_site, pretty_period, pretty_last_checked, pretty_error, pretty_urls, pretty_failures, pretty_paused, pretty_check_now )
+        sort_tuple = ( name, pretty_site, period, last_checked, pretty_error, num_urls, num_failures, paused, check_now )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def _GetExportObject( self ):
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        for subscription in self._GetSubscriptions( only_selected = True ):
+        for subscription in self._subscriptions.GetSelectedClientData():
             
             to_export.append( subscription )
             
@@ -2457,32 +2508,6 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def _GetSubscriptions( self, only_selected = False ):
-        
-        subscriptions = []
-        
-        if only_selected:
-            
-            for i in self._subscriptions.GetAllSelected():
-                
-                subscription = self._subscriptions.GetClientData( i )[0]
-                
-                subscriptions.append( subscription )
-                
-            
-        else:
-            
-            for row in self._subscriptions.GetClientData():
-                
-                subscription = row[0]
-                
-                subscriptions.append( subscription )
-                
-            
-        
-        return subscriptions
-        
-    
     def _ImportObject( self, obj ):
         
         if isinstance( obj, HydrusSerialisable.SerialisableList ):
@@ -2498,39 +2523,16 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 subscription = obj
                 
-                self._SetNonDupeName( subscription )
+                self._subscriptions.SetNonDupeName( subscription )
                 
-                ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+                ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
                 
-                self._subscriptions.Append( display_tuple, data_tuple )
+                self._subscriptions.Append( display_tuple, sort_tuple, subscription )
                 
             else:
                 
                 wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
                 
-            
-        
-    
-    def _SetNonDupeName( self, subscription ):
-        
-        name = subscription.GetName()
-        
-        current_names = { s.GetName() for s in self._GetSubscriptions() }
-        
-        if name in current_names:
-            
-            i = 1
-            
-            original_name = name
-            
-            while name in current_names:
-                
-                name = original_name + ' (' + str( i ) + ')'
-                
-                i += 1
-                
-            
-            subscription.SetName( name )
             
         
     
@@ -2548,11 +2550,11 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 new_subscription = panel.GetValue()
                 
-                self._SetNonDupeName( new_subscription )
+                self._subscriptions.SetNonDupeName( new_subscription )
                 
-                ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( new_subscription )
+                ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( new_subscription )
                 
-                self._subscriptions.Append( display_tuple, data_tuple )
+                self._subscriptions.Append( display_tuple, sort_tuple, new_subscription )
                 
             
         
@@ -2561,35 +2563,21 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetClientData( i )[0]
+            subscription = self._subscriptions.GetClientData( i )
             
             subscription.CheckNow()
             
-            ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
             
-            self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+            self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
             
         
     
     def CommitChanges( self ):
         
-        existing_db_names = set( HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ) )
+        subscriptions = self._subscriptions.GetClientData()
         
-        subscriptions = self._GetSubscriptions()
-        
-        save_names = { subscription.GetName() for subscription in subscriptions }
-        
-        deletee_names = existing_db_names.difference( save_names )
-        
-        for subscription in subscriptions:
-            
-            HydrusGlobals.client_controller.Write( 'serialisable', subscription )
-            
-        
-        for name in deletee_names:
-            
-            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
-            
+        HydrusGlobals.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
         
         HydrusGlobals.client_controller.pub( 'notify_new_subscriptions' )
         
@@ -2603,7 +2591,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         subs_to_dupe = []
         
-        for subscription in self._GetSubscriptions( only_selected = True ):
+        for subscription in self._subscriptions.GetSelectedClientData():
             
             subs_to_dupe.append( subscription )
             
@@ -2612,11 +2600,11 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             dupe_subscription = subscription.Duplicate()
             
-            self._SetNonDupeName( dupe_subscription )
+            self._subscriptions.SetNonDupeName( dupe_subscription )
             
-            ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( dupe_subscription )
+            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( dupe_subscription )
             
-            self._subscriptions.Append( display_tuple, data_tuple )
+            self._subscriptions.Append( display_tuple, sort_tuple, dupe_subscription )
             
         
     
@@ -2624,7 +2612,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetClientData( i )[0]
+            subscription = self._subscriptions.GetClientData( i )
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg:
                 
@@ -2638,16 +2626,14 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     edited_subscription = panel.GetValue()
                     
-                    name = edited_subscription.GetName()
-                    
-                    if name != original_name:
+                    if edited_subscription.GetName() != original_name:
                         
-                        self._SetNonDupeName( edited_subscription )
+                        self._subscriptions.SetNonDupeName( edited_subscription )
                         
                     
-                    ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( edited_subscription )
+                    ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( edited_subscription )
                     
-                    self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+                    self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, edited_subscription )
                     
                 
                 
@@ -2749,13 +2735,13 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetClientData( i )[0]
+            subscription = self._subscriptions.GetClientData( i )
             
             subscription.PauseResume()
             
-            ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
             
-            self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+            self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
             
         
     
@@ -2769,13 +2755,13 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for i in self._subscriptions.GetAllSelected():
                     
-                    subscription = self._subscriptions.GetClientData( i )[0]
+                    subscription = self._subscriptions.GetClientData( i )
                     
                     subscription.Reset()
                     
-                    ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+                    ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
                     
-                    self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+                    self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
                     
                 
             
@@ -2785,7 +2771,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetClientData( i )[0]
+            subscription = self._subscriptions.GetClientData( i )
             
             seed_cache = subscription.GetSeedCache()
             
@@ -2795,9 +2781,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
                 
-                ( display_tuple, data_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+                ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
                 
-                self._subscriptions.UpdateRow( i, display_tuple, data_tuple )
+                self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
                 
             
         

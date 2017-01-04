@@ -804,15 +804,19 @@ class MediaList( object ):
             
             if action == HC.CONTENT_UPDATE_DELETE:
                 
-                local_service_keys = ( CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY )
+                local_file_domains = HydrusGlobals.client_controller.GetServicesManager().GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                 
-                deleted_from_trash_and_local_view = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in local_service_keys
+                non_trash_local_file_services = list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
                 
-                deleted_from_local_and_option_set = HC.options[ 'remove_trashed_files' ] and service_key == CC.LOCAL_FILE_SERVICE_KEY and self._file_service_key in local_service_keys
+                local_file_services = list( non_trash_local_file_services ) + [ CC.TRASH_SERVICE_KEY ]
                 
-                deleted_from_repo_and_repo_view = service_key not in local_service_keys and self._file_service_key == service_key
+                deleted_from_trash_and_local_view = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in local_file_services
                 
-                if deleted_from_trash_and_local_view or deleted_from_local_and_option_set or deleted_from_repo_and_repo_view:
+                trashed_and_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and service_key in non_trash_local_file_services and self._file_service_key in non_trash_local_file_services
+                
+                deleted_from_repo_and_repo_view = service_key not in local_file_services and self._file_service_key == service_key
+                
+                if deleted_from_trash_and_local_view or trashed_and_non_trash_local_view or deleted_from_repo_and_repo_view:
                     
                     affected_singleton_media = self._GetMedia( hashes, 'singletons' )
                     affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]

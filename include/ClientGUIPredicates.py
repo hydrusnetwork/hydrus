@@ -36,7 +36,7 @@ class PanelPredicateSystemAge( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '>' ] )
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '>' ] )
         
         self._years = wx.SpinCtrl( self, max = 30, size = ( 60, -1 ) )
         self._months = wx.SpinCtrl( self, max = 60, size = ( 60, -1 ) )
@@ -87,7 +87,9 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
+        choices = [ '<', u'\u2248', '=', '>' ]
+        
+        self._sign = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
         
         self._duration_s = wx.SpinCtrl( self, max = 3599, size = ( 60, -1 ) )
         self._duration_ms = wx.SpinCtrl( self, max = 999, size = ( 60, -1 ) )
@@ -134,23 +136,15 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self )
-        self._sign.Append( 'is', True )
-        self._sign.Append( 'is not', False )
+        self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], style = wx.RA_SPECIFY_ROWS )
         
-        self._current_pending = wx.Choice( self )
-        self._current_pending.Append( 'currently in', HC.CURRENT )
-        self._current_pending.Append( 'pending to', HC.PENDING )
-        
-        self._file_service_key = wx.Choice( self )
-        
-        self._sign.SetSelection( 0 )
-        self._current_pending.SetSelection( 0 )
+        self._current_pending = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'currently in', HC.CURRENT ), ( 'pending to', HC.PENDING ) ], style = wx.RA_SPECIFY_ROWS )
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.FILE_SERVICES )
         
-        for service in services: self._file_service_key.Append( service.GetName(), service.GetServiceKey() )
-        self._file_service_key.SetSelection( 0 )
+        choices = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
+        
+        self._file_service_key = ClientGUICommon.BetterRadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -166,7 +160,8 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetClientData( self._sign.GetSelection() ), self._current_pending.GetClientData( self._current_pending.GetSelection() ), self._file_service_key.GetClientData( self._file_service_key.GetSelection() ) )
+        info = ( self._sign.GetChoice(), self._current_pending.GetChoice(), self._file_service_key.GetChoice() )
+        
         return info
         
     
@@ -178,15 +173,13 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._hash = wx.TextCtrl( self )
+        self.SetToolTipString( 'As this can only ever return one result, it overrules the active file domain and any other active predicate.' )
         
-        self._hash_type = ClientGUICommon.BetterChoice( self )
-        self._hash_type.Append( 'sha256', 'sha256' )
-        self._hash_type.Append( 'md5', 'md5' )
-        self._hash_type.Append( 'sha1', 'sha1' )
-        self._hash_type.Append( 'sha512', 'sha512' )
+        self._hash = wx.TextCtrl( self, size = ( 200, -1 ) )
         
-        self._hash_type.SetSelection( 0 )
+        choices = [ 'sha256', 'md5', 'sha1', 'sha512' ]
+        
+        self._hash_type = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -210,7 +203,7 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         hash = hash.decode( 'hex' )
         
-        hash_type = self._hash_type.GetChoice()
+        hash_type = self._hash_type.GetStringSelection()
         
         return ( hash, hash_type )
         
@@ -223,7 +216,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
         
         self._height = wx.SpinCtrl( self, max = 200000, size = ( 60, -1 ) )
         
@@ -330,11 +323,11 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices = [ '<', u'\u2248', '=', '>' ] )
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
         
         self._num_pixels = wx.SpinCtrl( self, max = 1048576, size = ( 60, -1 ) )
         
-        self._unit = wx.Choice( self, choices = [ 'pixels', 'kilopixels', 'megapixels' ] )
+        self._unit = wx.RadioBox( self, choices = [ 'pixels', 'kilopixels', 'megapixels' ] )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -373,7 +366,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
         
         self._num_tags = wx.SpinCtrl( self, max = 2000, size = ( 60, -1 ) )
         
@@ -411,7 +404,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
         
         self._num_words = wx.SpinCtrl( self, max = 1000000, size = ( 60, -1 ) )
         
@@ -457,9 +450,9 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         self._like_rating_ctrls = []
         
-        gridbox_like = wx.FlexGridSizer( 0, 4 )
+        gridbox = wx.FlexGridSizer( 0, 5 )
         
-        gridbox_like.AddGrowableCol( 0, 1 )
+        gridbox.AddGrowableCol( 0, 1 )
         
         for service in local_like_services:
             
@@ -474,10 +467,11 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             self._like_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
             self._like_rating_ctrls.append( rating_ctrl )
             
-            gridbox_like.AddF( wx.StaticText( self, label = name ), CC.FLAGS_VCENTER )
-            gridbox_like.AddF( rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox_like.AddF( not_rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox_like.AddF( rating_ctrl, CC.FLAGS_VCENTER )
+            gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_VCENTER )
+            gridbox.AddF( rated_checkbox, CC.FLAGS_VCENTER )
+            gridbox.AddF( not_rated_checkbox, CC.FLAGS_VCENTER )
+            gridbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            gridbox.AddF( rating_ctrl, CC.FLAGS_VCENTER )
             
         
         #
@@ -488,10 +482,6 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         self._numerical_rating_ctrls_to_info = {}
         
-        gridbox_numerical = wx.FlexGridSizer( 0, 5 )
-        
-        gridbox_numerical.AddGrowableCol( 0, 1 )
-        
         for service in local_numerical_services:
             
             name = service.GetName()
@@ -499,28 +489,27 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             
             rated_checkbox = wx.CheckBox( self, label = 'rated' )
             not_rated_checkbox = wx.CheckBox( self, label = 'not rated' )
-            choice = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248' ] )
+            choice = wx.RadioBox( self, choices = [ '>', '<', '=', u'\u2248' ] )
             rating_ctrl = ClientGUICommon.RatingNumericalDialog( self, service_key )
             
-            choice.Select( 2 )
+            choice.SetSelection( 2 )
             
             self._numerical_checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
             self._numerical_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
             self._numerical_rating_ctrls_to_info[ rating_ctrl ] = choice
             
-            gridbox_numerical.AddF( wx.StaticText( self, label = name ), CC.FLAGS_VCENTER )
-            gridbox_numerical.AddF( rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox_numerical.AddF( not_rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox_numerical.AddF( choice, CC.FLAGS_VCENTER )
-            gridbox_numerical.AddF( rating_ctrl, CC.FLAGS_VCENTER )
+            gridbox.AddF( wx.StaticText( self, label = name ), CC.FLAGS_VCENTER )
+            gridbox.AddF( rated_checkbox, CC.FLAGS_VCENTER )
+            gridbox.AddF( not_rated_checkbox, CC.FLAGS_VCENTER )
+            gridbox.AddF( choice, CC.FLAGS_VCENTER )
+            gridbox.AddF( rating_ctrl, CC.FLAGS_VCENTER )
             
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( gridbox_like, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.AddF( gridbox_numerical, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -626,7 +615,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices = [ '=', 'wider than', 'taller than', u'\u2248' ] )
+        self._sign = wx.RadioBox( self, choices = [ '=', 'wider than', 'taller than', u'\u2248' ] )
         
         self._width = wx.SpinCtrl( self, max = 50000, size = ( 60, -1 ) )
         
@@ -716,11 +705,11 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices = [ '<', u'\u2248', '=', '>' ] )
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
         
         self._size = wx.SpinCtrl( self, max = 1048576, size = ( 60, -1 ) )
         
-        self._unit = wx.Choice( self, choices = [ 'B', 'KB', 'MB', 'GB' ] )
+        self._unit = wx.RadioBox( self, choices = [ 'B', 'KB', 'MB', 'GB' ] )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -759,7 +748,7 @@ class PanelPredicateSystemWidth( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.Choice( self, choices = [ '<', u'\u2248', '=', '>' ] )
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
         
         self._width = wx.SpinCtrl( self, max = 200000, size = ( 60, -1 ) )
         

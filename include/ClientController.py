@@ -692,9 +692,9 @@ class Controller( HydrusController.HydrusController ):
             loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
             
         
-        self.WriteInterruptable( 'vacuum', stop_time = stop_time )
+        self.WriteInterruptable( 'maintain_similar_files', stop_time = stop_time )
         
-        self.pub( 'splash_set_status_text', 'analyzing' )
+        self.WriteInterruptable( 'vacuum', stop_time = stop_time )
         
         self.WriteInterruptable( 'analyze', stop_time = stop_time )
         

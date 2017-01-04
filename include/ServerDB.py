@@ -3,6 +3,7 @@ import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusDB
+import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
@@ -106,6 +107,12 @@ class DB( HydrusDB.HydrusDB ):
         
         self._files_dir = os.path.join( db_dir, 'server_files' )
         self._updates_dir = os.path.join( db_dir, 'server_updates' )
+        
+        self._ssl_cert_filename = 'server.crt'
+        self._ssl_key_filename = 'server.key'
+        
+        self._ssl_cert_path = os.path.join( db_dir, self._ssl_cert_filename )
+        self._ssl_key_path = os.path.join( db_dir, self._ssl_key_filename )
         
         HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name, no_wal = no_wal )
         
@@ -320,7 +327,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for db_name in db_names:
             
-            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master;' ) ) )
+            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
             
         
         all_names.discard( 'sqlite_stat1' )
@@ -486,6 +493,16 @@ class DB( HydrusDB.HydrusDB ):
             HydrusPaths.MakeSureDirectoryExists( backup_path )
             
             for filename in self._db_filenames.values():
+                
+                HydrusData.Print( 'backing up: copying ' + filename )
+                
+                source = os.path.join( self._db_dir, filename )
+                dest = os.path.join( backup_path, filename )
+                
+                HydrusPaths.MirrorFile( source, dest )
+                
+            
+            for filename in [ self._ssl_cert_filename, self._ssl_key_filename ]:
                 
                 HydrusData.Print( 'backing up: copying ' + filename )
                 
@@ -741,6 +758,10 @@ class DB( HydrusDB.HydrusDB ):
         ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
         
         self._c.execute( 'INSERT INTO version ( version, year, month ) VALUES ( ?, ?, ? );', ( HC.SOFTWARE_VERSION, current_year, current_month ) )
+        
+        # create ssl keys
+        
+        HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
         
         # set up server admin
         
@@ -2570,6 +2591,13 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 238:
+            
+            HydrusData.Print( 'Generating SSL cert and key' )
+            
+            HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
+            
+        
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -2617,6 +2645,11 @@ class DB( HydrusDB.HydrusDB ):
     def GetFilesDir( self ):
         
         return self._files_dir
+        
+    
+    def GetSSLPaths( self ):
+        
+        return ( self._ssl_cert_path, self._ssl_key_path )
         
     
     def GetUpdatesDir( self ):

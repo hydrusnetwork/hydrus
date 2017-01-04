@@ -51,6 +51,17 @@ def AppendMenuItem( menu, label, description, event_handler, callable, *args, **
     
     return menu_item
     
+def AppendMenuLabel( menu, label, description = None ):
+    
+    if description is None:
+        
+        description = ''
+        
+    
+    menu_item = menu.Append( wx.ID_ANY, label, description )
+    
+    return menu_item
+    
 def BindMenuItem( menu, event_handler, menu_item, callable, *args, **kwargs ):
     
     l_callable = GetLambdaCallable( callable, *args, **kwargs )

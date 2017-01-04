@@ -198,11 +198,13 @@ class Controller( HydrusController.HydrusController ):
                         elif service_type == HC.TAG_REPOSITORY: service_object = ServerServer.HydrusServiceRepositoryTag( service_key, service_type, message )
                         elif service_type == HC.MESSAGE_DEPOT: return
                         
-                        #context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( 'muh_key.key', 'muh_crt.crt' )
+                        ( ssl_cert_path, ssl_key_path ) = self._db.GetSSLPaths()
                         
-                        #self._services[ service_key ] = reactor.listenSSL( port, service_object, context_factory )
+                        context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path )
                         
-                        self._services[ service_key ] = reactor.listenTCP( port, service_object )
+                        self._services[ service_key ] = reactor.listenSSL( port, service_object, context_factory )
+                        
+                        #self._services[ service_key ] = reactor.listenTCP( port, service_object )
                         
                         try:
                             

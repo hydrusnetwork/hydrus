@@ -6,9 +6,8 @@
 	</head>
 	<body>
 		<div class="content">
-			<p class="warning">At the moment, the server is hacked-together and quite technical. It requires a fair amount of experience with the client and its concepts, and it does not operate on a timescale that works well on a LAN. I suggest you only try running your own server once you have a bit of experience synchronising with mine or someone else's and you think, 'Hey, I know exactly what that does, and I would like one!'</p>
+			<p class="warning">The server is hacked-together and quite technical. It requires a fair amount of experience with the client and its concepts, and it does not operate on a timescale that works well on a LAN. I suggest you only try running your own server once you have a bit of experience synchronising with mine or someone else's and you think, 'Hey, I know exactly what that does, and I would like one!'</p>
 			<h3>setting up a server</h3>
-			<p><b><i>If this stuff be-fuzzles you, and you just want a simple server set up on the same computer you run the client, you can go </i>help->i don't know what I am doing->just set up the server on this computer, please<i> and you _should_ be all set up with an admin service and tag/file repos automatically.</i></b></p>
 			<p>I will use two terms, <i>server</i> and <i>service</i>, to mean two distinct things:</p>
 			<ul>
 				<li>A <b>server</b> is an instantiation of the hydrus server executable (e.g. server.exe in Windows). It has a complicated and flexible database that can run many different services in parallel.</li>
@@ -37,7 +36,7 @@
 			<p>On the page for your new server, hit the initialise button. If you have everything set right, the server should generate its first, administrator account and return the access key, which the client will automatically set to the account for you.</p>
 			<p class="warning">YOU'LL WANT TO SAVE THAT KEY IN A SAFE PLACE</p>
 			<p>If you lose your admin access key, there is no way to get it back, and if you are not sqlite-proficient, you'll have to restart from the beginning by deleting your server's database files.</p>
-			<p>If the client can't connect to the server, it is either not running or you have a firewall/port-mapping problem. If you want a quick way to test the server's visibility, just put its host:port into your browser; if working, it should return some simple html identifying itself.</p>
+			<p>If the client can't connect to the server, it is either not running or you have a firewall/port-mapping problem. If you want a quick way to test the server's visibility, just put https://host:port into your browser--if it is working, your browser will probably complain about its self-signed https certificate. Once you add a certificate exception, the server should return some simple html identifying itself.</p>
 			<h3>set up the server</h3>
 			<p>You should have a new submenu, 'administrate services', under 'services', in the client gui. This is where you control most server and service-wide stuff.</p>
 			<p><i>admin->your server->manage services</i> lets you add, edit, and delete the services your server runs. Every time you add one, you will also be added as that service's first administrator, and the admin menu will gain a new entry for it.</i>

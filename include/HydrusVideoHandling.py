@@ -162,7 +162,7 @@ def GetMimeFromFFMPEG( path ):
             
         
     
-    raise Exception( 'FFMPEG could not find mime in ' + path + '!' )
+    return HC.APPLICATION_UNKNOWN
     
 def HasVideoStream( path ):
     

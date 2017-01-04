@@ -1041,6 +1041,11 @@ class GalleryBooru( Gallery ):
                 
                 for link in links:
                     
+                    if link.string is None:
+                        
+                        continue
+                        
+                    
                     if link.string not in ( '?', '-', '+' ):
                         
                         if namespace == '': tags.append( link.string )

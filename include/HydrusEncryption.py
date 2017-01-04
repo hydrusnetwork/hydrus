@@ -2,7 +2,9 @@ import Crypto.Cipher.AES
 import Crypto.Cipher.PKCS1_OAEP
 import Crypto.PublicKey.RSA
 import HydrusConstants as HC
+import OpenSSL
 import os
+import socket
 import traceback
 
 AES_KEY_LENGTH = 32
@@ -137,6 +139,37 @@ def GenerateFilteredRandomBytes( byte_to_exclude, num_bytes ):
     
     return ''.join( bytes )
 
+def GenerateOpenSSLCertAndKeyFile( cert_path, key_path ):
+    
+    key = OpenSSL.crypto.PKey()
+    
+    key.generate_key( OpenSSL.crypto.TYPE_RSA, 2048 )
+    
+    # create a self-signed cert
+    cert = OpenSSL.crypto.X509()
+    
+    cert.get_subject().C = 'US'
+    cert.set_serial_number( 1 )
+    cert.gmtime_adj_notBefore( 0 )
+    cert.gmtime_adj_notAfter( 10*365*24*60*60 )
+    cert.set_issuer( cert.get_subject() )
+    cert.set_pubkey( key )
+    cert.sign( key, 'sha256' )
+    
+    cert_text = OpenSSL.crypto.dump_certificate( OpenSSL.crypto.FILETYPE_PEM, cert )
+    
+    with open( cert_path, 'wt' ) as f:
+        
+        f.write( cert_text )
+        
+    
+    key_text = OpenSSL.crypto.dump_privatekey( OpenSSL.crypto.FILETYPE_PEM, key )
+    
+    with open( key_path, 'wt' ) as f:
+        
+        f.write( key_text )
+        
+    
 def GenerateRSAKeyPair():
     
     private_key = Crypto.PublicKey.RSA.generate( 2048 )

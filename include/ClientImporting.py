@@ -2558,51 +2558,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def ToPrettyStrings( self ):
-        
-        site = HC.site_type_string_lookup[ self._gallery_identifier.GetSiteType() ]
-        last_checked = HydrusData.ConvertTimestampToPrettySync( self._last_checked )
-        
-        period = HydrusData.ConvertTimeDeltaToPrettyString( self._period )
-        
-        error_next_check_time = self._last_error + HC.UPDATE_DURATION
-        
-        if HydrusData.TimeHasPassed( error_next_check_time ):
-            
-            error_text = ''
-            
-        else:
-            
-            error_text = 'yes'
-            
-        
-        urls = HydrusData.ConvertIntToPrettyString( self._seed_cache.GetSeedCount() )
-        failures = HydrusData.ConvertIntToPrettyString( self._seed_cache.GetSeedCount( CC.STATUS_FAILED ) )
-        
-        if self._paused:
-            
-            paused_text = 'yes'
-            
-        else:
-            
-            paused_text = ''
-            
-        
-        if self._check_now:
-            
-            check_now_text = 'yes'
-            
-        else:
-            
-            check_now_text = ''
-            
-        
-        return ( self._name, site, period, last_checked, error_text, urls, failures, paused_text, check_now_text )
-        
-    
     def ToTuple( self ):
         
-        return ( self._gallery_identifier, self._gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, self._import_file_options, self._import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
+        return ( self._name, self._gallery_identifier, self._gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, self._import_file_options, self._import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ] = Subscription
