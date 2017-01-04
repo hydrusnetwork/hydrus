@@ -8,6 +8,57 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 239</h3></li>
+				<ul>
+					<li>finished up similar files search data maintenance code</li>
+					<li>similar files search data maintenance will now run during idle time</li>
+					<li>similar files search data maintenance can be called from database->maintain menu</li>
+					<li>the crowded database->maintenance menu is now split into maintain, regenerate, check</li>
+					<li>improved the similar files tree generation code, speeding searches significantly</li>
+					<li>wrote a new listctrl class to handle more complicated objects and also sort by underlying data</li>
+					<li>the new listctrl now handles object name non-duplication</li>
+					<li>cleaned a bunch of crap old listctrl code</li>
+					<li>manage export folders now uses the new listctrl</li>
+					<li>manage import folders now uses the new listctrl</li>
+					<li>manage subs now uses the new listctrl</li>
+					<li>manage scripts now uses the new listctrl</li>
+					<li>options media viewer options now uses the new listctrl</li>
+					<li>file import status panel now uses the new listctrl</li>
+					<li>the new listctrl can now quickly fetch item index from the underlying object</li>
+					<li>the file import status panel should now cope with extremely huge lists a bit better now!</li>
+					<li>multiple parsing child nodes can now import from/export to clipboard as lists</li>
+					<li>export folders now have names, so you can have multiple export folders pointing to the same path! existing export folders will get their path as their name, but this can be changed no prob</li>
+					<li>cleaned import/export folder dialogs</li>
+					<li>cleaned import/export folder dialog workflow</li>
+					<li>several misc import/export folder improvements</li>
+					<li>hydrus servers are now exclusively https with self-signed certificates</li>
+					<li>hydrus servers now create server.crt and server.key in their db folders for SSL--these files will be backed up along with everything else on an admin backup command</li>
+					<li>system:hash now ignores the file domain and any other predicate. it now returns very quickly, no matter the context</li>
+					<li>improved system:hash search logic</li>
+					<li>all the awkward choice dropdowns in system predicate panels are replaced with radioboxes</li>
+					<li>improved system:rating panel grid layout</li>
+					<li>wrote a better subclass of radiobox to handle more data</li>
+					<li>moved first half of thumbnail menu to new menu system</li>
+					<li>cleaned up a little thumbnail menu logic</li>
+					<li>improved the different ways services are added to thumbnail menu</li>
+					<li>thumbnail 'select' menu is logically cleaned up and allows for better file domain selection</li>
+					<li>the thumbnail menu's copy files and copy hashes to clipboard will now send them ordered (they were previously pseudo-random)</li>
+					<li>added 'paths' to the share->copy thumbnail menu for copying multiple files' paths. these are also ordered.</li>
+					<li>if the popup message manager does not have any errors, it will no longer unhide (which can annoyingly raise the main gui window) when the gui window does not have focus</li>
+					<li>removed some old redundant error reporting stuff in popups</li>
+					<li>improved and quietened some some mime detection failure code, sped up mime failure loop in all cases</li>
+					<li>massively simplified and atomised how new serialisable-object management panels can save their data</li>
+					<li>the manage subscription dialog now saves in a single, faster transaction</li>
+					<li>the manage script dialog now saves in a single, faster transaction</li>
+					<li>reduced redundant index work from analyze jobs</li>
+					<li>improved tag parse error handling</li>
+					<li>fixed media removal rules when deleting from the 'all local files' domain</li>
+					<li>polished and clarified some of the help's tag schema</li>
+					<li>misc cleanup</li>
+					<li>more misc cleanup</li>
+					<li>misc refactoring</li>
+					<li>more misc refactoring</li>
+				</ul>
 				<li><h3>version 238</h3></li>
 				<ul>
 					<li>added left/right equal ratio preference to the similar files search tree generation</li>
