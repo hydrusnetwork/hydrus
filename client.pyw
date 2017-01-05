@@ -38,14 +38,14 @@ try:
     
     if result.db_dir is None:
         
-        db_dir = os.path.join( HC.BASE_DIR, 'db' )
+        db_dir = os.path.join( HC.USERDATA_DIR, 'db' )
         
     else:
         
         db_dir = result.db_dir
         
     
-    db_dir = HydrusPaths.ConvertPortablePathToAbsPath( db_dir, HC.BASE_DIR )
+    db_dir = HydrusPaths.ConvertPortablePathToAbsPath( db_dir, HC.USERDATA_DIR )
     
     try:
         
