@@ -5087,20 +5087,6 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         return ( self.itemDataMap[ key1 ], self.itemDataMap[ key2 ] )
         
     
-    def HasClientData( self, data, column_index = None ):
-        
-        try:
-            
-            index = self.GetIndexFromClientData( data, column_index )
-            
-            return True
-            
-        except HydrusExceptions.DataMissing:
-            
-            return False
-            
-        
-    
     def GetListCtrl( self ):
         
         return self
@@ -5118,6 +5104,20 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
         
         return results
+        
+    
+    def HasClientData( self, data, column_index = None ):
+        
+        try:
+            
+            index = self.GetIndexFromClientData( data, column_index )
+            
+            return True
+            
+        except HydrusExceptions.DataMissing:
+            
+            return False
+            
         
     
     def OnSortOrderChanged( self ):
@@ -5186,24 +5186,6 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         SaneListCtrl.Append( self, display_tuple, sort_tuple )
         
     
-    def GetClientData( self, index = None ):
-        
-        if index is None:
-            
-            data_indicies = [ self._GetDataIndex( index ) for index in range( self.GetItemCount() ) ]
-            
-            datas = [ self._data_indices_to_objects[ data_index ] for data_index in data_indicies ]
-            
-            return datas
-            
-        else:
-            
-            data_index = self._GetDataIndex( index )
-            
-            return self._data_indices_to_objects[ data_index ]
-            
-        
-    
     def GetIndexFromClientData( self, obj ):
         
         try:
@@ -5218,6 +5200,31 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
             
             raise HydrusExceptions.DataMissing( 'Data not found!' )
             
+        
+    
+    def GetObject( self, index ):
+        
+        data_index = self._GetDataIndex( index )
+        
+        return self._data_indices_to_objects[ data_index ]
+        
+    
+    def GetObjects( self, only_selected = False ):
+        
+        if only_selected:
+            
+            indicies = self.GetAllSelected()
+            
+        else:
+            
+            indicies = range( self.GetItemCount() )
+            
+        
+        data_indicies = [ self._GetDataIndex( index ) for index in indicies ]
+        
+        datas = [ self._data_indices_to_objects[ data_index ] for data_index in data_indicies ]
+        
+        return datas
         
     
     def HasClientData( self, data ):
@@ -5321,7 +5328,7 @@ class SeedCacheControl( SaneListCtrlForSingleObject ):
         
         notes = []
         
-        for seed in self.GetSelectedClientData():
+        for seed in self.GetObjects( only_selected = True ):
             
             ( seed, status, added_timestamp, last_modified_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
             
@@ -5343,7 +5350,7 @@ class SeedCacheControl( SaneListCtrlForSingleObject ):
     
     def _CopySelectedSeeds( self ):
         
-        seeds = self.GetSelectedClientData()
+        seeds = self.GetObjects( only_selected = True )
         
         if len( seeds ) > 0:
             
@@ -5357,7 +5364,7 @@ class SeedCacheControl( SaneListCtrlForSingleObject ):
     
     def _SetSelected( self, status_to_set ):
         
-        seeds_to_reset = self.GetSelectedClientData()
+        seeds_to_reset = self.GetObjects( only_selected = True )
         
         for seed in seeds_to_reset:
             
@@ -5559,6 +5566,31 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
     def SetTagsByMedia( self, media, force_reload = False ):
         
         self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
+        
+    
+class TextAndGauge( wx.Panel ):
+    
+    def __init__( self, parent ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._st = wx.StaticText( self )
+        self._gauge = Gauge( self )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def SetValue( self, text, value, range ):
+        
+        self._st.SetLabelText( text )
+        
+        self._gauge.SetRange( range )
+        self._gauge.SetValue( value )
         
     
 ( TimeDeltaEvent, EVT_TIME_DELTA ) = wx.lib.newevent.NewCommandEvent()

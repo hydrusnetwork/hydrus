@@ -701,9 +701,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         #
         
-        job_key = ClientThreading.JobKey( pausable = True, cancellable = True)
+        job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'title', 'test job' )
+        job_key.SetVariable( 'popup_title', u'\u24c9\u24d7\u24d8\u24e2 \u24d8\u24e2 \u24d0 \u24e3\u24d4\u24e2\u24e3 \u24e4\u24dd\u24d8\u24d2\u24de\u24d3\u24d4 \u24dc\u24d4\u24e2\u24e2\u24d0\u24d6\u24d4' )
+        
+        job_key.SetVariable( 'popup_text_1', u'\u24b2\u24a0\u24b2 \u24a7\u249c\u249f' )
+        job_key.SetVariable( 'popup_text_2', u'p\u0250\u05df \u028d\u01dd\u028d' )
+        
+        self._controller.pub( 'message', job_key )
+        
+        #
+        
+        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+        
+        job_key.SetVariable( 'popup_title', 'test job' )
         
         job_key.SetVariable( 'popup_text_1', 'Currently processing test job 5/8' )
         job_key.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
@@ -1028,6 +1039,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 ClientGUIMenus.AppendMenuItem( search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self, self._NewPageQuery, service.GetServiceKey() )
                 
+            
+            search_menu.AppendSeparator()
+            
+            ClientGUIMenus.AppendMenuItem( search_menu, 'duplicates (under construction!)', 'Open a new tab to discover and filter duplicate files.', self, self._NewPageDuplicateFilter )
             
             ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
             
@@ -1514,9 +1529,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _MaintainSimilarFilesData( self ):
         
-        text = 'This will do up to ten minutes\' maintenance on the similar files search data.'
-        text += os.linesep * 2
-        text += 'It will rebalance the search tree and (re)generate any outstanding file search data.'
+        text = 'This will rebalance the similar files search data, improving search speed.'
         text += os.linesep * 2
         text += 'If there is work to do, it will report its status through a popup message. The gui may hang until it is done.'
         
@@ -1528,7 +1541,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 stop_time = HydrusData.GetNow() + 60 * 10
                 
-                self._controller.Write( 'maintain_similar_files', stop_time )
+                self._controller.Write( 'maintain_similar_files_tree', stop_time )
                 
             
         
@@ -1693,6 +1706,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._notebook.AddPage( page, page_name, select = True )
         
         wx.CallAfter( page.SetSearchFocus )
+        
+    
+    def _NewPageDuplicateFilter( self ):
+        
+        management_controller = ClientGUIManagement.CreateManagementControllerDuplicateFilter()
+        
+        page_name = 'duplicates'
+        
+        self._NewPage( page_name, management_controller )
         
     
     def _NewPageImportBooru( self ):

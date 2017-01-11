@@ -5,6 +5,7 @@ import HydrusConstants as HC
 import OpenSSL
 import os
 import socket
+import stat
 import traceback
 
 AES_KEY_LENGTH = 32
@@ -163,12 +164,16 @@ def GenerateOpenSSLCertAndKeyFile( cert_path, key_path ):
         f.write( cert_text )
         
     
+    os.chmod( cert_path, stat.S_IREAD )
+    
     key_text = OpenSSL.crypto.dump_privatekey( OpenSSL.crypto.FILETYPE_PEM, key )
     
     with open( key_path, 'wt' ) as f:
         
         f.write( key_text )
         
+    
+    os.chmod( key_path, stat.S_IREAD )
     
 def GenerateRSAKeyPair():
     

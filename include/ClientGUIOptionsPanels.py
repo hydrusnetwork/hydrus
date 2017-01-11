@@ -204,7 +204,7 @@ class OptionsPanelImportFiles( OptionsPanel ):
         self._auto_archive.Bind( wx.EVT_CHECKBOX, self.EventChanged )
         self._auto_archive.SetToolTipString( 'If this is set, all successful imports will be automatically archived rather than sent to the inbox.' )
         
-        self._exclude_deleted = wx.CheckBox( self, label = 'exclude already deleted files' )
+        self._exclude_deleted = wx.CheckBox( self, label = 'exclude previously deleted files' )
         self._exclude_deleted.Bind( wx.EVT_CHECKBOX, self.EventChanged )
         self._exclude_deleted.SetToolTipString( 'If this is set and an incoming file has already been seen and deleted before by this client, the import will be abandoned. This is useful to make sure you do not keep importing and deleting the same bad files over and over. Files currently in the trash count as deleted.' )
         

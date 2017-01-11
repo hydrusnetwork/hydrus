@@ -2804,7 +2804,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if selection_has_local_file_domain:
                         
-                        filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'filter' ), 'archive/delete' )
+                        ClientGUIMenus.AppendMenuItem( filter_menu, 'archive/delete', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self, self._Filter )
                         
                     
                     shortcut_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
@@ -2813,41 +2813,48 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         custom_shortcuts_menu = wx.Menu()
                         
-                        custom_shortcuts_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'custom_filter' ), 'manage custom filters' )
+                        ClientGUIMenus.AppendMenuItem( custom_shortcuts_menu, 'manage', 'Manage your different custom filters and their shortcuts.', self, self._CustomFilter )
                         
                         custom_shortcuts_menu.AppendSeparator()
                         
                         for shortcut_name in shortcut_names:
                             
-                            custom_shortcuts_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'custom_filter', shortcut_name ), shortcut_name )
+                            ClientGUIMenus.AppendMenuItem( custom_shortcuts_menu, shortcut_name, 'Open the ' + shortcut_name + ' custom filter.', self, self._CustomFilter, shortcut_name )
                             
                         
-                        filter_menu.AppendMenu( CC.ID_NULL, 'custom filter', custom_shortcuts_menu )
+                        ClientGUIMenus.AppendMenu( filter_menu, custom_shortcuts_menu, 'custom filters' )
                         
                     else:
                         
-                        filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'custom_filter' ), 'custom filter' )
+                        ClientGUIMenus.AppendMenuItem( filter_menu, 'create a custom filter', 'Create a custom filter that uses non-default shortcuts.', self, self._CustomFilter )
                         
                     
-                    menu.AppendMenu( CC.ID_NULL, 'filter', filter_menu )
+                    ClientGUIMenus.AppendMenu( menu, filter_menu, 'filter' )
                     
                 
                 menu.AppendSeparator()
                 
-                if selection_has_inbox: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'archive' ), archive_phrase )
-                if selection_has_archive: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'inbox' ), inbox_phrase )
+                if selection_has_inbox:
+                    
+                    ClientGUIMenus.AppendMenuItem( menu, archive_phrase, 'Archive the selected files.', self, self._Archive )
+                    
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove' ), remove_phrase )
+                if selection_has_archive:
+                    
+                    ClientGUIMenus.AppendMenuItem( menu, inbox_phrase, 'Put the selected files back in the inbox.', self, self._Inbox )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( menu, remove_phrase, 'Remove the selected files from the current view.', self, self._Remove )
                 
                 if selection_has_local_file_domain:
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.LOCAL_FILE_SERVICE_KEY ), local_delete_phrase )
+                    ClientGUIMenus.AppendMenuItem( menu, local_delete_phrase, 'Delete the selected files from \'my files\'.', self, self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
                     
                 
                 if selection_has_trash:
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete', CC.TRASH_SERVICE_KEY ), trash_delete_phrase )
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'undelete' ), undelete_phrase )
+                    ClientGUIMenus.AppendMenuItem( menu, trash_delete_phrase, 'Delete the selected files from the trash, forcing an immediate physical delete from your hard drive.', self, self._Delete, CC.TRASH_SERVICE_KEY )
+                    ClientGUIMenus.AppendMenuItem( menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self, self._Undelete )
                     
                 
                 # share
@@ -2856,7 +2863,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if selection_has_local:
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'open_externally' ), '&open externally' )
+                    ClientGUIMenus.AppendMenuItem( menu, 'open externally', 'Launch this file with your OS\'s default program for it.', self, self._OpenExternally )
                     
                 
                 share_menu = wx.Menu()
@@ -3026,10 +3033,10 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     similar_menu = wx.Menu()
                     
-                    ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like this one.', self, self._GetSimilarTo, 0 )
-                    ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like this one.', self, self._GetSimilarTo, 2 )
-                    ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like this one.', self, self._GetSimilarTo, 4 )
-                    ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like this one. This is sometimes useful for symbols with sharp edges or lines.', self, self._GetSimilarTo, 8 )
+                    ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like this one.', self, self._GetSimilarTo, HC.HAMMING_EXACT_MATCH )
+                    ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like this one.', self, self._GetSimilarTo, HC.HAMMING_VERY_SIMILAR )
+                    ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like this one.', self, self._GetSimilarTo, HC.HAMMING_SIMILAR )
+                    ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like this one. This is sometimes useful for symbols with sharp edges or lines.', self, self._GetSimilarTo, HC.HAMMING_SPECULATIVE )
                     
                     ClientGUIMenus.AppendMenu( menu, similar_menu, 'find similar files' )
                     

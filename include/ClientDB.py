@@ -1073,10 +1073,10 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + splayed_valid_hash_ids + ';', ( service_id, ) )
             
-            info = self._c.execute( 'SELECT size, mime FROM files_info WHERE hash_id IN ' + splayed_valid_hash_ids + ';' ).fetchall()
+            info = self._c.execute( 'SELECT hash_id, size, mime FROM files_info WHERE hash_id IN ' + splayed_valid_hash_ids + ';' ).fetchall()
             
             num_files = len( valid_hash_ids )
-            delta_size = sum( ( size for ( size, mime ) in info ) )
+            delta_size = sum( ( size for ( hash_id, size, mime ) in info ) )
             num_inbox = len( valid_hash_ids.intersection( self._inbox_hash_ids ) )
             
             service_info_updates = []
@@ -1264,31 +1264,9 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
         
     
-    def _Analyze( self, stop_time = None, only_when_idle = False, force_reanalyze = False ):
+    def _AnalyzeStaleBigTables( self, stop_time = None, only_when_idle = False, force_reanalyze = False ):
         
-        stale_time_delta = 30 * 86400
-        
-        existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
-        
-        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
-        
-        all_names = set()
-        
-        for db_name in db_names:
-            
-            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
-            
-        
-        all_names.discard( 'sqlite_stat1' )
-        
-        if force_reanalyze:
-            
-            names_to_analyze = list( all_names )
-            
-        else:
-            
-            names_to_analyze = [ name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) ]
-            
+        names_to_analyze = self._GetBigTableNamesToAnalyze( force_reanalyze = force_reanalyze )
         
         if len( names_to_analyze ) > 0:
             
@@ -1307,11 +1285,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 started = HydrusData.GetNowPrecise()
                 
-                self._c.execute( 'ANALYZE ' + name + ';' )
-                
-                self._c.execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
-                
-                self._c.execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
+                self._AnalyzeTable( name )
                 
                 time_took = HydrusData.GetNowPrecise() - started
                 
@@ -1337,6 +1311,17 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.Delete( 30 )
             
+        
+    
+    def _AnalyzeTable( self, name ):
+        
+        self._c.execute( 'ANALYZE ' + name + ';' )
+        
+        ( num_rows, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + name + ';' ).fetchone()
+        
+        self._c.execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
+        
+        self._c.execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusData.GetNow() ) )
         
     
     def _ArchiveFiles( self, hash_ids ):
@@ -1632,6 +1617,9 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ( phash_id, ) for phash_id in deletee_phash_ids ) )
         
+        self._c.execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
+        self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? or larger_hash_id = ?;', ( hash_id, hash_id ) )
+        
     
     def _CacheSimilarFilesGenerateBranch( self, job_key, parent_id, phash_id, phash, children ):
         
@@ -1742,17 +1730,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesGetMaintenanceStatus( self ):
         
-        ( num_current_phashes, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_perceptual_hashes;' ).fetchone()
+        searched_distances_to_count = collections.Counter( dict( self._c.execute( 'SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' ) ) )
+        duplicate_types_to_count = collections.Counter( dict( self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM duplicate_pairs GROUP BY duplicate_type;' ) ) )
+        
         ( num_phashes_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
         ( num_branches_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_branch_regen;' ).fetchone()
         
-        # gui will present this as a general 'still 100,000 still to go!' and 'completely ready to go!'
-        
-        # I could stick this on local files review services, I guess, although it better belongs on a new 'all local files' service page.
-        
-        # can add the arbitrary dupe search cache to this as well
-        
-        return ( num_current_phashes, num_phashes_to_regen, num_branches_to_regen )
+        return ( searched_distances_to_count, duplicate_types_to_count, num_phashes_to_regen, num_branches_to_regen )
         
     
     def _CacheSimilarFilesAssociatePHashes( self, hash_id, phashes ):
@@ -1768,18 +1752,19 @@ class DB( HydrusDB.HydrusDB ):
             phash_ids.add( phash_id )
             
         
+        self._c.execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, None ) )
+        
         return phash_ids
         
     
-    def _CacheSimilarFilesMaintain( self, stop_time ):
+    def _CacheSimilarFilesMaintainFiles( self, job_key ):
         
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
-        
-        job_key_pubbed = False
+        # this should take a cancellable job_key from the gui filter window
         
         hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) ]
+        
+        # remove hash_id from the pairs cache?
+        # set its search status to False, but don't remove any existing pairs
         
         client_files_manager = self._controller.GetClientFilesManager()
         
@@ -1787,23 +1772,15 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( i, hash_id ) in enumerate( hash_ids ):
             
-            if not job_key_pubbed:
-                
-                self._controller.pub( 'message', job_key )
-                
-                job_key_pubbed = True
-                
-            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
-            if should_quit or HydrusData.TimeHasPassed( stop_time ):
+            if should_quit:
                 
                 return
                 
             
             text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do )
             
-            HydrusGlobals.client_controller.pub( 'splash_set_status_text', text )
             job_key.SetVariable( 'popup_text_1', text )
             job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
             
@@ -1853,6 +1830,17 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
             
         
+        job_key.Finish()
+        
+    
+    def _CacheSimilarFilesMaintainTree( self, stop_time ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
+        
+        job_key_pubbed = False
+        
         rebalance_phash_ids = [ phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) ]
         
         num_to_do = len( rebalance_phash_ids )
@@ -1900,13 +1888,6 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _CacheSimilarFilesMaintenanceDue( self ):
-        
-        result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
-        
-        if result is not None:
-            
-            return True
-            
         
         result = self._c.execute( 'SELECT 1 FROM shape_maintenance_branch_regen;' ).fetchone()
 
@@ -2685,7 +2666,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # main
         
-        self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
+        self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, num_rows INTEGER, timestamp INTEGER );' )
         
         self._c.execute( 'CREATE TABLE client_files_locations ( prefix TEXT, location TEXT );' )
         
@@ -2819,6 +2800,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE external_caches.shape_maintenance_phash_regen ( hash_id INTEGER PRIMARY KEY );' )
         self._c.execute( 'CREATE TABLE external_caches.shape_maintenance_branch_regen ( phash_id INTEGER PRIMARY KEY );' )
+        
+        self._c.execute( 'CREATE TABLE external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
+        
+        self._c.execute( 'CREATE TABLE external_caches.duplicate_pairs ( smaller_hash_id INTEGER, larger_hash_id INTEGER, duplicate_type INTEGER, PRIMARY KEY( smaller_hash_id, larger_hash_id ) );' )
+        self._c.execute( 'CREATE UNIQUE INDEX external_caches.duplicate_pairs_reversed_hash_ids ON duplicate_pairs ( larger_hash_id, smaller_hash_id );' )
         
         # master
         
@@ -3053,7 +3039,7 @@ class DB( HydrusDB.HydrusDB ):
             self._controller.CallToThread( client_files_manager.DelayedDeleteFiles, file_hashes )
             
         
-        useful_thumbnail_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id != ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( self._trash_service_id, ) ) }
+        useful_thumbnail_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) }
         
         deletable_thumbnail_hash_ids = hash_ids.difference( useful_thumbnail_hash_ids )
         
@@ -3558,6 +3544,81 @@ class DB( HydrusDB.HydrusDB ):
         predicates = ClientData.MergePredicates( all_predicates )
         
         return predicates
+        
+    
+    def _GetBigTableNamesToAnalyze( self, force_reanalyze = False ):
+        
+        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+        
+        all_names = set()
+        
+        for db_name in db_names:
+            
+            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
+            
+        
+        all_names.discard( 'sqlite_stat1' )
+        
+        if force_reanalyze:
+            
+            names_to_analyze = list( all_names )
+            
+        else:
+            
+            # The idea here is that some tables get huge faster than the normal maintenance cycle (usually after syncing to big repo)
+            # They then search real slow for like 14 days. And then after that they don't need new analyzes tbh
+            # Analyze on a small table takes ~1ms, so let's instead frequently do smaller tables and then catch them and throttle down as they grow
+            
+            big_table_minimum = 10000
+            huge_table_minimum = 1000000
+            
+            small_table_stale_time_delta = 86400
+            big_table_stale_time_delta = 30 * 86400
+            huge_table_stale_time_delta = 30 * 86400 * 6
+            
+            existing_names_to_info = { name : ( num_rows, timestamp ) for ( name, num_rows, timestamp ) in self._c.execute( 'SELECT name, num_rows, timestamp FROM analyze_timestamps;' ) }
+            
+            names_to_analyze = []
+            
+            for name in all_names:
+                
+                if name in existing_names_to_info:
+                    
+                    ( num_rows, timestamp ) = existing_names_to_info[ name ]
+                    
+                    if num_rows > big_table_minimum:
+                        
+                        if num_rows > huge_table_minimum:
+                            
+                            due_time = timestamp + huge_table_stale_time_delta
+                            
+                        else:
+                            
+                            due_time = timestamp + big_table_stale_time_delta
+                            
+                        
+                        if HydrusData.TimeHasPassed( due_time ):
+                            
+                            names_to_analyze.append( name )
+                            
+                        
+                    else:
+                        
+                        # these usually take a couple of milliseconds, so just sneak them in here. no need to bother the user with a prompt
+                        if HydrusData.TimeHasPassed( timestamp + small_table_stale_time_delta ):
+                            
+                            self._AnalyzeTable( name )
+                            
+                        
+                    
+                else:
+                    
+                    names_to_analyze.append( name )
+                    
+                
+            
+        
+        return names_to_analyze
         
     
     def _GetClientFilesLocations( self ):
@@ -5777,6 +5838,31 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?' + age_phrase + limit_phrase + ';', ( self._trash_service_id, ) ) }
         
+        if HydrusGlobals.db_report_mode:
+            
+            message = 'When asked for '
+            
+            if limit is None:
+                
+                message += 'all the'
+                
+            else:
+                
+                message += 'at most ' + HydrusData.ConvertIntToPrettyString( limit )
+                
+            
+            message += ' trash files,'
+            
+            if minimum_age is not None:
+                
+                message += ' with minimum age ' + HydrusData.ConvertTimestampToPrettyAge( timestamp_cutoff ) + ','
+                
+            
+            message += ' I found ' + HydrusData.ConvertIntToPrettyString( len( hash_ids ) ) + '.'
+            
+            HydrusData.ShowText( message )
+            
+        
         return self._GetHashes( hash_ids )
         
     
@@ -6211,22 +6297,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # analyze
         
-        stale_time_delta = 30 * 86400
-        
-        existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
-        
-        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
-        
-        all_names = set()
-        
-        for db_name in db_names:
-            
-            all_names.update( ( name for ( name, ) in self._c.execute( 'SELECT name FROM ' + db_name + '.sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
-            
-        
-        names_to_analyze = { name for name in all_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
-        
-        names_to_analyze.discard( 'sqlite_stat1' )
+        names_to_analyze = self._GetBigTableNamesToAnalyze()
         
         if len( names_to_analyze ) > 0:
             
@@ -7119,6 +7190,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'service_filenames': result = self._GetServiceFilenames( *args, **kwargs )
         elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
         elif action == 'services': result = self._GetServices( *args, **kwargs )
+        elif action == 'similar_files_maintenance_status': result = self._CacheSimilarFilesGetMaintenanceStatus( *args, **kwargs )
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
@@ -7505,106 +7577,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 180:
-            
-            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'rule34hentai', ClientDefaults.GetDefaultBoorus()[ 'rule34hentai' ] ) )
-            
-            #
-            
-            names_seen = set()
-            
-            info = self._c.execute( 'SELECT service_id, name FROM services;', ).fetchall()
-            
-            for ( service_id, name ) in info:
-                
-                if name in names_seen:
-                    
-                    while name in names_seen:
-                        
-                        name += str( random.randint( 0, 9 ) )
-                        
-                    
-                    self._c.execute( 'UPDATE services SET name = ? WHERE service_id = ?;', ( name, service_id ) )
-                    
-                
-                names_seen.add( name )
-                
-            
-        
-        if version == 182:
-            
-            self._c.execute( 'DELETE FROM service_info WHERE info_type IN ( ?, ? );', ( HC.SERVICE_INFO_NUM_THUMBNAILS, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
-            
-        
-        if version == 183:
-            
-            self._c.execute( 'CREATE TABLE client_files_locations ( prefix TEXT, location TEXT );' )
-            
-            client_files_default = os.path.join( self._db_dir, 'client_files' )
-            
-            location = HydrusPaths.ConvertAbsPathToPortablePath( client_files_default, HC.BASE_DIR )
-            
-            for prefix in HydrusData.IterateHexPrefixes():
-                
-                self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( prefix, location ) )
-                
-            
-        
-        if version == 184:
-            
-            result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( '', ) ).fetchone()
-            
-            if result is not None:
-                
-                ( tag_id, ) = result
-                
-                self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
-                
-            
-        
-        if version == 188:
-            
-            self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
-            
-        
-        if version == 189:
-            
-            self._controller.pub( 'splash_set_status_text', 'updating file tables' )
-            
-            #
-            
-            self._c.execute( 'DROP INDEX file_petitions_hash_id_index;' )
-            
-            self._c.execute( 'ALTER TABLE file_petitions RENAME TO file_petitions_old;' )
-            
-            self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ) );' )
-            self._c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
-            
-            self._c.execute( 'INSERT INTO file_petitions SELECT * FROM file_petitions_old;' )
-            
-            self._c.execute( 'DROP TABLE file_petitions_old;' )
-            
-            #
-            
-            self._c.execute( 'ALTER TABLE files_info RENAME TO files_info_old;' )
-            
-            self._c.execute( 'CREATE TABLE current_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-            self._c.execute( 'CREATE INDEX current_files_timestamp ON current_files ( timestamp );' )
-            
-            self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER );' )
-            self._c.execute( 'CREATE INDEX files_info_size ON files_info ( size );' )
-            self._c.execute( 'CREATE INDEX files_info_mime ON files_info ( mime );' )
-            self._c.execute( 'CREATE INDEX files_info_width ON files_info ( width );' )
-            self._c.execute( 'CREATE INDEX files_info_height ON files_info ( height );' )
-            self._c.execute( 'CREATE INDEX files_info_duration ON files_info ( duration );' )
-            self._c.execute( 'CREATE INDEX files_info_num_frames ON files_info ( num_frames );' )
-            
-            self._c.execute( 'INSERT INTO current_files SELECT service_id, hash_id, timestamp FROM files_info_old;' )
-            self._c.execute( 'INSERT OR IGNORE INTO files_info SELECT hash_id, size, mime, width, height, duration, num_frames, num_words FROM files_info_old;' )
-            
-            self._c.execute( 'DROP TABLE files_info_old;' )
-            
         
         if version == 192:
             
@@ -8132,7 +8104,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'splash_set_status_text', 'analyzing new tables' )
             
-            self._Analyze()
+            self._AnalyzeStaleBigTables()
             
             self._c.execute( 'COMMIT;' )
             
@@ -8866,6 +8838,26 @@ class DB( HydrusDB.HydrusDB ):
             self.pub_initial_message( message )
             
         
+        if version == 239:
+            
+            self._c.execute( 'DROP TABLE analyze_timestamps;' )
+            
+            self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, num_rows INTEGER, timestamp INTEGER );' )
+            
+            #
+            
+            self._controller.pub( 'splash_set_status_text', 'setting up next step of similar files stuff' )
+            
+            self._c.execute( 'CREATE TABLE external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
+            
+            self._c.execute( 'CREATE TABLE external_caches.duplicate_pairs ( smaller_hash_id INTEGER, larger_hash_id INTEGER, duplicate_type INTEGER, PRIMARY KEY( smaller_hash_id, larger_hash_id ) );' )
+            self._c.execute( 'CREATE UNIQUE INDEX external_caches.duplicate_pairs_reversed_hash_ids ON duplicate_pairs ( larger_hash_id, smaller_hash_id );' )
+            
+            combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            
+            self._c.execute( 'INSERT OR IGNORE INTO shape_search_cache SELECT hash_id, NULL FROM current_files, files_info USING ( hash_id ) WHERE service_id = ? and mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WE_CAN_PHASH ) + ';', ( combined_local_file_service_id, ) )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -9501,7 +9493,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Write( self, action, *args, **kwargs ):
         
-        if action == 'analyze': result = self._Analyze( *args, **kwargs )
+        if action == 'analyze': result = self._AnalyzeStaleBigTables( *args, **kwargs )
         elif action == 'backup': result = self._Backup( *args, **kwargs )
         elif action == 'content_update_package':result = self._ProcessContentUpdatePackage( *args, **kwargs )
         elif action == 'content_updates':result = self._ProcessContentUpdates( *args, **kwargs )
@@ -9519,7 +9511,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-        elif action == 'maintain_similar_files': result = self._CacheSimilarFilesMaintain( *args, **kwargs )
+        elif action == 'maintain_similar_files_tree': result = self._CacheSimilarFilesMaintainTree( *args, **kwargs )
         elif action == 'push_recent_tags': result = self._PushRecentTags( *args, **kwargs )
         elif action == 'regenerate_ac_cache': result = self._RegenerateACCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': result = self._CacheSimilarFilesRegenerateTree( *args, **kwargs )

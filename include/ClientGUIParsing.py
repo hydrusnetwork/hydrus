@@ -460,7 +460,7 @@ class EditNodes( wx.Panel ):
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        for node in self._nodes.GetSelectedClientData():
+        for node in self._nodes.GetObjects( only_selected = True ):
             
             to_export.append( node )
             
@@ -568,7 +568,7 @@ class EditNodes( wx.Panel ):
     
     def Duplicate( self ):
         
-        nodes_to_dupe = self._nodes.GetSelectedClientData()
+        nodes_to_dupe = self._nodes.GetObjects( only_selected = True )
         
         for node in nodes_to_dupe:
             
@@ -584,7 +584,7 @@ class EditNodes( wx.Panel ):
         
         for i in self._nodes.GetAllSelected():
             
-            node = self._nodes.GetClientData( i )
+            node = self._nodes.GetObject( i )
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit node' ) as dlg:
                 
@@ -619,7 +619,7 @@ class EditNodes( wx.Panel ):
     
     def GetValue( self ):
         
-        return self._nodes.GetClientData()
+        return self._nodes.GetObjects()
         
     
     def Paste( self ):
@@ -1629,7 +1629,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        for script in self._scripts.GetSelectedClientData():
+        for script in self._scripts.GetObjects( only_selected = True ):
             
             to_export.append( script )
             
@@ -1719,7 +1719,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        scripts = self._scripts.GetClientData()
+        scripts = self._scripts.GetObjects()
         
         HydrusGlobals.client_controller.Write( 'serialisables_overwrite', self.SCRIPT_TYPES, scripts )
         
@@ -1731,7 +1731,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def Duplicate( self ):
         
-        scripts_to_dupe = self._scripts.GetSelectedClientData()
+        scripts_to_dupe = self._scripts.GetObjects( only_selected = True )
         
         for script in scripts_to_dupe:
             
@@ -1749,7 +1749,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._scripts.GetAllSelected():
             
-            script = self._scripts.GetClientData( i )
+            script = self._scripts.GetObject( i )
             
             if isinstance( script, ClientParsing.ParseRootFileLookup ):
                 

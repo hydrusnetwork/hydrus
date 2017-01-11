@@ -279,7 +279,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             if self._service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                 
                 self._delete_local_deleted = wx.Button( self, label = 'clear deleted file record' )
-                self._delete_local_deleted.SetToolTipString( 'Make the client forget which files it has deleted from local files, resetting all the \'exclude already deleted files\' checks.' )
+                self._delete_local_deleted.SetToolTipString( 'Command the client to forget which files it has deleted, resetting all the \'exclude previously deleted files\' checks.' )
                 self._delete_local_deleted.Bind( wx.EVT_BUTTON, self.EventDeleteLocalDeleted )
                 
             
@@ -829,7 +829,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def EventDeleteLocalDeleted( self, event ):
             
-            message = 'This will clear the client\'s memory of which files it has locally deleted, which affects \'exclude already deleted files\' import tests.'
+            message = 'This will clear the client\'s memory of which files it has locally deleted, which affects \'exclude previously deleted files\' import tests.'
             message += os.linesep * 2
             message += 'It will freeze the gui while it works.'
             message += os.linesep * 2

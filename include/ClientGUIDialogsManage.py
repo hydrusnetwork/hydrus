@@ -1515,7 +1515,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for index in indices:
             
-            export_folder = self._export_folders.GetClientData( index )
+            export_folder = self._export_folders.GetObject( index )
             
             original_name = export_folder.GetName()
             
@@ -1557,7 +1557,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         existing_db_names = set( HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ) )
         
-        export_folders = self._export_folders.GetClientData()
+        export_folders = self._export_folders.GetObjects()
         
         good_names = set()
         
@@ -2592,7 +2592,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         for index in indices:
             
-            import_folder = self._import_folders.GetClientData( index )
+            import_folder = self._import_folders.GetObject( index )
             
             original_name = import_folder.GetName()
             
@@ -2636,7 +2636,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         good_names = set()
         
-        import_folders = self._import_folders.GetClientData()
+        import_folders = self._import_folders.GetObjects()
         
         for import_folder in import_folders:
             
@@ -3171,20 +3171,34 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         form_fields = {}
         
-        form_fields[ 'mode' ] = 'login'
+        # this no longer seems to work--they updated to some javascript gubbins for their main form
+        # I couldn't see where the POST was going in Firefox dev console, so I guess it is some other thing that doesn't pick up
+        # the old form is still there, but hidden and changed to https://accounts.pixiv.net/login, but even if I do that, it just refreshes in Japanese :/
+        
+        form_fields[ 'post_key' ] = 'c779b8a16389a7861d584d11d73424a0'
+        form_fields[ 'lang' ] = 'en'
+        form_fields[ 'source' ] = 'pc'
+        form_fields[ 'return_to' ] = 'http://www.pixiv.net'
         form_fields[ 'pixiv_id' ] = id
-        form_fields[ 'pass' ] = password
+        form_fields[ 'password' ] = password
         
         body = urllib.urlencode( form_fields )
         
         headers = {}
         headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
         
-        ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
+        ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'https://accounts.pixiv.net/login', request_headers = headers, body = body, return_cookies = True )
         
-        # _ only given to logged in php sessions
-        if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabelText( 'OK!' )
-        else: self._status.SetLabelText( 'Did not work!' )
+        # actually, it needs an _ in it to be a logged in session
+        # posting to the old login form gives you a 301 and a session without an underscore
+        if 'PHPSESSID' in cookies:
+            
+            self._status.SetLabelText( 'OK!' )
+            
+        else:
+            
+            self._status.SetLabelText( 'Did not work!' )
+            
         
         wx.CallLater( 2000, self._status.SetLabel, '' )
         

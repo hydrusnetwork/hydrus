@@ -2951,10 +2951,8 @@ class WebSessionManagerClient( object ):
                 
                 form_fields = {}
                 
-                form_fields[ 'mode' ] = 'login'
                 form_fields[ 'pixiv_id' ] = id
-                form_fields[ 'pass' ] = password
-                form_fields[ 'skip' ] = '1'
+                form_fields[ 'password' ] = password
                 
                 body = urllib.urlencode( form_fields )
                 
@@ -2964,7 +2962,7 @@ class WebSessionManagerClient( object ):
                 ( response_gumpf, cookies ) = self._controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
                 
                 # _ only given to logged in php sessions
-                if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Pixiv login credentials not accepted!' )
+                if 'PHPSESSID' not in cookies: raise Exception( 'Pixiv login credentials not accepted!' )
                 
                 expires = now + 30 * 86400
                 

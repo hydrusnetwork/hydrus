@@ -1933,7 +1933,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             if num_successful > 0: status_strings.append( str( num_successful ) + ' successful' )
             if num_failed > 0: status_strings.append( str( num_failed ) + ' failed' )
-            if num_deleted > 0: status_strings.append( str( num_deleted ) + ' already deleted' )
+            if num_deleted > 0: status_strings.append( str( num_deleted ) + ' previously deleted' )
             if num_redundant > 0: status_strings.append( str( num_redundant ) + ' already in db' )
             
             status = ', '.join( status_strings )

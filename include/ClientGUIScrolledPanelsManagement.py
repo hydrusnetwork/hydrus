@@ -1371,7 +1371,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for i in self._media_viewer_options.GetAllSelected():
                 
-                data = self._media_viewer_options.GetClientData( i )
+                data = self._media_viewer_options.GetObject( i )
                 
                 title = 'set media view options information'
                 
@@ -1436,7 +1436,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 HydrusData.ShowText( 'Could not parse those zooms, so they were not saved!' )
                 
             
-            for data in self._media_viewer_options.GetClientData():
+            for data in self._media_viewer_options.GetObjects():
                 
                 data = list( data )
                 
@@ -2489,7 +2489,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        for subscription in self._subscriptions.GetSelectedClientData():
+        for subscription in self._subscriptions.GetObjects( only_selected = True ):
             
             to_export.append( subscription )
             
@@ -2563,7 +2563,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetClientData( i )
+            subscription = self._subscriptions.GetObject( i )
             
             subscription.CheckNow()
             
@@ -2575,7 +2575,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        subscriptions = self._subscriptions.GetClientData()
+        subscriptions = self._subscriptions.GetObjects()
         
         HydrusGlobals.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
         
@@ -2591,7 +2591,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         subs_to_dupe = []
         
-        for subscription in self._subscriptions.GetSelectedClientData():
+        for subscription in self._subscriptions.GetObjects( only_selected = True ):
             
             subs_to_dupe.append( subscription )
             
@@ -2612,7 +2612,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetClientData( i )
+            subscription = self._subscriptions.GetObject( i )
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg:
                 
@@ -2735,7 +2735,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetClientData( i )
+            subscription = self._subscriptions.GetObject( i )
             
             subscription.PauseResume()
             
@@ -2755,7 +2755,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for i in self._subscriptions.GetAllSelected():
                     
-                    subscription = self._subscriptions.GetClientData( i )
+                    subscription = self._subscriptions.GetObject( i )
                     
                     subscription.Reset()
                     
@@ -2771,7 +2771,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for i in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetClientData( i )
+            subscription = self._subscriptions.GetObject( i )
             
             seed_cache = subscription.GetSeedCache()
             

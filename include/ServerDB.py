@@ -18,6 +18,7 @@ import random
 import ServerFiles
 import shutil
 import sqlite3
+import stat
 import sys
 import threading
 import time
@@ -2330,56 +2331,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusData.Print( 'The server is updating to version ' + str( version + 1 ) )
         
-        if version == 182:
-            
-            HydrusData.Print( 'generating swf thumbnails' )
-            
-            mimes = { HC.APPLICATION_FLASH }
-            mimes.update( HC.VIDEO )
-            
-            hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( mimes ) + ';' ) }
-            
-            for hash_id in hash_ids:
-                
-                hash = self._GetHash( hash_id )
-                
-                try:
-                    
-                    file_path = ServerFiles.GetFilePath( hash )
-                    
-                except HydrusExceptions.NotFoundException:
-                    
-                    continue
-                    
-                
-                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
-                
-                thumbnail_path = ServerFiles.GetExpectedThumbnailPath( hash )
-                
-                with open( thumbnail_path, 'wb' ) as f:
-                    
-                    f.write( thumbnail )
-                    
-                
-            
-        
-        if version == 184:
-            
-            result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( '', ) ).fetchone()
-            
-            if result is not None:
-                
-                ( tag_id, ) = result
-                
-                self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
-                
-            
-        
-        if version == 188:
-            
-            self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, timestamp INTEGER );' )
-            
-        
         if version == 198:
             
             HydrusData.Print( 'exporting mappings to external db' )
@@ -2596,6 +2547,12 @@ class DB( HydrusDB.HydrusDB ):
             HydrusData.Print( 'Generating SSL cert and key' )
             
             HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
+            
+        
+        if version == 239:
+            
+            os.chmod( self._ssl_cert_path, stat.S_IREAD )
+            os.chmod( self._ssl_key_path, stat.S_IREAD )
             
         
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )
