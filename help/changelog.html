@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 240</h3></li>
+				<ul>
+					<li>improved how the client analyzes itself, reducing maintenance latency and also overall cpu usage. syncing a big repo will no longer introduce lingering large lag, and huge analyze jobs will run significantly less frequently</li>
+					<li>the analyze cache will be reset on update, so you will have one big round of analyze the next time you maintain, and then you are good</li>
+					<li>added data structures to support auto-discovery of duplicate files</li>
+					<li>improved how some similar files maintenance occurs</li>
+					<li>flushed out duplicate status reporting</li>
+					<li>added a new page type, currently under pages->search pages->duplicates, to handle duplicate discovery and filtering</li>
+					<li>created a gui skeleton for the new duplicates page</li>
+					<li>started some handles and update code for the new duplicates page</li>
+					<li>wrote a new txt file in the db dir about the new emergency extract scripts</li>
+					<li>wrote an emergency extract script to migrate subscriptions to a new db</li>
+					<li>wrote an emergency extract script to migrate options to a new db</li>
+					<li>the trash clearing daemon now runs in the foreground, and a little of its code is improved</li>
+					<li>the trash clearing daemon now makes a popup message when it does work</li>
+					<li>the server's ssl keys are now set to read-only on Windows and user read-only only (i.e. chmod 400) on Linux and OS X on creation and update</li>
+					<li>added a explicitly unicode popup message to the debug test</li>
+					<li>fixed some network error catching code that was using Windows-only error codes</li>
+					<li>converted more of the thumbnail right-click menu over to the new system</li>
+					<li>improved some listctrl code</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 239</h3></li>
 				<ul>
 					<li>finished up similar files search data maintenance code</li>
