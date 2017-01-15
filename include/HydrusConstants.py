@@ -25,6 +25,9 @@ HELP_DIR = os.path.join( BASE_DIR, 'help' )
 INCLUDE_DIR = os.path.join( BASE_DIR, 'include' )
 STATIC_DIR = os.path.join( BASE_DIR, 'static' )
 
+USERDATA_DIR = BASE_DIR
+LICENSE_DIR = BASE_DIR
+
 #
 
 PLATFORM_WINDOWS = False

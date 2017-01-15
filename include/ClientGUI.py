@@ -224,7 +224,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         aboutinfo.SetDescription( description )
         
-        with open( os.path.join( HC.BASE_DIR, 'license.txt' ), 'rb' ) as f: license = f.read()
+        with open( os.path.join( HC.LICENSE_DIR, 'license.txt' ), 'rb' ) as f: license = f.read()
         
         aboutinfo.SetLicense( license )
         

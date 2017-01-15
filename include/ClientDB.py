@@ -8300,7 +8300,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         tas_flat = info[ 'tag_archive_sync' ].items()
                         
-                        info[ 'tag_archive_sync' ] = { HydrusPaths.ConvertAbsPathToPortablePath( os.path.join( client_archives_folder, archive_name + '.db', HC.BASE_DIR ) ) : namespaces for ( archive_name, namespaces ) in tas_flat }
+                        info[ 'tag_archive_sync' ] = { HydrusPaths.ConvertAbsPathToPortablePath( os.path.join( client_archives_folder, archive_name + '.db', HC.USERDATA_DIR ) ) : namespaces for ( archive_name, namespaces ) in tas_flat }
                         
                         self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                         
@@ -8428,7 +8428,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 't' + prefix, location ) )
                 self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'r' + prefix, location ) )
                 
-                location = HydrusPaths.ConvertPortablePathToAbsPath( location, HC.BASE_DIR )
+                location = HydrusPaths.ConvertPortablePathToAbsPath( location, HC.USERDATA_DIR )
                 
                 text_prefix = 'rearranging client files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, 256 ) + ', '
                 
@@ -8498,7 +8498,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    a_p = os.path.normpath( os.path.join( HC.BASE_DIR, p ) )
+                    a_p = os.path.normpath( os.path.join( HC.USERDATA_DIR, p ) )
                     
                 
                 if not HC.PLATFORM_WINDOWS and not os.path.exists( a_p ):

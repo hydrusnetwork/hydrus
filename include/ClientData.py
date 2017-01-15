@@ -512,7 +512,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         if db_dir is None:
             
-            db_dir = os.path.join( HC.BASE_DIR, 'db' )
+            db_dir = os.path.join( HC.USERDATA_DIR, 'db' )
             
         
         self._dictionary = HydrusSerialisable.SerialisableDictionary()
@@ -746,7 +746,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    a_p = os.path.normpath( os.path.join( HC.BASE_DIR, p ) )
+                    a_p = os.path.normpath( os.path.join( HC.USERDATA_DIR, p ) )
                     
                 
                 if not HC.PLATFORM_WINDOWS and not os.path.exists( a_p ):
