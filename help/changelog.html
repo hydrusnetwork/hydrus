@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 241</h3></li>
+				<ul>
+					<li>fixed the 'setnondupename' problem that was affecting 'add' actions on manage subscriptions, scripts, and import/export folders</li>
+					<li>added some more tests to catch this problem automatically in future</li>
+					<li>cleaned up some similar files phash regeneration logic</li>
+					<li>cleaned up similar files maintenance code to deal with the new duplicates page</li>
+					<li>wrote a similar files duplicate pair search maintenance routine</li>
+					<li>activated file phash regen button on the new duplicates page</li>
+					<li>activated branch rebalancing button on the new duplicates page</li>
+					<li>activated duplicate search button on the new duplicates page</li>
+					<li>search distance on the new duplicates page is now remembered between sessions</li>
+					<li>improved the phash algorithm to use median instead of mean--it now gives fewer apparent false positives and negatives, but I think it may also be stricter in general</li>
+					<li>the duplicate system now discards phashes for blank, flat colour images (this will be more useful when I reintroduce dupe checking for animations, which often start with a black frame)</li>
+					<li>misc phash code cleanup</li>
+					<li>all local jpegs and pngs will be scheduled for phash regeneration on update as their current phashes are legacies of several older versions of the algorithm</li>
+					<li>debuted a cog menu button on the new duplicates page to refresh the page and reset found potential duplicate pairs--this cog should be making appearances elsewhere to add settings and reduce excess buttons</li>
+					<li>improved some search logic that was refreshing too much info on an 'include current/pending tags' button press</li>
+					<li>fixed pixiv login--for now!</li>
+					<li>system:dimensions now catches an enter key event and passes it to the correct ok button, rather than always num_pixels</li>
+					<li>fixed some bad http->https conversion when uploading files to file repo</li>
+					<li>folder deletion will try to deal better with read-only nested files</li>
+					<li>tag parent uploads will now go one at a time (rather than up to 100 as before) to reduce commit lag</li>
+					<li>updated to python 2.7.13 for windows</li>
+					<li>updated to OpenCV 3.2 for windows--this new version does not crash with the same files that 3.1 does, so I recommend windows users turn off 'load images with pil' under options->media if they have it set</li>
+					<li>I think I improved some unicode error handling</li>
+					<li>added LICENSE_PATH and harmonised various instances of default db dir creation to DEFAULT_DB_DIR, both in HydrusConstants</li>
+					<li>misc code cleanup and bitmap button cleanup</li>
+				</ul>
 				<li><h3>version 240</h3></li>
 				<ul>
 					<li>improved how the client analyzes itself, reducing maintenance latency and also overall cpu usage. syncing a big repo will no longer introduce lingering large lag, and huge analyze jobs will run significantly less frequently</li>
