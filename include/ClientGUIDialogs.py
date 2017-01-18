@@ -1327,7 +1327,6 @@ class DialogInputFileSystemPredicates( Dialog ):
             self._predicate_panel = predicate_class( self )
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
-            self._ok.SetDefault()
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
@@ -1338,12 +1337,31 @@ class DialogInputFileSystemPredicates( Dialog ):
             
             self.SetSizer( hbox )
             
+            self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+            
         
-        def EventOK( self, event ):
+        def _DoOK( self ):
             
             predicates = self._predicate_panel.GetPredicates()
             
             self.GetParent().SubPanelOK( predicates )
+            
+        
+        def EventCharHook( self, event ):
+            
+            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                self._DoOK()
+                
+            else:
+                
+                event.Skip()
+                
+            
+        
+        def EventOK( self, event ):
+            
+            self._DoOK()
             
         
     

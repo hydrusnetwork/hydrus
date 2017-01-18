@@ -152,20 +152,32 @@ def GenerateShapePerceptualHashes( path ):
     
     dct_88 = dct[:8,:8]
     
-    # get mean of dct, excluding [0,0]
+    # get median of dct
+    # exclude [0,0], which represents flat colour
+    # this [0,0] exclusion is apparently important for mean, but maybe it ain't so important for median--w/e
     
-    mask = numpy.ones( ( 8, 8 ) )
+    # old mean code
+    # mask = numpy.ones( ( 8, 8 ) )
+    # mask[0,0] = 0
+    # average = numpy.average( dct_88, weights = mask )
     
-    mask[0,0] = 0
+    median = numpy.median( dct_88.reshape( 64 )[1:] )
     
-    average = numpy.average( dct_88, weights = mask )
+    # make a monochromatic, 64-bit hash of whether the entry is above or below the median
     
-    # make a monochromatic, 64-bit hash of whether the entry is above or below the mean
+    dct_88_boolean = dct_88 > median
+    
+    # convert TTTFTFTF to 11101010 by repeatedly shifting answer and adding 0 or 1
+    # you can even go ( a << 1 ) + b and leave out the initial param on the latel reduce call as bools act like ints for this
+    # but let's not go crazy for another two nanoseconds
+    collapse_bools_to_binary_uint = lambda a, b: ( a << 1 ) + int( b )
     
     bytes = []
     
     for i in range( 8 ):
         
+        '''
+        # old way of doing it, which compared value to median every time
         byte = 0
         
         for j in range( 8 ):
@@ -174,15 +186,27 @@ def GenerateShapePerceptualHashes( path ):
             
             value = dct_88[i,j]
             
-            if value > average: byte |= 1
+            if value > median:
+                
+                byte |= 1
+                
             
+        '''
+        
+        byte = reduce( collapse_bools_to_binary_uint, dct_88_boolean[i], 0 )
         
         bytes.append( byte )
         
     
     phash = str( bytearray( bytes ) )
     
-    phashes = [ phash ]
+    # now discard the blank hash, which is 1000000... and not useful
+    
+    phashes = set()
+    
+    phashes.add( phash )
+    
+    phashes.discard( CC.BLANK_PHASH )
     
     # we good
     

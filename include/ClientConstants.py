@@ -16,6 +16,8 @@ ID_TIMER_UPDATES = wx.NewId()
 
 #
 
+BLANK_PHASH = '\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but everything else 0 means only significant part of dct was [0,0], which represents flat colour
+
 CAN_HIDE_MOUSE = True
 
 # Hue is generally 200, Sat and Lum changes based on need
@@ -433,6 +435,8 @@ class GlobalBMPs( object ):
         GlobalBMPs.dump_recoverable = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'dump_recoverable.png' ) )
         GlobalBMPs.dump_fail = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'dump_fail.png' ) )
         
+        GlobalBMPs.cog = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'cog.png' ) )
+        GlobalBMPs.check = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'check.png' ) )
         GlobalBMPs.pause = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'pause.png' ) )
         GlobalBMPs.play = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'play.png' ) )
         GlobalBMPs.stop = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'stop.png' ) )

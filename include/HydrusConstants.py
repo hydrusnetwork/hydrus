@@ -25,6 +25,9 @@ HELP_DIR = os.path.join( BASE_DIR, 'help' )
 INCLUDE_DIR = os.path.join( BASE_DIR, 'include' )
 STATIC_DIR = os.path.join( BASE_DIR, 'static' )
 
+DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
+LICENSE_PATH = os.path.join( BASE_DIR, 'license.txt' )
+
 #
 
 PLATFORM_WINDOWS = False
@@ -46,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 17
-SOFTWARE_VERSION = 240
+SOFTWARE_VERSION = 241
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -125,6 +128,13 @@ HAMMING_EXACT_MATCH = 0
 HAMMING_VERY_SIMILAR = 2
 HAMMING_SIMILAR = 4
 HAMMING_SPECULATIVE = 8
+
+hamming_string_lookup = {}
+
+hamming_string_lookup[ HAMMING_EXACT_MATCH ] = 'exact match'
+hamming_string_lookup[ HAMMING_VERY_SIMILAR ] = 'very similar'
+hamming_string_lookup[ HAMMING_SIMILAR ] = 'similar'
+hamming_string_lookup[ HAMMING_SPECULATIVE ] = 'speculative'
 
 HYDRUS_CLIENT = 0
 HYDRUS_SERVER = 1

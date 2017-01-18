@@ -3149,16 +3149,16 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        id = self._id.GetValue()
+        pixiv_id = self._id.GetValue()
         password = self._password.GetValue()
         
-        if id == '' and password == '':
+        if pixiv_id == '' and password == '':
             
             HydrusGlobals.client_controller.Write( 'serialisable_simple', 'pixiv_account', None )
             
         else:
             
-            HydrusGlobals.client_controller.Write( 'serialisable_simple', 'pixiv_account', ( id, password ) )
+            HydrusGlobals.client_controller.Write( 'serialisable_simple', 'pixiv_account', ( pixiv_id, password ) )
             
         
         self.EndModal( wx.ID_OK )
@@ -3166,41 +3166,23 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
     
     def EventTest( self, event ):
         
-        id = self._id.GetValue()
+        pixiv_id = self._id.GetValue()
         password = self._password.GetValue()
         
-        form_fields = {}
-        
-        # this no longer seems to work--they updated to some javascript gubbins for their main form
-        # I couldn't see where the POST was going in Firefox dev console, so I guess it is some other thing that doesn't pick up
-        # the old form is still there, but hidden and changed to https://accounts.pixiv.net/login, but even if I do that, it just refreshes in Japanese :/
-        
-        form_fields[ 'post_key' ] = 'c779b8a16389a7861d584d11d73424a0'
-        form_fields[ 'lang' ] = 'en'
-        form_fields[ 'source' ] = 'pc'
-        form_fields[ 'return_to' ] = 'http://www.pixiv.net'
-        form_fields[ 'pixiv_id' ] = id
-        form_fields[ 'password' ] = password
-        
-        body = urllib.urlencode( form_fields )
-        
-        headers = {}
-        headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
-        
-        ( response_gumpf, cookies ) = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'https://accounts.pixiv.net/login', request_headers = headers, body = body, return_cookies = True )
-        
-        # actually, it needs an _ in it to be a logged in session
-        # posting to the old login form gives you a 301 and a session without an underscore
-        if 'PHPSESSID' in cookies:
+        try:
+            
+            manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
+            
+            cookies = manager.GetPixivCookies( pixiv_id, password )
             
             self._status.SetLabelText( 'OK!' )
             
-        else:
+            wx.CallLater( 5000, self._status.SetLabel, '' )
             
-            self._status.SetLabelText( 'Did not work!' )
+        except HydrusExceptions.ForbiddenException as e:
             
-        
-        wx.CallLater( 2000, self._status.SetLabel, '' )
+            self._status.SetLabelText( 'Did not work! ' + repr( e ) )
+            
         
     
 class DialogManageRatings( ClientGUIDialogs.Dialog ):

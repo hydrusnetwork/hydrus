@@ -333,6 +333,19 @@ def MakeFileWritable( path ):
         
         os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
         
+        if os.path.isdir( path ):
+            
+            for ( root, dirnames, filenames ) in os.walk( path ):
+                
+                for filename in filenames:
+                    
+                    sub_path = os.path.join( root, filename )
+                    
+                    os.chmod( sub_path, stat.S_IWRITE | stat.S_IREAD )
+                    
+                
+            
+        
     except:
         
         pass

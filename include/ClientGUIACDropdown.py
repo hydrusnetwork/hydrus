@@ -1052,10 +1052,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._file_search_context.SetIncludeCurrentTags( value )
             
-        
-        wx.CallAfter( self.RefreshList )
-        
-        HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
+            wx.CallAfter( self.RefreshList )
+            
+            HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
+            
         
     
     def IncludePending( self, page_key, value ):
@@ -1064,10 +1064,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._file_search_context.SetIncludePendingTags( value )
             
-        
-        wx.CallAfter( self.RefreshList )
-        
-        HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
+            wx.CallAfter( self.RefreshList )
+            
+            HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
+            
         
     
     def SetSynchronisedWait( self, page_key ):

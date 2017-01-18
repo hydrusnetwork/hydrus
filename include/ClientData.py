@@ -55,6 +55,8 @@ def CatchExceptionClient( etype, value, tb ):
             first_line = pretty_value
             
         
+        trace = HydrusData.ToUnicode( trace )
+        
         job_key = ClientThreading.JobKey()
         
         if etype == HydrusExceptions.ShutdownException:
@@ -360,6 +362,8 @@ def ShowExceptionClient( e ):
         trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
     
+    trace = HydrusData.ToUnicode( trace )
+    
     pretty_value = HydrusData.ToUnicode( value )
     
     if os.linesep in pretty_value:
@@ -512,7 +516,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         if db_dir is None:
             
-            db_dir = os.path.join( HC.BASE_DIR, 'db' )
+            db_dir = HC.DEFAULT_DB_DIR
             
         
         self._dictionary = HydrusSerialisable.SerialisableDictionary()
@@ -569,6 +573,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'related_tags_search_3_duration_ms' ] = 6000
         
         self._dictionary[ 'integers' ][ 'suggested_tags_width' ] = 300
+        
+        self._dictionary[ 'integers' ][ 'similar_files_duplicate_pairs_search_distance' ] = 0
         
         #
         

@@ -1445,17 +1445,25 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
+        self._job = None
+        self._job_key = None
+        
+        menu_items = []
+        
+        menu_items.append( ( 'refresh', 'This panel does not update itself when files are added or deleted elsewhere in the client. Hitting this will refresh the numbers from the database.', self._RefreshAndUpdateStatus ) )
+        menu_items.append( ( 'reset potentials', 'This will delete all the potential duplicate pairs found so far and reset their files\' search status.', self._ResetUnknown ) )
+        
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
+        
         self._preparing_panel = ClientGUICommon.StaticBox( self, 'preparation' )
         
         # refresh button that just calls update
         
-        self._total_files = wx.StaticText( self._preparing_panel )
-        
         self._num_phashes_to_regen = wx.StaticText( self._preparing_panel )
         self._num_branches_to_regen = wx.StaticText( self._preparing_panel )
         
-        self._phashes_button = wx.BitmapButton( self._preparing_panel, bitmap = CC.GlobalBMPs.play )
-        self._branches_button = wx.BitmapButton( self._preparing_panel, bitmap = CC.GlobalBMPs.play )
+        self._phashes_button = ClientGUICommon.BetterBitmapButton( self._preparing_panel, CC.GlobalBMPs.play, self._RegeneratePhashes )
+        self._branches_button = ClientGUICommon.BetterBitmapButton( self._preparing_panel, CC.GlobalBMPs.play, self._RebalanceTree )
         
         #
         
@@ -1471,10 +1479,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._search_distance_button = ClientGUICommon.MenuButton( self._searching_panel, 'similarity', menu_items )
         
         self._search_distance_spinctrl = wx.SpinCtrl( self._searching_panel, min = 0, max = 64, size = ( 50, -1 ) )
+        self._search_distance_spinctrl.Bind( wx.EVT_SPINCTRL, self.EventSearchDistanceChanged )
         
         self._num_searched = ClientGUICommon.TextAndGauge( self._searching_panel )
         
-        self._search_button = wx.BitmapButton( self._searching_panel, bitmap = CC.GlobalBMPs.play )
+        self._search_button = ClientGUICommon.BetterBitmapButton( self._searching_panel, CC.GlobalBMPs.play, self._SearchForDuplicates )
         
         #
         
@@ -1484,30 +1493,32 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._num_same_file_duplicates = wx.StaticText( self._filtering_panel )
         self._num_alternate_duplicates = wx.StaticText( self._filtering_panel )
         
-        # bind spinctrl (which should throw another update on every shift, as well
-        # bind the buttons (nah, replace with betterbitmapbutton)
+        #
+        
+        new_options = self._controller.GetNewOptions()
+        
+        self._search_distance_spinctrl.SetValue( new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' ) )
         
         #
         
-        # initialise value of spinctrl, label of distance button (which might be 'custom')
-        
-        gridbox_1 = wx.FlexGridSizer( 0, 2 )
+        gridbox_1 = wx.FlexGridSizer( 0, 3 )
         
         gridbox_1.AddGrowableCol( 0, 1 )
         
-        gridbox_1.AddF( self._num_phashes_to_regen, CC.FLAGS_EXPAND_PERPENDICULAR )
+        gridbox_1.AddF( self._num_phashes_to_regen, CC.FLAGS_VCENTER )
+        gridbox_1.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
         gridbox_1.AddF( self._phashes_button, CC.FLAGS_VCENTER )
-        gridbox_1.AddF( self._num_branches_to_regen, CC.FLAGS_EXPAND_PERPENDICULAR )
+        gridbox_1.AddF( self._num_branches_to_regen, CC.FLAGS_VCENTER )
+        gridbox_1.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
         gridbox_1.AddF( self._branches_button, CC.FLAGS_VCENTER )
         
-        self._preparing_panel.AddF( self._total_files, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._preparing_panel.AddF( gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
         distance_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        distance_hbox.AddF( wx.StaticText( self._searching_panel, label = 'search similarity: ' ), CC.FLAGS_VCENTER )
+        distance_hbox.AddF( wx.StaticText( self._searching_panel, label = 'search distance: ' ), CC.FLAGS_VCENTER )
         distance_hbox.AddF( self._search_distance_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         distance_hbox.AddF( self._search_distance_spinctrl, CC.FLAGS_VCENTER )
         
@@ -1531,22 +1542,63 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        vbox.AddF( self._cog_button, CC.FLAGS_LONE_BUTTON )
         vbox.AddF( self._preparing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
+        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdateDBJob, id = ID_TIMER_UPDATE )
+        self._update_db_job_timer = wx.Timer( self, id = ID_TIMER_UPDATE )
+        
         #
         
-        self._RefreshAndUpdate()
+        self._RefreshAndUpdateStatus()
+        
+    
+    def _RebalanceTree( self ):
+        
+        self._job = 'branches'
+        
+        self._StartStopDBJob()
+        
+    
+    def _RegeneratePhashes( self ):
+        
+        self._job = 'phashes'
+        
+        self._StartStopDBJob()
+        
+    
+    def _ResetUnknown( self ):
+        
+        text = 'This will delete all the potential duplicate pairs and reset their files\' search status.'
+        text += os.linesep * 2
+        text += 'This can be useful if you have accidentally searched too broadly and are now swamped with too many false positives.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._controller.Write( 'delete_unknown_duplicate_pairs' )
+                
+                self._RefreshAndUpdateStatus()
+            
+        
+    
+    def _SearchForDuplicates( self ):
+        
+        self._job = 'search'
+        
+        self._StartStopDBJob()
         
     
     def _SetSearchDistance( self, value ):
         
-        self._search_distance_spinctrl.SetValue( value ) # does this trigger the update event? check it
+        self._search_distance_spinctrl.SetValue( value )
         
-        # update the label, which prob needs an HC.hamming_str dict or something, which I can then apply everywhere else as well.
+        self._UpdateStatus()
         
     
     def _SetSearchDistanceExact( self ):
@@ -1569,26 +1621,126 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._SetSearchDistance( HC.HAMMING_VERY_SIMILAR )
         
     
-    def _RefreshAndUpdate( self ):
+    def _StartStopDBJob( self ):
+        
+        if self._job_key is None:
+            
+            self._cog_button.Disable()
+            self._phashes_button.Disable()
+            self._branches_button.Disable()
+            self._search_button.Disable()
+            self._search_distance_button.Disable()
+            self._search_distance_spinctrl.Disable()
+            
+            self._job_key = ClientThreading.JobKey( cancellable = True )
+            
+            if self._job == 'phashes':
+                
+                self._phashes_button.Enable()
+                self._phashes_button.SetBitmap( CC.GlobalBMPs.stop )
+                
+                self._controller.Write( 'maintain_similar_files_phashes', job_key = self._job_key )
+                
+            elif self._job == 'branches':
+                
+                self._branches_button.Enable()
+                self._branches_button.SetBitmap( CC.GlobalBMPs.stop )
+                
+                self._controller.Write( 'maintain_similar_files_tree', job_key = self._job_key )
+                
+            elif self._job == 'search':
+                
+                self._search_button.Enable()
+                self._search_button.SetBitmap( CC.GlobalBMPs.stop )
+                
+                search_distance = self._search_distance_spinctrl.GetValue()
+                
+                self._controller.Write( 'maintain_similar_files_duplicate_pairs', search_distance, job_key = self._job_key )
+                
+            
+            self._update_db_job_timer.Start( 250, wx.TIMER_CONTINUOUS )
+            
+        else:
+            
+            self._job_key.Cancel()
+            
+        
+    
+    def _UpdateJob( self ):
+        
+        if self._job_key.IsDone():
+            
+            self._job_key = None
+            
+            self._update_db_job_timer.Stop()
+            
+            self._RefreshAndUpdateStatus()
+            
+            return
+            
+        
+        if self._job == 'phashes':
+            
+            text = self._job_key.GetIfHasVariable( 'popup_text_1' )
+            
+            if text is not None:
+                
+                self._num_phashes_to_regen.SetLabelText( text )
+                
+            
+        elif self._job == 'branches':
+            
+            text = self._job_key.GetIfHasVariable( 'popup_text_1' )
+            
+            if text is not None:
+                
+                self._num_branches_to_regen.SetLabelText( text )
+                
+            
+        elif self._job == 'search':
+            
+            text = self._job_key.GetIfHasVariable( 'popup_text_1' )
+            gauge = self._job_key.GetIfHasVariable( 'popup_gauge_1' )
+            
+            if text is not None and gauge is not None:
+                
+                ( value, range ) = gauge
+                
+                self._num_searched.SetValue( text, value, range )
+                
+            
+        
+    
+    def _RefreshAndUpdateStatus( self ):
         
         self._similar_files_maintenance_status = self._controller.Read( 'similar_files_maintenance_status' )
         
-        self._Update()
+        self._UpdateStatus()
         
     
-    def _Update( self ):
+    def _UpdateStatus( self ):
         
         ( searched_distances_to_count, duplicate_types_to_count, num_phashes_to_regen, num_branches_to_regen ) = self._similar_files_maintenance_status
         
+        self._cog_button.Enable()
+        
+        self._phashes_button.SetBitmap( CC.GlobalBMPs.play )
+        self._branches_button.SetBitmap( CC.GlobalBMPs.play )
+        self._search_button.SetBitmap( CC.GlobalBMPs.play )
+        
+        total_num_files = sum( searched_distances_to_count.values() )
+        
         if num_phashes_to_regen == 0:
             
-            self._num_phashes_to_regen.SetLabelText( 'All files ready!' )
+            self._num_phashes_to_regen.SetLabelText( 'All ' + HydrusData.ConvertIntToPrettyString( total_num_files ) + ' eligible files up to date!' )
             
             self._phashes_button.Disable()
             
         else:
             
-            self._num_phashes_to_regen.SetLabelText( HydrusData.ConvertIntToPrettyString( num_phashes_to_regen ) + ' files to reanalyze.' )
+            num_done = total_num_files - num_phashes_to_regen
+            
+            self._num_phashes_to_regen.SetLabelText( HydrusData.ConvertValueRangeToPrettyString( num_done, total_num_files ) + 'eligible files up to date.' )
             
             self._phashes_button.Enable()
             
@@ -1606,17 +1758,31 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._branches_button.Enable()
             
         
-        total_num_files = sum( searched_distances_to_count.values() )
-        
-        self._total_files.SetLabelText( HydrusData.ConvertIntToPrettyString( total_num_files ) + ' eligable files.' )
+        self._search_distance_button.Enable()
+        self._search_distance_spinctrl.Enable()
         
         search_distance = self._search_distance_spinctrl.GetValue()
+        
+        new_options = self._controller.GetNewOptions()
+        
+        new_options.SetInteger( 'similar_files_duplicate_pairs_search_distance', search_distance )
+        
+        if search_distance in HC.hamming_string_lookup:
+            
+            button_label = HC.hamming_string_lookup[ search_distance ]
+            
+        else:
+            
+            button_label = 'custom'
+            
+        
+        self._search_distance_button.SetLabelText( button_label )
         
         num_searched = sum( ( count for ( value, count ) in searched_distances_to_count.items() if value is not None and value >= search_distance ) )
         
         if num_searched == total_num_files:
             
-            self._num_searched.SetValue( 'All potential duplicates found.', total_num_files, total_num_files )
+            self._num_searched.SetValue( 'All potential duplicates found at this distance.', total_num_files, total_num_files )
             
             self._search_button.Disable()
             
@@ -1624,19 +1790,31 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             if num_searched == 0:
                 
-                self._num_searched.SetValue( 'Have not yet searched at that distance.', 0, total_num_files )
+                self._num_searched.SetValue( 'Have not yet searched at this distance.', 0, total_num_files )
                 
             else:
                 
-                self._num_searched.SetValue( 'Searched ' + HydrusData.ConvertValueRangeToPrettyString( num_searched, total_num_files ) + ' files.', num_searched, total_num_files )
+                self._num_searched.SetValue( 'Searched ' + HydrusData.ConvertValueRangeToPrettyString( num_searched, total_num_files ) + ' files at this distance.', num_searched, total_num_files )
                 
             
             self._search_button.Enable()
             
         
-        self._num_unknown_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_UNKNOWN ] ) + ' potential duplicates found.' )
+        num_unknown = duplicate_types_to_count[ HC.DUPLICATE_UNKNOWN ]
+        
+        self._num_unknown_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( num_unknown ) + ' potential duplicates found.' )
         self._num_same_file_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_FILE ] ) + ' same file pairs filtered.' )
         self._num_alternate_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate file pairs filtered.' )
+        
+    
+    def EventSearchDistanceChanged( self, event ):
+        
+        self._UpdateStatus()
+        
+    
+    def TIMEREventUpdateDBJob( self, event ):
+        
+        self._UpdateJob()
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_DUPLICATE_FILTER ] = ManagementPanelDuplicateFilter

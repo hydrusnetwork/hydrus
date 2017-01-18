@@ -1,6 +1,8 @@
 import ClientConstants as CC
 import ClientDefaults
 import ClientGUIDialogs
+import ClientGUIScrolledPanelsManagement
+import ClientGUITopLevelWindows
 import collections
 import HydrusConstants as HC
 import os
@@ -9,9 +11,35 @@ import unittest
 import wx
 import HydrusGlobals
 
+def HitButton( button ): wx.PostEvent( button, wx.CommandEvent( wx.EVT_BUTTON.typeId, button.GetId() ) )
+
 def HitCancelButton( window ): wx.PostEvent( window, wx.CommandEvent( wx.EVT_BUTTON.typeId, wx.ID_CANCEL ) )
 
-def HitButton( button ): wx.PostEvent( button, wx.CommandEvent( wx.EVT_BUTTON.typeId, button.GetId() ) )
+def HitOKButton( window ): wx.PostEvent( window, wx.CommandEvent( wx.EVT_BUTTON.typeId, wx.ID_OK ) )
+
+def CancelChildDialog( window ):
+    
+    children = window.GetChildren()
+    
+    for child in children:
+        
+        if isinstance( child, wx.Dialog ):
+            
+            HitCancelButton( child )
+            
+        
+
+def OKChildDialog( window ):
+    
+    children = window.GetChildren()
+    
+    for child in children:
+        
+        if isinstance( child, wx.Dialog ):
+            
+            HitOKButton( child )
+            
+        
 
 def PressKey( window, key ):
     
@@ -32,6 +60,31 @@ class TestDBDialogs( unittest.TestCase ):
         with ClientGUIDialogs.DialogSelectBooru( None ) as dlg:
             
             HitCancelButton( dlg )
+            
+            result = dlg.ShowModal()
+            
+            self.assertEqual( result, wx.ID_CANCEL )
+            
+        
+    
+    def test_dialog_manage_subs( self ):
+        
+        HydrusGlobals.test_controller.SetRead( 'serialisable_named', [] )
+        
+        title = 'subs test'
+        frame_key = 'regular_dialog'
+        
+        with ClientGUITopLevelWindows.DialogManage( None, title, frame_key ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsManagement.ManageSubscriptionsPanel( dlg )
+            
+            dlg.SetPanel( panel )
+            
+            wx.CallAfter( panel.Add )
+            
+            wx.CallLater( 2000, OKChildDialog, panel )
+            
+            wx.CallLater( 4000, HitCancelButton, dlg )
             
             result = dlg.ShowModal()
             

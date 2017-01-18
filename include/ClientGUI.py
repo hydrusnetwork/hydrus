@@ -224,7 +224,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         aboutinfo.SetDescription( description )
         
-        with open( os.path.join( HC.BASE_DIR, 'license.txt' ), 'rb' ) as f: license = f.read()
+        with open( HC.LICENSE_PATH, 'rb' ) as f: license = f.read()
         
         aboutinfo.SetLicense( license )
         
@@ -1541,7 +1541,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 stop_time = HydrusData.GetNow() + 60 * 10
                 
-                self._controller.Write( 'maintain_similar_files_tree', stop_time )
+                self._controller.Write( 'maintain_similar_files_tree', stop_time = stop_time )
                 
             
         

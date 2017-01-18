@@ -185,6 +185,23 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
             
         
     
+class BetterBitmapButton( wx.BitmapButton ):
+    
+    def __init__( self, parent, bitmap, callable, *args, **kwargs ):
+        
+        wx.BitmapButton.__init__( self, parent, bitmap = bitmap )
+        
+        self._callable = callable
+        self._args = args
+        self._kwargs = kwargs
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        
+    
+    def EventButton( self, event ):
+        
+        self._callable( *self._args,  **self._kwargs )
+        
+    
 class BetterButton( wx.Button ):
     
     def __init__( self, parent, label, callable, *args, **kwargs ):
@@ -3207,6 +3224,27 @@ class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         for index in indices: self.DeleteItem( index )
         
     
+class MenuBitmapButton( BetterBitmapButton ):
+    
+    def __init__( self, parent, bitmap, menu_items ):
+        
+        BetterBitmapButton.__init__( self, parent, bitmap, self.DoMenu )
+        
+        self._menu_items = menu_items
+        
+    
+    def DoMenu( self ):
+        
+        menu = wx.Menu()
+        
+        for ( title, description, callable ) in self._menu_items:
+            
+            ClientGUIMenus.AppendMenuItem( menu, title, description, self, callable )
+            
+        
+        HydrusGlobals.client_controller.PopupMenu( self, menu )
+        
+    
 class MenuButton( BetterButton ):
     
     def __init__( self, parent, label, menu_items ):
@@ -5186,7 +5224,7 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         SaneListCtrl.Append( self, display_tuple, sort_tuple )
         
     
-    def GetIndexFromClientData( self, obj ):
+    def GetIndexFromObject( self, obj ):
         
         try:
             
@@ -5227,11 +5265,11 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         return datas
         
     
-    def HasClientData( self, data ):
+    def HasObject( self, obj ):
         
         try:
             
-            index = self.GetIndexFromClientData( data )
+            index = self.GetIndexFromObject( obj )
             
             return True
             
@@ -5247,7 +5285,7 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         
         name = obj.GetName()
         
-        current_names = { obj.GetName() for obj in self.GetClientData() }
+        current_names = { obj.GetName() for obj in self.GetObjects() }
         
         if name in current_names:
             
@@ -5407,9 +5445,9 @@ class SeedCacheControl( SaneListCtrlForSingleObject ):
         
         if self._seed_cache.HasSeed( seed ):
             
-            if self.HasClientData( seed ):
+            if self.HasObject( seed ):
                 
-                index = self.GetIndexFromClientData( seed )
+                index = self.GetIndexFromObject( seed )
                 
                 ( display_tuple, sort_tuple ) = self._GetListCtrlTuples( seed )
                 
@@ -5422,9 +5460,9 @@ class SeedCacheControl( SaneListCtrlForSingleObject ):
             
         else:
             
-            if self.HasClientData( seed ):
+            if self.HasObject( seed ):
                 
-                index = self.GetIndexFromClientData( seed )
+                index = self.GetIndexFromObject( seed )
                 
                 self.DeleteItem( index )
                 

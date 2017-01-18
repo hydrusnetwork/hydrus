@@ -156,6 +156,13 @@ class Controller( object ):
         return call_to_thread
         
     
+    def _SetupWx( self ):
+        
+        self.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important to init this here and keep it non garbage collected
+        
+        CC.GlobalBMPs.STATICInitialise()
+        
+    
     def pub( self, topic, *args, **kwargs ):
         
         pass
@@ -248,6 +255,8 @@ class Controller( object ):
     def ResetIdleTimer( self ): pass
     
     def Run( self ):
+        
+        self._SetupWx()
         
         suites = []
         

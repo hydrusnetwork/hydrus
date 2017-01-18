@@ -1596,29 +1596,62 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'INSERT INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
         
     
-    def _CacheSimilarFilesDelete( self, hash_id, phash_ids = None ):
+    def _CacheSimilarFilesAssociatePHashes( self, hash_id, phashes ):
         
-        if phash_ids is None:
+        phash_ids = set()
+        
+        for phash in phashes:
             
-            phash_ids = { phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) }
+            phash_id = self._CacheSimilarFilesGetPHashId( phash )
             
-            self._c.execute( 'DELETE FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) )
-            
-        else:
-            
-            phash_ids = set( phash_ids )
-            
-            self._c.executemany( 'DELETE FROM shape_perceptual_hash_map WHERE phash_id = ? AND hash_id = ?;', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
+            phash_ids.add( phash_id )
             
         
-        useful_phash_ids = { phash for ( phash, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN ' + HydrusData.SplayListForDB( phash_ids ) + ';' ) }
+        self._c.executemany( 'INSERT OR IGNORE INTO shape_perceptual_hash_map ( phash_id, hash_id ) VALUES ( ?, ? );', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
         
-        deletee_phash_ids = phash_ids.difference( useful_phash_ids )
+        if self._GetRowCount() > 0:
+            
+            self._c.execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, None ) )
+            
         
-        self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ( phash_id, ) for phash_id in deletee_phash_ids ) )
+        return phash_ids
+        
+    
+    def _CacheSimilarFilesDeleteFile( self, hash_id ):
+        
+        phash_ids = { phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) }
+        
+        self._CacheSimilarFilesDisassociatePHashes( hash_id, phash_ids )
         
         self._c.execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
         self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? or larger_hash_id = ?;', ( hash_id, hash_id ) )
+        self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
+        
+    
+    def _CacheSimilarFilesDeleteUnknownDuplicatePairs( self ):
+        
+        hash_ids = set()
+        
+        for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) ):
+            
+            hash_ids.add( smaller_hash_id )
+            hash_ids.add( larger_hash_id )
+            
+        
+        self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) )
+        
+        self._c.executemany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        
+    
+    def _CacheSimilarFilesDisassociatePHashes( self, hash_id, phash_ids ):
+        
+        self._c.executemany( 'DELETE FROM shape_perceptual_hash_map WHERE phash_id = ? AND hash_id = ?;', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
+        
+        useful_phash_ids = { phash for ( phash, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN ' + HydrusData.SplayListForDB( phash_ids ) + ';' ) }
+        
+        useless_phash_ids = phash_ids.difference( useful_phash_ids )
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ( phash_id, ) for phash_id in useless_phash_ids ) )
         
     
     def _CacheSimilarFilesGenerateBranch( self, job_key, parent_id, phash_id, phash, children ):
@@ -1739,32 +1772,78 @@ class DB( HydrusDB.HydrusDB ):
         return ( searched_distances_to_count, duplicate_types_to_count, num_phashes_to_regen, num_branches_to_regen )
         
     
-    def _CacheSimilarFilesAssociatePHashes( self, hash_id, phashes ):
+    def _CacheSimilarFilesMaintainDuplicatePairs( self, search_distance, job_key = None, stop_time = None ):
         
-        phash_ids = set()
+        pub_job_key = False
+        job_key_pubbed = False
         
-        for phash in phashes:
+        if job_key is None:
             
-            phash_id = self._CacheSimilarFilesGetPHashId( phash )
+            job_key = ClientThreading.JobKey( cancellable = True )
             
-            self._c.execute( 'INSERT OR IGNORE INTO shape_perceptual_hash_map ( phash_id, hash_id ) VALUES ( ?, ? );', ( phash_id, hash_id ) )
-            
-            phash_ids.add( phash_id )
+            pub_job_key = True
             
         
-        self._c.execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, None ) )
+        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ) ]
         
-        return phash_ids
+        pairs_found = 0
+        
+        num_to_do = len( hash_ids )
+        
+        for ( i, hash_id ) in enumerate( hash_ids ):
+            
+            job_key.SetVariable( 'popup_title', 'similar files duplicate pair discovery' )
+            
+            if pub_job_key and not job_key_pubbed:
+                
+                self._controller.pub( 'message', job_key )
+                
+                job_key_pubbed = True
+                
+            
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+            
+            if should_quit or should_stop:
+                
+                return
+                
+            
+            text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) + ', found ' + HydrusData.ConvertIntToPrettyString( pairs_found )
+            
+            job_key.SetVariable( 'popup_text_1', text )
+            job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+            
+            duplicate_hash_ids = [ duplicate_hash_id for duplicate_hash_id in self._CacheSimilarFilesSearch( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
+            
+            self._c.executemany( 'INSERT OR IGNORE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( ( min( hash_id, duplicate_hash_id ), max( hash_id, duplicate_hash_id ), HC.DUPLICATE_UNKNOWN ) for duplicate_hash_id in duplicate_hash_ids ) )
+            
+            pairs_found += self._GetRowCount()
+            
+            self._c.execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE hash_id = ?;', ( search_distance, hash_id ) )
+            
+        
+        job_key.SetVariable( 'popup_text_1', 'done!' )
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        
+        job_key.Finish()
+        job_key.Delete( 30 )
         
     
-    def _CacheSimilarFilesMaintainFiles( self, job_key ):
+    def _CacheSimilarFilesMaintainFiles( self, job_key = None, stop_time = None ):
         
-        # this should take a cancellable job_key from the gui filter window
+        pub_job_key = False
+        job_key_pubbed = False
+        
+        if job_key is None:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            pub_job_key = True
+            
         
         hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) ]
-        
-        # remove hash_id from the pairs cache?
-        # set its search status to False, but don't remove any existing pairs
         
         client_files_manager = self._controller.GetClientFilesManager()
         
@@ -1772,9 +1851,20 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( i, hash_id ) in enumerate( hash_ids ):
             
+            job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
+            
+            if pub_job_key and not job_key_pubbed:
+                
+                self._controller.pub( 'message', job_key )
+                
+                job_key_pubbed = True
+                
+            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
-            if should_quit:
+            should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+            
+            if should_quit or should_stop:
                 
                 return
                 
@@ -1823,23 +1913,36 @@ class DB( HydrusDB.HydrusDB ):
             
             correct_phash_ids = self._CacheSimilarFilesAssociatePHashes( hash_id, phashes )
             
-            deletee_phash_ids = existing_phash_ids.difference( correct_phash_ids )
+            incorrect_phash_ids = existing_phash_ids.difference( correct_phash_ids )
             
-            self._CacheSimilarFilesDelete( hash_id, deletee_phash_ids )
+            if len( incorrect_phash_ids ) > 0:
+                
+                self._CacheSimilarFilesDisassociatePHashes( hash_id, incorrect_phash_ids )
+                
             
             self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
             
         
+        job_key.SetVariable( 'popup_text_1', 'done!' )
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        
         job_key.Finish()
+        job_key.Delete( 30 )
         
     
-    def _CacheSimilarFilesMaintainTree( self, stop_time ):
+    def _CacheSimilarFilesMaintainTree( self, job_key = None, stop_time = None ):
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        pub_job_key = False
+        job_key_pubbed = False
+        
+        if job_key is None:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            pub_job_key = True
+            
         
         job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
-        
-        job_key_pubbed = False
         
         rebalance_phash_ids = [ phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) ]
         
@@ -1847,7 +1950,7 @@ class DB( HydrusDB.HydrusDB ):
         
         while len( rebalance_phash_ids ) > 0:
             
-            if not job_key_pubbed:
+            if pub_job_key and not job_key_pubbed:
                 
                 self._controller.pub( 'message', job_key )
                 
@@ -1856,14 +1959,16 @@ class DB( HydrusDB.HydrusDB ):
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
-            if should_quit or HydrusData.TimeHasPassed( stop_time ):
+            should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+            
+            if should_quit or should_stop:
                 
                 return
                 
             
             num_done = num_to_do - len( rebalance_phash_ids )
             
-            text = 'regenerating unbalanced similar file search data - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+            text = 'rebalancing similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
             
             HydrusGlobals.client_controller.pub( 'splash_set_status_text', text )
             job_key.SetVariable( 'popup_text_1', text )
@@ -1881,7 +1986,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', 'done!' )
         job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.DeleteVariable( 'popup_text_2' )
+        job_key.DeleteVariable( 'popup_text_2' ) # used in the regenbranch call
         
         job_key.Finish()
         job_key.Delete( 30 )
@@ -3052,7 +3157,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for hash_id in hash_ids:
             
-            self._CacheSimilarFilesDelete( hash_id )
+            self._CacheSimilarFilesDeleteFile( hash_id )
             
         
     
@@ -5144,7 +5249,7 @@ class DB( HydrusDB.HydrusDB ):
             
             # tag parents
             
-            pending = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetText( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 100;', ( service_id, HC.PENDING ) ).fetchall() ]
+            pending = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetText( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 1;', ( service_id, HC.PENDING ) ).fetchall() ]
             
             if len( pending ) > 0:
                 
@@ -5208,7 +5313,6 @@ class DB( HydrusDB.HydrusDB ):
                 return ( hash, multihash )
                 
             
-        
         
         if len( content_data_dict ) > 0:
             
@@ -8855,7 +8959,18 @@ class DB( HydrusDB.HydrusDB ):
             
             combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            self._c.execute( 'INSERT OR IGNORE INTO shape_search_cache SELECT hash_id, NULL FROM current_files, files_info USING ( hash_id ) WHERE service_id = ? and mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WE_CAN_PHASH ) + ';', ( combined_local_file_service_id, ) )
+            self._c.execute( 'INSERT OR IGNORE INTO shape_search_cache SELECT hash_id, NULL FROM current_files, files_info USING ( hash_id ) WHERE service_id = ? and mime IN ( ?, ? );', ( combined_local_file_service_id, HC.IMAGE_JPEG, HC.IMAGE_PNG ) )
+            
+        
+        if version == 240:
+            
+            combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            
+            self._c.execute( 'INSERT OR IGNORE INTO shape_maintenance_phash_regen SELECT hash_id FROM current_files, files_info USING ( hash_id ) WHERE service_id = ? AND mime IN ( ?, ? );', ( combined_local_file_service_id, HC.IMAGE_JPEG, HC.IMAGE_PNG ) )
+            
+            #
+            
+            self._c.execute( 'DELETE FROM web_sessions WHERE name = ?;', ( 'pixiv', ) )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
@@ -9505,12 +9620,15 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_remote_booru': result = self._DeleteYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'delete_serialisable_named': result = self._DeleteJSONDumpNamed( *args, **kwargs )
         elif action == 'delete_service_info': result = self._DeleteServiceInfo( *args, **kwargs )
+        elif action == 'delete_unknown_duplicate_pairs': result = self._CacheSimilarFilesDeleteUnknownDuplicatePairs( *args, **kwargs )
         elif action == 'export_mappings': result = self._ExportToTagArchive( *args, **kwargs )
         elif action == 'file_integrity': result = self._CheckFileIntegrity( *args, **kwargs )
         elif action == 'hydrus_session': result = self._AddHydrusSession( *args, **kwargs )
         elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+        elif action == 'maintain_similar_files_duplicate_pairs': result = self._CacheSimilarFilesMaintainDuplicatePairs( *args, **kwargs )
+        elif action == 'maintain_similar_files_phashes': result = self._CacheSimilarFilesMaintainFiles( *args, **kwargs )
         elif action == 'maintain_similar_files_tree': result = self._CacheSimilarFilesMaintainTree( *args, **kwargs )
         elif action == 'push_recent_tags': result = self._PushRecentTags( *args, **kwargs )
         elif action == 'regenerate_ac_cache': result = self._RegenerateACCache( *args, **kwargs )

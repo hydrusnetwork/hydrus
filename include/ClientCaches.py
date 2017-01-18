@@ -1,4 +1,5 @@
 import ClientDefaults
+import ClientDownloading
 import ClientFiles
 import ClientNetworking
 import ClientRendering
@@ -11,9 +12,11 @@ import HydrusImageHandling
 import HydrusPaths
 import HydrusSessions
 import itertools
+import json
 import os
 import random
 import Queue
+import requests
 import shutil
 import threading
 import time
@@ -2947,22 +2950,9 @@ class WebSessionManagerClient( object ):
                     raise HydrusExceptions.DataMissing( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
                     
                 
-                ( id, password ) = result
+                ( pixiv_id, password ) = result
                 
-                form_fields = {}
-                
-                form_fields[ 'pixiv_id' ] = id
-                form_fields[ 'password' ] = password
-                
-                body = urllib.urlencode( form_fields )
-                
-                headers = {}
-                headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
-                
-                ( response_gumpf, cookies ) = self._controller.DoHTTP( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
-                
-                # _ only given to logged in php sessions
-                if 'PHPSESSID' not in cookies: raise Exception( 'Pixiv login credentials not accepted!' )
+                cookies = self.GetPixivCookies( pixiv_id, password )
                 
                 expires = now + 30 * 86400
                 
@@ -2973,5 +2963,62 @@ class WebSessionManagerClient( object ):
             
             return cookies
             
+        
+    
+    # This updated login form is cobbled together from the example in PixivUtil2
+    # it is breddy shid because I'm not using mechanize or similar browser emulation (like requests's sessions) yet
+    # Pixiv 400s if cookies and referrers aren't passed correctly
+    # I am leaving this as a mess with the hope the eventual login engine will replace it
+    def GetPixivCookies( self, pixiv_id, password ):
+        
+        ( response, cookies ) = self._controller.DoHTTP( HC.GET, 'https://accounts.pixiv.net/login', return_cookies = True )
+        
+        soup = ClientDownloading.GetSoup( response )
+        
+        # some whocking 20kb bit of json tucked inside a hidden form input wew lad
+        i = soup.find( 'input', id = 'init-config' )
+        
+        raw_json = i['value']
+        
+        j = json.loads( raw_json )
+        
+        if 'pixivAccount.postKey' not in j:
+            
+            raise HydrusExceptions.ForbiddenException( 'When trying to log into Pixiv, I could not find the POST key!' )
+            
+        
+        post_key = j[ 'pixivAccount.postKey' ]
+        
+        form_fields = {}
+        
+        form_fields[ 'pixiv_id' ] = pixiv_id
+        form_fields[ 'password' ] = password
+        form_fields[ 'captcha' ] = ''
+        form_fields[ 'g_recaptcha_response' ] = ''
+        form_fields[ 'return_to' ] = 'http://www.pixiv.net'
+        form_fields[ 'lang' ] = 'en'
+        form_fields[ 'post_key' ] = post_key
+        form_fields[ 'source' ] = 'pc'
+        
+        headers = {}
+        
+        headers[ 'referer' ] = "https://accounts.pixiv.net/login?lang=en^source=pc&view_type=page&ref=wwwtop_accounts_index"
+        headers[ 'origin' ] = "https://accounts.pixiv.net"
+        ClientNetworking.AddCookiesToHeaders( cookies, headers )
+        
+        r = requests.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
+        
+        # doesn't work
+        #( response_gumpf, cookies ) = self._controller.DoHTTP( HC.POST, 'https://accounts.pixiv.net/api/login?lang=en', request_headers = headers, body = body, return_cookies = True )
+        
+        cookies = dict( r.cookies )
+        
+        # _ only given to logged-in php sessions
+        if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]:
+            
+            raise HydrusExceptions.ForbiddenException( 'Pixiv login credentials not accepted!' )
+            
+        
+        return cookies
         
     

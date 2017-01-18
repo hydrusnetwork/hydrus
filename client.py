@@ -38,7 +38,7 @@ try:
     
     if result.db_dir is None:
         
-        db_dir = os.path.join( HC.BASE_DIR, 'db' )
+        db_dir = HC.DEFAULT_DB_DIR
         
     else:
         

@@ -616,6 +616,13 @@ class HTTPConnection( object ):
                 
                 if attempt_number <= 3:
                     
+                    if self._hydrus_network:
+                        
+                        # we are talking to a new hydrus server, which uses https, and hence an http call gives badstatusline
+                        
+                        self._scheme = 'https'
+                        
+                    
                     self._RefreshConnection()
                     
                     return self._GetInitialResponse( method, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
@@ -637,6 +644,13 @@ class HTTPConnection( object ):
             time.sleep( 5 )
             
             if attempt_number <= 3:
+                
+                if self._hydrus_network:
+                    
+                    # we are talking to a new hydrus server, which uses https, and hence an http call gives badstatusline
+                    
+                    self._scheme = 'https'
+                    
                 
                 self._RefreshConnection()
                 
