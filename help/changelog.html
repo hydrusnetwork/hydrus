@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 242</h3></li>
+				<ul>
+					<li>optimised 'exact match' similar file queries to run a lot faster</li>
+					<li>optimised similar file queries in general, particularly for larger cycle queries</li>
+					<li>optimised hamming distance calculation, decreasing time by roughly 45%!</li>
+					<li>the similar files tree maintenance idle job will not trigger while there are phashes still to regenerate (this was redundantly and annoyingly blatting the new dupes page as soon as phash regen was paused)</li>
+					<li>removed similar files tree maintenance entry from db->maintain menu, as it can be done better from the new dupes page</li>
+					<li>adjusted the duplicate search and file phash regen progress gauges to reflect total number of files in cache, not the current batch job</li>
+					<li>all maintenance jobs on the duplicates search page will now save their progress (and free up a hanging gui) every 30 seconds</li>
+					<li>the duplicates page's cog menu button now lets you put phash regen and tree rebalancing on the normal idle routine, defaulting both to off</li>
+					<li>the cog menu can also put duplicate searching on idle time!</li>
+					<li>added a very rough 'just show me some pairs!' button to the dupe page--it is pretty neat to finally see what is going on</li>
+					<li>I may have reduced the memory use explosion some users are getting during file phash regen maintenance</li>
+					<li>wrote an unclose_page action and added it to the shortcuts options panel--it undoes the last page close, if one exists. ctrl+u will be the default for new users, but existing users have to add it under options</li>
+					<li>added ascending/descending sort choices for width, height, ratio, and num_pixels</li>
+					<li>the client can no longer talk to old http hydrus network servers--everything is now https</li>
+					<li>in prep for a later network version update, the client now supports gzipped network strings (which compress json a lot better than the old lz4 compression)</li>
+					<li>fixed gif rendering in the Windows build--I forgot to update a build script dll patch for the new version of opencv</li>
+					<li>the export file dialog's neighbouring .txt taglist file stuff now allows you to select a specific combination of tag services</li>
+					<li>if an hdd import's original file is due to be deleted, any existing neighbouring taglist .txt file will now also be deleted</li>
+					<li>the inter-thread messaging system has a new simple way of reporting download progress on an url</li>
+					<li>the handful of things that create a downloading popup (like the youtube downloader) now use this new download reporting system</li>
+					<li>sankaku seems to be 503-broke due to cloudflare protection--I have paused all existing sankaku subscriptions and removed the sankaku entry for new users (pending a future fix on my or their end)</li>
+					<li>I've also removed danbooru for new users for now--someone can fix the long-running sample size file issue in the new downloader engine</li>
+					<li>removed unnamespaced tag support from the hentai-foundry parser--maybe someone can try to fix that mess in the new downloader engine</li>
+					<li>menubuttons can now handle boolean check menu items that are tied straight into hydrus's options</li>
+					<li>menus launched from the newer frame and dialog code will now correctly display their help text on the main gui frame's statusbar! (at least on Windows! Linux and OS X remain borked!)</li>
+					<li>fixed a unicode error parsing bug in the gallery downloader</li>
+					<li>the server stop (or restart) command now correctly uses https!</li>
+					<li>the server test code now works on https as appropriate</li>
+					<li>fixed some misc server test code</li>
+					<li>misc fixes</li>
+					<li>misc cleanup</li>
+					<li>misc layout cleanup</li>
+				</ul>
 				<li><h3>version 241</h3></li>
 				<ul>
 					<li>fixed the 'setnondupename' problem that was affecting 'add' actions on manage subscriptions, scripts, and import/export folders</li>
